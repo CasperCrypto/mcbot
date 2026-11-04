@@ -6,13 +6,17 @@ Agent setup on disk**. The same graph then shows what each agent is doing, what
 it remembers, and what it costs.
 
 **The compile step is the product.** If the graph does not write real files
-that a real runtime reads, this is a drawing tool. Hermes Agent is the engine;
-we do not modify it — we build the cockpit.
+that a real runtime reads, this is a drawing tool. Hermes Agent is the engine
+and ships inside McBot: one download, nothing else to install. What merges into
+McBot and what is rebuilt is decided in `docs/MERGE.md`.
 
 ## Hard rules
 
-1. **Never modify, patch, fork or vendor the Hermes source.** Read it to confirm
-   a schema. Write only into a compile output root.
+1. **Merge only code we may ship.** MIT, Apache-2.0 and BSD code can come in,
+   with its `LICENSE` and notices kept: Hermes Agent (MIT, forked into `hermes/`)
+   and Buzz (Apache-2.0). Never copy code from OpenBot (PolyForm Noncommercial),
+   n8n (Sustainable Use License) or Vorssaint (GPL-3.0): rebuild those features.
+   Changes inside `hermes/` stay small and marked, so upstream updates still merge.
 2. **Never invent a Hermes config key, path or CLI flag.** Confirm it in the
    Hermes source or with `hermes --help`, then record it with its source line in
    `docs/HERMES.md`. If you cannot verify it, stop and ask. (Hermes' own docs have
@@ -90,10 +94,9 @@ Change them additively; a breaking change bumps the version.
   `scrollIntoView` returns a Promise in current Chromium, and an effect that
   returns a non-function crashes React on cleanup.
 - Views live behind an error boundary; a broken view must not blank the window.
-- **No OpenBot or Vorssaint code.** OpenBot is PolyForm Noncommercial (would make
-  McBot non-commercial) and Vorssaint is GPL-3.0 with a trade-dress trademark
-  policy. They are design references only. Blobatar (MIT) and Paper Shaders
-  (Apache-2.0) are fine.
+- **No OpenBot, n8n or Vorssaint code** (hard rule 1). They are design and
+  feature references only; Vorssaint's trade-dress policy also rules out copying
+  its look. Blobatar (MIT) and Paper Shaders (Apache-2.0) are fine.
 - **Local folders:** the engine reads only inside roots the user opened
   (`<workspace>/folders.json`), the shared files folder and compiled profiles —
   read-only, path-checked.
@@ -106,9 +109,10 @@ auth, no cloud: local JSON + the filesystem.
 
 ## Out of scope until asked
 
-Auth, SSO, Postgres, Redis, MinIO, Langfuse, OpenTelemetry, a cloud tier,
-installers, code signing, iOS, Android, a marketplace, templates, a code editor,
-git integration, an MCP client, ACP, A2A, settings UI beyond what M0–M4 need.
+Auth, SSO, Langfuse, OpenTelemetry, a cloud tier, a marketplace, templates, a
+code editor, git integration, an MCP client, ACP, A2A. Installers, signing,
+teams across machines and phones are planned in `docs/MERGE.md` phases 1–3;
+Postgres and Redis belong to the optional team server only, never the desktop app.
 
 ## Commands
 
