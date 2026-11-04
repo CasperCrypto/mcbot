@@ -21,13 +21,16 @@ process.on("warning", (w) => {
 const workspace = resolve(process.env.MCBOT_WORKSPACE ?? join(homedir(), "McBot"));
 const hermesHome = resolve(process.env.MCBOT_HERMES_HOME ?? join(workspace, "hermes"));
 await mkdir(join(workspace, "boards"), { recursive: true });
+// The shared folder the "Files tool" preset hands to the MCP filesystem server.
+await mkdir(join(workspace, "files"), { recursive: true });
 await mkdir(hermesHome, { recursive: true });
 
+const port = Number(process.env.MCBOT_PORT ?? 4317);
 const engine = await startEngine({
   workspace,
   hermesHome,
   managedRoot: !process.env.MCBOT_HERMES_HOME,
-  port: Number(process.env.MCBOT_PORT ?? 4317),
+  port,
   host: "127.0.0.1",
   allowedOrigins: [...DEFAULT_ORIGINS, ...(process.env.MCBOT_ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean)],
 });

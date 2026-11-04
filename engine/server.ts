@@ -304,7 +304,11 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     });
   });
 
-  await new Promise<void>((resolve) => server.listen(cfg.port, cfg.host, resolve));
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", (err: NodeJS.ErrnoException) =>
+      reject(err.code === "EADDRINUSE" ? new Error(`port ${cfg.port} is in use — is another McBot engine running? Set MCBOT_PORT to use another port.`) : err));
+    server.listen(cfg.port, cfg.host, () => resolve());
+  });
   const { port } = server.address() as AddressInfo;
   return {
     server,
