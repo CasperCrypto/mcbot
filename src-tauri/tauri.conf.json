@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build && node scripts/build-engine.mjs && node scripts/stage-hermes.mjs",
     "frontendDist": "../dist"
   },
   "app": {
@@ -33,7 +33,7 @@
     }
   },
   "bundle": {
-    "active": false,
+    "active": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
@@ -41,6 +41,19 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "externalBin": [
+      "binaries/mcbot-engine"
+    ],
+    "resources": {
+      "../dist-hermes/hermes/": "hermes/"
+    },
+    "category": "DeveloperTool",
+    "shortDescription": "Draw a team of AI agents; run it with Hermes.",
+    "license": "MIT",
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": "-"
+    }
   }
 }

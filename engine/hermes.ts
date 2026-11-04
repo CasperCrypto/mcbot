@@ -5,14 +5,14 @@
 import { execFile, spawn } from "node:child_process";
 import { constants, existsSync, readdirSync } from "node:fs";
 import { access, readFile } from "node:fs/promises";
-import { delimiter, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export interface HermesBinary {
   path: string;
   /** .cmd/.bat shims need a shell on Windows. */
   shell: boolean;
-  /** Arguments before Hermes' own (the in-repo copy runs through its dev runner). */
+  /** Arguments before Hermes' own (McBot's copy: the `hermes` launcher script for its Python). */
   prefix?: string[];
   /** Extra environment for every Hermes process. */
   env?: Record<string, string>;
@@ -20,72 +20,127 @@ export interface HermesBinary {
   kind: "bundled" | "external";
 }
 
-/** hermes/ next to engine/: McBot's fork of Hermes Agent (docs/MERGE.md). */
-export const BUNDLED_HERMES_DIR = resolve(fileURLToPath(new URL("../hermes", import.meta.url)));
+/** hermes/ next to engine/ (from source); the installed app passes MCBOT_HERMES_DIR. */
+export const BUNDLED_HERMES_DIR = (() => {
+  try {
+    return resolve(fileURLToPath(new URL("../hermes", import.meta.url)));
+  } catch {
+    return resolve(process.cwd(), "hermes"); // a bundle without import.meta (the packaged engine)
+  }
+})();
+
+/** Where McBot's Hermes lives and keeps its tools (Python, uv, Node…). */
+export function bundledSource(env: NodeJS.ProcessEnv = process.env): { dir: string; runtime: string } | null {
+  const dir = env.MCBOT_HERMES_DIR?.trim() || BUNDLED_HERMES_DIR;
+  if (!existsSync(join(dir, "hermes")) || !existsSync(join(dir, "pm"))) return null;
+  return { dir, runtime: env.HERMES_RUNTIME_DIR?.trim() || join(dir, ".hermes-runtime") };
+}
+
+/** The pinned Python Hermes' package manager put in the tool store (scripts/_activation.sh `hermes_bootstrap_python`). */
+function storePython(store: string): string | null {
+  try {
+    for (const d of readdirSync(store).filter((n) => n.startsWith("python-")).sort().reverse()) {
+      for (const rel of ["bin/python3", "python.exe", "bin/python", "bin/python.exe"]) {
+        const p = join(store, d, rel);
+        if (existsSync(p)) return p;
+      }
+    }
+  } catch {
+    /* no store yet */
+  }
+  return null;
+}
 
 /**
- * The copy of Hermes inside McBot, once its Python environment exists (`npm run hermes:setup`).
- * It runs through Hermes' own dev runner, with its tools in hermes/.hermes-runtime. Runs do NOT
- * set HERMES_MANAGED: a managed install stops creating its home's folders and securing them
- * (hermes_cli/config_home.py `initialize_home`). Only the terminal launcher sets it, so
- * `hermes update` there says updates come with McBot (scripts/hermes.sh).
+ * McBot's own Hermes, once its tools exist (first launch, or `npm run hermes:setup`): its Python
+ * running the `hermes` launcher. Use it through prepareHermes(), which adds Hermes' environment.
+ * Runs do NOT set HERMES_MANAGED: a managed install stops creating its home's folders and securing
+ * them (hermes_cli/config_home.py `initialize_home`). Only the terminal launcher sets it.
  */
 export function bundledHermes(env: NodeJS.ProcessEnv = process.env): HermesBinary | null {
-  const dir = env.MCBOT_HERMES_DIR?.trim() || BUNDLED_HERMES_DIR;
-  const runner = join(dir, "scripts", "run-in-hermes-env");
-  if (!existsSync(join(dir, "hermes")) || !existsSync(runner)) return null;
-  // Ready once Hermes' package manager has put a Python in the tool store (scripts/_activation.sh
-  // `hermes_bootstrap_python`); before that the first run would spend minutes installing.
-  const runtime = env.HERMES_RUNTIME_DIR?.trim() || join(dir, ".hermes-runtime");
-  if (!hasPython(runtime)) return null;
-  return {
-    path: "bash", shell: false, kind: "bundled",
-    prefix: [runner, "python3", join(dir, "hermes")],
-    env: { HERMES_RUNTIME_DIR: runtime },
-  };
+  const src = bundledSource(env);
+  const py = src && storePython(src.runtime);
+  if (!src || !py) return null;
+  return { path: py, shell: false, kind: "bundled", prefix: [join(src.dir, "hermes")], env: { HERMES_RUNTIME_DIR: src.runtime } };
 }
-
-function hasPython(store: string): boolean {
-  try {
-    return readdirSync(store).some((d) => d.startsWith("python-"));
-  } catch {
-    return false;
-  }
-}
-
-const activations = new Map<string, Promise<Record<string, string> | null>>();
 
 /**
- * McBot's own Hermes, activated: its runner (`run-in-hermes-env`) checks and, if needed, builds
- * Hermes' environment on every launch unless the caller already carries an activation
- * (`__HERMES_ACTIVATED`, scripts/_activation.sh). Activate once per Hermes home — the installed
- * environment is registered under `<home>/installs/` — with `run-in-hermes-env env -0`, and pass on
- * what the runner added, so each run starts in 0.2 s instead of 2.6 s. A stale activation (after a
- * Hermes update) just makes the runner rebuild once.
+ * Hermes' environment for `home`, from its package manager (`python -m pm.environments --format json`,
+ * hermes/pm/environments.py): PYTHONPATH with the installed dependencies, PATH with its tools, the
+ * activation marker. Dependencies are installed per Hermes home (`<home>/installs/`); null when this
+ * home has none yet.
  */
-export async function prepareHermes(bin: HermesBinary, home: string): Promise<HermesBinary> {
-  if (bin.kind !== "bundled" || !bin.prefix?.[0]) return bin;
-  const runner = bin.prefix[0];
-  const key = `${runner}\0${home}\0${JSON.stringify(bin.env ?? {})}`;
-  let act = activations.get(key);
-  if (!act) {
-    const base: NodeJS.ProcessEnv = { ...process.env, ...bin.env, HERMES_HOME: home };
-    act = new Promise((resolve) => {
-      execFile("bash", [runner, "env", "-0"], { env: base, maxBuffer: 16 << 20, timeout: 15 * 60_000, windowsHide: true }, (err, stdout) => {
-        if (err) return resolve(null);
+function composeEnv(bin: HermesBinary, dir: string, home: string): Promise<Record<string, string> | null> {
+  const base: NodeJS.ProcessEnv = { ...process.env, ...bin.env, HERMES_HOME: home, PYTHONHOME: "", PYTHONPATH: dir };
+  return new Promise((resolve) => {
+    execFile(bin.path, ["-m", "pm.environments", "--format", "json"], { cwd: dir, env: base, maxBuffer: 16 << 20, timeout: 120_000, windowsHide: true }, (err, stdout) => {
+      if (err) return resolve(null);
+      try {
+        const all = JSON.parse(stdout) as Record<string, string>;
+        if (!/site-packages/.test(all.PYTHONPATH ?? "")) return resolve(null);
         const added: Record<string, string> = {};
-        for (const kv of stdout.split("\0")) {
-          const i = kv.indexOf("=");
-          if (i > 0 && kv.slice(0, i) !== "HERMES_HOME" && base[kv.slice(0, i)] !== kv.slice(i + 1)) added[kv.slice(0, i)] = kv.slice(i + 1);
-        }
+        for (const [k, v] of Object.entries(all)) if (k !== "HERMES_HOME" && k !== "_" && process.env[k] !== v) added[k] = String(v);
         resolve(added);
-      });
+      } catch {
+        resolve(null);
+      }
     });
-    activations.set(key, act);
-    void act.then((a) => { if (!a) activations.delete(key); }); // try again next time
+  });
+}
+
+/** Hermes' own setup (`setup-hermes.sh --runtime-only`, `setup-hermes.ps1 -RuntimeOnly` on Windows): tools into the store, dependencies for `home`. */
+export function runHermesSetup(src: { dir: string; runtime: string }, home: string, onLine: (line: string) => void = () => undefined): Promise<boolean> {
+  const win = process.platform === "win32";
+  const [file, args] = win
+    ? ["powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", join(src.dir, "setup-hermes.ps1"), "-RuntimeOnly"]]
+    : ["bash", [join(src.dir, "setup-hermes.sh"), "--runtime-only"]];
+  const env: NodeJS.ProcessEnv = { ...process.env, HERMES_RUNTIME_DIR: src.runtime, HERMES_HOME: home, PYTHONHOME: "", PYTHONPATH: "", VIRTUAL_ENV: "" };
+  return new Promise((resolve) => {
+    const child = spawn(file, args as string[], { cwd: src.dir, env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+    let tail = "";
+    const feed = (chunk: Buffer) => {
+      tail += chunk.toString("utf8");
+      const lines = tail.split(/\r?\n|\r/);
+      tail = lines.pop() ?? "";
+      for (const l of lines) {
+        // eslint-disable-next-line no-control-regex
+        const clean = l.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").trim();
+        if (clean) onLine(clean);
+      }
+    };
+    child.stdout!.on("data", feed);
+    child.stderr!.on("data", feed);
+    child.on("error", () => resolve(false));
+    child.on("close", (code) => resolve(code === 0));
+  });
+}
+
+const prepared = new Map<string, Promise<Record<string, string> | null>>();
+
+/**
+ * McBot's own Hermes, ready to launch for `home`: its environment composed once per home and
+ * reused (a launch then starts in about 0.2 s). A home without Hermes' dependencies gets them first
+ * (Hermes' setup, minutes on first use; progress goes to `onLine`). An external Hermes is used as is.
+ */
+export async function prepareHermes(bin: HermesBinary, home: string, onLine?: (line: string) => void): Promise<HermesBinary> {
+  if (bin.kind !== "bundled" || !bin.prefix?.[0]) return bin;
+  // bundledHermes(): prefix[0] is <dir>/hermes, the store is HERMES_RUNTIME_DIR.
+  const src = { dir: dirname(bin.prefix[0]), runtime: bin.env?.HERMES_RUNTIME_DIR ?? join(dirname(bin.prefix[0]), ".hermes-runtime") };
+  const key = `${bin.path}\0${src.dir}\0${home}`;
+  let ready = prepared.get(key);
+  if (!ready) {
+    ready = (async () => {
+      const env = await composeEnv(bin, src.dir, home);
+      if (env) return env;
+      onLine?.("Preparing Hermes for this home (first use)…");
+      if (!(await runHermesSetup(src, home, onLine))) return null;
+      return composeEnv(bin, src.dir, home);
+    })();
+    prepared.set(key, ready);
+    void ready.then((r) => { if (!r) prepared.delete(key); }); // try again next time
   }
-  const added = await act;
-  return added ? { ...bin, env: { ...bin.env, ...added } } : bin;
+  const env = await ready;
+  return env ? { ...bin, env: { ...bin.env, ...env } } : bin;
 }
 
 /** How to start Hermes with `argv`, and the environment it needs. */

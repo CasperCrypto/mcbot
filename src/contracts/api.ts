@@ -25,6 +25,10 @@ export interface HermesInfo {
   root: string;
   managedRoot: boolean;
   gateway: { running: boolean; pid: number | null };
+  /** McBot's own Hermes is present (hermes/), whether or not it is prepared yet. */
+  source: boolean;
+  /** Preparing McBot's own Hermes (first launch): its tools and dependencies. */
+  setup: { state: "idle" | "running" | "done" | "failed"; lines: string[] };
 }
 
 export interface BoardInfo {
@@ -173,7 +177,8 @@ export interface LocalServer {
 }
 
 export interface SetupDetect {
-  hermes: { found: boolean; path: string | null; kind?: "bundled" | "external" | null };
+  /** source: McBot's own Hermes is present but may still need preparing. */
+  hermes: { found: boolean; path: string | null; kind?: "bundled" | "external" | null; source?: boolean };
   local: LocalServer[];
   /** Names of the API keys McBot holds (never the values). */
   secrets: string[];

@@ -107,3 +107,32 @@ describe("setup routes", () => {
     expect((await api<{ models: string[] | null }>("/api/setup/models", { baseUrl: stub.url, keyName: "STUB_KEY" })).body.models).toEqual(["stub-model"]);
   });
 });
+
+describe("a gateway that is still starting", () => {
+  it("gets one more attempt, so a new home's first message still answers", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mcbot-retry-"));
+    const count = join(dir, "attempts");
+    const fake = join(dir, "hermes");
+    // First launch: Hermes reports the gateway was not ready; second: it answers.
+    writeFileSync(fake, [
+      "#!/bin/sh",
+      `n=$(cat '${count}' 2>/dev/null || echo 0); n=$((n+1)); echo $n > '${count}'`,
+      'if [ "$n" = 1 ]; then echo \'{"type":"result","session_id":"","exit_code":1,"text":"","error":"Gateway starting: deadline"}\'; exit 1; fi',
+      'echo \'{"type":"text","text":"4"}\'',
+      'echo \'{"type":"result","session_id":"s1","exit_code":0,"text":"4","tokens":{"input":1,"output":1,"total":2,"cache_read":0,"cache_write":0},"duration_ms":5}\'',
+    ].join("\n"));
+    chmodSync(fake, 0o755);
+    mkdirSync(join(dir, "root", "profiles", "assistant", "workspace"), { recursive: true });
+    const store = new RunStore(join(dir, "runs"));
+    const events: string[] = [];
+    const done = new Promise<void>((resolve) => store.subscribe((e) => {
+      if (e.type === "run.finished") { events.push(`${e.status}:${e.text}`); resolve(); }
+      if (e.type === "run.log" && e.line.startsWith("[mcbot]")) events.push("retry");
+    }));
+    const runner = new Runner({ store, root: join(dir, "root"), managedRoot: false, findHermes: async () => ({ path: fake, shell: false, kind: "external" as const }) });
+    await runner.start({ boardId: "b", agentNodeId: "a", profile: "assistant", prompt: "what is 2+2", toolNodes: [], models: [] });
+    await done;
+    expect(events).toEqual(["retry", "succeeded:4"]);
+    expect(readFileSync(count, "utf8").trim()).toBe("2");
+  }, 15_000);
+});

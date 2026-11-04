@@ -37,8 +37,11 @@ export interface RunnerOptions {
   secrets?: () => Promise<Record<string, string>>;
 }
 
+/** The gateway was booting or shutting down when the client connected (hermes_cli/gateway_chat.py). */
+const GATEWAY_NOT_READY = /Gateway (starting|draining)/i;
+
 export class Runner {
-  private readonly active = new Map<string, { child: ChildProcess | null; profile: string }>();
+  private readonly active = new Map<string, { child: ChildProcess | null; profile: string; cancelled?: boolean }>();
   private gatewayStale = false;
   private gatewayRestart: Promise<void> | null = null;
 
@@ -60,6 +63,7 @@ export class Runner {
   cancel(runId: string): boolean {
     const run = this.active.get(runId);
     if (!run?.child) return false;
+    run.cancelled = true;
     run.child.kill(process.platform === "win32" ? undefined : "SIGINT");
     return true;
   }
@@ -91,28 +95,34 @@ export class Runner {
   private async execute(runId: string, req: StartRun, argv: string[], cwd: string, found: HermesBinary | null): Promise<void> {
     const { store, root } = this.opts;
     const started = Date.now();
-    const bin = found && (await prepareHermes(found, root));
+    const bin = found && (await prepareHermes(found, root, (line) => store.emit(runId, { type: "run.log", stream: "stderr", line })));
     if (!bin) {
       store.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: 0, sessionId: null, error: "Hermes not found: install it or set MCBOT_HERMES_BIN" });
       return;
     }
     await this.refreshGateway(runId, bin);
 
-    const mapper = new StreamMapper(req.toolNodes);
     const stderrTail: string[] = [];
     let sessionId: string | null = null;
-
     const env = hermesEnv(root, { ...process.env, ...((await this.opts.secrets?.().catch(() => ({}))) ?? {}) });
-    const exit = await new Promise<{ code: number | null; signal: string | null; error?: Error }>((resolve) => {
+
+    /** One Hermes process. A first attempt holds back "the gateway is still starting" so it can be retried. */
+    const attempt = (retryable: boolean) => new Promise<{ exit: { code: number | null; signal: string | null; error?: Error }; mapper: StreamMapper; held: boolean }>((resolve) => {
+      const mapper = new StreamMapper(req.toolNodes);
+      let held = false;
       const cmd = hermesCommand(bin, argv, env);
       const child = spawn(cmd.file, cmd.args, { cwd, env: cmd.env, shell: bin.shell, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
       const entry = this.active.get(runId);
       if (entry) entry.child = child;
-      child.on("error", (error) => resolve({ code: null, signal: null, error }));
-      child.on("close", (code, signal) => resolve({ code, signal }));
+      child.on("error", (error) => resolve({ exit: { code: null, signal: null, error }, mapper, held }));
+      child.on("close", (code, signal) => resolve({ exit: { code, signal }, mapper, held }));
 
       createInterface({ input: child.stdout! }).on("line", (line) => {
         for (const e of mapper.feed(line)) {
+          if (retryable && e.type === "run.finished" && e.status === "failed" && GATEWAY_NOT_READY.test(e.error ?? "")) {
+            held = true;
+            continue;
+          }
           if (e.type === "run.session") sessionId = e.sessionId;
           if (e.type === "run.finished" && e.sessionId) sessionId = e.sessionId;
           store.emit(runId, e);
@@ -126,6 +136,14 @@ export class Runner {
       child.stdin!.on("error", () => undefined);
       child.stdin!.end(req.prompt);
     });
+
+    // A new Hermes home's gateway can take longer to boot than the client waits ("Gateway starting:
+    // deadline"); by then it is up, so one more attempt answers.
+    let { exit, mapper, held } = await attempt(true);
+    if (held && !this.active.get(runId)?.cancelled) {
+      store.emit(runId, { type: "run.log", stream: "stderr", line: "[mcbot] Hermes' gateway was still starting; trying again" });
+      ({ exit, mapper } = await attempt(false));
+    }
 
     if (exit.error) {
       store.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: Date.now() - started, sessionId: null, error: `could not start hermes: ${exit.error.message}` });

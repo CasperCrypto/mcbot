@@ -155,7 +155,8 @@ h2 { margin: 10px 0 0; font-size: clamp(30px, 4.4vw, 46px); line-height: 1.06; l
 .soon { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--warn); background: rgba(255, 179, 92, 0.12); width: fit-content; }
 .mobile { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .mobile .os { grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; }
-.dl-note { margin-top: 16px; color: var(--text-3); font-size: 13.5px; }
+.dl-note { margin-top: 16px; color: var(--text-3); font-size: 13.5px; max-width: 760px; line-height: 1.6; }
+.dl-note b { color: var(--text-2); font-weight: 600; }
 .dl-note a { color: var(--text-2); border-bottom: 1px solid var(--line-2); }
 
 /* closing */
@@ -349,7 +350,7 @@ footer .spacer { flex: 1; }
         <span class="soon">Later</span>
       </div>
     </div>
-    <p class="dl-note" data-dl-note>All releases on <a href="https://github.com/CasperCrypto/mcbot/releases" data-gh-releases>GitHub</a>.</p>
+    <p class="dl-note" data-dl-note>Free and open source, not signed yet, so your computer asks once. <b>macOS:</b> open McBot, then System Settings → Privacy &amp; Security → Open Anyway. <b>Windows:</b> More info → Run anyway. The first launch prepares Hermes in a few minutes. All releases on <a href="https://github.com/CasperCrypto/mcbot/releases" data-gh-releases>GitHub</a>.</p>
   </section>
 
   <div class="wrap">

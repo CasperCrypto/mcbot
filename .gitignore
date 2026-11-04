@@ -6,3 +6,6 @@ src-tauri/gen/
 .DS_Store
 .mcbot-dev/
 dist-demo/
+dist-engine/
+dist-hermes/
+src-tauri/binaries/

@@ -55,7 +55,8 @@ Change them additively; a breaking change bumps the version.
 ## Runtime invariants
 
 - Agents run as `HERMES_HOME=<root> hermes -p <agent> chat --query-file - --oneshot --format stream-json`,
-  cwd `<profile>/workspace`, prompt on stdin. No `--source` (Hermes rejects unknown sources).
+  cwd `<profile>/workspace`, prompt on stdin. McBot's own Hermes adds `--source mcbot`;
+  an external one gets no `--source` (upstream rejects unknown sources).
 - `hermes chat` auto-starts one gateway per root; it discovers MCP servers only
   at boot. After a compile changes a config.yaml, the engine stops it and
   **waits for the process to exit** before the next run — only for McBot's own
@@ -71,17 +72,42 @@ Change them additively; a breaking change bumps the version.
   carry the variable's name. The engine never returns a key's value. Saving a
   key restarts McBot's own gateway. (OS keychain in M6.)
 - McBot runs **its own Hermes** (`hermes/`, our fork) unless `MCBOT_HERMES_BIN` names
-  another: through Hermes' runner (`scripts/run-in-hermes-env`), tools in
-  `hermes/.hermes-runtime` (`npm run hermes:setup`), activated once per Hermes
-  home and reused (`prepareHermes`). Its runs carry `--source mcbot`; an external
-  Hermes gets no `--source`. Runs never set `HERMES_MANAGED` (a managed install
-  stops creating its home's folders); `npm run hermes` does, so `hermes update`
-  says updates come with McBot. Changes inside `hermes/` are listed in
-  `hermes/MCBOT.md`; upstream releases come in with `npm run hermes:sync`.
+  another: Hermes' own Python from its tool store (`HERMES_RUNTIME_DIR`, default
+  `hermes/.hermes-runtime`) running the `hermes` launcher, with the environment
+  `python -m pm.environments --format json` gives for that Hermes home, composed
+  once per home and reused (`prepareHermes`). A home without Hermes' dependencies
+  gets `setup-hermes.sh --runtime-only` (`setup-hermes.ps1 -RuntimeOnly` on Windows)
+  first. No bash needed, so Windows works the same way. Its runs carry
+  `--source mcbot`; an external Hermes gets no `--source`. A run that meets
+  "Gateway starting/draining" is retried once (a new home's gateway boots slowly).
+  Runs never set `HERMES_MANAGED` (a managed install stops creating its home's
+  folders); `npm run hermes` does, so `hermes update` says updates come with McBot.
+  Changes inside `hermes/` are listed in `hermes/MCBOT.md`; upstream releases come
+  in with `npm run hermes:sync`, which also lists upstream files Hermes'
+  `.gitignore` hides (add them with `git add -f`).
 - First launch runs the setup assistant (`src/app/setup/`): its answers go into
   every agent's SOUL.md and their USER.md memory; `<workspace>/setup.json`
   records that it ran. Local model servers are found by asking the usual
   addresses for `/v1/models` (Ollama :11434, LM Studio :1234).
+
+## The installed app
+
+- One download: the Tauri shell, `mcbot-engine` (the engine as a Node single
+  executable, `scripts/build-engine.mjs`, Tauri `externalBin`) and Hermes as a
+  resource (`scripts/stage-hermes.mjs`: only git-tracked files of `hermes/`).
+  `tauri build` runs all three (`beforeBuildCommand`).
+- In release builds the shell starts the engine with `MCBOT_HERMES_BUNDLE` and
+  `MCBOT_DATA_DIR` and kills it on quit; `tauri dev` runs `npm run dev` instead.
+  The engine copies the read-only Hermes to `<data>/hermes-<stamp>`
+  (`engine/bundle.ts`) and keeps tools in `<data>/hermes-runtime`; its log is
+  `<data>/engine.log`. First launch: the setup assistant prepares Hermes in the
+  background (`POST /api/hermes/prepare`), minutes, with progress.
+- The engine must stay bundleable as CommonJS: no top-level `await`, and guard
+  every `import.meta` (it is empty in the bundle).
+- Unsigned on purpose (free and open source): macOS ad-hoc (`signingIdentity: "-"`),
+  Windows unsigned. `.github/workflows/release.yml` builds draft releases from
+  `v*` tags for macOS (arm64, x64), Windows and Linux; the website explains the
+  one-time "Open Anyway" / "Run anyway".
 
 ## Shared board
 
@@ -143,6 +169,7 @@ npm run build:demo browser-only demo in dist-demo/ (in-page engine, simulated ru
 npm run hermes:setup   prepare McBot's own Hermes (once, and after a Hermes update)
 npm run hermes -- …    McBot's Hermes in a terminal, on McBot's agents (HERMES_HOME=~/McBot/hermes)
 npm run hermes:sync -- <hermes-agent checkout> [ref]   merge an upstream Hermes release into hermes/
+npx tauri build    the installer for this computer (engine + Hermes inside; unsigned)
 MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
 ```
 

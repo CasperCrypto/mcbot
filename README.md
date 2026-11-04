@@ -45,7 +45,16 @@ same board, live, with everyone's cursor.
 | **Compile** | **⌘K** |
 | ![Compile](docs/screenshots/compile.png) | ![Command palette](docs/screenshots/palette.png) |
 
-## Quick start
+## Install
+
+Download McBot for macOS, Windows or Linux from the
+[releases](https://github.com/CasperCrypto/mcbot/releases). Everything is inside:
+the first launch prepares Hermes by itself (a few minutes, needs internet) and
+walks you through setup. McBot is free and not signed, so your computer asks
+once: on **macOS** open it, then System Settings → Privacy & Security → Open
+Anyway; on **Windows** choose More info → Run anyway.
+
+## Quick start (from source)
 
 Requirements: Node 22.13+ and bash (macOS, Linux, or Git Bash on Windows). For
 the desktop shell, Rust and the [Tauri 2 prerequisites](https://v2.tauri.app/start/prerequisites/).
@@ -74,6 +83,14 @@ Compiled agents are ordinary Hermes profiles; run them without McBot too:
 ```bash
 npm run hermes -- -p triage     # McBot's own Hermes on McBot's agents
 ```
+
+## Building the installers
+
+`npx tauri build` makes the installer for the computer it runs on: it builds the
+UI, the engine as one program (`scripts/build-engine.mjs`) and a clean copy of
+`hermes/` (`scripts/stage-hermes.mjs`), then bundles them. Pushing a `v*` tag
+runs `.github/workflows/release.yml`, which builds macOS (Apple silicon and
+Intel), Windows and Linux installers into a draft GitHub release.
 
 ## Website and browser demo
 

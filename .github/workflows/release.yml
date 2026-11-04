@@ -1,0 +1,63 @@
+# Installers for macOS (Apple silicon and Intel), Windows and Linux, attached to a draft
+# GitHub release. Push a tag like v0.1.0 (or run it by hand), check the draft, publish it:
+# the website's download buttons pick up the newest published release.
+#
+# Unsigned on purpose (free and open source): macOS asks once (System Settings → Privacy &
+# Security → Open Anyway), Windows SmartScreen asks once (More info → Run anyway).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - name: Linux build dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - run: npm ci
+      # tauri build runs beforeBuildCommand: the UI, the engine for this target, and the Hermes it ships.
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: --target ${{ matrix.target }}
+          tagName: v__VERSION__
+          releaseName: McBot v__VERSION__
+          releaseBody: |
+            McBot v__VERSION__. Download the file for your computer below.
+            First launch prepares Hermes (a few minutes, needs internet).
+            Not signed yet: on macOS open it once, then System Settings → Privacy & Security → Open Anyway; on Windows choose More info → Run anyway.
+          releaseDraft: true
+          prerelease: false

@@ -59,6 +59,7 @@ const http = {
   setSecret: (name: string, value: string) => call<{ names: string[] }>("POST", "/api/secrets", { name, value }),
   hermes: () => call<HermesInfo>("GET", "/api/hermes"),
   restartGateway: () => call<HermesInfo>("POST", "/api/hermes/gateway/restart", {}),
+  prepareHermes: () => call<HermesInfo>("POST", "/api/hermes/prepare", {}),
 };
 
 export const engine: typeof http = DEMO ? demoEngine : http;

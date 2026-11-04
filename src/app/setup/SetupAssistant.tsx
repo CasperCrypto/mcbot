@@ -56,10 +56,25 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
   const index = STEPS.indexOf(step);
   const go = (s: Step) => setStep(s);
 
+  // McBot's own Hermes prepares itself in the background from the first screen (minutes on first launch).
+  const prep = useRef<Promise<boolean> | null>(null);
+  const [prepLine, setPrepLine] = useState<string | null>(null);
+  const prepareHermes = () => (prep.current ??= (async () => {
+    let info = await engine.prepareHermes().catch(() => null);
+    while (info?.setup.state === "running") {
+      setPrepLine(info.setup.lines.at(-1) ?? null);
+      await pause(1000);
+      info = await engine.hermes().catch(() => info);
+    }
+    setPrepLine(info?.setup.lines.at(-1) ?? null);
+    return info?.setup.state === "done";
+  })());
+
   const runDetect = async () => {
     setDetect(null);
     const d = await engine.setupDetect().catch(() => ({ hermes: { found: false, path: null }, local: [], secrets: [] }) as SetupDetect);
     setDetect(d);
+    if (!d.hermes.found && d.hermes.source) void prepareHermes();
     if (!local && d.local[0]?.models[0]) {
       const server = d.local[0];
       setLocal({ server, model: server.models.find((m) => /qwen|llama|gemma|mistral/i.test(m)) ?? server.models[0]! });
@@ -101,8 +116,10 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
     setFailed(null);
     const workspace = health?.workspace ?? "~/McBot";
     const hermesOk = !!detect?.hermes.found;
+    const preparing = !hermesOk && !!detect?.hermes.source;
     const plan: Row[] = [
-      { label: hermesOk ? (detect?.hermes.kind === "bundled" ? "Hermes is built in" : "Hermes is ready") : "Hermes isn't set up yet", status: hermesOk ? "ok" : "warn" },
+      preparing ? { label: "Preparing Hermes", status: "busy", detail: "first launch, a few minutes" }
+        : { label: hermesOk ? (detect?.hermes.kind === "bundled" ? "Hermes is built in" : "Hermes is ready") : "Hermes isn't set up yet", status: hermesOk ? "ok" : "warn" },
       { label: "Building your board", status: "wait" },
       { label: "Writing your agents", status: withModels.length ? "wait" : "warn", detail: withModels.length ? undefined : "Add a model on the board, then compile" },
       { label: "Telling them who you are", status: withModels.length ? "wait" : "warn" },
@@ -111,6 +128,11 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
     const set = (i: number, patch: Partial<Row>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)));
     try {
       if (profile.name.trim() && profile.name.trim() !== identity.name) setIdentity({ ...identity, name: profile.name.trim() });
+      if (preparing) {
+        const ok = await prepareHermes();
+        set(0, ok ? { label: "Hermes is built in", status: "ok", detail: undefined } : { label: "Hermes couldn't be prepared", status: "warn", detail: "McBot tries again on the first run" });
+        if (ok) setDetect((d) => (d ? { ...d, hermes: { ...d.hermes, found: true, kind: "bundled" } } : d));
+      }
       set(1, { status: "busy" });
       const graph = buildTeam(profile, picks, withModels, workspace);
       const board = await engine.setupBoard(boardName(profile), graph);
@@ -295,11 +317,13 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
                 <li key={r.label} data-status={r.status}>
                   <span className="mark">{r.status === "busy" ? <LoaderCircle size={15} className="spin-icon" /> : r.status === "ok" ? <Check size={15} strokeWidth={3} /> : r.status === "wait" ? null : <TriangleAlert size={14} />}</span>
                   <span className="grow">{r.label}</span>
-                  {r.detail && <small className="mono">{r.detail}</small>}
+                  {(r.status === "busy" && r.label === "Preparing Hermes" && prepLine ? prepLine : r.detail) && (
+                    <small className="mono ellipsis" style={{ maxWidth: 260 }}>{r.status === "busy" && r.label === "Preparing Hermes" && prepLine ? prepLine : r.detail}</small>
+                  )}
                 </li>
               ))}
             </ul>
-            {!detect?.hermes.found && <InstallHermes />}
+            {!detect?.hermes.found && !detect?.hermes.source && <InstallHermes />}
             {failed && <p className="setup-note fail-text">{failed}</p>}
           </>
         )}

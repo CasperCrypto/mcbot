@@ -475,7 +475,10 @@ async function load(): Promise<void> {
 /** The fork's real upstream record; the gateway itself is simulated (no Hermes runs in a browser). */
 function demoHermes(): HermesInfo {
   const running = Object.values(state.runs).some((e) => !e.some((x) => x.type === "run.finished"));
-  return { kind: "bundled", path: "simulated in this browser", upstream: { url: upstream.upstream, commit: upstream.commit, date: upstream.date }, root: ROOT, managedRoot: true, gateway: { running, pid: null } };
+  return {
+    kind: "bundled", path: "simulated in this browser", upstream: { url: upstream.upstream, commit: upstream.commit, date: upstream.date },
+    root: ROOT, managedRoot: true, gateway: { running, pid: null }, source: true, setup: { state: "done", lines: [] },
+  };
 }
 
 /** Forget everything this browser stored for the demo. */
@@ -496,6 +499,7 @@ const api = <A extends unknown[], R>(f: (...a: A) => R | Promise<R>) => async (.
 export const demoEngine = {
   health: api((): Health => ({ ok: true, version: "0.1.0", workspace: WORKSPACE, hermesHome: ROOT, managedRoot: true, hermes: { found: true, path: "simulated in this browser", kind: "bundled" } })),
   hermes: api((): HermesInfo => demoHermes()),
+  prepareHermes: api((): HermesInfo => demoHermes()),
   restartGateway: api(async (): Promise<HermesInfo> => {
     await sleep(600);
     return demoHermes();

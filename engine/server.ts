@@ -17,7 +17,7 @@ import type { Graph, ModelNode } from "../src/contracts/graph";
 import { buildCostReport } from "./cost";
 import { atomicWrite, readTextOrNull, resolveInside, toPosix } from "./fsutil";
 import { FolderError, Folders } from "./folders";
-import { BUNDLED_HERMES_DIR, bundledUpstream, findHermes, gatewayStatus, stopGateway } from "./hermes";
+import { bundledHermes, bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, runHermesSetup, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
 import { BOARD_ID_RE, BoardRelay, LooseGraph } from "./relay";
 import { Runner } from "./runner";
@@ -82,6 +82,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   const relay = new BoardRelay(join(cfg.workspace, "boards"));
   const store = new RunStore(join(cfg.workspace, "runs"));
   const secrets = new Secrets(join(cfg.workspace, "secrets.json"));
+  let setupJob: HermesInfo["setup"] = { state: "idle", lines: [] };
   const setup = new SetupStore(join(cfg.workspace, "setup.json"));
   const runner = new Runner({ store, root: cfg.hermesHome, managedRoot: cfg.managedRoot, findHermes: () => findHermes(), secrets: () => secrets.env() });
   const folders = new Folders(cfg.workspace, cfg.hermesHome);
@@ -110,6 +111,26 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
 
     // ---- the Hermes runtime ----
     "GET /api/hermes": async (): Promise<HermesInfo> => hermesInfo(),
+    /** Prepare McBot's own Hermes (first launch): tools and dependencies, minutes, progress in GET /api/hermes. */
+    "POST /api/hermes/prepare": async (): Promise<HermesInfo> => {
+      const src = bundledSource();
+      if (!src) throw new HttpError(404, "This McBot has no Hermes of its own");
+      if (setupJob.state !== "running") {
+        setupJob = { state: "running", lines: [] };
+        const push = (line: string) => {
+          setupJob.lines.push(line);
+          if (setupJob.lines.length > 200) setupJob.lines.splice(0, setupJob.lines.length - 200);
+        };
+        void (async () => {
+          const ok = await runHermesSetup(src, cfg.hermesHome, push);
+          const bin = ok ? bundledHermes() : null;
+          const ready = bin && (await prepareHermes(bin, cfg.hermesHome, push));
+          setupJob.state = ready && ready.env?.PYTHONPATH ? "done" : "failed";
+          push(setupJob.state === "done" ? "Hermes is ready" : "Hermes could not be prepared");
+        })();
+      }
+      return hermesInfo();
+    },
     /** Stop McBot's own gateway; the next run starts a fresh one (picks up new keys and MCP servers). */
     "POST /api/hermes/gateway/restart": async (): Promise<HermesInfo> => {
       const bin = await findHermes();
@@ -122,7 +143,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     "GET /api/setup": async (): Promise<SetupState> => setup.get(),
     "GET /api/setup/detect": async (): Promise<SetupDetect> => {
       const [bin, local, names] = await Promise.all([findHermes(), detectLocal(), secrets.names()]);
-      return { hermes: { found: !!bin, path: bin?.path ?? null, kind: bin?.kind ?? null }, local, secrets: names };
+      return { hermes: { found: !!bin, path: bin?.path ?? null, kind: bin?.kind ?? null, source: !!bundledSource() }, local, secrets: names };
     },
     "POST /api/setup/models": async (req) => {
       const body = parse(z.object({ baseUrl: z.string().url(), keyName: z.string().optional() }), await json(req));
@@ -269,13 +290,16 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
 
   async function hermesInfo(): Promise<HermesInfo> {
     const bin = await findHermes();
+    const src = bundledSource();
     return {
       kind: bin?.kind ?? null,
-      path: bin?.kind === "bundled" ? BUNDLED_HERMES_DIR : bin?.path ?? null,
-      upstream: bin?.kind === "bundled" ? await bundledUpstream() : null,
+      path: bin?.kind === "bundled" ? src?.dir ?? null : bin?.path ?? null,
+      upstream: src ? await bundledUpstream() : null,
       root: cfg.hermesHome,
       managedRoot: cfg.managedRoot,
       gateway: await gatewayStatus(cfg.hermesHome),
+      source: !!src,
+      setup: { state: setupJob.state, lines: setupJob.lines.slice(-30) },
     };
   }
 

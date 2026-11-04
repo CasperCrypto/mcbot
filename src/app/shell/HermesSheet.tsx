@@ -45,10 +45,22 @@ export function HermesSheet() {
           <span className="hermes-mark" aria-hidden>☤</span>
           <div className="grow">
             <h2>Hermes</h2>
-            <small>{!info ? "…" : bundled ? "Built into McBot" : info.kind === "external" ? "Installed separately" : "Not found"}</small>
+            <small>{!info ? "…" : bundled ? "Built into McBot" : info.kind === "external" ? "Installed separately" : info.source ? "Built into McBot · not prepared yet" : "Not found"}</small>
           </div>
           <button className="icon-btn" aria-label="Close" onClick={() => setOpen(false)}><X size={15} /></button>
         </header>
+        {info && !info.kind && info.source && (
+          <div className="hermes-prepare">
+            {info.setup.state === "running" ? (
+              <><LoaderCircle size={14} className="spin-icon" /><span className="mono ellipsis grow">{info.setup.lines.at(-1) ?? "Starting…"}</span></>
+            ) : (
+              <>
+                <span className="grow">{info.setup.state === "failed" ? "Preparing failed. Check your connection and try again." : "Hermes needs its tools once (a few minutes)."}</span>
+                <button className="btn primary sm" data-testid="hermes-prepare" onClick={async () => setInfo(await engine.prepareHermes().catch(() => info))}>Prepare</button>
+              </>
+            )}
+          </div>
+        )}
         {info && (
           <dl>
             {info.upstream && (

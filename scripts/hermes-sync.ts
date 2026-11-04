@@ -98,9 +98,33 @@ function update(repo: string, ref: string) {
   }
 }
 
+/** Upstream tracks some files its own .gitignore matches (built dashboards, fonts); git skips them unless forced. */
+function reportIgnored() {
+  const tracked = new Set(execFileSync("git", ["-C", ROOT, "ls-files", "hermes"], { maxBuffer: 1 << 28 }).toString().split("\n"));
+  let ignored: string[] = [];
+  try {
+    ignored = execFileSync("git", ["-C", ROOT, "ls-files", "--others", "--ignored", "--exclude-standard", "hermes"], { maxBuffer: 1 << 28 }).toString()
+      .split("\n").filter((p) => p && !tracked.has(p) && !/__pycache__|\.hermes-runtime|\/\.hermes\//.test(p));
+  } catch {
+    return;
+  }
+  const upstream = new Set(files(...lastRecord()).map((p) => `hermes/${p}`));
+  const needed = ignored.filter((p) => upstream.has(p));
+  if (needed.length) console.log(`Upstream tracks ${needed.length} file(s) hermes/.gitignore matches; add them with:\n  git add -f ${needed.join(" ")}`);
+}
+let last: [string, string] | null = null;
+const lastRecord = (): [string, string] => last!;
+
 const args = process.argv.slice(2);
-if (args[0] === "--init" && args[1]) init(resolve(args[1]));
-else if (args[0]) update(resolve(args[0]), args[1] ?? "HEAD");
+if (args[0] === "--init" && args[1]) {
+  init(resolve(args[1]));
+  last = [resolve(args[1]), (JSON.parse(readFileSync(RECORD, "utf8")) as { commit: string }).commit];
+  reportIgnored();
+} else if (args[0]) {
+  update(resolve(args[0]), args[1] ?? "HEAD");
+  last = [resolve(args[0]), (JSON.parse(readFileSync(RECORD, "utf8")) as { commit: string }).commit];
+  reportIgnored();
+}
 else {
   console.error("usage: hermes-sync.ts --init <upstream-checkout> | <upstream-checkout> [ref]");
   process.exitCode = 2;

@@ -57,7 +57,7 @@ Status: ● working today · ◐ started · ○ planned
 
 | | Scope | Done when |
 |---|---|---|
-| **M5** | Setup assistant ●, key vault ●, local model detection ●, Hermes forked into `hermes/` and run by McBot ●; Hermes' Python and the engine inside the app, installers ○ | Someone downloads McBot on a Mac or PC, answers five questions, and talks to a working agent within three minutes, without a terminal |
+| **M5** | Setup assistant ●, key vault ●, local model detection ●, Hermes forked into `hermes/` and run by McBot ●, engine and Hermes inside the app with first-launch preparation ●, unsigned installers from `release.yml` ● (Linux verified here; macOS and Windows need their first CI run) | Someone downloads McBot on a Mac or PC, answers five questions, and talks to a working agent within three minutes, without a terminal |
 | **M6** | Connections hub: providers, MCP catalog, chat apps, keychain | Connecting Slack or a new MCP server takes one screen |
 | **M7** | Workflows: trigger, step, condition and approval nodes; scheduler; history | A weekly report runs itself and waits for a human's OK before sending |
 | **M8** | Copilot and terminal | "Add a researcher that can search our docs" changes the board |
