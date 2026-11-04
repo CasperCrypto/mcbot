@@ -4,7 +4,8 @@ name: Site
 
 on:
   push:
-    branches: [main]
+    # The repository's default branch (and main, if it is ever renamed to that).
+    branches: [main, claude/eloquent-ramanujan-4h1z53]
     paths:
       - "site/**"
       - "src/**"
