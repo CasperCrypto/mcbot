@@ -1,0 +1,55 @@
+{
+  "schema": "mcbot.compile/v1",
+  "graphId": "acme-ops",
+  "profiles": [
+    "researcher",
+    "writer"
+  ],
+  "files": [
+    {
+      "path": "profiles/researcher/.no-bundled-skills",
+      "sha256": "4b119d35f8b55961ffc94e5670b8c91216dfdb2788e46df63405f25bd7e4ff44",
+      "bytes": 168
+    },
+    {
+      "path": "profiles/researcher/SOUL.md",
+      "sha256": "eb8039f538dac6b1f95cef301031a8a8028108ccaf5236c51c1c0f3aae9453e7",
+      "bytes": 52
+    },
+    {
+      "path": "profiles/researcher/config.yaml",
+      "sha256": "2a62ebc106561071aca1d131fe2031294652bfd7c32db835096b4012ffbbcf74",
+      "bytes": 800
+    },
+    {
+      "path": "profiles/researcher/profile.yaml",
+      "sha256": "f4cec9d138cab95c55c30b9c3f23b605a0019bfc3178ff72ef514e12b9e0732a",
+      "bytes": 25
+    },
+    {
+      "path": "profiles/researcher/skills/on-call/SKILL.md",
+      "sha256": "b80c81f31f9a8003ddd0c549e3dc3e50b2449005886e8ebffa92f93d15463c2f",
+      "bytes": 110
+    },
+    {
+      "path": "profiles/researcher/skills/web-brief/SKILL.md",
+      "sha256": "a8017187f6e3f1f498ef5047cbbfbf0b768e358b1a8eed6d537e07af0dc04a60",
+      "bytes": 283
+    },
+    {
+      "path": "profiles/writer/.no-bundled-skills",
+      "sha256": "4b119d35f8b55961ffc94e5670b8c91216dfdb2788e46df63405f25bd7e4ff44",
+      "bytes": 168
+    },
+    {
+      "path": "profiles/writer/SOUL.md",
+      "sha256": "79f2abb53619cfad65c59ae476fa763b6ccb4ae9a3144930d05da385ecd06e70",
+      "bytes": 9
+    },
+    {
+      "path": "profiles/writer/config.yaml",
+      "sha256": "7144619b8472553f84eacfffc4de30d3139ce3b60dd813c9d4115a51f518e5b0",
+      "bytes": 308
+    }
+  ]
+}

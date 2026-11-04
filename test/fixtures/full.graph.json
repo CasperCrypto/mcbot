@@ -1,0 +1,91 @@
+{
+  "schema": "mcbot.graph/v1",
+  "id": "acme-ops",
+  "name": "Acme ops",
+  "nodes": [
+    {
+      "id": "a1",
+      "kind": "agent",
+      "position": { "x": 0, "y": 0 },
+      "data": {
+        "name": "researcher",
+        "displayName": "Researcher",
+        "description": "",
+        "soul": "You are the Acme research agent.\r\nCite every source.   \r\n\r\n\r\n",
+        "skills": [
+          {
+            "name": "web-brief",
+            "description": "Summarize a topic into a one-page brief.",
+            "version": "1.2.0",
+            "author": "Acme Ops",
+            "license": "MIT",
+            "platforms": ["linux", "macos", "windows"],
+            "tags": ["research", "writing"],
+            "body": "# Web brief\n\n1. Search.\n2. Read.\n3. Write the brief."
+          },
+          {
+            "name": "on-call",
+            "description": "Page the on-call human.",
+            "body": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "a2",
+      "kind": "agent",
+      "position": { "x": 0, "y": 300 },
+      "data": { "name": "writer", "skills": [] }
+    },
+    {
+      "id": "m-local",
+      "kind": "model",
+      "position": { "x": -300, "y": 0 },
+      "data": { "name": "local", "endpoint": "local", "baseUrl": "http://127.0.0.1:1234/v1", "model": "on" }
+    },
+    {
+      "id": "m-cloud",
+      "kind": "model",
+      "position": { "x": -300, "y": 200 },
+      "data": {
+        "name": "cloud",
+        "label": "Cloud",
+        "endpoint": "cloud",
+        "baseUrl": "https://api.example.com/v1",
+        "model": "frontier-1",
+        "apiKeyEnv": "EXAMPLE_API_KEY",
+        "pricing": { "inputPerMTok": 3, "outputPerMTok": 15 }
+      }
+    },
+    {
+      "id": "t-search",
+      "kind": "tool",
+      "position": { "x": 300, "y": 0 },
+      "data": {
+        "name": "search",
+        "transport": "http",
+        "url": "https://mcp.example.com/mcp",
+        "headers": { "X-Team": "ops", "Authorization": "Bearer ${env:SEARCH_TOKEN}" }
+      }
+    },
+    {
+      "id": "t-git",
+      "kind": "tool",
+      "position": { "x": 300, "y": 200 },
+      "data": {
+        "name": "git",
+        "transport": "stdio",
+        "command": "uvx",
+        "args": ["mcp-server-git", "--repository", "yes"],
+        "env": { "ZED": "1", "ALPHA": "0755" }
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e2", "source": "a1", "target": "m-local", "order": 1 },
+    { "id": "e1", "source": "m-cloud", "target": "a1", "order": 0 },
+    { "id": "e3", "source": "a1", "target": "t-search" },
+    { "id": "e4", "source": "t-git", "target": "a1" },
+    { "id": "e5", "source": "a2", "target": "m-local" }
+  ]
+}

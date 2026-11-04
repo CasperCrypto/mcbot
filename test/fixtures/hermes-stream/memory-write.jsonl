@@ -1,0 +1,9 @@
+{"type": "system", "subtype": "init", "model": "", "session_id": "", "timestamp": 1793750410949}
+{"type": "tool_use", "name": "memory", "tool_call_id": "call_4", "input": {"action": "add", "target": "memory", "content": "The Acme escalation channel is #acme-urgent"}, "timestamp": 1793750411206}
+{"type": "tool_result", "name": "memory", "tool_call_id": "call_4", "output": "{\"success\": true, \"done\": true, \"target\": \"memory\", \"usage\": \"1% — 43/2,200 chars\", \"entry_count\": 1, \"message\": \"Entry added.\", \"note\": \"Write saved. This update is complete — do not repeat it.\"}", "duration_ms": 16, "is_error": false, "timestamp": 1793750411223}
+{"type": "text", "text": "\n\nSaved to mem", "timestamp": 1793750411244}
+{"type": "text", "text": "ory: The Acm", "timestamp": 1793750411244}
+{"type": "text", "text": "e escalation", "timestamp": 1793750411244}
+{"type": "text", "text": " channel is ", "timestamp": 1793750411244}
+{"type": "text", "text": "#acme-urgent", "timestamp": 1793750411244}
+{"type": "result", "session_id": "local-77429cc69b516d3a556979876610e5e234080cda93c6222399d1024fed3033f7", "exit_code": 0, "text": "Saved to memory: The Acme escalation channel is #acme-urgent", "tokens": {"input": 2637, "output": 38, "total": 2675, "cache_read": 0, "cache_write": 0}, "duration_ms": 352, "timestamp": 1793750411302}

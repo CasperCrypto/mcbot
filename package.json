@@ -1,0 +1,52 @@
+{
+  "name": "mcbot",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Draw a harness of AI agents as a graph; compile it into a real, runnable Hermes Agent setup.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n engine,ui -c blue,magenta \"npm:engine\" \"npm:ui\"",
+    "ui": "vite",
+    "engine": "tsx engine/main.ts",
+    "stub-llm": "tsx test/stub-llm/main.ts",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "tauri": "tauri",
+    "desktop": "tauri dev"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0",
+    "@xyflow/react": "12.12.1",
+    "diff": "9.0.0",
+    "lib0": "0.2.119",
+    "lucide-react": "1.67.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "ws": "8.22.1",
+    "y-protocols": "1.0.7",
+    "y-websocket": "3.1.0",
+    "yaml": "2.9.1",
+    "yjs": "13.6.33",
+    "zod": "4.6.7",
+    "zustand": "5.0.16"
+  },
+  "devDependencies": {
+    "@tauri-apps/api": "2.12.4",
+    "@tauri-apps/cli": "2.12.4",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/ws": "8.18.2",
+    "@vitejs/plugin-react": "6.2.1",
+    "concurrently": "10.0.6",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "vitest": "5.1.0"
+  }
+}

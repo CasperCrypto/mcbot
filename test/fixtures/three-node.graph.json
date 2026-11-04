@@ -1,0 +1,52 @@
+{
+  "schema": "mcbot.graph/v1",
+  "id": "acme-support",
+  "name": "Acme support desk",
+  "nodes": [
+    {
+      "id": "n-agent",
+      "kind": "agent",
+      "position": { "x": 0, "y": 0 },
+      "data": {
+        "name": "triage",
+        "displayName": "Triage",
+        "description": "Reads incoming tickets and routes them.",
+        "soul": "",
+        "skills": []
+      }
+    },
+    {
+      "id": "n-model",
+      "kind": "model",
+      "position": { "x": -320, "y": 0 },
+      "data": {
+        "name": "local",
+        "label": "Local",
+        "endpoint": "local",
+        "baseUrl": "http://127.0.0.1:11434/v1",
+        "model": "qwen3:8b",
+        "apiKeyEnv": "",
+        "pricing": null
+      }
+    },
+    {
+      "id": "n-tool",
+      "kind": "tool",
+      "position": { "x": 320, "y": 0 },
+      "data": {
+        "name": "files",
+        "label": "Files",
+        "transport": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"],
+        "env": {},
+        "url": "",
+        "headers": {}
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e-model", "source": "n-agent", "target": "n-model", "order": 0 },
+    { "id": "e-tool", "source": "n-agent", "target": "n-tool", "order": 0 }
+  ]
+}

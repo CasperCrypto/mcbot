@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "model": "", "session_id": "", "timestamp": 1793750038696}
+{"type": "text", "text": "4", "timestamp": 1793750040672}
+{"type": "result", "session_id": "local-981afbe5fc81df375cab076a59dd34ba5255a8d7c386dd1ebeb47f97e0f0447d", "exit_code": 0, "text": "4", "tokens": {"input": 1245, "output": 1, "total": 1246, "cache_read": 0, "cache_write": 0}, "duration_ms": 2084, "timestamp": 1793750040781}
