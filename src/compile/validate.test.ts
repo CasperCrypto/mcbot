@@ -25,7 +25,11 @@ describe("resolveGraph", () => {
     expect(messages(graph([agent("a", "default"), model("m", "local")], [{ id: "e", source: "a", target: "m" }]))).toContain(
       'error: "default" is reserved by Hermes and cannot be a profile name',
     );
-    expect(messages(graph([agent("a", "Bad Name")]))[0]).toMatch(/^error: nodes\.0\.data\.name/);
+    expect(messages(graph([agent("a", "Bad Name")]))[0]).toMatch(/^error: Agent "Bad Name": ID: lowercase profile id/);
+    // A half-filled node is an error, but the rest of the board still resolves for the views.
+    const half = resolveGraph(graph([agent("a", "bot"), model("m", "local"), model("c", "cloud", { endpoint: "cloud", model: "" })], [{ id: "e", source: "m", target: "a" }]));
+    expect(half.issues.find((i) => i.nodeId === "c")?.message).toBe('Model "cloud": Model is required');
+    expect(half.bundles.map((b) => [b.agent.data.name, b.models.map((m) => m.data.name)])).toEqual([["bot", ["local"]]]);
     expect(messages(graph([agent("a", "bot")]))).toContain('error: Agent "bot" has no model; wire a model node to it');
     expect(messages(graph([agent("a", "bot"), model("m", "c", { endpoint: "cloud", baseUrl: "https://x/v1" })], [{ id: "e", source: "a", target: "m" }]))).toContain(
       'error: Cloud model "c" needs the name of the env var that holds its API key',

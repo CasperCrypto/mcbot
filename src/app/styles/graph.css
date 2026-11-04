@@ -153,3 +153,6 @@
 .graph-area.with-panel { right: 440px; }
 .code { margin: 0; font-family: var(--mono); font-size: 11.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; color: var(--text-2); }
 .inspector.glass, .side-panel.glass, .sheet.glass { background: var(--bg-panel); }
+.key-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.key-entry .btn { height: 34px; }
+.key-saved { min-height: 34px; padding: 0 4px 0 10px; border-radius: var(--r-sm); background: var(--ok-soft); font-size: 12.5px; }

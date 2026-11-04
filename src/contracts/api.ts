@@ -27,6 +27,8 @@ export interface HermesInfo {
   gateway: { running: boolean; pid: number | null };
   /** McBot's own Hermes is present (hermes/), whether or not it is prepared yet. */
   source: boolean;
+  /** Running from the installed app (not from source): there is no `npm run hermes`. */
+  installed: boolean;
   /** Preparing McBot's own Hermes (first launch): its tools and dependencies. */
   setup: { state: "idle" | "running" | "done" | "failed"; lines: string[] };
 }

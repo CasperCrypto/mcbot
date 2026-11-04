@@ -1,5 +1,5 @@
-import { ArrowUp, Cloud, HardDrive, MessagesSquare, Plug, Plus, Square, Trash2, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArrowUp, Check, Cloud, HardDrive, MessagesSquare, Plug, Plus, Square, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { removeNodes, setNodeField, updateEdge } from "../../board/ydoc";
 import type { Issue } from "../../compile";
 import { AgentDataSchema, ModelDataSchema, ToolDataSchema, type AgentData, type GraphNode, type ModelData, type Skill, type ToolData } from "../../contracts/graph";
@@ -202,13 +202,60 @@ function ModelFields({ data, set }: { data: ModelData; set: (f: string, v: unkno
       <Segmented value={data.endpoint} onChange={(v) => set("endpoint", v)} options={[{ value: "local", label: "Local" }, { value: "cloud", label: "Cloud" }]} />
       <Field label="Endpoint" value={data.baseUrl} onChange={(v) => set("baseUrl", v)} mono error={errors.baseUrl} />
       <Field label="Model" value={data.model} onChange={(v) => set("model", v)} mono error={errors.model ? "Required" : null} />
-      <Field label="API key variable" value={data.apiKeyEnv} onChange={(v) => set("apiKeyEnv", v)} mono error={errors.apiKeyEnv} placeholder={data.endpoint === "cloud" ? "OPENROUTER_API_KEY" : "optional"} note="Only the name is stored, never the key." />
-      <Field label="Key" value={data.name} onChange={(v) => set("name", v)} mono error={errors.name} />
+      {data.endpoint === "cloud" && <ApiKey data={data} set={set} error={errors.apiKeyEnv} />}
+      <Field label="ID" value={data.name} onChange={(v) => set("name", v)} mono error={errors.name} />
       <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <Field label="$ / 1M in" type="number" value={price ? String(price.inputPerMTok) : ""} onChange={(v) => setPrice("inputPerMTok", v)} />
         <Field label="$ / 1M out" type="number" value={price ? String(price.outputPerMTok) : ""} onChange={(v) => setPrice("outputPerMTok", v)} />
       </div>
     </>
+  );
+}
+
+/** The variable a cloud key is saved under: the usual one for known services, else one per model node. */
+const keyNameFor = (d: ModelData) =>
+  /openrouter\.ai/i.test(d.baseUrl) ? "OPENROUTER_API_KEY" : /api\.openai\.com/i.test(d.baseUrl) ? "OPENAI_API_KEY"
+    : `MCBOT_${d.name.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_API_KEY`;
+
+/** A cloud model's key: typed once, kept on this computer by the engine, never on the board. */
+function ApiKey({ data, set, error }: { data: ModelData; set: (f: string, v: unknown) => void; error?: string }) {
+  const [saved, setSaved] = useState<string[] | null>(null);
+  const [value, setValue] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  useEffect(() => {
+    engine.secrets().then((r) => setSaved(r.names)).catch(() => setSaved([]));
+  }, []);
+  const name = data.apiKeyEnv || keyNameFor(data);
+  const has = !!data.apiKeyEnv && !!saved?.includes(data.apiKeyEnv);
+  const save = async () => {
+    try {
+      const r = await engine.setSecret(name, value);
+      if (data.apiKeyEnv !== name) set("apiKeyEnv", name);
+      setSaved(r.names);
+      setValue("");
+      setEditing(false);
+      setProblem(null);
+    } catch (err) {
+      setProblem((err as Error).message);
+    }
+  };
+  if (has && !editing) {
+    return (
+      <div className="field">
+        <span>API key</span>
+        <div className="row key-saved" data-testid="api-key-saved">
+          <Check size={14} className="ok-text" /><span className="grow" data-tip={`Saved as ${name}`} data-tip-side="top">Saved on this computer</span>
+          <button className="btn ghost sm" onClick={() => setEditing(true)}>Change</button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="key-entry">
+      <Field label="API key" type="password" value={value} onChange={(v) => { setValue(v); setProblem(null); }} placeholder="Paste your key" error={problem ?? error ?? null} testId="api-key" />
+      <button className="btn" disabled={!value.trim()} onClick={() => void save()} data-testid="api-key-save">Save</button>
+    </div>
   );
 }
 

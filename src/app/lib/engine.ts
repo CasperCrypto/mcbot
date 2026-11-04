@@ -57,6 +57,7 @@ const http = {
   setupBoard: (name: string, graph: Graph) => call<BoardInfo>("POST", "/api/setup/board", { name, graph }),
   setupComplete: (profile: SetupProfile | null) => call<SetupState>("POST", "/api/setup/complete", { profile }),
   setSecret: (name: string, value: string) => call<{ names: string[] }>("POST", "/api/secrets", { name, value }),
+  secrets: () => call<{ names: string[] }>("GET", "/api/secrets"),
   hermes: () => call<HermesInfo>("GET", "/api/hermes"),
   restartGateway: () => call<HermesInfo>("POST", "/api/hermes/gateway/restart", {}),
   prepareHermes: () => call<HermesInfo>("POST", "/api/hermes/prepare", {}),

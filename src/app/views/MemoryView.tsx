@@ -111,7 +111,7 @@ export function MemoryView() {
   };
 
   if (agents && !agents.length) {
-    return <section className="main flush-left"><Empty title="No agents yet" action={<button className="btn light" onClick={() => setTab("graph")}>Open graph</button>}>Each agent remembers what it learns. Its memory shows up here as a graph.</Empty></section>;
+    return <section className="main flush-left"><Empty title="No agents yet" action={<button className="btn light" onClick={() => setTab("graph")}>Open graph</button>}>Agents show what they remember here.</Empty></section>;
   }
 
   return (

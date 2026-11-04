@@ -1,5 +1,7 @@
 import {
+  EdgeSchema,
   GraphSchema,
+  NodeSchema,
   RESERVED_PROFILE_NAMES,
   type AgentNode,
   type Graph,
@@ -52,15 +54,50 @@ function duplicates<T>(items: readonly T[], key: (t: T) => string): Map<string, 
  */
 export function resolveGraph(input: unknown): Resolved {
   const parsed = GraphSchema.safeParse(input);
-  if (!parsed.success) {
-    const issues = parsed.error.issues.map<Issue>((i) => ({
-      level: "error",
-      message: `${i.path.join(".") || "graph"}: ${i.message}`,
-    }));
-    return { graph: input as Graph, bundles: [], issues };
+  if (parsed.success) return resolveValid(parsed.data, []);
+  const raw = (input ?? {}) as { nodes?: unknown; edges?: unknown };
+  const nodeAt = (path: PropertyKey[]) => {
+    const n = path[0] === "nodes" && Array.isArray(raw.nodes) ? (raw.nodes[path[1] as number] as { id?: unknown } | undefined) : undefined;
+    return typeof n?.id === "string" ? { nodeId: n.id } : {};
+  };
+  const issues = parsed.error.issues.map<Issue>((i) => ({ level: "error", message: describe(i.path, i.message, raw), ...nodeAt(i.path) }));
+  // One half-filled node must not hide the rest of the board: resolve every node and edge that is
+  // valid on its own, so the views still see the agents and their models. Compile still refuses,
+  // because these issues are errors.
+  const shell = GraphSchema.omit({ nodes: true, edges: true }).safeParse(input);
+  if (!shell.success || !Array.isArray(raw.nodes)) return { graph: input as Graph, bundles: [], issues };
+  const nodes = raw.nodes.flatMap((n) => {
+    const r = NodeSchema.safeParse(n);
+    return r.success ? [r.data] : [];
+  });
+  const ids = new Set(nodes.map((n) => n.id));
+  const edges = (Array.isArray(raw.edges) ? raw.edges : []).flatMap((e) => {
+    const r = EdgeSchema.safeParse(e);
+    return r.success && ids.has(r.data.source) && ids.has(r.data.target) ? [r.data] : [];
+  });
+  return { ...resolveValid({ ...shell.data, nodes, edges }, issues), graph: input as Graph };
+}
+
+const KIND: Record<string, string> = { agent: "Agent", model: "Model", tool: "Tool" };
+const FIELD: Record<string, string> = {
+  name: "ID", displayName: "Name", description: "Description", soul: "Soul", model: "Model", baseUrl: "Endpoint",
+  apiKeyEnv: "API key", label: "Label", command: "Command", url: "URL", transport: "Transport", skills: "Skills",
+};
+
+/** A schema problem in words a person can act on: which node, which field, what is wrong. */
+function describe(path: PropertyKey[], message: string, raw: { nodes?: unknown }): string {
+  const required = /expected string to have >=1|received undefined|^Required$/i.test(message);
+  if (path[0] === "nodes" && typeof path[1] === "number" && Array.isArray(raw.nodes)) {
+    const n = raw.nodes[path[1]] as { id?: unknown; kind?: unknown; data?: Record<string, unknown> } | undefined;
+    const who = [n?.data?.displayName, n?.data?.label, n?.data?.name, n?.id].find((v) => typeof v === "string" && v.trim()) ?? `#${path[1]}`;
+    const field = path[2] === "data" && typeof path[3] === "string" ? FIELD[path[3]] ?? path[3] : null;
+    const what = field ? (required ? `${field} is required` : `${field}: ${message}`) : message;
+    return `${KIND[String(n?.kind)] ?? "Node"} "${String(who)}": ${what}`;
   }
-  const graph = parsed.data;
-  const issues: Issue[] = [];
+  return `${path.join(".") || "graph"}: ${message}`;
+}
+
+function resolveValid(graph: Graph, issues: Issue[]): Resolved {
   const byId = new Map<string, GraphNode>();
 
   for (const [id] of duplicates(graph.nodes, (n) => n.id)) issues.push({ level: "error", nodeId: id, message: `Duplicate node id ${id}` });

@@ -83,7 +83,7 @@ export function HermesSheet() {
               </dd>
             </div>
             <div><dt>Updates</dt><dd>{bundled ? "Arrive with McBot" : "Outside McBot"}</dd></div>
-            <div>
+            {!info.installed && <div>
               <dt>Terminal</dt>
               <dd className="row">
                 <code className="mono grow ellipsis">{cli}</code>
@@ -91,7 +91,7 @@ export function HermesSheet() {
                   void navigator.clipboard?.writeText(cli).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1400); }).catch(() => undefined);
                 }}>{copied ? <Check size={12} /> : <Copy size={12} />}</button>
               </dd>
-            </div>
+            </div>}
           </dl>
         )}
       </section>

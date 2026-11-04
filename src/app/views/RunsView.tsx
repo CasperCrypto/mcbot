@@ -125,7 +125,7 @@ export function RunsView() {
         ))}
       </Sidebar>
       <section className="main">
-        {!run ? <Empty title="No runs yet">Run an agent and every step shows up here as a graph.</Empty> : (
+        {!run ? <Empty title="No runs yet">Each run appears here, step by step.</Empty> : (
           <div className="view">
             <div className="view-head">
               <AgentFace seed={run.profile} size={26} status={run.status} />

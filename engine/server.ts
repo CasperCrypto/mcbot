@@ -15,7 +15,7 @@ import { compile, resolveGraph, type AgentBundle } from "../src/compile";
 import type { AgentMemoryView, BoardInfo, CompileResponse, FsListing, FsPreview, FsRoot, Health, HermesInfo, SetupDetect, SetupState } from "../src/contracts/api";
 import type { Graph, ModelNode } from "../src/contracts/graph";
 import { buildCostReport } from "./cost";
-import { atomicWrite, readTextOrNull, resolveInside, toPosix } from "./fsutil";
+import { atomicWrite } from "./fsutil";
 import { FolderError, Folders } from "./folders";
 import { bundledHermes, bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, runHermesSetup, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
@@ -299,6 +299,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       managedRoot: cfg.managedRoot,
       gateway: await gatewayStatus(cfg.hermesHome),
       source: !!src,
+      installed: !!process.env.MCBOT_HERMES_BUNDLE,
       setup: { state: setupJob.state, lines: setupJob.lines.slice(-30) },
     };
   }

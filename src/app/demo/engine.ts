@@ -477,7 +477,7 @@ function demoHermes(): HermesInfo {
   const running = Object.values(state.runs).some((e) => !e.some((x) => x.type === "run.finished"));
   return {
     kind: "bundled", path: "simulated in this browser", upstream: { url: upstream.upstream, commit: upstream.commit, date: upstream.date },
-    root: ROOT, managedRoot: true, gateway: { running, pid: null }, source: true, setup: { state: "done", lines: [] },
+    root: ROOT, managedRoot: true, gateway: { running, pid: null }, source: true, installed: true, setup: { state: "done", lines: [] },
   };
 }
 
@@ -608,6 +608,7 @@ export const demoEngine = {
     save();
     return state.setup;
   }),
+  secrets: api(() => ({ names: [...secretNames] })),
   setSecret: api((name: string, value: string) => {
     if (!/^[A-Z_][A-Z0-9_]{0,63}$/.test(name) || !value.trim()) throw new EngineError(400, "That key doesn't look right", {});
     secretNames.add(name);
