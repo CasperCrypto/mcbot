@@ -129,6 +129,8 @@
 .gnode.root { padding: 12px 14px 12px 12px; border-radius: var(--r-lg); }
 .gnode.root .label { font-size: 14px; }
 .gnode.note { align-items: flex-start; width: 280px; max-width: 280px; padding: 11px 12px; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; color: var(--text-2); }
+.gnode.more { min-width: 0; padding: 7px 12px; background: transparent; border-style: dashed; box-shadow: none; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; }
+.react-flow__node:hover .gnode.more { color: var(--text); border-color: var(--line-3); }
 .gnode.ok { border-color: rgba(52, 209, 122, 0.35); }
 .gnode.fail { border-color: rgba(255, 95, 87, 0.45); }
 .gnode.live { border-color: rgba(79, 140, 255, 0.55); }
