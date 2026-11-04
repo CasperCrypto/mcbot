@@ -33,6 +33,19 @@ export function newModel(g: Graph, preset: ModelPreset, position: { x: number; y
 export type ToolPreset = "filesystem" | "stdio" | "http";
 
 /**
+ * An Obsidian vault is a folder of Markdown notes, so the vault block is the
+ * filesystem MCP server limited to that folder: connected agents can list, read,
+ * search and write notes there and nowhere else.
+ */
+export function newVault(g: Graph, folder: string, position: { x: number; y: number }): GraphNode {
+  const name = uniqueName("obsidian", namesOf(g, "tool"));
+  return {
+    id: newId("tool"), kind: "tool", position,
+    data: { name, label: "Obsidian", transport: "stdio", command: "npx", args: ["-y", "@modelcontextprotocol/server-filesystem", folder.trim().replace(/[\\/]+$/, "")], env: {}, url: "", headers: {} },
+  };
+}
+
+/**
  * The filesystem preset gets an absolute folder: Hermes' gateway starts MCP
  * servers at boot, so ${workspaceFolder} would resolve to the gateway's
  * directory, not the agent's (observed in the e2e run).

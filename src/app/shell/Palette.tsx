@@ -1,11 +1,11 @@
 import {
-  Bot, Brain, ChartColumnBig, Cloud, CornerDownLeft, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Users, Waypoints, Workflow,
+  BookOpen, Bot, Brain, ChartColumnBig, Cloud, CornerDownLeft, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Users, Waypoints, Workflow,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { addNode } from "../../board/ydoc";
+import { addEdge, addNode } from "../../board/ydoc";
 import type { GraphNode } from "../../contracts/graph";
 import { compileBoard } from "../actions";
-import { newAgent, newModel, newTool } from "../graph/defaults";
+import { newAgent, newId, newModel, newTool, newVault } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { resetDemo } from "../demo/engine";
 import { DEMO, engine } from "../lib/engine";
@@ -52,6 +52,25 @@ function useCommands(close: () => void): Command[] {
       { id: "add-cloud", group: "Create", label: "Cloud model", hint: "Any OpenAI-compatible API", icon: <Cloud size={15} />, run: () => place(newModel(graph, "cloud", at("model"))) },
       { id: "add-files", group: "Create", label: "Files tool", icon: <Plug size={15} />, run: () => place(newTool(graph, "filesystem", at("tool"), app.health?.workspace ?? null)) },
       { id: "add-mcp", group: "Create", label: "MCP server", icon: <Server size={15} />, run: () => place(newTool(graph, "stdio", at("tool"), null)) },
+      {
+        id: "add-vault", group: "Create", label: "Obsidian vault…", hint: "Agents read and write your notes", icon: <BookOpen size={15} />,
+        ask: {
+          placeholder: "/Users/you/Documents/Obsidian Vault",
+          submit: async (folder) => {
+            const vault = newVault(graph, folder, at("tool"));
+            const agent = graph.nodes.find((n) => n.id === app.selectedNodeId && n.kind === "agent");
+            doc.transact(() => {
+              addNode(doc, vault);
+              if (agent) addEdge(doc, { id: newId("edge"), source: agent.id, target: vault.id, order: 0 });
+            });
+            // Also browse it in Files; a folder the engine cannot see is still fine on the board.
+            await engine.openFolder(folder.trim()).catch(() => undefined);
+            app.setTab("graph");
+            app.select(vault.id);
+            close();
+          },
+        },
+      },
       { id: "compile", group: "Actions", label: "Compile", icon: <Hammer size={15} />, keys: ["⌘", "S"], run: () => { close(); void compileBoard(boardId); } },
       {
         id: "open-folder", group: "Actions", label: "Open folder…", hint: "See any folder as a graph", icon: <FolderPlus size={15} />,
