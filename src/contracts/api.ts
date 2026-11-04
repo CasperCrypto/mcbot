@@ -11,7 +11,20 @@ export interface Health {
   hermesHome: string;
   /** True when the output root is McBot's own (so the engine may restart its gateway). */
   managedRoot: boolean;
-  hermes: { found: boolean; path: string | null };
+  hermes: { found: boolean; path: string | null; kind?: "bundled" | "external" | null };
+}
+
+/** The Hermes McBot runs agents with. */
+export interface HermesInfo {
+  /** "bundled": McBot's own copy (hermes/, our fork); "external": an install found elsewhere. */
+  kind: "bundled" | "external" | null;
+  path: string | null;
+  /** hermes/UPSTREAM.json: the upstream release our fork is based on (bundled only). */
+  upstream: { url: string; commit: string; date: string } | null;
+  /** HERMES_HOME of McBot's agents. */
+  root: string;
+  managedRoot: boolean;
+  gateway: { running: boolean; pid: number | null };
 }
 
 export interface BoardInfo {
@@ -160,7 +173,7 @@ export interface LocalServer {
 }
 
 export interface SetupDetect {
-  hermes: { found: boolean; path: string | null };
+  hermes: { found: boolean; path: string | null; kind?: "bundled" | "external" | null };
   local: LocalServer[];
   /** Names of the API keys McBot holds (never the values). */
   secrets: string[];

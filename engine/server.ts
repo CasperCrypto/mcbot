@@ -12,12 +12,12 @@ import { join } from "node:path";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { compile, resolveGraph, type AgentBundle } from "../src/compile";
-import type { AgentMemoryView, BoardInfo, CompileResponse, FsListing, FsPreview, FsRoot, Health, SetupDetect, SetupState } from "../src/contracts/api";
+import type { AgentMemoryView, BoardInfo, CompileResponse, FsListing, FsPreview, FsRoot, Health, HermesInfo, SetupDetect, SetupState } from "../src/contracts/api";
 import type { Graph, ModelNode } from "../src/contracts/graph";
 import { buildCostReport } from "./cost";
 import { atomicWrite, readTextOrNull, resolveInside, toPosix } from "./fsutil";
 import { FolderError, Folders } from "./folders";
-import { findHermes } from "./hermes";
+import { BUNDLED_HERMES_DIR, bundledUpstream, findHermes, gatewayStatus, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
 import { BOARD_ID_RE, BoardRelay, LooseGraph } from "./relay";
 import { Runner } from "./runner";
@@ -103,16 +103,26 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   const routes: Record<string, (req: IncomingMessage, url: URL) => Promise<unknown>> = {
     "GET /api/health": async (): Promise<Health> => {
       const bin = await findHermes();
-      return { ok: true, version: ENGINE_VERSION, workspace: cfg.workspace, hermesHome: cfg.hermesHome, managedRoot: cfg.managedRoot, hermes: { found: !!bin, path: bin?.path ?? null } };
+      return { ok: true, version: ENGINE_VERSION, workspace: cfg.workspace, hermesHome: cfg.hermesHome, managedRoot: cfg.managedRoot, hermes: { found: !!bin, path: bin?.path ?? null, kind: bin?.kind ?? null } };
     },
 
     "GET /api/boards": async (): Promise<BoardInfo[]> => relay.list(),
+
+    // ---- the Hermes runtime ----
+    "GET /api/hermes": async (): Promise<HermesInfo> => hermesInfo(),
+    /** Stop McBot's own gateway; the next run starts a fresh one (picks up new keys and MCP servers). */
+    "POST /api/hermes/gateway/restart": async (): Promise<HermesInfo> => {
+      const bin = await findHermes();
+      if (!cfg.managedRoot) throw new HttpError(409, "This Hermes home is not McBot's own; restart its gateway yourself");
+      if (bin) await stopGateway(bin, cfg.hermesHome);
+      return hermesInfo();
+    },
 
     // ---- setup assistant ----
     "GET /api/setup": async (): Promise<SetupState> => setup.get(),
     "GET /api/setup/detect": async (): Promise<SetupDetect> => {
       const [bin, local, names] = await Promise.all([findHermes(), detectLocal(), secrets.names()]);
-      return { hermes: { found: !!bin, path: bin?.path ?? null }, local, secrets: names };
+      return { hermes: { found: !!bin, path: bin?.path ?? null, kind: bin?.kind ?? null }, local, secrets: names };
     },
     "POST /api/setup/models": async (req) => {
       const body = parse(z.object({ baseUrl: z.string().url(), keyName: z.string().optional() }), await json(req));
@@ -256,6 +266,18 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       return folders.read(dir, url.searchParams.get("path") ?? "");
     },
   };
+
+  async function hermesInfo(): Promise<HermesInfo> {
+    const bin = await findHermes();
+    return {
+      kind: bin?.kind ?? null,
+      path: bin?.kind === "bundled" ? BUNDLED_HERMES_DIR : bin?.path ?? null,
+      upstream: bin?.kind === "bundled" ? await bundledUpstream() : null,
+      root: cfg.hermesHome,
+      managedRoot: cfg.managedRoot,
+      gateway: await gatewayStatus(cfg.hermesHome),
+    };
+  }
 
   async function compileBoard(boardId: string, dryRun: boolean): Promise<CompileResponse> {
     const graph = await relay.graph(boardId);

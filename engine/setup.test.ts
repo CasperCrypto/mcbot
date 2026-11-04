@@ -74,7 +74,7 @@ describe("secrets", () => {
     mkdirSync(join(dir, "root", "profiles", "assistant", "workspace"), { recursive: true });
     const store = new RunStore(join(dir, "runs"));
     const done = new Promise<void>((resolve) => store.subscribe((e) => { if (e.type === "run.finished") resolve(); }));
-    const runner = new Runner({ store, root: join(dir, "root"), managedRoot: false, findHermes: async () => ({ path: fake, shell: false }), secrets: async () => ({ MCBOT_TEST_KEY: "sk-test" }) });
+    const runner = new Runner({ store, root: join(dir, "root"), managedRoot: false, findHermes: async () => ({ path: fake, shell: false, kind: "external" as const }), secrets: async () => ({ MCBOT_TEST_KEY: "sk-test" }) });
     await runner.start({ boardId: "b", agentNodeId: "a", profile: "assistant", prompt: "hi", toolNodes: [], models: [] });
     await done;
     expect(readFileSync(out, "utf8")).toBe(`sk-test|${join(dir, "root")}`);

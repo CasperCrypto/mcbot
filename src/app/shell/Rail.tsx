@@ -21,9 +21,10 @@ export function Rail() {
       ))}
       <div className="rail-foot">
         <button className="rail-btn" onClick={() => setPalette(true)} data-tip="Commands  ⌘K" data-tip-side="right" aria-label="Commands"><Command size={15} /></button>
-        <span className="rail-btn" style={{ width: 38, height: 26 }} data-tip={health ? (health.hermes.found ? "Hermes ready" : "Hermes not found — set MCBOT_HERMES_BIN") : "Engine offline"} data-tip-side="right">
+        <button className="rail-btn" style={{ width: 38, height: 26 }} onClick={() => useApp.getState().setHermesOpen(true)} data-testid="hermes-dot"
+          data-tip={health ? (health.hermes.found ? (health.hermes.kind === "bundled" ? "Hermes (built in)" : "Hermes") : "Hermes not set up: npm run hermes:setup") : "Engine offline"} data-tip-side="right" aria-label="Hermes">
           <span className={`dot ${health ? (health.hermes.found ? "ok" : "warn") : "fail"}`} />
-        </span>
+        </button>
       </div>
     </nav>
   );

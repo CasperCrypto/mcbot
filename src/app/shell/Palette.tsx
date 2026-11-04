@@ -80,6 +80,7 @@ function useCommands(close: () => void): Command[] {
           },
         },
       },
+      { id: "hermes", group: "Actions", label: "Hermes", hint: "Version, gateway, terminal", icon: <span style={{ width: 15, textAlign: "center", fontSize: 14 }}>☤</span>, run: () => app.setHermesOpen(true) },
       { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Sparkles size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: null }); } },
       ...(DEMO ? [{ id: "reset-demo", group: "Actions", label: "Reset demo", hint: "Start over with the sample board", icon: <RotateCcw size={15} />, run: resetDemo }] : []),
       ...VIEWS.map((v, i) => ({ id: `go-${v.tab}`, group: "Go to", label: v.label, icon: v.icon, keys: ["⌘", String(i + 1)], run: () => { app.setTab(v.tab); close(); } })),

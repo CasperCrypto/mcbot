@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, FsListing, FsPreview, FsRoot, Health, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
+import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
@@ -57,6 +57,8 @@ const http = {
   setupBoard: (name: string, graph: Graph) => call<BoardInfo>("POST", "/api/setup/board", { name, graph }),
   setupComplete: (profile: SetupProfile | null) => call<SetupState>("POST", "/api/setup/complete", { profile }),
   setSecret: (name: string, value: string) => call<{ names: string[] }>("POST", "/api/secrets", { name, value }),
+  hermes: () => call<HermesInfo>("GET", "/api/hermes"),
+  restartGateway: () => call<HermesInfo>("POST", "/api/hermes/gateway/restart", {}),
 };
 
 export const engine: typeof http = DEMO ? demoEngine : http;

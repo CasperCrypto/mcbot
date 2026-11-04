@@ -70,6 +70,14 @@ Change them additively; a breaking change bumps the version.
   reach Hermes only as environment variables of a run; boards and compiled files
   carry the variable's name. The engine never returns a key's value. Saving a
   key restarts McBot's own gateway. (OS keychain in M6.)
+- McBot runs **its own Hermes** (`hermes/`, our fork) unless `MCBOT_HERMES_BIN` names
+  another: through Hermes' runner (`scripts/run-in-hermes-env`), tools in
+  `hermes/.hermes-runtime` (`npm run hermes:setup`), activated once per Hermes
+  home and reused (`prepareHermes`). Its runs carry `--source mcbot`; an external
+  Hermes gets no `--source`. Runs never set `HERMES_MANAGED` (a managed install
+  stops creating its home's folders); `npm run hermes` does, so `hermes update`
+  says updates come with McBot. Changes inside `hermes/` are listed in
+  `hermes/MCBOT.md`; upstream releases come in with `npm run hermes:sync`.
 - First launch runs the setup assistant (`src/app/setup/`): its answers go into
   every agent's SOUL.md and their USER.md memory; `<workspace>/setup.json`
   records that it ran. Local model servers are found by asking the usual
@@ -128,10 +136,14 @@ optional team server only, never the desktop app.
 ```
 npm run dev        engine (:4317) + Vite (:5173)
 npm run desktop    the Tauri app (runs `npm run dev` itself)
-npm test           all tests; set MCBOT_HERMES_BIN to include a real Hermes run
+npm test           all tests (MCBOT_E2E=1 or MCBOT_HERMES_BIN adds a real Hermes run)
 npm run typecheck
 npm run stub-llm   deterministic OpenAI-compatible server on :11500 for offline runs
 npm run build:demo browser-only demo in dist-demo/ (in-page engine, simulated runs)
+npm run hermes:setup   prepare McBot's own Hermes (once, and after a Hermes update)
+npm run hermes -- …    McBot's Hermes in a terminal, on McBot's agents (HERMES_HOME=~/McBot/hermes)
+npm run hermes:sync -- <hermes-agent checkout> [ref]   merge an upstream Hermes release into hermes/
+MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
 ```
 
 ## Browser demo and website

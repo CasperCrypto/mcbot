@@ -12,7 +12,8 @@ import type { SessionRow } from "../../../engine/hermesData";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
-import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, FsEntry, FsListing, FsPreview, FsRoot, Health, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
+import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
+import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import type { Graph } from "../../contracts/graph";
 import { RUN_EVENT_VERSION, summarizeRun, type RunEvent, type RunEventInput, type RunSummary } from "../../contracts/run";
@@ -471,6 +472,12 @@ async function load(): Promise<void> {
   save();
 }
 
+/** The fork's real upstream record; the gateway itself is simulated (no Hermes runs in a browser). */
+function demoHermes(): HermesInfo {
+  const running = Object.values(state.runs).some((e) => !e.some((x) => x.type === "run.finished"));
+  return { kind: "bundled", path: "simulated in this browser", upstream: { url: upstream.upstream, commit: upstream.commit, date: upstream.date }, root: ROOT, managedRoot: true, gateway: { running, pid: null } };
+}
+
 /** Forget everything this browser stored for the demo. */
 export function resetDemo(): void {
   try {
@@ -487,7 +494,12 @@ const api = <A extends unknown[], R>(f: (...a: A) => R | Promise<R>) => async (.
 };
 
 export const demoEngine = {
-  health: api((): Health => ({ ok: true, version: "0.1.0", workspace: WORKSPACE, hermesHome: ROOT, managedRoot: true, hermes: { found: true, path: "simulated in this browser" } })),
+  health: api((): Health => ({ ok: true, version: "0.1.0", workspace: WORKSPACE, hermesHome: ROOT, managedRoot: true, hermes: { found: true, path: "simulated in this browser", kind: "bundled" } })),
+  hermes: api((): HermesInfo => demoHermes()),
+  restartGateway: api(async (): Promise<HermesInfo> => {
+    await sleep(600);
+    return demoHermes();
+  }),
   boards: api((): BoardInfo[] => state.boards),
   createBoard: api((name: string): BoardInfo => {
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "board";
@@ -576,7 +588,7 @@ export const demoEngine = {
   setupDetect: api(async (): Promise<SetupDetect> => {
     await sleep(700);
     // Simulated: a browser cannot see what runs on the visitor's computer.
-    return { hermes: { found: true, path: "simulated in this browser" }, local: [{ name: "Ollama", baseUrl: "http://127.0.0.1:11434/v1", models: ["gemma3:4b", "llama3.2:3b", "qwen3:8b"] }], secrets: [...secretNames] };
+    return { hermes: { found: true, path: "simulated in this browser", kind: "bundled" }, local: [{ name: "Ollama", baseUrl: "http://127.0.0.1:11434/v1", models: ["gemma3:4b", "llama3.2:3b", "qwen3:8b"] }], secrets: [...secretNames] };
   }),
   setupModels: api((_baseUrl: string, _keyName?: string) => ({ models: null as string[] | null })),
   setupBoard: api((name: string, graph: Graph): BoardInfo => {

@@ -12,7 +12,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
 import type { ModelNode } from "../src/contracts/graph";
 import { priceSession } from "./cost";
-import { chatArgv, hermesEnv, stopGateway, type HermesBinary } from "./hermes";
+import { chatArgv, hermesCommand, hermesEnv, prepareHermes, stopGateway, type HermesBinary } from "./hermes";
 import { readSession } from "./hermesData";
 import { RunStore, newRunId } from "./runStore";
 import { StreamMapper, type ToolNodeRef } from "./streamJson";
@@ -78,19 +78,20 @@ export class Runner {
   async start(req: StartRun): Promise<string> {
     const { store, root } = this.opts;
     const runId = newRunId();
-    const argv = chatArgv(req.profile);
+    const bin = await this.opts.findHermes();
+    const argv = chatArgv(req.profile, bin ?? undefined);
     const cwd = resolveInside(root, `profiles/${req.profile}/workspace`);
     this.active.set(runId, { child: null, profile: req.profile });
     store.emit(runId, { type: "run.started", boardId: req.boardId, agentNodeId: req.agentNodeId, profile: req.profile, prompt: req.prompt, argv, hermesHome: root, cwd });
 
-    void this.execute(runId, req, argv, cwd).finally(() => this.active.delete(runId));
+    void this.execute(runId, req, argv, cwd, bin).finally(() => this.active.delete(runId));
     return runId;
   }
 
-  private async execute(runId: string, req: StartRun, argv: string[], cwd: string): Promise<void> {
+  private async execute(runId: string, req: StartRun, argv: string[], cwd: string, found: HermesBinary | null): Promise<void> {
     const { store, root } = this.opts;
     const started = Date.now();
-    const bin = await this.opts.findHermes();
+    const bin = found && (await prepareHermes(found, root));
     if (!bin) {
       store.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: 0, sessionId: null, error: "Hermes not found: install it or set MCBOT_HERMES_BIN" });
       return;
@@ -103,7 +104,8 @@ export class Runner {
 
     const env = hermesEnv(root, { ...process.env, ...((await this.opts.secrets?.().catch(() => ({}))) ?? {}) });
     const exit = await new Promise<{ code: number | null; signal: string | null; error?: Error }>((resolve) => {
-      const child = spawn(bin.path, argv, { cwd, env, shell: bin.shell, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+      const cmd = hermesCommand(bin, argv, env);
+      const child = spawn(cmd.file, cmd.args, { cwd, env: cmd.env, shell: bin.shell, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
       const entry = this.active.get(runId);
       if (entry) entry.child = child;
       child.on("error", (error) => resolve({ code: null, signal: null, error }));

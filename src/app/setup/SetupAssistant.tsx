@@ -28,9 +28,8 @@ const KINDS: { kind: SetupKind; title: string; sub: string; icon: ReactNode }[] 
   { kind: "company", title: "My company", sub: "Agents for every department", icon: <Building2 size={22} /> },
 ];
 
-const INSTALL = typeof navigator !== "undefined" && /Win/i.test(navigator.platform)
-  ? "iex (irm https://hermes-agent.nousresearch.com/install.ps1)"
-  : "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash";
+/** McBot ships its own Hermes (hermes/); from source it needs one setup run. */
+const INSTALL = "npm run hermes:setup";
 
 type Status = "wait" | "busy" | "ok" | "warn" | "fail";
 interface Row { label: string; status: Status; detail?: string }
@@ -103,7 +102,7 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
     const workspace = health?.workspace ?? "~/McBot";
     const hermesOk = !!detect?.hermes.found;
     const plan: Row[] = [
-      { label: hermesOk ? "Hermes is ready" : "Hermes isn't installed yet", status: hermesOk ? "ok" : "warn" },
+      { label: hermesOk ? (detect?.hermes.kind === "bundled" ? "Hermes is built in" : "Hermes is ready") : "Hermes isn't set up yet", status: hermesOk ? "ok" : "warn" },
       { label: "Building your board", status: "wait" },
       { label: "Writing your agents", status: withModels.length ? "wait" : "warn", detail: withModels.length ? undefined : "Add a model on the board, then compile" },
       { label: "Telling them who you are", status: withModels.length ? "wait" : "warn" },

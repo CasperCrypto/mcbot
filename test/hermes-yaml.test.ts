@@ -1,9 +1,10 @@
 /**
  * Cross-check against the real parser: every YAML file the compiler emits is
  * loaded with Hermes' own `hermes_yaml.safe_load` (ruamel, YAML 1.1) and must
- * mean exactly what McBot intended. Opt-in: needs a Hermes checkout.
+ * mean exactly what McBot intended. Opt-in: needs Hermes' environment.
  *
- *   MCBOT_HERMES_SRC=/path/to/hermes-agent npm test
+ *   MCBOT_E2E=1 npm test                         McBot's own hermes/ (after npm run hermes:setup)
+ *   MCBOT_HERMES_SRC=/path/to/hermes-agent npm test   another checkout
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -12,7 +13,7 @@ import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { compile } from "../src/compile";
 
-const SRC = process.env.MCBOT_HERMES_SRC;
+const SRC = process.env.MCBOT_HERMES_SRC || (process.env.MCBOT_E2E === "1" ? join(import.meta.dirname, "..", "hermes") : undefined);
 
 function hermesLoad(docs: string[]): unknown[] {
   const py = [

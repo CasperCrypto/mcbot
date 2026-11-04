@@ -47,12 +47,13 @@ same board, live, with everyone's cursor.
 
 ## Quick start
 
-Requirements: Node 22.13+, and [Hermes Agent](https://github.com/NousResearch/hermes-agent)
-installed so `hermes` is on your PATH (or set `MCBOT_HERMES_BIN`). For the
-desktop shell, Rust and the [Tauri 2 prerequisites](https://v2.tauri.app/start/prerequisites/).
+Requirements: Node 22.13+ and bash (macOS, Linux, or Git Bash on Windows). For
+the desktop shell, Rust and the [Tauri 2 prerequisites](https://v2.tauri.app/start/prerequisites/).
+Hermes Agent comes with McBot: `hermes/` is our fork, and McBot runs it.
 
 ```bash
 npm install
+npm run hermes:setup # once: Hermes' Python, tools and dependencies (a few minutes)
 npm run desktop      # the McBot app (starts the engine + UI for you)
 # or, in a browser:
 npm run dev          # engine on 127.0.0.1:4317, UI on http://localhost:5173
@@ -71,7 +72,7 @@ Your boards, runs and compiled profiles live in `~/McBot` (`MCBOT_WORKSPACE`).
 Compiled agents are ordinary Hermes profiles; run them without McBot too:
 
 ```bash
-HERMES_HOME=~/McBot/hermes hermes -p triage
+npm run hermes -- -p triage     # McBot's own Hermes on McBot's agents
 ```
 
 ## Website and browser demo
@@ -143,7 +144,8 @@ McBot's dependencies are permissively licensed: React, React Flow, Yjs,
 y-websocket, y-protocols, lib0, zod, zustand, ws, @noble/hashes,
 [Blobatar](https://github.com/Alain00/blobatar) (MIT); yaml, lucide-react (ISC);
 diff (BSD-3-Clause); [Paper Shaders](https://github.com/paper-design/shaders),
-Tauri (Apache-2.0 / MIT); Inter (OFL-1.1). Hermes Agent is MIT (© Nous Research).
+Tauri (Apache-2.0 / MIT); Inter (OFL-1.1). Hermes Agent is MIT (© Nous Research);
+`hermes/` is our fork of it, with McBot's changes listed in [hermes/MCBOT.md](hermes/MCBOT.md).
 
 The look takes its cues from OpenBot and Vorssaint. Only OpenBot code from
 v0.1.11 or earlier (Apache-2.0) may be used; later OpenBot versions are

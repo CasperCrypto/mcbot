@@ -70,7 +70,9 @@ function update(repo: string, ref: string) {
     const old = blob(repo, base, p);
     const theirs = blob(repo, next, p);
     const ours = existsSync(dest) ? readFileSync(dest) : null;
-    const untouched = (ours === null && old === null) || (ours !== null && old !== null && ours.equals(old));
+    // .ps1 files check out with CRLF (Hermes' .gitattributes); compare line endings loosely.
+    const same = (a: Buffer, b: Buffer) => a.equals(b) || a.toString("latin1").replace(/\r\n/g, "\n") === b.toString("latin1").replace(/\r\n/g, "\n");
+    const untouched = (ours === null && old === null) || (ours !== null && old !== null && same(ours, old));
     if (theirs === null) {
       if (untouched && ours) { rmSync(dest); removed++; } else if (ours) conflicts.push(`${p} (removed upstream, changed here)`);
       continue;
