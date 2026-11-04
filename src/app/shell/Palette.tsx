@@ -1,5 +1,5 @@
 import {
-  Bot, Brain, ChartColumnBig, Cloud, CornerDownLeft, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Users, Waypoints, Workflow,
+  Bot, Brain, ChartColumnBig, Cloud, CornerDownLeft, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Users, Waypoints, Workflow,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addNode } from "../../board/ydoc";
@@ -80,6 +80,7 @@ function useCommands(close: () => void): Command[] {
           },
         },
       },
+      { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Sparkles size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: null }); } },
       ...(DEMO ? [{ id: "reset-demo", group: "Actions", label: "Reset demo", hint: "Start over with the sample board", icon: <RotateCcw size={15} />, run: resetDemo }] : []),
       ...VIEWS.map((v, i) => ({ id: `go-${v.tab}`, group: "Go to", label: v.label, icon: v.icon, keys: ["⌘", String(i + 1)], run: () => { app.setTab(v.tab); close(); } })),
       ...graph.nodes.filter((n) => n.kind === "agent").map((n) => ({

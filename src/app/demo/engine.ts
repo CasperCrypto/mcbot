@@ -12,7 +12,7 @@ import type { SessionRow } from "../../../engine/hermesData";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
-import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, FsEntry, FsListing, FsPreview, FsRoot, Health, MemoryFileView } from "../../contracts/api";
+import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, FsEntry, FsListing, FsPreview, FsRoot, Health, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import type { Graph } from "../../contracts/graph";
 import { RUN_EVENT_VERSION, summarizeRun, type RunEvent, type RunEventInput, type RunSummary } from "../../contracts/run";
@@ -34,6 +34,9 @@ interface State {
   memory: Record<string, Record<Target, string[]>>;
   sessions: Record<string, SessionRow[]>;
   sampleOpen: boolean;
+  /** Setup assistant: done or not, and boards it built (their graphs until a window opens them). */
+  setup?: SetupState;
+  pending?: Record<string, Graph>;
 }
 
 // ---------- storage (best effort: a private window just starts fresh) ----------
@@ -83,7 +86,8 @@ function fillDoc(doc: Y.Doc, boardId: string): void {
     }
   }
   const name = state.boards.find((b) => b.id === boardId)?.name ?? "Board";
-  loadGraphIntoDoc(doc, boardId === SEED_BOARD.id ? seedGraph : { schema: "mcbot.graph/v1", id: boardId, name, nodes: [], edges: [] });
+  const built = state.pending?.[boardId];
+  loadGraphIntoDoc(doc, boardId === SEED_BOARD.id ? seedGraph : built ? { ...built, id: boardId, name } : { schema: "mcbot.graph/v1", id: boardId, name, nodes: [], edges: [] });
 }
 
 function graphOf(boardId: string): Graph {
@@ -202,6 +206,9 @@ function compileBoard(boardId: string, dryRun: boolean): CompileResponse {
 }
 
 // ---------- runs: simulated, in the run event shape (contract 3) ----------
+
+/** Key names typed into the demo's setup. The values are dropped: a browser demo never keeps keys. */
+const secretNames = new Set<string>();
 
 type Listener = (e: RunEvent) => void;
 const listeners = new Set<Listener>();
@@ -564,6 +571,31 @@ export const demoEngine = {
     const { files, owned } = filesOf(root);
     const entries = listVirtual(files, path).filter((e) => e.name !== ".keep").map((e) => ({ ...e, owned: e.kind === "file" && owned(e.path) }));
     return { root, path, entries, truncated: 0 };
+  }),
+  setup: api((): SetupState => state.setup ?? { completed: false, profile: null }),
+  setupDetect: api(async (): Promise<SetupDetect> => {
+    await sleep(700);
+    // Simulated: a browser cannot see what runs on the visitor's computer.
+    return { hermes: { found: true, path: "simulated in this browser" }, local: [{ name: "Ollama", baseUrl: "http://127.0.0.1:11434/v1", models: ["gemma3:4b", "llama3.2:3b", "qwen3:8b"] }], secrets: [...secretNames] };
+  }),
+  setupModels: api((_baseUrl: string, _keyName?: string) => ({ models: null as string[] | null })),
+  setupBoard: api((name: string, graph: Graph): BoardInfo => {
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "board";
+    const b = { id: `${slug}-${Math.random().toString(16).slice(2, 6)}`, name };
+    state.boards.push(b);
+    (state.pending ??= {})[b.id] = { ...graph, id: b.id, name };
+    save();
+    return b;
+  }),
+  setupComplete: api((profile: SetupProfile | null): SetupState => {
+    state.setup = { completed: true, profile };
+    save();
+    return state.setup;
+  }),
+  setSecret: api((name: string, value: string) => {
+    if (!/^[A-Z_][A-Z0-9_]{0,63}$/.test(name) || !value.trim()) throw new EngineError(400, "That key doesn't look right", {});
+    secretNames.add(name);
+    return { names: [...secretNames] };
   }),
   read: api((root: string, path: string): FsPreview => {
     const { files } = filesOf(root);

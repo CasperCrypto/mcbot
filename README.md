@@ -58,7 +58,9 @@ npm run desktop      # the McBot app (starts the engine + UI for you)
 npm run dev          # engine on 127.0.0.1:4317, UI on http://localhost:5173
 ```
 
-Then: **Add an agent**, add a **Local model** from the Dock (defaults to Ollama
+The first launch walks you through setup: who McBot is for, your company,
+which agents, which model (it finds Ollama and LM Studio on its own). It ends
+with a compiled team you can talk to. To build by hand instead: **Add an agent**, add a **Local model** from the Dock (defaults to Ollama
 on `:11434/v1` — set the model you have pulled), drag the model onto the agent,
 **Compile** (⌘S), and message the agent in **Agents**.
 

@@ -12,16 +12,18 @@ import { join } from "node:path";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { compile, resolveGraph, type AgentBundle } from "../src/compile";
-import type { AgentMemoryView, BoardInfo, CompileResponse, FsListing, FsPreview, FsRoot, Health } from "../src/contracts/api";
-import type { ModelNode } from "../src/contracts/graph";
+import type { AgentMemoryView, BoardInfo, CompileResponse, FsListing, FsPreview, FsRoot, Health, SetupDetect, SetupState } from "../src/contracts/api";
+import type { Graph, ModelNode } from "../src/contracts/graph";
 import { buildCostReport } from "./cost";
 import { atomicWrite, readTextOrNull, resolveInside, toPosix } from "./fsutil";
 import { FolderError, Folders } from "./folders";
 import { findHermes } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
-import { BOARD_ID_RE, BoardRelay } from "./relay";
+import { BOARD_ID_RE, BoardRelay, LooseGraph } from "./relay";
 import { Runner } from "./runner";
 import { RunStore } from "./runStore";
+import { SecretError, Secrets } from "./secrets";
+import { SetupStore, detectLocal, listModels } from "./setup";
 import { OwnershipError, readManifest, writeCompileResult } from "./writer";
 
 export const ENGINE_VERSION = "0.1.0";
@@ -65,6 +67,8 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   return r.data;
 }
 
+const slugOf = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "board";
+
 export interface Engine {
   server: Server;
   url: string;
@@ -77,7 +81,9 @@ export interface Engine {
 export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   const relay = new BoardRelay(join(cfg.workspace, "boards"));
   const store = new RunStore(join(cfg.workspace, "runs"));
-  const runner = new Runner({ store, root: cfg.hermesHome, managedRoot: cfg.managedRoot, findHermes: () => findHermes() });
+  const secrets = new Secrets(join(cfg.workspace, "secrets.json"));
+  const setup = new SetupStore(join(cfg.workspace, "setup.json"));
+  const runner = new Runner({ store, root: cfg.hermesHome, managedRoot: cfg.managedRoot, findHermes: () => findHermes(), secrets: () => secrets.env() });
   const folders = new Folders(cfg.workspace, cfg.hermesHome);
   const allowed = new Set(cfg.allowedOrigins);
   const sse = new Set<ServerResponse>();
@@ -101,10 +107,51 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     },
 
     "GET /api/boards": async (): Promise<BoardInfo[]> => relay.list(),
+
+    // ---- setup assistant ----
+    "GET /api/setup": async (): Promise<SetupState> => setup.get(),
+    "GET /api/setup/detect": async (): Promise<SetupDetect> => {
+      const [bin, local, names] = await Promise.all([findHermes(), detectLocal(), secrets.names()]);
+      return { hermes: { found: !!bin, path: bin?.path ?? null }, local, secrets: names };
+    },
+    "POST /api/setup/models": async (req) => {
+      const body = parse(z.object({ baseUrl: z.string().url(), keyName: z.string().optional() }), await json(req));
+      const key = body.keyName ? (await secrets.env())[body.keyName] : undefined;
+      return { models: await listModels(body.baseUrl, key, 4000) };
+    },
+    /** The board the assistant built: fills the empty first-run board, else a new one. */
+    "POST /api/setup/board": async (req): Promise<BoardInfo> => {
+      const body = parse(z.object({ name: z.string().trim().min(1).max(80), graph: LooseGraph }), await json(req));
+      const boards = await relay.list();
+      const graph = { ...body.graph, name: body.name } as Graph;
+      if (boards.length === 1 && (await relay.fillIfEmpty(boards[0]!.id, graph))) return { id: boards[0]!.id, name: body.name };
+      const id = `${slugOf(body.name)}-${randomBytes(2).toString("hex")}`;
+      await relay.create(id, body.name, graph);
+      return { id, name: body.name };
+    },
+    "POST /api/setup/complete": async (req): Promise<SetupState> => {
+      const profile = z.object({
+        kind: z.enum(["personal", "team", "company"]), name: z.string().max(80), company: z.string().max(120), about: z.string().max(600), role: z.string().max(120),
+      }).nullable();
+      const body = parse(z.object({ profile }), await json(req));
+      return setup.complete(body.profile);
+    },
+    "GET /api/secrets": async () => ({ names: await secrets.names() }),
+    "POST /api/secrets": async (req) => {
+      const body = parse(z.object({ name: z.string(), value: z.string() }), await json(req));
+      try {
+        await secrets.set(body.name, body.value);
+      } catch (err) {
+        if (err instanceof SecretError) throw new HttpError(400, err.message);
+        throw err;
+      }
+      // A running gateway was started without this key.
+      if (cfg.managedRoot) runner.markGatewayStale();
+      return { names: await secrets.names() };
+    },
     "POST /api/boards": async (req) => {
       const { name } = parse(z.object({ name: z.string().trim().min(1).max(80) }), await json(req));
-      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "board";
-      const id = `${slug}-${randomBytes(2).toString("hex")}`;
+      const id = `${slugOf(name)}-${randomBytes(2).toString("hex")}`;
       await relay.create(id, name);
       return { id, name };
     },

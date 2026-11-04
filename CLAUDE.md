@@ -66,6 +66,14 @@ Change them additively; a breaking change bumps the version.
   running, and only against the sha256 the editor read.
 - Cost comes from each profile's `state.db`; Hermes-priced vs McBot-estimated is
   always labelled. Hermes reports no GPU time — do not fabricate it.
+- API keys typed into McBot live in `<workspace>/secrets.json` (owner-only) and
+  reach Hermes only as environment variables of a run; boards and compiled files
+  carry the variable's name. The engine never returns a key's value. Saving a
+  key restarts McBot's own gateway. (OS keychain in M6.)
+- First launch runs the setup assistant (`src/app/setup/`): its answers go into
+  every agent's SOUL.md and their USER.md memory; `<workspace>/setup.json`
+  records that it ran. Local model servers are found by asking the usual
+  addresses for `/v1/models` (Ollama :11434, LM Studio :1234).
 
 ## Shared board
 
@@ -110,10 +118,10 @@ auth, no cloud: local JSON + the filesystem.
 
 ## Out of scope until asked
 
-Auth, SSO, Langfuse, OpenTelemetry, a cloud tier, a marketplace, templates, a
-code editor, git integration, an MCP client, ACP, A2A. Installers, signing,
-teams across machines and phones are planned in `docs/MERGE.md` phases 1–3;
-Postgres and Redis belong to the optional team server only, never the desktop app.
+Auth, SSO, Langfuse, OpenTelemetry, a cloud tier, a marketplace, a code
+editor, git integration, ACP, A2A. Everything else on the way is ordered in
+`docs/PLAN.md` (M5–M11); build in that order. Postgres and Redis belong to the
+optional team server only, never the desktop app.
 
 ## Commands
 

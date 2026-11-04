@@ -30,7 +30,7 @@ export const BOARD_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
  * Structure only. A board being edited is routinely not compile-valid (a name
  * half typed); the compiler validates, the store never rejects or rewrites.
  */
-const LooseGraph = z.object({
+export const LooseGraph = z.object({
   schema: z.literal(GRAPH_SCHEMA),
   id: z.string(),
   name: z.string().default(""),
@@ -82,10 +82,20 @@ export class BoardRelay {
     return out.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
   }
 
-  async create(id: string, name: string): Promise<void> {
+  async create(id: string, name: string, graph?: Graph): Promise<void> {
     if (!BOARD_ID_RE.test(id)) throw new Error(`invalid board id ${id}`);
     if ((await readTextOrNull(this.file(id))) !== null) throw new Error(`board ${id} exists`);
-    await atomicWrite(this.file(id), `${JSON.stringify(emptyGraph(id, name), null, 2)}\n`);
+    const content = graph ? { ...graph, id, name } : emptyGraph(id, name);
+    await atomicWrite(this.file(id), `${JSON.stringify(content, null, 2)}\n`);
+  }
+
+  /** Put `graph` on a board that has nothing on it yet (the first-run board). False if it has content. */
+  async fillIfEmpty(id: string, graph: Graph): Promise<boolean> {
+    const room = await this.room(id);
+    const current = graphFromDoc(room.doc);
+    if (current.nodes.length || current.edges.length) return false;
+    loadGraphIntoDoc(room.doc, { ...graph, id });
+    return true;
   }
 
   async exists(id: string): Promise<boolean> {

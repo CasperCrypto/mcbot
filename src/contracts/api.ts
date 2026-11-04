@@ -133,3 +133,35 @@ export interface FsPreview {
 export interface LastCompile {
   report: CompileReport | null;
 }
+
+// ---- setup assistant ----
+
+export type SetupKind = "personal" | "team" | "company";
+
+/** What the setup assistant was told. Goes into agents' SOUL.md and USER.md memory. */
+export interface SetupProfile {
+  kind: SetupKind;
+  name: string;
+  company: string;
+  about: string;
+  role: string;
+}
+
+export interface SetupState {
+  completed: boolean;
+  profile: SetupProfile | null;
+}
+
+/** An OpenAI-compatible model server answering on this computer. */
+export interface LocalServer {
+  name: string;
+  baseUrl: string;
+  models: string[];
+}
+
+export interface SetupDetect {
+  hermes: { found: boolean; path: string | null };
+  local: LocalServer[];
+  /** Names of the API keys McBot holds (never the values). */
+  secrets: string[];
+}

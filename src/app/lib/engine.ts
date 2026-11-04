@@ -1,5 +1,6 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, FsListing, FsPreview, FsRoot, Health, MemoryFileView } from "../../contracts/api";
+import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, FsListing, FsPreview, FsRoot, Health, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
+import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
 /** The Tauri production webview has no dev proxy; everything else (Vite, Tauri dev) does. */
@@ -50,6 +51,12 @@ const http = {
   closeFolder: (id: string) => call<{ ok: true }>("POST", "/api/fs/roots/close", { id }),
   list: (root: string, path: string) => call<FsListing>("GET", `/api/fs/list?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
   read: (root: string, path: string) => call<FsPreview>("GET", `/api/fs/read?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
+  setup: () => call<SetupState>("GET", "/api/setup"),
+  setupDetect: () => call<SetupDetect>("GET", "/api/setup/detect"),
+  setupModels: (baseUrl: string, keyName?: string) => call<{ models: string[] | null }>("POST", "/api/setup/models", { baseUrl, keyName }),
+  setupBoard: (name: string, graph: Graph) => call<BoardInfo>("POST", "/api/setup/board", { name, graph }),
+  setupComplete: (profile: SetupProfile | null) => call<SetupState>("POST", "/api/setup/complete", { profile }),
+  setSecret: (name: string, value: string) => call<{ names: string[] }>("POST", "/api/secrets", { name, value }),
 };
 
 export const engine: typeof http = DEMO ? demoEngine : http;

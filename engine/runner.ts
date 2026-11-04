@@ -33,6 +33,8 @@ export interface RunnerOptions {
   /** May the engine stop the gateway under `root`? Only for McBot's own output root. */
   managedRoot: boolean;
   findHermes: () => Promise<HermesBinary | null>;
+  /** API keys the user saved in McBot, passed to Hermes as environment variables. */
+  secrets?: () => Promise<Record<string, string>>;
 }
 
 export class Runner {
@@ -99,8 +101,9 @@ export class Runner {
     const stderrTail: string[] = [];
     let sessionId: string | null = null;
 
+    const env = hermesEnv(root, { ...process.env, ...((await this.opts.secrets?.().catch(() => ({}))) ?? {}) });
     const exit = await new Promise<{ code: number | null; signal: string | null; error?: Error }>((resolve) => {
-      const child = spawn(bin.path, argv, { cwd, env: hermesEnv(root), shell: bin.shell, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+      const child = spawn(bin.path, argv, { cwd, env, shell: bin.shell, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
       const entry = this.active.get(runId);
       if (entry) entry.child = child;
       child.on("error", (error) => resolve({ code: null, signal: null, error }));

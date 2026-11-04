@@ -45,18 +45,9 @@ everyone's app and phone connect to it.
 
 ## Phases
 
-1. **One download.** Hermes forked into `hermes/` (runtime only: no tests,
-   website or apps in the bundle), bundled Python, engine as a sidecar,
-   first-launch setup (finds Ollama or LM Studio, keeps API keys in the OS
-   keychain), GitHub release builds for macOS and Windows. The website's
-   download buttons go live.
-2. **Workflows.** Trigger (schedule, webhook, message), step and condition
-   nodes on the graph; compiled to Hermes cron and workflow definitions;
-   an integrations catalog of MCP servers.
-3. **Teams and phones.** McBot joins a Buzz relay; boards, chat and runs are
-   shared across machines; Buzz mobile ships as McBot for iOS and Android.
-4. **Canvas depth.** Sections, notes, step nodes with inline results, run-all
-   with history.
+The order of work is in [PLAN.md](PLAN.md): M5 (one download) merges Hermes;
+M8 (copilot and terminal) takes OpenBot v0.1.11's connectors and Buzz's dev
+tools; M9 and M10 (teams, phones) take the Buzz relay and Buzz mobile.
 
 ## Open decisions
 

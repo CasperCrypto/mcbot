@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { BoardInfo, CompileResponse, Health } from "../../contracts/api";
+import type { BoardInfo, CompileResponse, Health, SetupState } from "../../contracts/api";
 import { summarizeRun, type RunEvent, type RunSummary } from "../../contracts/run";
 import { loadIdentity, saveIdentity, type Identity } from "../lib/identity";
 
@@ -32,10 +32,13 @@ interface State {
   paletteOpen: boolean;
   /** The agent whose thread is open in Agents. */
   chatAgentId: string | null;
+  /** First-launch setup: null until the engine answers. */
+  setup: SetupState | null;
 
   setTab(tab: Tab): void;
   setPalette(open: boolean): void;
   openChat(agentNodeId: string | null): void;
+  setSetup(setup: SetupState | null): void;
   setBoard(id: string | null): void;
   setBoards(b: BoardInfo[]): void;
   setHealth(h: Health | null, up: boolean): void;
@@ -83,6 +86,8 @@ export const useApp = create<State>((set, get) => ({
   setTab: (tab) => set({ tab }),
   setPalette: (paletteOpen) => set({ paletteOpen }),
   openChat: (chatAgentId) => set({ chatAgentId, tab: "agents" }),
+  setup: null,
+  setSetup: (setup) => set({ setup }),
   setBoard: (boardId) => {
     try {
       if (boardId) localStorage.setItem(BOARD_KEY, boardId);

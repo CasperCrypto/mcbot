@@ -5,6 +5,7 @@ import { engine, subscribeRunEvents } from "./lib/engine";
 import { Boundary } from "./shell/Boundary";
 import { Palette, VIEWS } from "./shell/Palette";
 import { Rail } from "./shell/Rail";
+import { SetupAssistant } from "./setup/SetupAssistant";
 import { BrandMark, TitleBar } from "./shell/TitleBar";
 import { BoardProvider, useBoard } from "./state/board";
 import { useApp } from "./state/store";
@@ -103,6 +104,24 @@ export function App() {
   const engineUp = useApp((s) => s.engineUp);
   const boards = useApp((s) => s.boards);
   const boardId = useApp((s) => s.boardId);
+  const setup = useApp((s) => s.setup);
+  const setSetup = useApp((s) => s.setSetup);
+
+  // First launch runs the setup assistant. An engine without /api/setup is treated as set up.
+  useEffect(() => {
+    if (engineUp && !setup) engine.setup().then(setSetup).catch(() => setSetup({ completed: true, profile: null }));
+  }, [engineUp, setup, setSetup]);
+
+  const finishSetup = async (newBoardId: string | null, agentNodeId: string | null) => {
+    const app = useApp.getState();
+    app.setSetup(await engine.setup().catch(() => ({ completed: true, profile: null })));
+    app.setBoards(await engine.boards().catch(() => app.boards));
+    if (newBoardId) {
+      app.setBoard(newBoardId);
+      if (agentNodeId) app.openChat(agentNodeId);
+      else app.setTab("graph");
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -129,7 +148,14 @@ export function App() {
 
   useEffect(() => subscribeRunEvents(applyEvent), [applyEvent]);
 
-  const ready = engineUp && boards.length > 0 && boardId;
+  const ready = engineUp && boards.length > 0 && boardId && setup;
+  if (ready && !setup.completed) {
+    return (
+      <Boundary>
+        <SetupAssistant onDone={(b, a) => void finishSetup(b, a)} />
+      </Boundary>
+    );
+  }
   return (
     <div className="app">
       {ready ? (
