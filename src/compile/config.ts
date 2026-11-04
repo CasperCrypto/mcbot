@@ -92,6 +92,11 @@ export function renderConfig(graph: Graph, bundle: AgentBundle): string {
   if (toolsets) doc.platform_toolsets = { cli: toolsets };
   if (bundle.image) doc.image_gen = makerEntry(bundle.image);
   if (bundle.video) doc.video_gen = makerEntry(bundle.video);
+  // A chat app's token and allowed users live in the agent's .env (written by the engine, never
+  // compiled). Only an own Bot API server is config: platforms.<platform>.extra.base_url
+  // (gateway/config_loader.py merge_platform_sections; plugins/platforms/telegram/adapter.py).
+  const servers = bundle.channels.filter((c) => c.data.apiBase);
+  if (servers.length) doc.platforms = Object.fromEntries(servers.map((c) => [c.data.platform, { extra: { base_url: c.data.apiBase } }]));
 
   const header = yamlComment([
     `Compiled by McBot from board "${graph.name || graph.id}" (${graph.id}), agent node ${bundle.agent.id}.`,

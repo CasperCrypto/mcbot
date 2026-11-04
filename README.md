@@ -30,6 +30,8 @@ Seven views, one shared board, everything a graph:
     agent makes shows up in its chat.
   - **Obsidian**: ⌘K → "Obsidian vault…" gives agents your notes — read, search
     and write, only inside that folder.
+  - **Telegram**: give an agent its own Telegram bot (token from @BotFather) and
+    say who may talk to it; the agent answers there while your computer is on.
 - **Agents** — your agents as teammates. Message one and it runs with Hermes;
   tool calls, answer, time, tokens and cost land in the thread. Its face shows
   what it is doing: thinking while it works, happy or sad after.
@@ -120,6 +122,7 @@ Pages with "GitHub Actions" as the source).
 | tool | `config.yaml` → `mcp_servers.<name>` (stdio command or URL) |
 | agent abilities | `config.yaml` → `platform_toolsets.cli` (left out = Hermes' defaults) |
 | image / video maker | `config.yaml` → `image_gen` / `video_gen` `{ provider, model }` |
+| Telegram bot | its token and allowed users in the agent's `.env`; an own Bot API server in `config.yaml` → `platforms.telegram` |
 
 Two kinds of model endpoint, both OpenAI-compatible: one **local** (Ollama, LM
 Studio, vLLM, llama.cpp) and one **cloud** (any OpenAI-compatible API). Boards and
@@ -161,8 +164,8 @@ invariants (never invent a Hermes key; every compiler module is byte-tested).
 
 v0.1. Done: graph, compiler, shared board, runs, memory and cost (M0–M4); the
 setup assistant, McBot's own Hermes inside the app and unsigned installers for
-macOS, Windows and Linux (M5). Under way (M6): abilities, image and video makers
-and Obsidian are in; chat apps (Slack, Telegram, WhatsApp, Discord), tool and
+macOS, Windows and Linux (M5). Under way (M6): abilities, image and video makers,
+Obsidian and Telegram are in; WhatsApp, Slack, Discord and email, tool and
 skill catalogs and the OS keychain are next. No accounts yet: the engine only
 listens on this computer and checks origins. The whole plan, M6–M14, is in
 [docs/PLAN.md](docs/PLAN.md); why that order, in [docs/NEXT.md](docs/NEXT.md).

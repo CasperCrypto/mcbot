@@ -68,3 +68,10 @@ export function newMaker(g: Graph, media: "image" | "video", position: { x: numb
   const name = uniqueName(media === "image" ? "images" : "videos", namesOf(g, "media"));
   return { id: newId("maker"), kind: "media", position, data: { name, label: media === "image" ? "Images" : "Videos", media, provider: "openrouter", model: "" } };
 }
+
+/** A chat app bot (one per agent and app). Its token is saved under a name of its own, so two agents can have two bots. */
+export function newChannel(g: Graph, platform: "telegram", position: { x: number; y: number }): GraphNode {
+  const name = uniqueName(platform, namesOf(g, "channel"));
+  const tokenEnv = `MCBOT_${platform.toUpperCase()}_${name.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_TOKEN`;
+  return { id: newId("chat"), kind: "channel", position, data: { name, label: "Telegram", platform, tokenEnv, allowedUsers: [], apiBase: "" } };
+}

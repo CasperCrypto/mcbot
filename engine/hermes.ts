@@ -239,6 +239,15 @@ function runQuiet(bin: HermesBinary, argv: string[], env: NodeJS.ProcessEnv, tim
 }
 
 /**
+ * Start the root's gateway if it is not running and keep it up: `hermes gateway ensure`, what
+ * Hermes' own desktop app runs (no idle exit, nothing installed; hermes_cli/gateway_runtime_start.py).
+ * Chat apps need a running gateway even when no run is in progress. Exit 0 = ready.
+ */
+export async function ensureGateway(bin: HermesBinary, root: string, timeoutMs = 90_000): Promise<number | null> {
+  return runQuiet(await prepareHermes(bin, root), ["gateway", "ensure", "--json", "--timeout", String(Math.round(timeoutMs / 1000) - 10)], hermesEnv(root), timeoutMs);
+}
+
+/**
  * `hermes chat` auto-starts one multiplex gateway per Hermes root, and that
  * gateway discovers MCP servers once, at boot. After a compile changes a
  * config.yaml the engine stops it (`hermes gateway stop`) and waits for the

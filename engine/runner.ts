@@ -13,12 +13,12 @@ import { join } from "node:path";
 import { createInterface } from "node:readline";
 import type { ModelNode } from "../src/contracts/graph";
 import { priceSession } from "./cost";
-import { chatArgv, hermesCommand, hermesEnv, prepareHermes, stopGateway, type HermesBinary } from "./hermes";
+import { chatArgv, ensureGateway, gatewayStatus, hermesCommand, hermesEnv, prepareHermes, stopGateway, type HermesBinary } from "./hermes";
 import { readSession } from "./hermesData";
 import { RunStore, newRunId } from "./runStore";
 import { StreamMapper, type ToolNodeRef } from "./streamJson";
 import { resolveInside } from "./fsutil";
-import { writeProfileKeys } from "./profileEnv";
+import { resolveEntries, writeProfileKeys, type EnvEntry } from "./profileEnv";
 
 export interface StartRun {
   boardId: string;
@@ -27,8 +27,8 @@ export interface StartRun {
   prompt: string;
   toolNodes: ToolNodeRef[];
   models: ModelNode[];
-  /** Key variables this agent's board names (engine/profileEnv.ts keyNamesFor). */
-  keyNames?: string[];
+  /** What this agent's .env holds from the board (engine/profileEnv.ts envEntriesFor). */
+  env?: EnvEntry[];
 }
 
 export interface RunnerOptions {
@@ -52,6 +52,7 @@ export class Runner {
   private readonly active = new Map<string, { child: ChildProcess | null; profile: string; cancelled?: boolean }>();
   private gatewayStale = false;
   private gatewayRestart: Promise<void> | null = null;
+  private gatewayEnsure: Promise<unknown> = Promise.resolve();
 
   constructor(private readonly opts: RunnerOptions) {}
 
@@ -87,6 +88,27 @@ export class Runner {
     await this.gatewayRestart;
   }
 
+  /**
+   * Keep the gateway up for chat apps: restart it first if a compile made it stale (McBot's own
+   * root only), then `hermes gateway ensure`. Calls are serialized. Resolves to what happened.
+   */
+  ensureGateway(): Promise<string> {
+    const next = this.gatewayEnsure.then(async () => {
+      const found = await this.opts.findHermes();
+      if (!found) return "no hermes";
+      if (!this.gatewayStale && (await gatewayStatus(this.opts.root)).running) return "running";
+      const bin = await prepareHermes(found, this.opts.root);
+      if (this.gatewayStale && this.opts.managedRoot) {
+        this.gatewayStale = false;
+        await stopGateway(bin, this.opts.root);
+      }
+      const code = await ensureGateway(bin, this.opts.root);
+      return code === 0 ? "ready" : `ensure exited ${code}`;
+    });
+    this.gatewayEnsure = next.catch(() => "failed");
+    return next;
+  }
+
   async start(req: StartRun): Promise<string> {
     const { store, root } = this.opts;
     const runId = newRunId();
@@ -114,8 +136,7 @@ export class Runner {
     let sessionId: string | null = null;
     const saved: Record<string, string> = (await this.opts.secrets?.().catch(() => ({}))) ?? {};
     const env = hermesEnv(root, { ...process.env, ...saved });
-    const keys = Object.fromEntries((req.keyNames ?? []).filter((n) => n in saved).map((n) => [n, saved[n]!]));
-    await writeProfileKeys(join(root, "profiles", req.profile), keys).catch((err: Error) =>
+    await writeProfileKeys(join(root, "profiles", req.profile), resolveEntries(req.env ?? [], saved)).catch((err: Error) =>
       store.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] could not write this agent's keys: ${err.message}` }));
 
     /** One Hermes process. A first attempt holds back "the gateway is still starting" so it can be retried. */

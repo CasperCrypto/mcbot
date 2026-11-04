@@ -16,3 +16,7 @@ platform_toolsets:
     - memory
 image_gen:
   provider: openrouter
+platforms:
+  telegram:
+    extra:
+      base_url: https://tg.example.com/bot

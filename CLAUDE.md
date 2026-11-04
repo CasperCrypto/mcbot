@@ -67,6 +67,13 @@ Change them additively; a breaking change bumps the version.
   `image_gen` / `video_gen` and turns its tool set on. Makers are Hermes' own
   provider plugins: McBot only names one and its key variable, so hard rule 4 (two
   chat-model providers, no vendor SDKs in McBot) still holds.
+- A chat app node (Telegram) is one bot for one agent. Its token (saved in McBot
+  under the node's `tokenEnv`) and allowed users go into that agent's `.env` as
+  `TELEGRAM_BOT_TOKEN` / `TELEGRAM_ALLOWED_USERS`; only an own Bot API server is
+  compiled (`platforms.telegram.extra.base_url`). The engine refreshes agents'
+  `.env` after a compile, a saved key, a board save and at start, and runs
+  `hermes gateway ensure` while any compiled agent has a bot with a saved token.
+  No allowed users = nobody can message it (Hermes refuses unknown senders).
 - Run is refused (409) if the agent's files on disk differ from the board — compile first.
 - Memory edits: Hermes' `§` format byte for byte, refused while the profile is
   running, and only against the sha256 the editor read.
@@ -75,8 +82,9 @@ Change them additively; a breaking change bumps the version.
 - API keys typed into McBot live in `<workspace>/secrets.json` (owner-only); boards
   and compiled files carry only the variable's name, and the engine never returns a
   key's value. Hermes' gateway reads a served profile's keys from `<profile>/.env`
-  only (never its own environment), so right before each run the engine writes the
-  keys that agent's board names (models, makers, `${env:NAME}` in MCP servers) into
+  only (never its own environment), so before each run (and after a compile, a saved
+  key or a board save) the engine writes the keys that agent's board names (models,
+  makers, `${env:NAME}` in MCP servers, chat-app tokens) into
   a marked McBot block of that `.env`, owner-only, keeping every other line
   (`engine/profileEnv.ts`). Compile never writes keys. The Files view never lists or
   shows `.env` / `.op.env`. Saving a key restarts McBot's own gateway. (OS keychain in M6.)

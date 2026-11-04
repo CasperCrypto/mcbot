@@ -167,6 +167,31 @@ export const MediaDataSchema = z.object({
 });
 export type MediaData = z.infer<typeof MediaDataSchema>;
 
+/**
+ * Chat apps an agent answers in, through Hermes' gateway. Each block is one bot
+ * that belongs to one agent: its token and allowed users go into that agent's
+ * `.env` (the gateway reads a served profile's platform credentials there), so
+ * the board carries only the token's variable name. Names verified in
+ * hermes/plugins/platforms/<platform>/ (plugin.yaml, gateway_env.py).
+ */
+export const CHANNEL_PLATFORMS = {
+  telegram: { label: "Telegram", tokenEnv: "TELEGRAM_BOT_TOKEN", allowedUsersEnv: "TELEGRAM_ALLOWED_USERS" },
+} as const;
+export type ChannelPlatform = keyof typeof CHANNEL_PLATFORMS;
+
+export const ChannelDataSchema = z.object({
+  name: slug,
+  label: z.string().default(""),
+  platform: z.enum(["telegram"]),
+  /** McBot's name for the saved bot token; written to the agent's .env as the platform's token variable. */
+  tokenEnv: z.union([z.literal(""), z.string().regex(ENV_NAME_RE, "env var name")]).default(""),
+  /** Who may talk to the bot: Telegram numeric user ids. Empty = nobody (Hermes refuses unknown senders). */
+  allowedUsers: z.array(z.string().regex(/^\d{1,20}$/, "a numeric Telegram user id")).default([]),
+  /** Optional own Bot API server (`platforms.telegram.extra.base_url`); empty = api.telegram.org. */
+  apiBase: z.union([z.literal(""), z.string().url().refine((u) => /^https?:\/\//.test(u), "http(s) URL")]).default(""),
+});
+export type ChannelData = z.infer<typeof ChannelDataSchema>;
+
 const nodeBase = { id: z.string().min(1), position: PositionSchema };
 
 export const NodeSchema = z.discriminatedUnion("kind", [
@@ -174,6 +199,7 @@ export const NodeSchema = z.discriminatedUnion("kind", [
   z.object({ ...nodeBase, kind: z.literal("model"), data: ModelDataSchema }),
   z.object({ ...nodeBase, kind: z.literal("tool"), data: ToolDataSchema }),
   z.object({ ...nodeBase, kind: z.literal("media"), data: MediaDataSchema }),
+  z.object({ ...nodeBase, kind: z.literal("channel"), data: ChannelDataSchema }),
 ]);
 export type GraphNode = z.infer<typeof NodeSchema>;
 export type NodeKind = GraphNode["kind"];
@@ -181,6 +207,7 @@ export type AgentNode = Extract<GraphNode, { kind: "agent" }>;
 export type ModelNode = Extract<GraphNode, { kind: "model" }>;
 export type ToolNode = Extract<GraphNode, { kind: "tool" }>;
 export type MediaNode = Extract<GraphNode, { kind: "media" }>;
+export type ChannelNode = Extract<GraphNode, { kind: "channel" }>;
 
 export const EdgeSchema = z.object({
   id: z.string().min(1),

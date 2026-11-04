@@ -1,11 +1,11 @@
 import {
-  BookOpen, Bot, Brain, ChartColumnBig, Cloud, CornerDownLeft, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Users, Waypoints, Workflow,
+  BookOpen, Bot, Brain, Send, ChartColumnBig, Cloud, CornerDownLeft, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Users, Waypoints, Workflow,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
 import type { GraphNode } from "../../contracts/graph";
 import { compileBoard } from "../actions";
-import { newAgent, newId, newModel, newTool, newVault } from "../graph/defaults";
+import { newAgent, newChannel, newId, newModel, newTool, newVault } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { resetDemo } from "../demo/engine";
 import { DEMO, engine } from "../lib/engine";
@@ -52,6 +52,7 @@ function useCommands(close: () => void): Command[] {
       { id: "add-cloud", group: "Create", label: "Cloud model", hint: "Any OpenAI-compatible API", icon: <Cloud size={15} />, run: () => place(newModel(graph, "cloud", at("model"))) },
       { id: "add-files", group: "Create", label: "Files tool", icon: <Plug size={15} />, run: () => place(newTool(graph, "filesystem", at("tool"), app.health?.workspace ?? null)) },
       { id: "add-mcp", group: "Create", label: "MCP server", icon: <Server size={15} />, run: () => place(newTool(graph, "stdio", at("tool"), null)) },
+      { id: "add-telegram", group: "Create", label: "Telegram bot", hint: "Talk to an agent from Telegram", icon: <Send size={15} />, run: () => place(newChannel(graph, "telegram", at("channel"))) },
       {
         id: "add-vault", group: "Create", label: "Obsidian vault…", hint: "Agents read and write your notes", icon: <BookOpen size={15} />,
         ask: {

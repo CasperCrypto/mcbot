@@ -1,5 +1,5 @@
 /**
- * The keys an agent's run needs, in that agent's `<profile>/.env`.
+ * The keys (and chat-app settings) an agent needs, in that agent's `<profile>/.env`.
  *
  * Hermes' gateway serves every profile of a root from one process and reads a
  * served profile's credentials from that profile's `.env` only: it never falls
@@ -7,15 +7,18 @@
  * build_profile_secret_scope). So a key McBot passes as a run's environment
  * variable never reaches an agent; it has to be in the profile's `.env`.
  *
- * Right before each run the engine writes the keys that agent's board names
+ * The engine writes, inside a marked block, the keys that agent's board names
  * (its models' key variables, its makers' keys, `${env:NAME}` in its MCP
- * servers) and that the user saved in McBot, inside a marked block. Lines
- * outside the block (keys someone added with Hermes itself) are kept. The file
- * is owner-only, and the Files view never lists or shows it (engine/folders.ts).
+ * servers) and that the user saved in McBot, plus each chat app's bot token
+ * under the platform's own variable and its allowed users. It does so right
+ * before each run, after a compile and after a key is saved (a bot must be
+ * reachable without a run; the gateway re-reads a served profile's .env).
+ * Lines outside the block (keys someone added with Hermes itself) are kept.
+ * The file is owner-only, and the Files view never lists or shows it.
  */
 import { chmod, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { MEDIA_PROVIDERS } from "../src/contracts/graph";
+import { CHANNEL_PLATFORMS, MEDIA_PROVIDERS } from "../src/contracts/graph";
 import type { AgentBundle } from "../src/compile";
 import { readTextOrNull } from "./fsutil";
 
@@ -27,19 +30,45 @@ export const SECRET_FILES = new Set([".env", ".op.env"]);
 
 const ENV_REF = /\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g;
 
-/** Every key variable an agent's run may read, by name, sorted. */
-export function keyNamesFor(bundle: AgentBundle): string[] {
-  const names = new Set<string>();
-  for (const m of bundle.models) if (m.data.apiKeyEnv) names.add(m.data.apiKeyEnv);
+/**
+ * One line of an agent's McBot block: a saved key under its own or another name, or a plain
+ * setting that only makes sense next to a key (a bot's allowed users without its token).
+ */
+export type EnvEntry = { name: string; secret: string } | { name: string; value: string; with: string };
+
+/** Everything an agent's .env should hold from the board, sorted by variable name. */
+export function envEntriesFor(bundle: AgentBundle): EnvEntry[] {
+  const out = new Map<string, EnvEntry>();
+  const secret = (name: string, from = name) => out.set(name, { name, secret: from });
+  for (const m of bundle.models) if (m.data.apiKeyEnv) secret(m.data.apiKeyEnv);
   for (const maker of [bundle.image, bundle.video]) {
     if (!maker) continue;
     const p = (MEDIA_PROVIDERS[maker.data.media] as Record<string, { keyEnv: string } | undefined>)[maker.data.provider];
-    if (p) names.add(p.keyEnv);
+    if (p) secret(p.keyEnv);
   }
   for (const t of bundle.tools)
     for (const v of [...Object.values(t.data.env), ...Object.values(t.data.headers)])
-      for (const m of v.matchAll(ENV_REF)) names.add(m[1]!);
-  return [...names].sort();
+      for (const m of v.matchAll(ENV_REF)) secret(m[1]!);
+  for (const c of bundle.channels) {
+    const p = CHANNEL_PLATFORMS[c.data.platform];
+    if (!c.data.tokenEnv) continue;
+    secret(p.tokenEnv, c.data.tokenEnv);
+    out.set(p.allowedUsersEnv, { name: p.allowedUsersEnv, value: c.data.allowedUsers.join(","), with: p.tokenEnv });
+  }
+  return [...out.values()].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+}
+
+/** The block's values: saved keys that exist, and settings whose key made it in. */
+export function resolveEntries(entries: readonly EnvEntry[], saved: Readonly<Record<string, string>>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const e of entries) if ("secret" in e && e.secret in saved) out[e.name] = saved[e.secret]!;
+  for (const e of entries) if ("value" in e && e.with in out && e.value) out[e.name] = e.value;
+  return out;
+}
+
+/** Does this agent have a chat app whose bot token is saved? */
+export function hasLiveChannel(bundle: AgentBundle, saved: Readonly<Record<string, string>>): boolean {
+  return bundle.channels.some((c) => !!c.data.tokenEnv && c.data.tokenEnv in saved);
 }
 
 /** Hermes' dotenv subset: double quotes with \" and \\ escapes (agent/secret_scope.py _parse_env_value). */

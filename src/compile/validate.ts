@@ -5,6 +5,7 @@ import {
   NodeSchema,
   RESERVED_PROFILE_NAMES,
   type AgentNode,
+  type ChannelNode,
   type Graph,
   type GraphNode,
   type MediaNode,
@@ -28,6 +29,8 @@ export interface AgentBundle {
   /** The image maker and the video maker wired to this agent (one each at most). */
   image: MediaNode | null;
   video: MediaNode | null;
+  /** Chat apps this agent answers in (one bot per app), by platform. */
+  channels: ChannelNode[];
 }
 
 export interface Resolved {
@@ -36,10 +39,10 @@ export interface Resolved {
   issues: Issue[];
 }
 
-const PAIRS = new Set(["agent:model", "model:agent", "agent:tool", "tool:agent", "agent:media", "media:agent"]);
+const PAIRS = new Set(["agent:model", "model:agent", "agent:tool", "tool:agent", "agent:media", "media:agent", "agent:channel", "channel:agent"]);
 
 function label(n: GraphNode): string {
-  const kind = n.kind === "media" ? `${n.data.media} maker` : n.kind;
+  const kind = n.kind === "media" ? `${n.data.media} maker` : n.kind === "channel" ? "chat app" : n.kind;
   return n.data.name ? `${kind} "${n.data.name}"` : `${kind} ${n.id}`;
 }
 
@@ -84,11 +87,11 @@ export function resolveGraph(input: unknown): Resolved {
   return { ...resolveValid({ ...shell.data, nodes, edges }, issues), graph: input as Graph };
 }
 
-const KIND: Record<string, string> = { agent: "Agent", model: "Model", tool: "Tool", media: "Maker" };
+const KIND: Record<string, string> = { agent: "Agent", model: "Model", tool: "Tool", media: "Maker", channel: "Chat app" };
 const FIELD: Record<string, string> = {
   name: "ID", displayName: "Name", description: "Description", soul: "Soul", model: "Model", baseUrl: "Endpoint",
   apiKeyEnv: "API key", label: "Label", command: "Command", url: "URL", transport: "Transport", skills: "Skills",
-  capabilities: "Abilities", provider: "Service", media: "Kind",
+  capabilities: "Abilities", provider: "Service", media: "Kind", allowedUsers: "Allowed users", tokenEnv: "Bot token", apiBase: "Bot API server",
 };
 
 /** A schema problem in words a person can act on: which node, which field, what is wrong. */
@@ -115,6 +118,7 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
   const models = graph.nodes.filter((n): n is ModelNode => n.kind === "model");
   const tools = graph.nodes.filter((n): n is ToolNode => n.kind === "tool");
   const makers = graph.nodes.filter((n): n is MediaNode => n.kind === "media");
+  const channels = graph.nodes.filter((n): n is ChannelNode => n.kind === "channel");
 
   for (const [name, ns] of duplicates(agents, (n) => n.data.name))
     for (const n of ns) issues.push({ level: "error", nodeId: n.id, message: `Two agents are named "${name}"; agent names are Hermes profile ids and must be unique` });
@@ -124,6 +128,12 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
     for (const n of ns) issues.push({ level: "error", nodeId: n.id, message: `Two tools are named "${name}"` });
   for (const [name, ns] of duplicates(makers, (n) => n.data.name))
     for (const n of ns) issues.push({ level: "error", nodeId: n.id, message: `Two makers are named "${name}"` });
+  for (const [name, ns] of duplicates(channels, (n) => n.data.name))
+    for (const n of ns) issues.push({ level: "error", nodeId: n.id, message: `Two chat apps are named "${name}"` });
+  for (const c of channels) {
+    if (c.data.allowedUsers.length === 0)
+      issues.push({ level: "warning", nodeId: c.id, message: `${label(c)}: add your user id, or nobody can message it` });
+  }
 
   for (const a of agents) {
     if (RESERVED_PROFILE_NAMES.includes(a.data.name))
@@ -152,6 +162,8 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
   const modelEdges = new Map<string, { edgeId: string; order: number; model: ModelNode }[]>();
   const toolEdges = new Map<string, ToolNode[]>();
   const mediaEdges = new Map<string, MediaNode[]>();
+  const channelEdges = new Map<string, ChannelNode[]>();
+  const channelOwners = new Map<string, AgentNode[]>();
   const wired = new Set<string>();
   const pairSeen = new Set<string>();
 
@@ -163,7 +175,7 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
       continue;
     }
     if (!PAIRS.has(`${s.kind}:${t.kind}`)) {
-      issues.push({ level: "error", edgeId: e.id, message: `Cannot connect ${label(s)} to ${label(t)}; wire models, tools and makers to agents` });
+      issues.push({ level: "error", edgeId: e.id, message: `Cannot connect ${label(s)} to ${label(t)}; wire models, tools, makers and chat apps to agents` });
       continue;
     }
     const agent = (s.kind === "agent" ? s : t) as AgentNode;
@@ -181,6 +193,9 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
       toolEdges.set(agent.id, [...(toolEdges.get(agent.id) ?? []), other]);
     } else if (other.kind === "media") {
       mediaEdges.set(agent.id, [...(mediaEdges.get(agent.id) ?? []), other]);
+    } else if (other.kind === "channel") {
+      channelEdges.set(agent.id, [...(channelEdges.get(agent.id) ?? []), other]);
+      channelOwners.set(other.id, [...(channelOwners.get(other.id) ?? []), agent]);
     }
   }
 
@@ -200,11 +215,19 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
         issues.push({ level: "error", nodeId: agent.id, message: `Agent "${agent.data.name}" has ${wiredMakers.length} ${kind} makers; keep one` });
       return wiredMakers.length === 1 ? wiredMakers[0]! : null;
     };
-    bundles.push({ agent, models: chain, tools: agentTools, image: maker("image"), video: maker("video") });
+    // One bot is one agent's: Hermes reads a bot's token from its agent's .env, and an agent's
+    // .env has one token variable per app.
+    const agentChannels = (channelEdges.get(agent.id) ?? []).slice().sort((x, y) => (x.data.platform < y.data.platform ? -1 : x.data.platform > y.data.platform ? 1 : 0));
+    for (const [platform] of duplicates(agentChannels, (c) => c.data.platform))
+      issues.push({ level: "error", nodeId: agent.id, message: `Agent "${agent.data.name}" has two ${platform} bots; keep one` });
+    bundles.push({ agent, models: chain, tools: agentTools, image: maker("image"), video: maker("video"), channels: agentChannels });
   }
   bundles.sort((x, y) => (x.agent.data.name < y.agent.data.name ? -1 : x.agent.data.name > y.agent.data.name ? 1 : 0));
 
-  for (const n of [...models, ...tools, ...makers])
+  for (const [channelId, owners] of channelOwners)
+    if (owners.length > 1) issues.push({ level: "error", nodeId: channelId, message: `A bot answers as one agent; it is wired to ${owners.length}` });
+
+  for (const n of [...models, ...tools, ...makers, ...channels])
     if (!wired.has(n.id)) issues.push({ level: "warning", nodeId: n.id, message: `${label(n)} is not wired to any agent and will not be compiled` });
   if (agents.length === 0) issues.push({ level: "error", message: "Nothing to compile: add an agent node" });
 

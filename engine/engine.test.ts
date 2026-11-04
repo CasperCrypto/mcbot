@@ -9,11 +9,14 @@ import { addEdge, addNode, graphFromDoc, setNodeField } from "../src/board/ydoc"
 import type { CompileResponse } from "../src/contracts/api";
 import type { RunEvent, RunSummary } from "../src/contracts/run";
 import { startStubLlm, type StubLlm } from "../test/stub-llm/server";
+import { startStubTelegram, type StubTelegram } from "../test/stub-telegram/server";
+import { findHermes, stopGateway } from "./hermes";
 import { startEngine, type Engine } from "./server";
 
 const ORIGIN = "http://localhost:5173";
 let engine: Engine;
 let stub: StubLlm;
+let telegram: StubTelegram | null = null;
 let workspace: string;
 
 beforeAll(async () => {
@@ -23,6 +26,10 @@ beforeAll(async () => {
   await engine.relay.create("team", "Team board");
 });
 afterAll(async () => {
+  // A chat app keeps the gateway running on purpose; a test must not leave one behind.
+  const bin = telegram ? await findHermes() : null;
+  if (bin) await stopGateway(bin, join(workspace, "hermes"));
+  await telegram?.close();
   await engine?.close();
   await stub?.close();
 });
@@ -193,4 +200,41 @@ describe("engine", () => {
     expect(image.startsWith(join(workspace, "hermes/profiles/artist/"))).toBe(true);
     expect(readFileSync(image).subarray(1, 4).toString()).toBe("PNG");
   }, 300_000);
+
+  // A chat app: the bot's token and allowed users reach the agent's .env, the engine starts the
+  // gateway without a run, Hermes' Telegram adapter polls (here: a stub Bot API), the allowed user
+  // gets the agent's answer and a stranger gets nothing.
+  it.skipIf(!process.env.MCBOT_HERMES_BIN && process.env.MCBOT_E2E !== "1")("answers the allowed user on Telegram through the agent's own bot, and nobody else", async () => {
+    telegram = await startStubTelegram();
+    // Hermes' Telegram adapter sends through a system proxy even to a local Bot API server
+    // (resolve_proxy_url checks NO_PROXY against api.telegram.org); the stub is local.
+    const proxies = ["HTTPS_PROXY", "HTTP_PROXY", "https_proxy", "http_proxy", "ALL_PROXY", "all_proxy"];
+    const savedProxies = Object.fromEntries(proxies.map((k) => [k, process.env[k]]));
+    for (const k of proxies) delete process.env[k];
+    const a = client();
+    await until(() => a.provider.synced);
+    addNode(a.doc, { id: "n-desk", kind: "channel", position: { x: 300, y: 0 }, data: { name: "desk", label: "Desk bot", platform: "telegram", tokenEnv: "MCBOT_TELEGRAM_DESK_TOKEN", allowedUsers: ["111"], apiBase: telegram.url } });
+    addEdge(a.doc, { id: "e-desk", source: "n-agent", target: "n-desk", order: 0 });
+    await until(() => graphFromDoc(a.doc).nodes.some((n) => n.id === "n-desk"));
+    await engine.relay.flush();
+    a.provider.destroy();
+
+    expect((await api("/api/secrets", { method: "POST", body: JSON.stringify({ name: "MCBOT_TELEGRAM_DESK_TOKEN", value: "4242:stub-token" }) })).status).toBe(200);
+    const compiled = await api<CompileResponse>("/api/compile", { method: "POST", body: JSON.stringify({ boardId: "team" }) });
+    expect(compiled.body.ok).toBe(true);
+    expect(readFileSync(join(workspace, "hermes/profiles/triage/config.yaml"), "utf8")).toContain(`platforms:\n  telegram:\n    extra:\n      base_url: ${telegram.url}\n`);
+
+    // No run started: the engine itself brings the gateway up, and the bot starts polling.
+    await until(() => telegram!.calls.some((c) => c.method === "getUpdates" && c.token === "4242:stub-token"), 180_000);
+    const env = readFileSync(join(workspace, "hermes/profiles/triage/.env"), "utf8");
+    expect(env).toContain('TELEGRAM_ALLOWED_USERS="111"\nTELEGRAM_BOT_TOKEN="4242:stub-token"\n');
+
+    telegram.say(111, "what is 2+2");
+    await until(() => telegram!.sent.some((m) => m.chatId === "111" && m.text.trim() === "4"), 120_000);
+
+    telegram.say(999, "what is 2+2");
+    await new Promise((r) => setTimeout(r, 8000));
+    expect(telegram.sent.filter((m) => m.chatId === "999" && m.text.includes("4"))).toEqual([]);
+    for (const [k, v] of Object.entries(savedProxies)) if (v !== undefined) process.env[k] = v;
+  }, 400_000);
 });

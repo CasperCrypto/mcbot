@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { resolveGraph } from "../src/compile";
 import { Folders } from "./folders";
-import { ENV_BEGIN, ENV_END, keyNamesFor, withKeys, writeProfileKeys } from "./profileEnv";
+import { ENV_BEGIN, ENV_END, envEntriesFor, hasLiveChannel, resolveEntries, withKeys, writeProfileKeys } from "./profileEnv";
 
 describe("withKeys", () => {
   it("adds McBot's block after the lines someone wrote with Hermes, and keeps those lines", () => {
@@ -25,12 +25,27 @@ describe("withKeys", () => {
   });
 });
 
-describe("keyNamesFor", () => {
-  it("collects model key variables, maker keys and ${env:NAME} in MCP servers", () => {
-    const g = JSON.parse(readFileSync(join(import.meta.dirname, "../test/fixtures/full.graph.json"), "utf8"));
-    const { bundles } = resolveGraph(g);
-    expect(keyNamesFor(bundles.find((b) => b.agent.data.name === "researcher")!)).toEqual(["EXAMPLE_API_KEY", "FAL_KEY", "SEARCH_TOKEN"]);
-    expect(keyNamesFor(bundles.find((b) => b.agent.data.name === "writer")!)).toEqual(["OPENROUTER_API_KEY"]);
+describe("envEntriesFor", () => {
+  const g = JSON.parse(readFileSync(join(import.meta.dirname, "../test/fixtures/full.graph.json"), "utf8"));
+  const { bundles } = resolveGraph(g);
+  const researcher = bundles.find((b) => b.agent.data.name === "researcher")!;
+
+  it("names model keys, maker keys, ${env:NAME} in MCP servers and the bot's token and allowed users", () => {
+    expect(envEntriesFor(researcher)).toEqual([
+      { name: "EXAMPLE_API_KEY", secret: "EXAMPLE_API_KEY" },
+      { name: "FAL_KEY", secret: "FAL_KEY" },
+      { name: "SEARCH_TOKEN", secret: "SEARCH_TOKEN" },
+      { name: "TELEGRAM_ALLOWED_USERS", value: "111,222", with: "TELEGRAM_BOT_TOKEN" },
+      { name: "TELEGRAM_BOT_TOKEN", secret: "MCBOT_TELEGRAM_DESK_TOKEN" },
+    ]);
+  });
+
+  it("writes only saved keys, under the platform's name, and allowed users only with their bot's token", () => {
+    const entries = envEntriesFor(researcher);
+    expect(resolveEntries(entries, { FAL_KEY: "f" })).toEqual({ FAL_KEY: "f" });
+    expect(resolveEntries(entries, { MCBOT_TELEGRAM_DESK_TOKEN: "123:abc" })).toEqual({ TELEGRAM_BOT_TOKEN: "123:abc", TELEGRAM_ALLOWED_USERS: "111,222" });
+    expect(hasLiveChannel(researcher, {})).toBe(false);
+    expect(hasLiveChannel(researcher, { MCBOT_TELEGRAM_DESK_TOKEN: "123:abc" })).toBe(true);
   });
 });
 

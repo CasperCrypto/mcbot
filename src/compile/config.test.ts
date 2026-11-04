@@ -139,3 +139,34 @@ describe("abilities and makers", () => {
     expect(issues.some((i) => i.level === "error" && i.nodeId === "n-agent")).toBe(true);
   });
 });
+
+describe("chat apps", () => {
+  const board = (channel: Record<string, unknown>, wireTo: string[] = ["n-agent"]) => {
+    const g = fixture("three-node.graph.json");
+    g.nodes.push({ id: "n-tg", kind: "channel", position: { x: 320, y: 200 }, data: { name: "tg", label: "", platform: "telegram", tokenEnv: "MCBOT_TELEGRAM_TG_TOKEN", allowedUsers: ["111"], apiBase: "", ...channel } });
+    if (wireTo.length > 1) g.nodes.push({ ...g.nodes[0], id: "n-agent-2", data: { ...g.nodes[0].data, name: "second" } });
+    for (const a of wireTo) g.edges.push({ id: `e-tg-${a}`, source: a, target: "n-tg", order: 0 });
+    if (wireTo.length > 1) g.edges.push({ id: "e-model-2", source: "n-agent-2", target: "n-model", order: 0 });
+    return resolveGraph(g);
+  };
+
+  it("writes nothing to config.yaml for a bot on api.telegram.org: its token is not config", () => {
+    const { graph, bundles, issues } = board({});
+    expect(issues.filter((i) => i.level === "error")).toEqual([]);
+    expect(bundles[0]!.channels.map((c) => c.id)).toEqual(["n-tg"]);
+    const out = renderConfig(graph, bundles[0]!);
+    expect(out).not.toContain("platforms");
+    expect(out).not.toContain("TELEGRAM");
+  });
+
+  it("points the bot at an own Bot API server, byte for byte", () => {
+    const { graph, bundles } = board({ apiBase: "http://127.0.0.1:8081/bot" });
+    expect(renderConfig(graph, bundles[0]!)).toMatch(/\nplatforms:\n  telegram:\n    extra:\n      base_url: http:\/\/127\.0\.0\.1:8081\/bot\n$/);
+  });
+
+  it("refuses one bot for two agents, and warns while nobody may message it", () => {
+    expect(board({}, ["n-agent", "n-agent-2"]).issues.map((i) => i.message)).toContain("A bot answers as one agent; it is wired to 2");
+    expect(board({ allowedUsers: [] }).issues).toContainEqual(expect.objectContaining({ level: "warning", nodeId: "n-tg" }));
+    expect(board({ allowedUsers: ["@me"] }).issues.some((i) => i.level === "error" && i.nodeId === "n-tg")).toBe(true);
+  });
+});

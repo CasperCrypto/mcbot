@@ -13,6 +13,11 @@ export default function setup(): () => void {
   process.env.TEMP = dir;
   process.env.TMP = dir;
   return () => {
-    rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
+    // A Hermes gateway a test stopped may still be finishing its last writes: retry, never fail the run.
+    try {
+      rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 500 });
+    } catch (err) {
+      console.warn(`[tests] could not remove ${dir}: ${(err as Error).message}`);
+    }
   };
 }

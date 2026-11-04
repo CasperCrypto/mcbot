@@ -20,7 +20,7 @@ import { atomicWrite } from "./fsutil";
 import { FolderError, Folders } from "./folders";
 import { bundledHermes, bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, runHermesSetup, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
-import { keyNamesFor } from "./profileEnv";
+import { envEntriesFor, hasLiveChannel, resolveEntries, writeProfileKeys } from "./profileEnv";
 import { MediaError, mediaFile } from "./media";
 import { BOARD_ID_RE, BoardRelay, LooseGraph } from "./relay";
 import { Runner } from "./runner";
@@ -82,7 +82,9 @@ export interface Engine {
 }
 
 export async function startEngine(cfg: EngineConfig): Promise<Engine> {
-  const relay = new BoardRelay(join(cfg.workspace, "boards"));
+  // A saved board edit can change what an agent's .env holds (a bot's allowed users): sync it.
+  let onBoardSaved: (boardId: string) => void = () => undefined;
+  const relay = new BoardRelay(join(cfg.workspace, "boards"), (boardId) => onBoardSaved(boardId));
   const store = new RunStore(join(cfg.workspace, "runs"));
   const secrets = new Secrets(join(cfg.workspace, "secrets.json"));
   let setupJob: HermesInfo["setup"] = { state: "idle", lines: [] };
@@ -103,6 +105,29 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
 
   const bundlesOf = async (boardId: string) => resolveGraph(await relay.graph(boardId));
   const modelsOf = (bundles: AgentBundle[]): ModelNode[] => [...new Map(bundles.flatMap((b) => b.models).map((m) => [m.id, m])).values()];
+
+  /**
+   * After a compile, a saved key and at start: fill every compiled agent's .env from the board
+   * compiled into this root, and keep the gateway up while any agent has a chat app whose bot
+   * token is saved (a bot must answer without a run in progress). Serialized; never throws.
+   */
+  let syncing: Promise<void> = Promise.resolve();
+  const syncAgents = (): Promise<void> => (syncing = syncing.then(async () => {
+    const manifest = await readManifest(cfg.hermesHome);
+    if (!manifest || !BOARD_ID_RE.test(manifest.graphId) || !(await relay.exists(manifest.graphId))) return;
+    const { bundles } = await bundlesOf(manifest.graphId);
+    const saved = await secrets.env();
+    let live = false;
+    for (const b of bundles) {
+      if (!manifest.profiles.includes(b.agent.data.name)) continue;
+      await writeProfileKeys(join(cfg.hermesHome, "profiles", b.agent.data.name), resolveEntries(envEntriesFor(b), saved));
+      live ||= hasLiveChannel(b, saved);
+    }
+    if (live) console.log(`[engine] chat apps: gateway ${await runner.ensureGateway()}`);
+  }).catch((err: unknown) => console.error("[engine] could not update agents' keys:", err)));
+  onBoardSaved = (boardId) => {
+    void readManifest(cfg.hermesHome).then((m) => { if (m?.graphId === boardId) void syncAgents(); }).catch(() => undefined);
+  };
 
   const routes: Record<string, (req: IncomingMessage, url: URL) => Promise<unknown>> = {
     "GET /api/health": async (): Promise<Health> => {
@@ -181,6 +206,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       }
       // A running gateway was started without this key.
       if (cfg.managedRoot) runner.markGatewayStale();
+      void syncAgents();
       return { names: await secrets.names() };
     },
     "POST /api/boards": async (req) => {
@@ -212,7 +238,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const runId = await runner.start({
         boardId, agentNodeId: bundle.agent.id, profile: bundle.agent.data.name, prompt: body.prompt,
         toolNodes: bundle.tools.map((t) => ({ id: t.id, name: t.data.name })), models: bundle.models,
-        keyNames: keyNamesFor(bundle),
+        env: envEntriesFor(bundle),
       });
       return { runId };
     },
@@ -317,6 +343,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const configChanged = report.changes.some((c) => c.path.endsWith("/config.yaml") && c.status !== "unchanged");
       if (!dryRun && configChanged) runner.markGatewayStale();
       if (!dryRun) await atomicWrite(join(cfg.workspace, "compiles", `${boardId}.json`), `${JSON.stringify({ at: Date.now(), report }, null, 2)}\n`);
+      if (!dryRun) void syncAgents();
       return { ok: true, report, issues, gateway: !dryRun && configChanged && cfg.managedRoot ? "restart-pending" : "unchanged" };
     } catch (err) {
       if (err instanceof OwnershipError) return { ok: false, issues, error: err.message };
@@ -421,6 +448,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     server.listen(cfg.port, cfg.host, () => resolve());
   });
   const { port } = server.address() as AddressInfo;
+  void syncAgents();
   return {
     server,
     url: `http://${cfg.host}:${port}`,

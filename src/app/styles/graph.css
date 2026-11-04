@@ -54,6 +54,7 @@
 .tile.tool { background: linear-gradient(145deg, #46e3c0, #10a98a); }
 .tile.agent { background: linear-gradient(145deg, #a597ff, #6d5bff); }
 .tile.media { background: linear-gradient(145deg, #ff8ac2, #e2457f); }
+.tile.channel { background: linear-gradient(145deg, #c2f06e, #5fbf3a); }
 .tile.folder { background: linear-gradient(145deg, #74b6ff, #3d7ef0); }
 .tile.file { background: rgba(255, 255, 255, 0.08); color: var(--text-2); box-shadow: none; }
 .tile.sm { width: 26px; height: 26px; border-radius: 8px; }

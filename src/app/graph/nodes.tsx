@@ -1,7 +1,7 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
-import { Clapperboard, Cloud, HardDrive, Image, Plug, Server } from "lucide-react";
+import { Clapperboard, Cloud, HardDrive, Image, Plug, Send, Server } from "lucide-react";
 import { memo } from "react";
-import { MEDIA_PROVIDERS, type AgentData, type GraphNode, type MediaData, type ModelData, type ToolData } from "../../contracts/graph";
+import { CHANNEL_PLATFORMS, MEDIA_PROVIDERS, type AgentData, type ChannelData, type GraphNode, type MediaData, type ModelData, type ToolData } from "../../contracts/graph";
 import type { RunSummary } from "../../contracts/run";
 import { ago, usd } from "../lib/format";
 import type { Peer } from "../state/board";
@@ -122,4 +122,20 @@ export const MediaNodeView = memo(function MediaNodeView({ data }: NodeProps<Flo
   );
 });
 
-export const nodeTypes = { agent: AgentNodeView, model: ModelNodeView, tool: ToolNodeView, media: MediaNodeView };
+export const ChannelNodeView = memo(function ChannelNodeView({ data }: NodeProps<FlowNode>) {
+  const c = data.node.data as ChannelData;
+  const n = c.allowedUsers.length;
+  return (
+    <div className={`node node-compact${data.hasError ? " has-error" : ""}`}>
+      <Peer peer={data.peer} />
+      <Handle type="target" position={Position.Left} id="in" />
+      <div className="tile channel"><Send size={15} /></div>
+      <div className="grow">
+        <div className="label ellipsis">{c.label || CHANNEL_PLATFORMS[c.platform].label}</div>
+        <div className="sub ellipsis">{n ? `${n} allowed` : "nobody allowed yet"}</div>
+      </div>
+    </div>
+  );
+});
+
+export const nodeTypes = { agent: AgentNodeView, model: ModelNodeView, tool: ToolNodeView, media: MediaNodeView, channel: ChannelNodeView };

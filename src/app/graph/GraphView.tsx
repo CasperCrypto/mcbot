@@ -14,7 +14,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { MeshGradient } from "@paper-design/shaders-react";
-import { Bot, Clapperboard, Cloud, Command, FolderOpen, HardDrive, Image, Plug, Plus, Server } from "lucide-react";
+import { Bot, Clapperboard, Cloud, Command, FolderOpen, HardDrive, Image, Plug, Plus, Send, Server } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode, moveNode, removeEdges, removeNodes } from "../../board/ydoc";
 import { resolveGraph } from "../../compile";
@@ -25,12 +25,12 @@ import { latestRunByAgent, toolActivity, useApp } from "../state/store";
 import { AgentFace } from "../ui";
 import { CompileSheet } from "./CompileSheet";
 import { Cursors } from "./Cursors";
-import { newAgent, newId, newMaker, newModel, newTool } from "./defaults";
+import { newAgent, newChannel, newId, newMaker, newModel, newTool } from "./defaults";
 import { Inspector } from "./Inspector";
 import { MakerIcon, makerService, nodeTypes, type FlowNode } from "./nodes";
 import { freeSpot } from "./place";
 
-const PAIRS = new Set(["agent:model", "model:agent", "agent:tool", "tool:agent", "agent:media", "media:agent"]);
+const PAIRS = new Set(["agent:model", "model:agent", "agent:tool", "tool:agent", "agent:media", "media:agent", "agent:channel", "channel:agent"]);
 const MAKER_TOOLS: Record<string, MediaData["media"]> = { image_generate: "image", video_generate: "video" };
 
 function DockItem({ tile, icon, label, onClick, testId }: { tile: string; icon: ReactNode; label: string; onClick: () => void; testId: string }) {
@@ -60,6 +60,7 @@ function HarnessSidebar() {
     ["Models", graph.nodes.filter((n) => n.kind === "model" && hit(n))],
     ["Tools", graph.nodes.filter((n) => n.kind === "tool" && hit(n))],
     ["Makers", graph.nodes.filter((n) => n.kind === "media" && hit(n))],
+    ["Chat apps", graph.nodes.filter((n) => n.kind === "channel" && hit(n))],
   ];
   return (
     <Sidebar title="Harness" search={q} onSearch={setQ} testId="harness-sidebar">
@@ -70,12 +71,13 @@ function HarnessSidebar() {
             <button key={n.id} className="list-row" aria-selected={n.id === selected} onClick={() => focus(n)}>
               {n.kind === "agent" ? <AgentFace seed={n.data.name} size={28} status={latest.get(n.id)?.status} />
                 : n.kind === "media" ? <span className="tile sm media"><MakerIcon media={n.data.media} size={13} /></span>
+                : n.kind === "channel" ? <span className="tile sm channel"><Send size={12} /></span>
                 : <span className={`tile sm ${n.kind === "tool" ? "tool" : (n.data as ModelData).endpoint === "local" ? "model" : "cloud"}`}>
                   {n.kind === "tool" ? ((n.data as ToolData).transport === "http" ? <Server size={13} /> : <Plug size={13} />) : (n.data as ModelData).endpoint === "local" ? <HardDrive size={13} /> : <Cloud size={13} />}
                 </span>}
               <span className="grow">
                 <span className="title ellipsis" style={{ display: "block" }}>{n.kind === "agent" ? n.data.displayName || n.data.name : ("label" in n.data && n.data.label) || n.data.name}</span>
-                <span className="sub ellipsis mono" style={{ display: "block", fontSize: 11 }}>{n.kind === "model" ? (n.data as ModelData).model || "—" : n.kind === "media" ? makerService(n.data) || "—" : n.data.name}</span>
+                <span className="sub ellipsis mono" style={{ display: "block", fontSize: 11 }}>{n.kind === "model" ? (n.data as ModelData).model || "—" : n.kind === "media" ? makerService(n.data) || "—" : n.kind === "channel" ? `${n.data.allowedUsers.length} allowed` : n.data.name}</span>
               </span>
             </button>
           ))}
@@ -181,7 +183,7 @@ function Canvas() {
     const other = agent === s ? t : s;
     const running = agent ? latest.get(agent.id)?.status === "running" : false;
     if (agent && other.kind === "model") return [{ id: e.id, source: other.id, target: agent.id, sourceHandle: "out", targetHandle: "in", className: running ? "live" : undefined }];
-    if (agent && (other.kind === "tool" || other.kind === "media")) return [{ id: e.id, source: agent.id, target: other.id, sourceHandle: "out", targetHandle: "in", className: activity.active.has(other.id) ? "live" : undefined }];
+    if (agent && (other.kind === "tool" || other.kind === "media" || other.kind === "channel")) return [{ id: e.id, source: agent.id, target: other.id, sourceHandle: "out", targetHandle: "in", className: activity.active.has(other.id) ? "live" : undefined }];
     return [{ id: e.id, source: e.source, target: e.target, className: "problem" }];
   }), [graph, latest, activity]);
 
@@ -279,6 +281,7 @@ function Canvas() {
             <div className="dock-sep" />
             <DockItem tile="media" icon={<Image size={19} />} label="Image maker" testId="add-maker-image" onClick={() => add("media", (p) => newMaker(graph, "image", p))} />
             <DockItem tile="media" icon={<Clapperboard size={19} />} label="Video maker" testId="add-maker-video" onClick={() => add("media", (p) => newMaker(graph, "video", p))} />
+            <DockItem tile="channel" icon={<Send size={18} />} label="Telegram" testId="add-telegram" onClick={() => add("channel", (p) => newChannel(graph, "telegram", p))} />
             <div className="dock-sep" />
             <DockItem tile="file" icon={<Command size={19} />} label="Commands ⌘K" testId="dock-palette" onClick={() => setPalette(true)} />
           </div>

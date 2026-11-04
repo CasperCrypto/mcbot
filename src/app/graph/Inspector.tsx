@@ -1,10 +1,10 @@
-import { ArrowUp, Check, Cloud, HardDrive, MessagesSquare, Plug, Plus, RotateCcw, Square, Trash2, X } from "lucide-react";
+import { ArrowUp, Check, Cloud, HardDrive, MessagesSquare, Plug, Plus, RotateCcw, Send, Square, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { removeNodes, setNodeField, updateEdge } from "../../board/ydoc";
 import type { Issue } from "../../compile";
 import {
-  AgentDataSchema, CAPABILITIES, DEFAULT_CAPABILITIES, MEDIA_PROVIDERS, MediaDataSchema, ModelDataSchema, ToolDataSchema,
-  type AgentData, type Capability, type GraphNode, type MediaData, type ModelData, type Skill, type ToolData,
+  AgentDataSchema, CAPABILITIES, ChannelDataSchema, DEFAULT_CAPABILITIES, MEDIA_PROVIDERS, MediaDataSchema, ModelDataSchema, ToolDataSchema,
+  type AgentData, type Capability, type ChannelData, type GraphNode, type MediaData, type ModelData, type Skill, type ToolData,
 } from "../../contracts/graph";
 import { runAgent } from "../actions";
 import { engine } from "../lib/engine";
@@ -34,13 +34,15 @@ export function Inspector({ node, issues }: { node: GraphNode; issues: Issue[] }
   const title = node.kind === "agent" ? node.data.displayName : node.data.label;
   const sub = node.kind === "agent" ? `hermes -p ${node.data.name || "…"}`
     : node.kind === "model" ? (node.data.endpoint === "local" ? "Local model" : "Cloud model")
-    : node.kind === "media" ? (node.data.media === "video" ? "Video maker" : "Image maker") : "MCP server";
+    : node.kind === "media" ? (node.data.media === "video" ? "Video maker" : "Image maker")
+    : node.kind === "channel" ? "Chat app" : "MCP server";
 
   return (
     <aside className="inspector glass" aria-label="Inspector" data-testid="inspector">
       <div className="inspector-head">
         {node.kind === "agent" ? <AgentFace seed={node.data.name} size={42} status={status} />
           : node.kind === "media" ? <span className="tile media"><MakerIcon media={node.data.media} size={16} /></span>
+          : node.kind === "channel" ? <span className="tile channel"><Send size={15} /></span>
           : <span className={`tile ${node.kind === "tool" ? "tool" : node.data.endpoint === "local" ? "model" : "cloud"}`}>
             {node.kind === "tool" ? <Plug size={16} /> : node.data.endpoint === "local" ? <HardDrive size={16} /> : <Cloud size={16} />}
           </span>}
@@ -57,6 +59,7 @@ export function Inspector({ node, issues }: { node: GraphNode; issues: Issue[] }
           {node.kind === "model" && <ModelFields data={node.data} set={set} />}
           {node.kind === "tool" && <ToolFields data={node.data} set={set} />}
           {node.kind === "media" && <MakerFields data={node.data} set={set} />}
+          {node.kind === "channel" && <ChannelFields data={node.data} set={set} />}
         </div>
       )}
     </aside>
@@ -91,7 +94,7 @@ function AgentSetup({ node, set }: { node: Extract<GraphNode, { kind: "agent" }>
     .map((e) => ({ edge: e, other: graph.nodes.find((n) => n.id === (e.source === node.id ? e.target : e.source)) }))
     .filter((x): x is { edge: typeof x.edge; other: GraphNode } => !!x.other);
   const chain = linked.filter((x) => x.other.kind === "model").sort((x, y) => x.edge.order - y.edge.order || (x.edge.id < y.edge.id ? -1 : 1));
-  const tools = linked.filter((x) => x.other.kind === "tool");
+  const tools = linked.filter((x) => x.other.kind === "tool" || x.other.kind === "channel");
   const makers = linked.filter((x): x is { edge: typeof x.edge; other: Extract<GraphNode, { kind: "media" }> } => x.other.kind === "media");
   const makePrimary = (edgeId: string) => {
     const ordered = [chain.find((c) => c.edge.id === edgeId)!, ...chain.filter((c) => c.edge.id !== edgeId)];
@@ -122,7 +125,7 @@ function AgentSetup({ node, set }: { node: Extract<GraphNode, { kind: "agent" }>
           <span className="section-label">Tools</span>
           <div className="chain">
             {tools.map((t) => (
-              <div key={t.edge.id} className="chain-item"><Plug size={13} className="faint" /><span className="grow ellipsis">{(t.other.data as ToolData).label || t.other.data.name}</span><span className="chip mono">{t.other.data.name}</span></div>
+              <div key={t.edge.id} className="chain-item">{t.other.kind === "channel" ? <Send size={13} className="faint" /> : <Plug size={13} className="faint" />}<span className="grow ellipsis">{(t.other.data as ToolData | ChannelData).label || t.other.data.name}</span><span className="chip mono">{t.other.data.name}</span></div>
             ))}
           </div>
         </div>
@@ -165,6 +168,26 @@ function Abilities({ data, set, forced }: { data: AgentData; set: (f: string, v:
         })}
       </div>
     </div>
+  );
+}
+
+/**
+ * A Telegram bot for one agent. The token comes from @BotFather; only the ids listed may talk to
+ * it (Hermes refuses everyone else). It answers while this computer and McBot's gateway are on.
+ */
+function ChannelFields({ data, set }: { data: ChannelData; set: (f: string, v: unknown) => void }) {
+  const errors = fieldErrors(ChannelDataSchema, data);
+  const [ids, setIds] = useState(data.allowedUsers.join(", "));
+  const userError = Object.entries(errors).find(([k]) => k.startsWith("allowedUsers"))?.[1];
+  return (
+    <>
+      <KeyField name={data.tokenEnv} label="Bot token" placeholder="From @BotFather" />
+      <Field label="Allowed users" value={ids} mono placeholder="Your Telegram user id" testId="channel-users"
+        error={userError ? "Numbers only, like 123456789" : null}
+        onChange={(v) => { setIds(v); set("allowedUsers", v.split(/[\s,]+/).map((x) => x.trim()).filter(Boolean)); }} />
+      <Field label="Bot API server" value={data.apiBase} onChange={(v) => set("apiBase", v.trim())} mono placeholder="api.telegram.org" error={errors.apiBase} />
+      <Field label="ID" value={data.name} onChange={(v) => set("name", v)} mono error={errors.name} />
+    </>
   );
 }
 
@@ -286,7 +309,7 @@ const keyNameFor = (d: ModelData) =>
  * A key, typed once and kept on this computer by the engine, never on the board: the
  * board only names its variable. Shared by cloud models and makers.
  */
-function KeyField({ name, error, onSaved }: { name: string; error?: string; onSaved?: (name: string) => void }) {
+function KeyField({ name, error, onSaved, label = "API key", placeholder = "Paste your key" }: { name: string; error?: string; onSaved?: (name: string) => void; label?: string; placeholder?: string }) {
   const [saved, setSaved] = useState<string[] | null>(null);
   const [value, setValue] = useState("");
   const [editing, setEditing] = useState(false);
@@ -313,7 +336,7 @@ function KeyField({ name, error, onSaved }: { name: string; error?: string; onSa
   if (has && !editing) {
     return (
       <div className="field">
-        <span>API key</span>
+        <span>{label}</span>
         <div className="row key-saved" data-testid="api-key-saved">
           <Check size={14} className="ok-text" /><span className="grow" data-tip={`Saved as ${name}`} data-tip-side="top">Saved on this computer</span>
           <button className="btn ghost sm" onClick={() => setEditing(true)}>Change</button>
@@ -323,7 +346,7 @@ function KeyField({ name, error, onSaved }: { name: string; error?: string; onSa
   }
   return (
     <div className="key-entry">
-      <Field label="API key" type="password" value={value} onChange={(v) => { setValue(v); setProblem(null); }} placeholder="Paste your key" error={problem ?? error ?? null} testId="api-key" />
+      <Field label={label} type="password" value={value} onChange={(v) => { setValue(v); setProblem(null); }} placeholder={placeholder} error={problem ?? error ?? null} testId="api-key" />
       <button className="btn" disabled={!value.trim()} onClick={() => void save()} data-testid="api-key-save">Save</button>
     </div>
   );

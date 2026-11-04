@@ -91,6 +91,18 @@
       "kind": "media",
       "position": { "x": 640, "y": 200 },
       "data": { "name": "clips", "media": "video", "provider": "fal", "model": "kling-video" }
+    },
+    {
+      "id": "c-desk",
+      "kind": "channel",
+      "position": { "x": 640, "y": 400 },
+      "data": { "name": "desk", "platform": "telegram", "tokenEnv": "MCBOT_TELEGRAM_DESK_TOKEN", "allowedUsers": ["111", "222"] }
+    },
+    {
+      "id": "c-own",
+      "kind": "channel",
+      "position": { "x": 640, "y": 600 },
+      "data": { "name": "own", "label": "Own server", "platform": "telegram", "tokenEnv": "MCBOT_TELEGRAM_OWN_TOKEN", "allowedUsers": ["333"], "apiBase": "https://tg.example.com/bot" }
     }
   ],
   "edges": [
@@ -100,6 +112,8 @@
     { "id": "e4", "source": "t-git", "target": "a1" },
     { "id": "e5", "source": "a2", "target": "m-local" },
     { "id": "e6", "source": "a2", "target": "x-image" },
-    { "id": "e7", "source": "x-video", "target": "a1" }
+    { "id": "e7", "source": "x-video", "target": "a1" },
+    { "id": "e8", "source": "a1", "target": "c-desk" },
+    { "id": "e9", "source": "c-own", "target": "a2" }
   ]
 }

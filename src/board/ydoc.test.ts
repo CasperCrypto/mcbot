@@ -50,6 +50,6 @@ describe("board ydoc", () => {
     const doc = new Y.Doc();
     loadGraphIntoDoc(doc, fixture);
     removeNodes(doc, ["m-local"]);
-    expect(graphFromDoc(doc).edges.map((e) => e.id)).toEqual(["e1", "e3", "e4", "e6", "e7"]);
+    expect(graphFromDoc(doc).edges.map((e) => e.id)).toEqual(["e1", "e3", "e4", "e6", "e7", "e8", "e9"]);
   });
 });
