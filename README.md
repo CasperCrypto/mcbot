@@ -2,7 +2,7 @@
 
 **Draw your AI agent harness. Compile it into a real one.**
 
-McBot is a desktop app (macOS and Windows) where a team draws a harness of AI
+McBot is a desktop app (macOS, Windows and Linux) where a team draws a harness of AI
 agents as a graph — agents, the models they think with, the tools they can use —
 and that graph **compiles into a real, runnable [Hermes Agent](https://github.com/NousResearch/hermes-agent)
 setup on disk**. Then the same graph shows what every agent is doing, what it
@@ -22,6 +22,14 @@ Seven views, one shared board, everything a graph:
   wire them, press **Compile**: every agent becomes a real Hermes profile
   (`SOUL.md`, `config.yaml`, `profile.yaml`, `skills/<name>/SKILL.md`), and the
   Compile panel shows each file written with its SHA-256 and a diff.
+  - **Abilities** per agent: web search, browser, files, terminal, code, making
+    images and videos, speech, memory, helpers, schedules, the task board,
+    using the computer — switch each on or off.
+  - **Image and video makers**: wire one to an agent, pick the service (OpenAI,
+    OpenRouter, FAL, xAI, Krea, DeepInfra, Meta), paste the key once. What the
+    agent makes shows up in its chat.
+  - **Obsidian**: ⌘K → "Obsidian vault…" gives agents your notes — read, search
+    and write, only inside that folder.
 - **Agents** — your agents as teammates. Message one and it runs with Hermes;
   tool calls, answer, time, tokens and cost land in the thread. Its face shows
   what it is doing: thinking while it works, happy or sad after.
@@ -110,10 +118,14 @@ Pages with "GitHub Actions" as the source).
 | model (primary) | `config.yaml` → `model:` + `providers.mcbot-<name>` |
 | model (fallbacks) | `config.yaml` → `fallback_providers:` |
 | tool | `config.yaml` → `mcp_servers.<name>` (stdio command or URL) |
+| agent abilities | `config.yaml` → `platform_toolsets.cli` (left out = Hermes' defaults) |
+| image / video maker | `config.yaml` → `image_gen` / `video_gen` `{ provider, model }` |
 
 Two kinds of model endpoint, both OpenAI-compatible: one **local** (Ollama, LM
-Studio, vLLM, llama.cpp) and one **cloud** (any OpenAI-compatible API). McBot
-stores the *name* of your API-key variable, never the key.
+Studio, vLLM, llama.cpp) and one **cloud** (any OpenAI-compatible API). Boards and
+compiled files carry only the *name* of a key. Keys you type into McBot stay on
+your computer (owner-only), and right before a run McBot hands an agent the keys
+that agent uses, in its own profile's `.env` — the only place Hermes reads them.
 
 ## Architecture
 
@@ -138,7 +150,7 @@ are in [`src/contracts/`](src/contracts) and described in [docs/BUILD.md](docs/B
 
 ```bash
 npm test                               # unit, golden byte-level compiler tests, engine integration
-MCBOT_HERMES_BIN=$(which hermes) npm test   # + a real Hermes run end to end
+MCBOT_E2E=1 npm test                   # + real runs on McBot's own Hermes (after npm run hermes:setup)
 npm run typecheck
 ```
 
@@ -147,10 +159,13 @@ invariants (never invent a Hermes key; every compiler module is byte-tested).
 
 ## Status
 
-v0.1, milestones M0–M4: graph, compiler, shared board, run + observe, memory and
-cost. No auth (the engine only listens on loopback and checks origins), no
-cloud, no installers yet. Next node kinds: workflow, file/folder, memory, human
-gate, schedule.
+v0.1. Done: graph, compiler, shared board, runs, memory and cost (M0–M4); the
+setup assistant, McBot's own Hermes inside the app and unsigned installers for
+macOS, Windows and Linux (M5). Under way (M6): abilities, image and video makers
+and Obsidian are in; chat apps (Slack, Telegram, WhatsApp, Discord), tool and
+skill catalogs and the OS keychain are next. No accounts yet: the engine only
+listens on this computer and checks origins. The whole plan, M6–M14, is in
+[docs/PLAN.md](docs/PLAN.md); why that order, in [docs/NEXT.md](docs/NEXT.md).
 
 ## Licences and credits
 
