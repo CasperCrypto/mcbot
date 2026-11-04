@@ -206,11 +206,6 @@ describe("engine", () => {
   // gets the agent's answer and a stranger gets nothing.
   it.skipIf(!process.env.MCBOT_HERMES_BIN && process.env.MCBOT_E2E !== "1")("answers the allowed user on Telegram through the agent's own bot, and nobody else", async () => {
     telegram = await startStubTelegram();
-    // Hermes' Telegram adapter sends through a system proxy even to a local Bot API server
-    // (resolve_proxy_url checks NO_PROXY against api.telegram.org); the stub is local.
-    const proxies = ["HTTPS_PROXY", "HTTP_PROXY", "https_proxy", "http_proxy", "ALL_PROXY", "all_proxy"];
-    const savedProxies = Object.fromEntries(proxies.map((k) => [k, process.env[k]]));
-    for (const k of proxies) delete process.env[k];
     const a = client();
     await until(() => a.provider.synced);
     addNode(a.doc, { id: "n-desk", kind: "channel", position: { x: 300, y: 0 }, data: { name: "desk", label: "Desk bot", platform: "telegram", tokenEnv: "MCBOT_TELEGRAM_DESK_TOKEN", allowedUsers: ["111"], apiBase: telegram.url } });
@@ -235,6 +230,5 @@ describe("engine", () => {
     telegram.say(999, "what is 2+2");
     await new Promise((r) => setTimeout(r, 8000));
     expect(telegram.sent.filter((m) => m.chatId === "999" && m.text.includes("4"))).toEqual([]);
-    for (const [k, v] of Object.entries(savedProxies)) if (v !== undefined) process.env[k] = v;
   }, 400_000);
 });

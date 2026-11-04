@@ -2985,7 +2985,12 @@ class TelegramAdapter(TelegramHeldInboundMixin, TelegramTopicRoutingMixin, BaseP
                 kwargs["limits"] = _pool_limits
             return kwargs
 
-        disable_fallback = os.getenv("HERMES_TELEGRAM_DISABLE_FALLBACK_IPS", "").strip().lower() in {"1", "true", "yes", "on"}
+        # McBot: an own Bot API server (extra.base_url) is the host to reach and to check NO_PROXY
+        # against; Telegram's fallback IPs and api.telegram.org do not apply to it. Upstream sent a
+        # local server through the system proxy (both via the proxy check and the fallback transport).
+        from urllib.parse import urlsplit
+        _own_api_host = urlsplit(str(self.config.extra.get("base_url") or "")).hostname
+        disable_fallback = bool(_own_api_host) or os.getenv("HERMES_TELEGRAM_DISABLE_FALLBACK_IPS", "").strip().lower() in {"1", "true", "yes", "on"}
         fallback_ips = [] if disable_fallback else self._fallback_ips()
         if not fallback_ips and not disable_fallback:
             discovery_timeout = self._env_float_clamped("HERMES_TELEGRAM_FALLBACK_DISCOVERY_TIMEOUT", 5.0, min_value=0.0)
@@ -3001,7 +3006,7 @@ class TelegramAdapter(TelegramHeldInboundMixin, TelegramTopicRoutingMixin, BaseP
             else:
                 logger.info("[%s] Auto-discovered Telegram fallback IPs: %s", self.name, ", ".join(fallback_ips))
         proxy_url = resolve_proxy_url(
-            "TELEGRAM_PROXY", target_hosts=["api.telegram.org", *fallback_ips],
+            "TELEGRAM_PROXY", target_hosts=[_own_api_host] if _own_api_host else ["api.telegram.org", *fallback_ips],
             configured=self.config.extra.get("proxy_url"))
 
         def _pair(general_httpx: dict, updates_httpx: dict, **extra) -> tuple:
