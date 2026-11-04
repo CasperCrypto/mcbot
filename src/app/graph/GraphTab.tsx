@@ -136,8 +136,12 @@ function Canvas() {
     const sel = kind === "agent" ? undefined : agents.find((n) => n.id === useApp.getState().selectedNodeId) ?? agents.at(-1);
     const anchor = sel ? { x: sel.position.x + 124, y: sel.position.y + 50 } : c;
     const dx = kind === "model" ? -360 : kind === "tool" ? 360 : 0;
-    const count = graph.nodes.filter((n) => n.kind === kind && Math.abs(n.position.x - (anchor.x - 124 + dx)) < 200).length;
-    return { x: Math.round(anchor.x - 124 + dx), y: Math.round(anchor.y - 50 + count * 150) };
+    const x = Math.round(anchor.x - 124 + dx);
+    let y = Math.round(anchor.y - 50);
+    // Step down until the new card (≈248×140) overlaps no existing card.
+    const taken = (yy: number) => graph.nodes.some((n) => Math.abs(n.position.x - x) < 260 && Math.abs(n.position.y - yy) < 150);
+    for (let i = 0; i < 40 && taken(y); i++) y += 160;
+    return { x, y };
   };
   const place = (node: GraphNode) => {
     addNode(doc, node);

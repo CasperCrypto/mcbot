@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "McBot windows: core APIs only. The engine is reached over loopback HTTP/WebSocket, not IPC.",
+  "windows": ["main", "board-*"],
+  "permissions": ["core:default"]
+}

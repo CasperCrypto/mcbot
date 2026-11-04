@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6a67ff"/>
+      <stop offset="1" stop-color="#0a7aff"/>
+    </linearGradient>
+  </defs>
+  <!-- macOS icon grid: 824px body on a 1024 canvas, continuous-corner approximation -->
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#g)"/>
+  <rect x="100" y="100" width="824" height="412" rx="186" fill="#fff" opacity="0.08"/>
+  <!-- three wired nodes: model -> agent -> tool -->
+  <g fill="none" stroke="#fff" stroke-width="34" stroke-linecap="round">
+    <path d="M318 512 C 390 512, 400 512, 452 512"/>
+    <path d="M572 512 C 624 512, 634 512, 706 512"/>
+  </g>
+  <rect x="232" y="452" width="120" height="120" rx="34" fill="#fff" opacity="0.75"/>
+  <rect x="432" y="412" width="160" height="200" rx="44" fill="#fff"/>
+  <circle cx="482" cy="490" r="18" fill="#3d63ff"/>
+  <circle cx="542" cy="490" r="18" fill="#3d63ff"/>
+  <rect x="478" y="538" width="68" height="16" rx="8" fill="#3d63ff"/>
+  <rect x="672" y="452" width="120" height="120" rx="34" fill="#fff" opacity="0.75"/>
+</svg>

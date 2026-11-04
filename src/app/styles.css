@@ -172,6 +172,10 @@ code, pre, .mono { font-family: var(--mono); font-size: 12px; }
 .page { position: absolute; inset: 0; overflow: auto; padding: 24px 28px 40px; user-select: text; }
 .page-narrow { max-width: 1120px; }
 
+[data-shell="mac"] .brand { padding-left: 72px; }
+[data-shell="mac"] .brand, [data-shell="mac"] .toolbar { -webkit-app-region: drag; }
+[data-shell="mac"] .toolbar button, [data-shell="mac"] .toolbar .avatars { -webkit-app-region: no-drag; }
+
 /* ---------- primitives ---------- */
 .btn {
   display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: var(--r-sm);

@@ -15,5 +15,6 @@ export default defineConfig({
     },
   },
   envPrefix: ["VITE_", "TAURI_ENV_"],
-  build: { target: "es2022", outDir: "dist", sourcemap: true },
+  // A desktop app loads its bundle from disk, so the web-oriented 500 kB chunk warning does not apply.
+  build: { target: "es2022", outDir: "dist", sourcemap: true, chunkSizeWarningLimit: 2000 },
 });

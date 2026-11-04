@@ -94,7 +94,7 @@ function Sidebar() {
   const live = Object.values(runs).filter((r) => r.status === "running").length;
   return (
     <nav className="sidebar" aria-label="Main">
-      <div className="brand">
+      <div className="brand" data-tauri-drag-region>
         <div className="brand-mark"><Bot size={14} strokeWidth={2.4} /></div>
         <span className="brand-name">McBot</span>
         <span className="brand-sub">for Hermes</span>
@@ -132,7 +132,7 @@ function Toolbar() {
   const [title, sub] = TITLES[tab];
 
   return (
-    <header className="toolbar">
+    <header className="toolbar" data-tauri-drag-region>
       <h1>{title}</h1>
       <span className="sub">{sub}</span>
       <div className="spacer" />

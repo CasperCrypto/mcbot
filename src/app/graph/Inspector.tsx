@@ -1,5 +1,5 @@
 import { ArrowUp, Bot, Cloud, HardDrive, Play, Plug, Plus, Square, Trash2, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { removeNodes, setNodeField, updateEdge } from "../../board/ydoc";
 import { AgentDataSchema, ModelDataSchema, ToolDataSchema, type AgentData, type GraphNode, type ModelData, type Skill, type ToolData } from "../../contracts/graph";
 import type { Issue } from "../../compile";
@@ -137,6 +137,10 @@ function RunBox({ agentNodeId }: { agentNodeId: string }) {
   const latest = useMemo(() => latestRunByAgent(runs).get(agentNodeId) ?? null, [runs, agentNodeId]);
   const steps = latest ? (events[latest.runId] ?? []).filter((e) => e.type === "run.tool.started" || e.type === "run.tool.finished") : [];
   const running = latest?.status === "running";
+  // Keep the newest result in view as it starts, streams and finishes.
+  useEffect(() => {
+    if (latest) requestAnimationFrame(() => box.current?.scrollIntoView({ block: "end", behavior: "smooth" }));
+  }, [latest?.runId, latest?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const go = async () => {
     if (!prompt.trim() || busy) return;
@@ -144,12 +148,14 @@ function RunBox({ agentNodeId }: { agentNodeId: string }) {
     useApp.getState().setCompile({ compileOpen: false });
     const id = await runAgent(boardId, agentNodeId, prompt.trim());
     setBusy(false);
-    if (id) requestAnimationFrame(() => box.current?.scrollIntoView({ block: "end", behavior: "smooth" }));
+
   };
 
   return (
     <div className="inspector-section run-box" ref={box}>
-      <p className="section-title">RUN</p>
+      <div className="row"><p className="section-title" style={{ margin: 0, flex: 1 }}>RUN</p>
+        {latest && <button className="btn ghost sm" onClick={() => { selectRun(latest.runId); setTab("workflows"); }}>Timeline</button>}
+      </div>
       <label className="field">
         <textarea rows={3} value={prompt} placeholder="Ask this agent something…  (⌘↩ to run)" data-testid="run-prompt"
           onChange={(e) => setPrompt(e.target.value)}
@@ -165,12 +171,11 @@ function RunBox({ agentNodeId }: { agentNodeId: string }) {
       </div>
       {latest && (
         <div className="run-box" data-testid="run-result">
-          <div className="row" style={{ fontSize: 12 }}>
+          <div className="row" style={{ fontSize: 12, flexWrap: "wrap", gap: "4px 10px" }}>
             <span className={`badge ${latest.status === "succeeded" ? "ok" : latest.status === "running" ? "run" : "fail"}`}>{latest.status}</span>
-            {latest.tokens && <span className="faint num">{fmtTokens(latest.tokens.input)} in · {fmtTokens(latest.tokens.output)} out</span>}
-            {latest.finishedAt && <span className="faint num">{duration(latest.finishedAt - latest.startedAt)}</span>}
-            {(latest.reportedUsd || latest.estimatedUsd) ? <span className="faint num">{usd(latest.reportedUsd || latest.estimatedUsd)}</span> : null}
-            <button className="btn ghost sm" style={{ marginLeft: "auto" }} onClick={() => { selectRun(latest.runId); setTab("workflows"); }}>Timeline</button>
+            {latest.tokens && <span className="faint num" style={{ whiteSpace: "nowrap" }}>{fmtTokens(latest.tokens.input)} in · {fmtTokens(latest.tokens.output)} out</span>}
+            {latest.finishedAt && <span className="faint num" style={{ whiteSpace: "nowrap" }}>{duration(latest.finishedAt - latest.startedAt)}</span>}
+            {(latest.reportedUsd || latest.estimatedUsd) ? <span className="faint num" style={{ whiteSpace: "nowrap" }}>{usd(latest.reportedUsd || latest.estimatedUsd)}</span> : null}
           </div>
           {steps.filter((e) => e.type === "run.tool.started").map((e) => (
             <div key={e.seq} className="step"><Plug size={12} className="faint" /><span className="mono">{e.type === "run.tool.started" ? e.tool : ""}</span></div>
