@@ -2,7 +2,12 @@
 
 Decision (owner, 2026-11-04): McBot is **one app** that does what Hermes Agent,
 OpenBot, n8n, Buzz and a Mac-native UI do today. A person downloads McBot,
-opens it, and has all of it. It stays open source and usable by companies.
+opens it, and has all of it. McBot is free and open source under the **MIT
+licence**, and anyone, companies included, may use it for any purpose.
+
+That last part decides what code can come in: a licence that limits commercial
+use binds everyone who uses McBot, even though McBot itself is free, and MIT
+cannot override it.
 
 ## What each project brings, and how
 
@@ -12,9 +17,9 @@ Licences checked in each repository on 2026-11-04.
 |---|---|---|---|
 | [Hermes Agent](https://github.com/NousResearch/hermes-agent) | MIT | The agent runtime: memory, skills, tools, MCP, gateway, cron, self-improvement | **Merged.** Forked into this repo under `hermes/` and shipped inside the app with its own Python. Keep its `LICENSE`; mark our changes so upstream updates can still be merged. |
 | [Buzz](https://github.com/block/buzz) | Apache-2.0 | Team workspace where people and agents share channels; the relay; the workflow engine (`buzz-workflow`); iOS and Android apps (Flutter) | **Merged.** Its relay becomes McBot's team server; its mobile app becomes McBot for phones. Keep `LICENSE` and notices. |
-| n8n | Sustainable Use License | Workflow builder, triggers, schedules, integrations | **Rebuilt, no n8n code.** The licence allows only internal business use and free non-commercial redistribution, so its code cannot ship in an open-source app companies use. Workflows become node kinds on McBot's graph, run by Hermes cron and `buzz-workflow`; integrations come as MCP servers. |
-| OpenBot | PolyForm Noncommercial | Multiplayer canvas | **Rebuilt, no OpenBot code** (done in M2). Its licence forbids commercial use. |
-| Vorssaint utils | GPL-3.0, trade-dress policy | Mac-native look, Raycast-style launcher | **Our own design, no Vorssaint code** (done: tokens, ⌘K). GPL code would force McBot under GPL; the trade-dress policy forbids copying the look. |
+| [n8n](https://github.com/n8n-io/n8n) | Sustainable Use License (Apache-2.0 with Commons Clause since its first release) | Workflow builder, triggers, schedules, integrations | **Rebuilt, no n8n code.** The licence allows only internal business use and free non-commercial redistribution, so its code cannot ship in an open-source app companies use. Workflows become node kinds on McBot's graph, run by Hermes cron and `buzz-workflow`; integrations come as MCP servers. |
+| [OpenBot](https://github.com/nightly-labs/openbot) | Apache-2.0 up to and including **v0.1.11** (16 Aug 2026); PolyForm Noncommercial from v0.1.12, with paid commercial licences | v0.1.11: connections to the Codex App Server and Claude Code (sign in with a ChatGPT or Claude plan), provider picker, first-run setup, chat. The canvas and teams came later. | **Merged from tag `v0.1.11` only**, keeping its Apache `LICENSE` and `NOTICE`. Nothing from v0.1.12 or later; we rebuilt the multiplayer canvas (M2). Not the OpenBot name or logo. Newer code needs the author's permission (licenses@openbot.run). |
+| [Vorssaint utils](https://github.com/vorssaint/vorssaint-utils) | GPL-3.0-or-later (first releases PolyForm Noncommercial); trademark policy covers name, icon and trade dress | Mac-native look, Raycast-style launcher | **Our own design, no Vorssaint code** (done: tokens, ⌘K). GPL code would turn all of McBot into GPL instead of MIT. |
 
 Buying a commercial licence (n8n sells one for embedding) or getting the
 authors' permission would change a "rebuilt" row to "merged".
@@ -55,5 +60,7 @@ everyone's app and phone connect to it.
 
 ## Open decisions
 
-- McBot's own licence: Apache-2.0 (matches Buzz, includes a patent grant) or MIT.
 - Code signing: Apple Developer ID and a Windows certificate, or unsigned first.
+- Signing in with a ChatGPT or Claude plan (OpenBot v0.1.11's Codex and Claude
+  Code connections) breaks hard rule 4 (two OpenAI-compatible providers, no
+  per-vendor SDKs). Taking that code means changing the rule.

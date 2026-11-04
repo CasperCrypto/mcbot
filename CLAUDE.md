@@ -12,9 +12,10 @@ McBot and what is rebuilt is decided in `docs/MERGE.md`.
 
 ## Hard rules
 
-1. **Merge only code we may ship.** MIT, Apache-2.0 and BSD code can come in,
-   with its `LICENSE` and notices kept: Hermes Agent (MIT, forked into `hermes/`)
-   and Buzz (Apache-2.0). Never copy code from OpenBot (PolyForm Noncommercial),
+1. **Merge only code we may ship under MIT.** McBot is MIT. MIT, Apache-2.0 and
+   BSD code can come in, with its `LICENSE` and notices kept: Hermes Agent (MIT,
+   forked into `hermes/`), Buzz (Apache-2.0) and OpenBot **from tag v0.1.11 or
+   earlier** (Apache-2.0). Never copy OpenBot v0.1.12+ (PolyForm Noncommercial),
    n8n (Sustainable Use License) or Vorssaint (GPL-3.0): rebuild those features.
    Changes inside `hermes/` stay small and marked, so upstream updates still merge.
 2. **Never invent a Hermes config key, path or CLI flag.** Confirm it in the
@@ -94,9 +95,9 @@ Change them additively; a breaking change bumps the version.
   `scrollIntoView` returns a Promise in current Chromium, and an effect that
   returns a non-function crashes React on cleanup.
 - Views live behind an error boundary; a broken view must not blank the window.
-- **No OpenBot, n8n or Vorssaint code** (hard rule 1). They are design and
-  feature references only; Vorssaint's trade-dress policy also rules out copying
-  its look. Blobatar (MIT) and Paper Shaders (Apache-2.0) are fine.
+- **No n8n, Vorssaint or post-v0.1.11 OpenBot code** (hard rule 1). They are
+  design and feature references only; Vorssaint's trademark policy also rules out
+  copying its look. Blobatar (MIT) and Paper Shaders (Apache-2.0) are fine.
 - **Local folders:** the engine reads only inside roots the user opened
   (`<workspace>/folders.json`), the shared files folder and compiled profiles —
   read-only, path-checked.

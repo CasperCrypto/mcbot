@@ -134,14 +134,16 @@ gate, schedule.
 
 ## Licences and credits
 
+McBot is free and open source under the [MIT licence](LICENSE). What other
+projects' code may come into McBot, and why, is in [docs/MERGE.md](docs/MERGE.md).
+
 McBot's dependencies are permissively licensed: React, React Flow, Yjs,
 y-websocket, y-protocols, lib0, zod, zustand, ws, @noble/hashes,
 [Blobatar](https://github.com/Alain00/blobatar) (MIT); yaml, lucide-react (ISC);
 diff (BSD-3-Clause); [Paper Shaders](https://github.com/paper-design/shaders),
-Tauri (Apache-2.0 / MIT); Inter (OFL-1.1). Hermes Agent is MIT (© Nous Research)
-and is used as an external program, not vendored.
+Tauri (Apache-2.0 / MIT); Inter (OFL-1.1). Hermes Agent is MIT (© Nous Research).
 
-The look takes its cues from OpenBot and Vorssaint. Neither's code is used:
-OpenBot is PolyForm Noncommercial (it would forbid commercial use of McBot) and
-Vorssaint is GPL-3.0 with a trademark policy covering its trade dress; both are
-design references only.
+The look takes its cues from OpenBot and Vorssaint. Only OpenBot code from
+v0.1.11 or earlier (Apache-2.0) may be used; later OpenBot versions are
+PolyForm Noncommercial, and Vorssaint is GPL-3.0 with a trademark policy
+covering its trade dress.
