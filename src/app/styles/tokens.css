@@ -1,0 +1,83 @@
+/* McBot design tokens. Dark, neutral, quiet chrome; colour is reserved for
+   identity (agents, kinds) and state (running, ok, failed). */
+:root {
+  color-scheme: dark;
+
+  --font: "Inter Variable", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", system-ui, sans-serif;
+  --mono: "SF Mono", ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* surfaces, darkest to lightest */
+  --bg-window: #111112;
+  --bg-chrome: #151516;
+  --bg-sidebar: #18181a;
+  --bg-main: #1c1c1e;
+  --bg-canvas: #161618;
+  --bg-raised: #222225;
+  --bg-card: #232326;
+  --bg-hover: #2a2a2e;
+  --bg-active: #303035;
+  --bg-input: #121214;
+  --bg-glass: rgba(34, 34, 38, 0.72);
+
+  /* lines */
+  --line: rgba(255, 255, 255, 0.055);
+  --line-2: rgba(255, 255, 255, 0.09);
+  --line-3: rgba(255, 255, 255, 0.14);
+
+  /* text */
+  --text: #f5f5f7;
+  --text-2: #b4b4ba;
+  --text-3: #808088;
+  --text-4: #5c5c64;
+
+  /* brand + state */
+  --accent: #7b6cff;
+  --accent-2: #4f8cff;
+  --accent-soft: rgba(123, 108, 255, 0.16);
+  --accent-line: rgba(123, 108, 255, 0.55);
+  --brand-gradient: linear-gradient(135deg, #8b7bff 0%, #5b8dff 100%);
+  --focus: 0 0 0 3px rgba(123, 108, 255, 0.35);
+
+  --ok: #34d17a;
+  --ok-soft: rgba(52, 209, 122, 0.14);
+  --run: #4f8cff;
+  --run-soft: rgba(79, 140, 255, 0.16);
+  --fail: #ff5f57;
+  --fail-soft: rgba(255, 95, 87, 0.14);
+  --warn: #febc2e;
+  --warn-soft: rgba(254, 188, 46, 0.14);
+
+  /* node kinds */
+  --k-agent: #8b7bff;
+  --k-model: #ff9f43;
+  --k-model-cloud: #4fb3ff;
+  --k-tool: #2fd4b0;
+
+  /* shape */
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r: 10px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  /* depth */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.38), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* motion */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --t-fast: 140ms;
+  --t: 220ms;
+  --t-slow: 380ms;
+
+  /* layout */
+  --titlebar-h: 46px;
+  --rail-w: 60px;
+  --sidebar-w: 268px;
+  --inspector-w: 348px;
+}

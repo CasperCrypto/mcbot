@@ -6,7 +6,12 @@
 src/contracts/   the three contracts (zod + types) — the only shapes that cross a boundary
 src/compile/     compile(graph) → files. Pure: no clock, no randomness, no fs. Byte-tested.
 src/board/       the board as a Yjs doc (shared by the relay and every window)
-src/app/         React UI: seven tabs, React Flow canvas, zustand UI state
+src/app/         React UI
+  shell/         title bar, live island, page rail, sidebar, ⌘K palette, error boundary
+  graph/         the harness canvas: nodes, dock, inspector, compile panel
+  views/         Agents (chat), Runs, Memory, Files, Cost, Team; GraphCanvas for read-only graphs
+  styles/        tokens.css (the design system), base, shell, graph, views
+  state/         zustand store, the live board (Yjs + awareness)
 engine/          one local Node process: board relay · compile writer · Hermes runner · data readers
 src-tauri/       Tauri 2 shell: windows and menus only
 test/            golden fixtures, real Hermes stream captures, the stub OpenAI-compatible server

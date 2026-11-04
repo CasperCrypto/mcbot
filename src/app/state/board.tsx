@@ -97,9 +97,15 @@ function Live({ boardId, doc, provider, children }: { boardId: string; doc: Y.Do
     };
   }, [provider]);
 
-  useEffect(() => provider.awareness.setLocalStateField("user", identity), [provider, identity]);
-  useEffect(() => provider.awareness.setLocalStateField("tab", tab), [provider, tab]);
-  useEffect(() => provider.awareness.setLocalStateField("selection", selected), [provider, selected]);
+  useEffect(() => {
+    provider.awareness.setLocalStateField("user", identity);
+  }, [provider, identity]);
+  useEffect(() => {
+    provider.awareness.setLocalStateField("tab", tab);
+  }, [provider, tab]);
+  useEffect(() => {
+    provider.awareness.setLocalStateField("selection", selected);
+  }, [provider, selected]);
 
   const value = useMemo<Board>(() => ({
     boardId, doc, provider, graph, peers, synced,

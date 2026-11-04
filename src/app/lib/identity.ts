@@ -34,4 +34,3 @@ export function saveIdentity(id: Identity): void {
   }
 }
 
-export const initials = (name: string) => name.trim().split(/\s+/).map((p) => p[0] ?? "").join("").slice(0, 2).toUpperCase() || "?";

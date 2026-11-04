@@ -29,8 +29,13 @@ interface State {
   events: Record<string, RunEvent[]>;
   runs: Record<string, RunSummary>;
   toasts: Toast[];
+  paletteOpen: boolean;
+  /** The agent whose thread is open in Agents. */
+  chatAgentId: string | null;
 
   setTab(tab: Tab): void;
+  setPalette(open: boolean): void;
+  openChat(agentNodeId: string | null): void;
   setBoard(id: string | null): void;
   setBoards(b: BoardInfo[]): void;
   setHealth(h: Health | null, up: boolean): void;
@@ -72,15 +77,19 @@ export const useApp = create<State>((set, get) => ({
   events: {},
   runs: {},
   toasts: [],
+  paletteOpen: false,
+  chatAgentId: null,
 
   setTab: (tab) => set({ tab }),
+  setPalette: (paletteOpen) => set({ paletteOpen }),
+  openChat: (chatAgentId) => set({ chatAgentId, tab: "agents" }),
   setBoard: (boardId) => {
     try {
       if (boardId) localStorage.setItem(BOARD_KEY, boardId);
     } catch {
       /* remembered for this session only */
     }
-    set({ boardId, selectedNodeId: null, selectedRunId: null, compile: null, compileOpen: false, drift: null, events: {}, runs: {} });
+    set({ boardId, selectedNodeId: null, selectedRunId: null, chatAgentId: null, compile: null, compileOpen: false, drift: null, events: {}, runs: {} });
   },
   setBoards: (boards) => set({ boards }),
   setHealth: (health, engineUp) => set({ health, engineUp }),
@@ -109,7 +118,7 @@ export const useApp = create<State>((set, get) => ({
   toast: (t) => {
     const id = ++toastId;
     set((s) => ({ toasts: [...s.toasts, { ...t, id }] }));
-    setTimeout(() => get().dismiss(id), t.kind === "fail" ? 9000 : 4500);
+    setTimeout(() => get().dismiss(id), t.kind === "fail" ? 8000 : 3200);
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })),
 }));

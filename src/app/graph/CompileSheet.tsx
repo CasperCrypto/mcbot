@@ -4,25 +4,24 @@ import type { FileChange } from "../../contracts/compile";
 import { bytes } from "../lib/format";
 import { useApp } from "../state/store";
 
-const STATUS_CLASS: Record<FileChange["status"], string> = { added: "ok", modified: "run", unchanged: "", removed: "fail" };
+const MARK: Record<FileChange["status"], string> = { added: "A", modified: "M", removed: "D", unchanged: "=" };
 
 function Diff({ change }: { change: FileChange }) {
-  if (change.status === "unchanged") return <div className="diff"><div className="meta">  {change.path} is unchanged — sha256 {change.sha256}</div></div>;
-  const lines = change.diff.split("\n").slice(2);
+  if (change.status === "unchanged") return <div className="diff"><div className="meta">  unchanged · sha256 {change.sha256}</div></div>;
   return (
     <div className="diff" data-testid="diff">
-      {lines.map((l, i) => (
+      {change.diff.split("\n").slice(2).map((l, i) => (
         <div key={i} className={l.startsWith("+++") || l.startsWith("---") ? "meta" : l.startsWith("@@") ? "hunk" : l.startsWith("+") ? "add" : l.startsWith("-") ? "del" : ""}>{l || " "}</div>
       ))}
     </div>
   );
 }
 
-function CopyCommand({ text }: { text: string }) {
+function CopyCommand({ text, label }: { text: string; label: string }) {
   const [done, setDone] = useState(false);
   return (
-    <button className="btn sm" title={text} onClick={() => { void navigator.clipboard?.writeText(text).then(() => { setDone(true); setTimeout(() => setDone(false), 1500); }); }}>
-      {done ? <Check size={12} /> : <Copy size={12} />} <span className="mono">{text.length > 46 ? `…${text.slice(-44)}` : text}</span>
+    <button className="btn sm" data-tip={text} data-tip-side="bottom" onClick={() => void navigator.clipboard?.writeText(text).then(() => { setDone(true); setTimeout(() => setDone(false), 1400); })}>
+      {done ? <Check size={13} /> : <Copy size={13} />} <span className="mono">{label}</span>
     </button>
   );
 }
@@ -32,8 +31,8 @@ export function CompileSheet({ wide }: { wide: boolean }) {
   const setCompile = useApp((s) => s.setCompile);
   const select = useApp((s) => s.select);
   const [path, setPath] = useState<string | null>(null);
-
   const changes = res?.ok ? res.report.changes : [];
+
   useEffect(() => {
     if (changes.some((c) => c.path === path)) return;
     const changed = changes.filter((c) => c.status !== "unchanged");
@@ -42,31 +41,25 @@ export function CompileSheet({ wide }: { wide: boolean }) {
 
   if (!res) return null;
   const selected = changes.find((c) => c.path === path) ?? null;
-  const counts = changes.reduce<Record<string, number>>((acc, c) => ({ ...acc, [c.status]: (acc[c.status] ?? 0) + 1 }), {});
+  const changedCount = changes.filter((c) => c.status !== "unchanged").length;
 
   return (
-    <section className={`sheet${wide ? " wide" : ""}`} aria-label="Compile output" data-testid="compile-sheet">
+    <section className={`sheet glass${wide ? " wide" : ""}`} aria-label="Compile output" data-testid="compile-sheet">
       <div className="sheet-head">
-        <h3>{res.ok ? "Compiled" : "Cannot compile"}</h3>
-        {res.ok ? (
-          <>
-            <span className="faint">{changes.length} files · {(["added", "modified", "removed", "unchanged"] as const).filter((k) => counts[k]).map((k) => `${counts[k]} ${k}`).join(" · ")}</span>
-            <span style={{ flex: 1 }} />
-            {res.report.profiles.map((p) => <CopyCommand key={p.name} text={`HERMES_HOME="${res.report.root}" hermes -p ${p.name}`} />)}
-          </>
-        ) : (
-          <span style={{ flex: 1 }} className="faint">{res.error}</span>
-        )}
-        <button className="icon-btn" aria-label="Close compile output" onClick={() => setCompile({ compileOpen: false })}><X size={15} /></button>
+        <h3>{res.ok ? `${changes.length} files` : "Can't compile yet"}</h3>
+        {res.ok && <span className="faint">{changedCount ? `${changedCount} changed` : "up to date"}</span>}
+        <span className="grow" />
+        {res.ok && res.report.profiles.map((p) => <CopyCommand key={p.name} label={`hermes -p ${p.name}`} text={`HERMES_HOME="${res.report.root}" hermes -p ${p.name}`} />)}
+        <button className="icon-btn" aria-label="Close" onClick={() => setCompile({ compileOpen: false })}><X size={16} /></button>
       </div>
       {res.ok ? (
         <div className="sheet-body">
           <div className="file-list" role="listbox" aria-label="Files">
             {changes.map((c) => (
               <div key={c.path} role="option" className="file-row" aria-selected={c.path === path} onClick={() => setPath(c.path)} data-testid="compiled-file">
-                <span className={`badge ${STATUS_CLASS[c.status]}`}>{c.status}</span>
+                <span className={`status-mark ${c.status}`} title={c.status}>{MARK[c.status]}</span>
                 <span className="path" title={c.path}>{c.path}</span>
-                <span className="hash" title={`sha256 ${c.sha256 ?? c.previousSha256}`}>{(c.sha256 ?? c.previousSha256 ?? "").slice(0, 10)} · {bytes(c.bytes)}</span>
+                <span className="hash" title={`sha256 ${c.sha256 ?? c.previousSha256}`}>{(c.sha256 ?? c.previousSha256 ?? "").slice(0, 8)} · {bytes(c.bytes)}</span>
               </div>
             ))}
           </div>
@@ -75,7 +68,7 @@ export function CompileSheet({ wide }: { wide: boolean }) {
       ) : (
         <div style={{ overflow: "auto", padding: 14, display: "grid", gap: 6, alignContent: "start" }}>
           {res.issues.filter((i) => i.level === "error").map((i, n) => (
-            <button key={n} className="issue" style={{ border: 0, textAlign: "left", cursor: i.nodeId ? "pointer" : "default" }} onClick={() => i.nodeId && select(i.nodeId)}>
+            <button key={n} className="issue" style={{ border: 0, textAlign: "left" }} onClick={() => i.nodeId && select(i.nodeId)}>
               <CircleAlert size={14} style={{ flex: "none", marginTop: 1 }} />
               <span>{i.message}</span>
             </button>

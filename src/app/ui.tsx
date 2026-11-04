@@ -1,12 +1,37 @@
-import { CircleAlert, X } from "lucide-react";
+import { Blobatar } from "@blobatar/react";
+import { happy, idle, sad, thinking } from "blobatar/expression";
+import { CircleAlert } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { useApp } from "./state/store";
+import type { RunStatus } from "../contracts/run";
+
+/** An agent's face. Its expression is its state: thinking while it works, happy or sad after. */
+export function AgentFace({ seed, size = 32, status }: { seed: string; size?: number; status?: RunStatus | null }) {
+  const expression = status === "running" || status === "queued" ? thinking : status === "succeeded" ? happy : status === "failed" ? sad : idle;
+  // Tone locked to the vivid middle of the set: the auto tone can land near-black, which disappears on a dark UI.
+  return <Blobatar name={`agent:${seed}`} size={size} tone={0.48} animate="always" expression={expression} title={seed} />;
+}
+
+function hueOf(hex: string): number {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return 260;
+  const [r, g, b] = m.slice(1).map((x) => parseInt(x, 16) / 255) as [number, number, number];
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  if (!d) return 0;
+  const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return Math.round(h * 60 + 360) % 360;
+}
+
+/** A person on the board, tinted with their presence colour. */
+export function PersonFace({ name, color, size = 26 }: { name: string; color: string; size?: number }) {
+  return <Blobatar name={`person:${name}`} size={size} hue={hueOf(color)} tone={0.48} title={name} className="face" />;
+}
 
 export function Field(props: {
-  label: string;
+  label?: string;
   value: string;
   onChange: (v: string) => void;
-  help?: ReactNode;
+  note?: ReactNode;
   error?: string | null;
   mono?: boolean;
   multiline?: boolean;
@@ -14,27 +39,26 @@ export function Field(props: {
   placeholder?: string;
   type?: string;
   testId?: string;
+  ariaLabel?: string;
 }) {
-  const { label, value, onChange, help, error, mono, multiline, rows, placeholder, type, testId } = props;
+  const { label, value, onChange, note, error, mono, multiline, rows, placeholder, type, testId, ariaLabel } = props;
   const cls = mono ? "mono" : undefined;
+  const common = { className: cls, value, placeholder, spellCheck: !mono, "data-testid": testId, "aria-label": ariaLabel ?? label };
   return (
     <label className={`field${error ? " invalid" : ""}`}>
-      <span>{label}</span>
+      {label && <span>{label}</span>}
       {multiline ? (
-        <textarea className={cls} rows={rows ?? 3} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} spellCheck={!mono} data-testid={testId} />
+        <textarea {...common} rows={rows ?? 3} onChange={(e) => onChange(e.target.value)} />
       ) : (
-        <input className={cls} type={type ?? "text"} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} spellCheck={false} data-testid={testId} />
+        <input {...common} type={type ?? "text"} onChange={(e) => onChange(e.target.value)} />
       )}
-      {error ? <span className="error">{error}</span> : help ? <span className="help">{help}</span> : null}
+      {error ? <span className="error">{error}</span> : note ? <span className="note">{note}</span> : null}
     </label>
   );
 }
 
-/**
- * A text field whose committed value is structured (args, env). Keeps the raw
- * text locally while typing so half-typed lines are not reformatted away.
- */
-export function TextListField(props: { label: string; value: string; onCommit: (text: string) => void; help?: ReactNode; placeholder?: string; rows?: number }) {
+/** Structured text (args, env) kept raw while typing so half-typed lines survive. */
+export function TextListField(props: { label: string; value: string; onCommit: (text: string) => void; placeholder?: string; rows?: number }) {
   const [text, setText] = useState(props.value);
   const [focused, setFocused] = useState(false);
   useEffect(() => {
@@ -44,19 +68,10 @@ export function TextListField(props: { label: string; value: string; onCommit: (
     <label className="field">
       <span>{props.label}</span>
       <textarea
-        className="mono"
-        rows={props.rows ?? 3}
-        value={text}
-        placeholder={props.placeholder}
-        spellCheck={false}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        onChange={(e) => {
-          setText(e.target.value);
-          props.onCommit(e.target.value);
-        }}
+        className="mono" rows={props.rows ?? 3} value={text} placeholder={props.placeholder} spellCheck={false} aria-label={props.label}
+        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+        onChange={(e) => { setText(e.target.value); props.onCommit(e.target.value); }}
       />
-      {props.help && <span className="help">{props.help}</span>}
     </label>
   );
 }
@@ -71,10 +86,11 @@ export function Segmented<T extends string>({ value, options, onChange }: { valu
   );
 }
 
-export function Empty({ icon, title, children, action }: { icon?: ReactNode; title: string; children?: ReactNode; action?: ReactNode }) {
+export const Kbd = ({ children }: { children: ReactNode }) => <span className="kbd">{children}</span>;
+
+export function Empty({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="empty">
-      {icon && <div className="faint">{icon}</div>}
+    <div className="empty page-enter">
       <h3>{title}</h3>
       {children && <p>{children}</p>}
       {action}
@@ -85,7 +101,7 @@ export function Empty({ icon, title, children, action }: { icon?: ReactNode; tit
 export function Issues({ issues }: { issues: { level: "error" | "warning"; message: string }[] }) {
   if (!issues.length) return null;
   return (
-    <div className="inspector-section" style={{ gap: 6 }}>
+    <div className="stack" style={{ gap: 6 }}>
       {issues.map((i, n) => (
         <div key={n} className={`issue${i.level === "warning" ? " warning" : ""}`}>
           <CircleAlert size={14} style={{ flex: "none", marginTop: 1 }} />
@@ -96,20 +112,18 @@ export function Issues({ issues }: { issues: { level: "error" | "warning"; messa
   );
 }
 
-export function Toasts() {
-  const toasts = useApp((s) => s.toasts);
-  const dismiss = useApp((s) => s.dismiss);
-  return (
-    <div className="toasts" role="status" aria-live="polite">
-      {toasts.map((t) => (
-        <div key={t.id} className={`toast ${t.kind}`}>
-          <span style={{ flex: 1 }}>{t.text}</span>
-          {t.action && (
-            <button className="btn sm" onClick={() => { t.action!.run(); dismiss(t.id); }}>{t.action.label}</button>
-          )}
-          <button className="icon-btn" aria-label="Dismiss" onClick={() => dismiss(t.id)}><X size={14} /></button>
-        </div>
-      ))}
-    </div>
-  );
+/** Ticks once a second while mounted — for live elapsed clocks. */
+export function useNow(active: boolean): number {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!active) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [active]);
+  return now;
+}
+
+export function clock(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }

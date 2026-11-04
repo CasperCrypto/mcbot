@@ -12,31 +12,38 @@ Chat-only agent tools hide the system: you can't see which cron job runs which
 agent, what it remembers, or what it spends. McBot makes the harness the thing
 you look at and edit.
 
-![The graph, compiled](docs/screenshots/compiled.png)
+![McBot](docs/screenshots/graph.png)
 
 ## What it does today
 
-- **Graph** — place agent, model and tool nodes, wire them, and press **Compile**.
-  Every agent becomes a Hermes profile directory: `SOUL.md`, `config.yaml`,
-  `profile.yaml`, `skills/<name>/SKILL.md`. The Compile panel lists every file
-  written with its SHA-256 and a diff against what was on disk.
-- **Run** — run any agent from the canvas. McBot launches `hermes -p <agent>`,
-  streams its steps and paints status onto the nodes: the agent goes blue, the
-  tool it is calling lights up.
-- **Shared board** — open a second window (⌘N): the same graph, live cursors,
-  presence, no save button. Every window is a client of the local engine, so
-  the board is shared by construction (v0 listens on this computer only).
-- **Agents · Workflows · Memory · Files · Cost · Team** — every agent as a row;
-  every run as a step-by-step timeline with inputs, outputs, tokens and
-  failures; each agent's own memory (view, edit, delete); its profile on disk;
-  spend by agent, model and day from Hermes' own session records; who is on the
-  board and what they are editing.
+Seven views, one shared board, everything a graph:
 
-| Workflows | Cost |
+- **Graph** — agents, models and tools on a canvas. Add from the Dock or ⌘K,
+  wire them, press **Compile**: every agent becomes a real Hermes profile
+  (`SOUL.md`, `config.yaml`, `profile.yaml`, `skills/<name>/SKILL.md`), and the
+  Compile panel shows each file written with its SHA-256 and a diff.
+- **Agents** — your agents as teammates. Message one and it runs with Hermes;
+  tool calls, answer, time, tokens and cost land in the thread. Its face shows
+  what it is doing: thinking while it works, happy or sad after.
+- **Runs** — every run as a flow graph: prompt → tool calls → answer → cost.
+  Click a step for its inputs and outputs.
+- **Memory** — what each agent has learned, as a graph you can edit.
+- **Files** — each agent's profile, the shared folder, or **any folder you open**,
+  as a graph you expand in place.
+- **Cost** — spend by agent, model and day, from Hermes' own session records.
+- **Team** — who is on the board and what they are looking at.
+
+The live **island** in the title bar shows which agent is working and for how
+long; **⌘K** does everything from the keyboard; a second window (⌘N) is the
+same board, live, with everyone's cursor.
+
+| Agents | Runs |
 |---|---|
-| ![Run timeline](docs/screenshots/workflows.png) | ![Cost](docs/screenshots/cost.png) |
-| **Second window, live cursor** | **Dark** |
-| ![Shared board](docs/screenshots/shared-board.png) | ![Dark mode](docs/screenshots/graph-dark.png) |
+| ![Agents](docs/screenshots/agents.png) | ![Runs](docs/screenshots/runs.png) |
+| **Files — any folder as a graph** | **Memory** |
+| ![Files](docs/screenshots/files.png) | ![Memory](docs/screenshots/memory.png) |
+| **Compile** | **⌘K** |
+| ![Compile](docs/screenshots/compile.png) | ![Command palette](docs/screenshots/palette.png) |
 
 ## Quick start
 
@@ -51,9 +58,9 @@ npm run desktop      # the McBot app (starts the engine + UI for you)
 npm run dev          # engine on 127.0.0.1:4317, UI on http://localhost:5173
 ```
 
-Then: **+ Agent**, **+ Local model** (defaults to Ollama on `:11434/v1` — set
-the model id you have pulled), wire the model to the agent, **Compile**, select
-the agent and **Run**.
+Then: **Add an agent**, add a **Local model** from the Dock (defaults to Ollama
+on `:11434/v1` — set the model you have pulled), drag the model onto the agent,
+**Compile** (⌘S), and message the agent in **Agents**.
 
 No model at hand? `npm run stub-llm` starts a deterministic OpenAI-compatible
 server on `:11500` you can point a model node at.
@@ -117,9 +124,16 @@ cost. No auth (the engine only listens on loopback and checks origins), no
 cloud, no installers yet. Next node kinds: workflow, file/folder, memory, human
 gate, schedule.
 
-## Licences
+## Licences and credits
 
 McBot's dependencies are permissively licensed: React, React Flow, Yjs,
-y-websocket, y-protocols, lib0, zod, zustand, ws, @noble/hashes (MIT); yaml,
-lucide-react (ISC); diff (BSD-3-Clause); Tauri (Apache-2.0 OR MIT). Hermes
-Agent is MIT (© Nous Research) and is used as an external program, not vendored.
+y-websocket, y-protocols, lib0, zod, zustand, ws, @noble/hashes,
+[Blobatar](https://github.com/Alain00/blobatar) (MIT); yaml, lucide-react (ISC);
+diff (BSD-3-Clause); [Paper Shaders](https://github.com/paper-design/shaders),
+Tauri (Apache-2.0 / MIT); Inter (OFL-1.1). Hermes Agent is MIT (© Nous Research)
+and is used as an external program, not vendored.
+
+The look takes its cues from OpenBot and Vorssaint. Neither's code is used:
+OpenBot is PolyForm Noncommercial (it would forbid commercial use of McBot) and
+Vorssaint is GPL-3.0 with a trademark policy covering its trade dress; both are
+design references only.

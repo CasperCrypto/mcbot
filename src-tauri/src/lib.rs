@@ -19,10 +19,12 @@ fn new_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .title("McBot")
         .inner_size(1440.0, 900.0)
         .min_inner_size(960.0, 600.0);
+    let builder = builder.theme(Some(tauri::Theme::Dark)).background_color(tauri::window::Color(21, 21, 22, 255));
     #[cfg(target_os = "macos")]
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)
-        .hidden_title(true);
+        .hidden_title(true)
+        .traffic_light_position(tauri::LogicalPosition::new(18.0, 23.0));
     builder.build()?;
     Ok(())
 }

@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, FileEntry, Health, MemoryFileView } from "../../contracts/api";
+import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, FsListing, FsPreview, FsRoot, Health, MemoryFileView } from "../../contracts/api";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
 /** The Tauri production webview has no dev proxy; everything else (Vite, Tauri dev) does. */
@@ -43,8 +43,11 @@ export const engine = {
   saveMemory: (profile: string, target: "memory" | "user", entries: string[], baseSha256: string | null) =>
     call<MemoryFileView>("PUT", "/api/memory", { profile, target, entries, baseSha256 }),
   cost: (boardId: string) => call<CostReport>("GET", `/api/cost?boardId=${encodeURIComponent(boardId)}`),
-  files: (boardId: string) => call<{ profile: string; nodeId: string; files: FileEntry[] }[]>("GET", `/api/files?boardId=${encodeURIComponent(boardId)}`),
-  file: (path: string) => call<{ path: string; bytes: number; text: string | null; reason?: string }>("GET", `/api/file?path=${encodeURIComponent(path)}`),
+  roots: (boardId: string) => call<FsRoot[]>("GET", `/api/fs/roots?boardId=${encodeURIComponent(boardId)}`),
+  openFolder: (path: string) => call<FsRoot>("POST", "/api/fs/roots", { path }),
+  closeFolder: (id: string) => call<{ ok: true }>("POST", "/api/fs/roots/close", { id }),
+  list: (root: string, path: string) => call<FsListing>("GET", `/api/fs/list?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
+  read: (root: string, path: string) => call<FsPreview>("GET", `/api/fs/read?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
 };
 
 /** Live run events for every run, from the engine's SSE stream. Reconnects on its own. */

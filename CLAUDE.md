@@ -72,6 +72,32 @@ Change them additively; a breaking change bumps the version.
 - The engine listens on loopback only and checks `Origin` and `Host` on every
   request and WebSocket upgrade. No auth in v0.
 
+## UI invariants
+
+- **Look:** dark, quiet, Apple-native. All colours, radii, shadows and motion are
+  tokens in `src/app/styles/tokens.css`; components use tokens, not literals.
+  Colour means identity (agents, node kinds) or state (running, ok, failed).
+- **Less text.** No explanatory paragraphs in the UI. Labels are short; detail
+  lives in tooltips (`data-tip`). Empty states are one line plus one action.
+- **Everything structural is a graph.** The harness is the editable React Flow
+  canvas; runs, memory and folders use the read-only `views/GraphCanvas.tsx`.
+  Give each GraphCanvas a `key` per subject (root, run, agent) so React Flow
+  state never leaks between subjects.
+- **Faces:** agents (and people) are Blobatars with `tone={0.48}` (auto tone can
+  be near-black on dark). An agent's expression is its run state: thinking,
+  happy, sad.
+- **Effects use block bodies.** `useEffect(() => { … })` — never a concise arrow:
+  `scrollIntoView` returns a Promise in current Chromium, and an effect that
+  returns a non-function crashes React on cleanup.
+- Views live behind an error boundary; a broken view must not blank the window.
+- **No OpenBot or Vorssaint code.** OpenBot is PolyForm Noncommercial (would make
+  McBot non-commercial) and Vorssaint is GPL-3.0 with a trade-dress trademark
+  policy. They are design references only. Blobatar (MIT) and Paper Shaders
+  (Apache-2.0) are fine.
+- **Local folders:** the engine reads only inside roots the user opened
+  (`<workspace>/folders.json`), the shared files folder and compiled profiles —
+  read-only, path-checked.
+
 ## Stack (do not substitute)
 
 Tauri **2.x** (never 3, it is alpha) · React + TypeScript · React Flow
@@ -93,3 +119,5 @@ npm test           all tests; set MCBOT_HERMES_BIN to include a real Hermes run
 npm run typecheck
 npm run stub-llm   deterministic OpenAI-compatible server on :11500 for offline runs
 ```
+
+Shortcuts: ⌘K commands · ⌘1–7 views · ⌘S compile · ⌘N new window (desktop).
