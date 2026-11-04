@@ -1,4 +1,4 @@
-import type { Graph, ModelNode, ToolData, ToolNode } from "../contracts/graph";
+import { CAPABILITIES, DEFAULT_CAPABILITIES, type Capability, type Graph, type MediaNode, type ModelNode, type ToolData, type ToolNode } from "../contracts/graph";
 import type { AgentBundle } from "./validate";
 import { canonicalText } from "./text";
 import { toYaml, yamlComment } from "./yaml";
@@ -52,6 +52,27 @@ export function mcpServerEntry(tool: ToolData): Record<string, unknown> {
   return entry;
 }
 
+/**
+ * The tool sets to pin in `platform_toolsets.cli`, or null to leave Hermes'
+ * default. A wired maker turns its tool set on: video_gen is off by default,
+ * so a video maker alone already needs the list. Catalog order, no duplicates.
+ */
+export function compiledToolsets(bundle: AgentBundle): Capability[] | null {
+  const base = bundle.agent.data.capabilities;
+  if (base === null && !bundle.video) return null;
+  const on = new Set<Capability>(base ?? DEFAULT_CAPABILITIES);
+  if (bundle.image) on.add("image_gen");
+  if (bundle.video) on.add("video_gen");
+  return CAPABILITIES.map((c) => c.key).filter((k) => on.has(k));
+}
+
+/** `image_gen:` / `video_gen:` (agent/image_gen_registry.py, hermes_cli/web_routers/tools.py). */
+function makerEntry(m: MediaNode): Record<string, unknown> {
+  const entry: Record<string, unknown> = { provider: m.data.provider };
+  if (m.data.model.trim()) entry.model = m.data.model.trim();
+  return entry;
+}
+
 /** <profile>/config.yaml */
 export function renderConfig(graph: Graph, bundle: AgentBundle): string {
   const [primary, ...fallbacks] = bundle.models;
@@ -67,6 +88,10 @@ export function renderConfig(graph: Graph, bundle: AgentBundle): string {
   if (bundle.tools.length) {
     doc.mcp_servers = Object.fromEntries(bundle.tools.map((t: ToolNode) => [t.data.name, mcpServerEntry(t.data)]));
   }
+  const toolsets = compiledToolsets(bundle);
+  if (toolsets) doc.platform_toolsets = { cli: toolsets };
+  if (bundle.image) doc.image_gen = makerEntry(bundle.image);
+  if (bundle.video) doc.video_gen = makerEntry(bundle.video);
 
   const header = yamlComment([
     `Compiled by McBot from board "${graph.name || graph.id}" (${graph.id}), agent node ${bundle.agent.id}.`,

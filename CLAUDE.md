@@ -62,15 +62,24 @@ Change them additively; a breaking change bumps the version.
   **waits for the process to exit** before the next run — only for McBot's own
   root (`managedRoot`), never an external `~/.hermes`.
 - MCP tools are `mcp__<server>__<tool>`; calls may arrive wrapped in `tool_call`.
+- An agent's abilities compile to `platform_toolsets.cli` (unset = Hermes' default:
+  everything but video and the task board); a wired image/video maker compiles to
+  `image_gen` / `video_gen` and turns its tool set on. Makers are Hermes' own
+  provider plugins: McBot only names one and its key variable, so hard rule 4 (two
+  chat-model providers, no vendor SDKs in McBot) still holds.
 - Run is refused (409) if the agent's files on disk differ from the board — compile first.
 - Memory edits: Hermes' `§` format byte for byte, refused while the profile is
   running, and only against the sha256 the editor read.
 - Cost comes from each profile's `state.db`; Hermes-priced vs McBot-estimated is
   always labelled. Hermes reports no GPU time — do not fabricate it.
-- API keys typed into McBot live in `<workspace>/secrets.json` (owner-only) and
-  reach Hermes only as environment variables of a run; boards and compiled files
-  carry the variable's name. The engine never returns a key's value. Saving a
-  key restarts McBot's own gateway. (OS keychain in M6.)
+- API keys typed into McBot live in `<workspace>/secrets.json` (owner-only); boards
+  and compiled files carry only the variable's name, and the engine never returns a
+  key's value. Hermes' gateway reads a served profile's keys from `<profile>/.env`
+  only (never its own environment), so right before each run the engine writes the
+  keys that agent's board names (models, makers, `${env:NAME}` in MCP servers) into
+  a marked McBot block of that `.env`, owner-only, keeping every other line
+  (`engine/profileEnv.ts`). Compile never writes keys. The Files view never lists or
+  shows `.env` / `.op.env`. Saving a key restarts McBot's own gateway. (OS keychain in M6.)
 - McBot runs **its own Hermes** (`hermes/`, our fork) unless `MCBOT_HERMES_BIN` names
   another: Hermes' own Python from its tool store (`HERMES_RUNTIME_DIR`, default
   `hermes/.hermes-runtime`) running the `hermes` launcher, with the environment

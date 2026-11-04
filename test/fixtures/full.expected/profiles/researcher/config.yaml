@@ -31,3 +31,26 @@ mcp_servers:
     headers:
       Authorization: Bearer ${env:SEARCH_TOKEN}
       X-Team: ops
+platform_toolsets:
+  cli:
+    - web
+    - browser
+    - file
+    - terminal
+    - code_execution
+    - vision
+    - image_gen
+    - video_gen
+    - tts
+    - memory
+    - session_search
+    - skills
+    - todo
+    - clarify
+    - delegation
+    - cronjob
+    - computer_use
+    - connections
+video_gen:
+  provider: fal
+  model: kling-video

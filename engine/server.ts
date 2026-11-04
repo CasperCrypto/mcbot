@@ -19,6 +19,7 @@ import { atomicWrite } from "./fsutil";
 import { FolderError, Folders } from "./folders";
 import { bundledHermes, bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, runHermesSetup, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
+import { keyNamesFor } from "./profileEnv";
 import { BOARD_ID_RE, BoardRelay, LooseGraph } from "./relay";
 import { Runner } from "./runner";
 import { RunStore } from "./runStore";
@@ -209,6 +210,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const runId = await runner.start({
         boardId, agentNodeId: bundle.agent.id, profile: bundle.agent.data.name, prompt: body.prompt,
         toolNodes: bundle.tools.map((t) => ({ id: t.id, name: t.data.name })), models: bundle.models,
+        keyNames: keyNamesFor(bundle),
       });
       return { runId };
     },

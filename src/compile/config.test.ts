@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ToolDataSchema } from "../contracts/graph";
-import { mcpServerEntry, mcpToolPrefix, renderConfig } from "./config";
+import { compiledToolsets, mcpServerEntry, mcpToolPrefix, renderConfig } from "./config";
 import { resolveGraph } from "./validate";
 
 const fixture = (name: string) => JSON.parse(readFileSync(join(import.meta.dirname, "../../test/fixtures", name), "utf8"));
@@ -65,5 +65,77 @@ describe("mcpToolPrefix", () => {
     expect(mcpToolPrefix("files")).toBe("mcp__files__");
     expect(mcpToolPrefix("my-api")).toBe("mcp__my_api__");
     expect(mcpToolPrefix("git_ops")).toBe("mcp__git_ops__");
+  });
+});
+
+describe("abilities and makers", () => {
+  // The three-node board, with its agent's abilities and makers changed per case.
+  const board = (agent: Record<string, unknown>, makers: { id: string; media: "image" | "video"; provider: string; model?: string }[] = []) => {
+    const g = fixture("three-node.graph.json");
+    Object.assign(g.nodes[0].data, agent);
+    for (const m of makers) {
+      g.nodes.push({ id: m.id, kind: "media", position: { x: 320, y: 200 }, data: { name: m.id, label: "", media: m.media, provider: m.provider, model: m.model ?? "" } });
+      g.edges.push({ id: `e-${m.id}`, source: "n-agent", target: m.id, order: 0 });
+    }
+    return resolveGraph(g);
+  };
+  const tail = (out: string) => out.slice(out.indexOf("mcp_servers:"));
+
+  it("leaves Hermes' default tool sets alone when nothing is chosen", () => {
+    const { graph, bundles, issues } = board({});
+    expect(issues.filter((i) => i.level === "error")).toEqual([]);
+    expect(compiledToolsets(bundles[0]!)).toBeNull();
+    expect(renderConfig(graph, bundles[0]!)).not.toContain("platform_toolsets");
+  });
+
+  it("pins chosen abilities to the cli surface, in catalog order, byte for byte", () => {
+    const { graph, bundles } = board({ capabilities: ["memory", "web", "file"] }, [{ id: "img", media: "image", provider: "openai", model: "gpt-image-2" }]);
+    expect(tail(renderConfig(graph, bundles[0]!))).toBe(
+      [
+        "mcp_servers:",
+        "  files:",
+        "    command: npx",
+        "    args:",
+        "      - -y",
+        '      - "@modelcontextprotocol/server-filesystem"',
+        "      - ${workspaceFolder}",
+        "platform_toolsets:",
+        "  cli:",
+        "    - web",
+        "    - file",
+        "    - image_gen",
+        "    - memory",
+        "image_gen:",
+        "  provider: openai",
+        "  model: gpt-image-2",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("turns video on with Hermes' defaults when only a video maker is wired", () => {
+    const { graph, bundles } = board({}, [{ id: "vid", media: "video", provider: "fal" }]);
+    const toolsets = compiledToolsets(bundles[0]!)!;
+    expect(toolsets).toContain("video_gen");
+    expect(toolsets).toContain("terminal");
+    expect(toolsets).not.toContain("kanban");
+    expect(renderConfig(graph, bundles[0]!)).toMatch(/\nvideo_gen:\n  provider: fal\n$/);
+  });
+
+  it("an empty list means no built-in tools at all (MCP servers still load)", () => {
+    const { graph, bundles } = board({ capabilities: [] });
+    expect(renderConfig(graph, bundles[0]!)).toContain("platform_toolsets:\n  cli: []\n");
+  });
+
+  it("refuses an unknown service and two makers of one kind on one agent", () => {
+    const { issues } = board({}, [{ id: "a", media: "image", provider: "midjourney" }, { id: "b", media: "image", provider: "fal" }]);
+    const errors = issues.filter((i) => i.level === "error").map((i) => i.message);
+    expect(errors).toContain('Image maker "a": pick a service');
+    expect(errors).toContain('Agent "triage" has 2 image makers; keep one');
+  });
+
+  it("refuses a capability Hermes does not have", () => {
+    const { issues } = board({ capabilities: ["web", "teleport"] });
+    expect(issues.some((i) => i.level === "error" && i.nodeId === "n-agent")).toBe(true);
   });
 });

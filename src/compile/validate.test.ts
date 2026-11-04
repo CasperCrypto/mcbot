@@ -46,7 +46,7 @@ describe("resolveGraph", () => {
       { id: "e2", source: "m", target: "t" },
       { id: "e3", source: "a", target: "ghost" },
     ]))).toEqual([
-      'error: Cannot connect model "local" to tool "files"; wire models and tools to agents',
+      'error: Cannot connect model "local" to tool "files"; wire models, tools and makers to agents',
       "error: Edge e3 points at a node that does not exist",
       'warning: tool "files" is not wired to any agent and will not be compiled',
     ]);

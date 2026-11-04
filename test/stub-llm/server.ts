@@ -11,6 +11,9 @@
  *   "what is 2+2" / "2+2"       → "4"
  *   anything else               → "Stub model here. You asked: <message>"
  * Requests without `tools` (Hermes' title generation, compression) always get text.
+ *
+ * POST /images/generations answers like OpenAI's Images API with a 1×1 PNG, so
+ * Hermes' image maker (provider openai, OPENAI_BASE_URL → here) runs offline.
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -29,10 +32,17 @@ export interface ChatRequest {
 }
 type Reply = { kind: "text"; text: string } | { kind: "tool"; name: string; args: string };
 
+/** A 1×1 PNG. */
+export const STUB_PNG_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
 export interface StubLlm {
   url: string;
   port: number;
   requests: ChatRequest[];
+  /** Bodies of POST /images/generations. */
+  imageRequests: Record<string, unknown>[];
+  /** The Authorization header of each chat request, in order ("" when none). */
+  authorizations: string[];
   close(): Promise<void>;
 }
 
@@ -117,6 +127,8 @@ function respond(res: ServerResponse, body: ChatRequest, n: number) {
 
 export async function startStubLlm(port = 0, host = "127.0.0.1", onRequest?: (req: ChatRequest) => void): Promise<StubLlm> {
   const requests: ChatRequest[] = [];
+  const imageRequests: Record<string, unknown>[] = [];
+  const authorizations: string[] = [];
   const server: Server = createServer(async (req, res) => {
     const path = (req.url ?? "").split("?")[0];
     if (req.method === "GET" && path?.endsWith("/models")) {
@@ -127,8 +139,15 @@ export async function startStubLlm(port = 0, host = "127.0.0.1", onRequest?: (re
     if (req.method === "POST" && path?.endsWith("/chat/completions")) {
       const body = JSON.parse((await readBody(req)) || "{}") as ChatRequest;
       requests.push(body);
+      authorizations.push(String(req.headers.authorization ?? ""));
       onRequest?.(body);
       respond(res, body, requests.length);
+      return;
+    }
+    if (req.method === "POST" && path?.endsWith("/images/generations")) {
+      imageRequests.push(JSON.parse((await readBody(req)) || "{}") as Record<string, unknown>);
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ created: 1_700_000_000, data: [{ b64_json: STUB_PNG_B64 }] }));
       return;
     }
     res.writeHead(404, { "content-type": "application/json" });
@@ -140,6 +159,8 @@ export async function startStubLlm(port = 0, host = "127.0.0.1", onRequest?: (re
     url: `http://${host}:${actual}/v1`,
     port: actual,
     requests,
+    imageRequests,
+    authorizations,
     close: () => new Promise((resolve) => server.close(() => resolve())),
   };
 }

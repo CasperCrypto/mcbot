@@ -9,6 +9,7 @@
  * emits run.cost.
  */
 import { spawn, type ChildProcess } from "node:child_process";
+import { join } from "node:path";
 import { createInterface } from "node:readline";
 import type { ModelNode } from "../src/contracts/graph";
 import { priceSession } from "./cost";
@@ -17,6 +18,7 @@ import { readSession } from "./hermesData";
 import { RunStore, newRunId } from "./runStore";
 import { StreamMapper, type ToolNodeRef } from "./streamJson";
 import { resolveInside } from "./fsutil";
+import { writeProfileKeys } from "./profileEnv";
 
 export interface StartRun {
   boardId: string;
@@ -25,6 +27,8 @@ export interface StartRun {
   prompt: string;
   toolNodes: ToolNodeRef[];
   models: ModelNode[];
+  /** Key variables this agent's board names (engine/profileEnv.ts keyNamesFor). */
+  keyNames?: string[];
 }
 
 export interface RunnerOptions {
@@ -33,7 +37,11 @@ export interface RunnerOptions {
   /** May the engine stop the gateway under `root`? Only for McBot's own output root. */
   managedRoot: boolean;
   findHermes: () => Promise<HermesBinary | null>;
-  /** API keys the user saved in McBot, passed to Hermes as environment variables. */
+  /**
+   * API keys the user saved in McBot. A run gets them as environment variables, and the
+   * ones its agent names are written to the profile's .env, which is where Hermes' gateway
+   * reads a served profile's keys (engine/profileEnv.ts).
+   */
   secrets?: () => Promise<Record<string, string>>;
 }
 
@@ -104,7 +112,11 @@ export class Runner {
 
     const stderrTail: string[] = [];
     let sessionId: string | null = null;
-    const env = hermesEnv(root, { ...process.env, ...((await this.opts.secrets?.().catch(() => ({}))) ?? {}) });
+    const saved: Record<string, string> = (await this.opts.secrets?.().catch(() => ({}))) ?? {};
+    const env = hermesEnv(root, { ...process.env, ...saved });
+    const keys = Object.fromEntries((req.keyNames ?? []).filter((n) => n in saved).map((n) => [n, saved[n]!]));
+    await writeProfileKeys(join(root, "profiles", req.profile), keys).catch((err: Error) =>
+      store.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] could not write this agent's keys: ${err.message}` }));
 
     /** One Hermes process. A first attempt holds back "the gateway is still starting" so it can be retried. */
     const attempt = (retryable: boolean) => new Promise<{ exit: { code: number | null; signal: string | null; error?: Error }; mapper: StreamMapper; held: boolean }>((resolve) => {

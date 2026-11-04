@@ -15,7 +15,7 @@ const namesOf = (g: Graph, kind: GraphNode["kind"]) => g.nodes.filter((n) => n.k
 
 export function newAgent(g: Graph, position: { x: number; y: number }): GraphNode {
   const name = uniqueName("agent", namesOf(g, "agent"));
-  return { id: newId("agent"), kind: "agent", position, data: { name, displayName: "New agent", description: "", soul: "", skills: [] } };
+  return { id: newId("agent"), kind: "agent", position, data: { name, displayName: "New agent", description: "", soul: "", skills: [], capabilities: null } };
 }
 
 export type ModelPreset = "local" | "cloud";

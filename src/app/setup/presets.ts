@@ -142,7 +142,7 @@ export function buildTeam(profile: SetupProfile, picks: string[], models: ModelC
     const id = `agent-${p.id}`;
     nodes.push({
       id, kind: "agent", position: { x: 0, y: rowY(i, chosen.length) },
-      data: { name: p.name, displayName: p.displayName, description: p.role, soul: context ? `${p.soul}\n\n${context}` : p.soul, skills: [] },
+      data: { name: p.name, displayName: p.displayName, description: p.role, soul: context ? `${p.soul}\n\n${context}` : p.soul, skills: [], capabilities: null },
     });
     modelIds.forEach((m, order) => edges.push({ id: `e-${m}-${p.id}`, source: m, target: id, order }));
     if (p.files) edges.push({ id: `e-${p.id}-files`, source: id, target: "tool-files", order: 0 });

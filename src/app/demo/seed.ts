@@ -23,13 +23,14 @@ export const seedGraph: Graph = {
           name: "route-ticket", description: "Pick the owner for a support ticket.", version: "1.0.0", author: "Support", license: "MIT",
           platforms: [], tags: ["support"], body: "# Route a ticket\n\n1. Read the ticket.\n2. Billing → Sam. Outage → on-call. Else → researcher.\n3. Reply with the owner and one line why.",
         }],
+        capabilities: null,
       },
     },
     {
       id: "agent-research", kind: "agent", position: { x: 0, y: 250 },
       data: {
         name: "researcher", displayName: "Researcher", description: "Answers product questions from the docs.",
-        soul: "You answer product questions from Acme's docs.\nQuote the doc you used.", skills: [],
+        soul: "You answer product questions from Acme's docs.\nQuote the doc you used.", skills: [], capabilities: null,
       },
     },
     {

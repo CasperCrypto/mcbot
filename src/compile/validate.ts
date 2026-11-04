@@ -1,11 +1,13 @@
 import {
   EdgeSchema,
   GraphSchema,
+  MEDIA_PROVIDERS,
   NodeSchema,
   RESERVED_PROFILE_NAMES,
   type AgentNode,
   type Graph,
   type GraphNode,
+  type MediaNode,
   type ModelNode,
   type ToolNode,
 } from "../contracts/graph";
@@ -23,6 +25,9 @@ export interface AgentBundle {
   models: ModelNode[];
   /** Sorted by tool name. */
   tools: ToolNode[];
+  /** The image maker and the video maker wired to this agent (one each at most). */
+  image: MediaNode | null;
+  video: MediaNode | null;
 }
 
 export interface Resolved {
@@ -31,10 +36,11 @@ export interface Resolved {
   issues: Issue[];
 }
 
-const PAIRS = new Set(["agent:model", "model:agent", "agent:tool", "tool:agent"]);
+const PAIRS = new Set(["agent:model", "model:agent", "agent:tool", "tool:agent", "agent:media", "media:agent"]);
 
 function label(n: GraphNode): string {
-  return n.data.name ? `${n.kind} "${n.data.name}"` : `${n.kind} ${n.id}`;
+  const kind = n.kind === "media" ? `${n.data.media} maker` : n.kind;
+  return n.data.name ? `${kind} "${n.data.name}"` : `${kind} ${n.id}`;
 }
 
 function duplicates<T>(items: readonly T[], key: (t: T) => string): Map<string, T[]> {
@@ -78,10 +84,11 @@ export function resolveGraph(input: unknown): Resolved {
   return { ...resolveValid({ ...shell.data, nodes, edges }, issues), graph: input as Graph };
 }
 
-const KIND: Record<string, string> = { agent: "Agent", model: "Model", tool: "Tool" };
+const KIND: Record<string, string> = { agent: "Agent", model: "Model", tool: "Tool", media: "Maker" };
 const FIELD: Record<string, string> = {
   name: "ID", displayName: "Name", description: "Description", soul: "Soul", model: "Model", baseUrl: "Endpoint",
   apiKeyEnv: "API key", label: "Label", command: "Command", url: "URL", transport: "Transport", skills: "Skills",
+  capabilities: "Abilities", provider: "Service", media: "Kind",
 };
 
 /** A schema problem in words a person can act on: which node, which field, what is wrong. */
@@ -107,6 +114,7 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
   const agents = graph.nodes.filter((n): n is AgentNode => n.kind === "agent");
   const models = graph.nodes.filter((n): n is ModelNode => n.kind === "model");
   const tools = graph.nodes.filter((n): n is ToolNode => n.kind === "tool");
+  const makers = graph.nodes.filter((n): n is MediaNode => n.kind === "media");
 
   for (const [name, ns] of duplicates(agents, (n) => n.data.name))
     for (const n of ns) issues.push({ level: "error", nodeId: n.id, message: `Two agents are named "${name}"; agent names are Hermes profile ids and must be unique` });
@@ -114,6 +122,8 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
     for (const n of ns) issues.push({ level: "error", nodeId: n.id, message: `Two models are named "${name}"` });
   for (const [name, ns] of duplicates(tools, (n) => n.data.name))
     for (const n of ns) issues.push({ level: "error", nodeId: n.id, message: `Two tools are named "${name}"` });
+  for (const [name, ns] of duplicates(makers, (n) => n.data.name))
+    for (const n of ns) issues.push({ level: "error", nodeId: n.id, message: `Two makers are named "${name}"` });
 
   for (const a of agents) {
     if (RESERVED_PROFILE_NAMES.includes(a.data.name))
@@ -134,8 +144,14 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
       issues.push({ level: "error", nodeId: t.id, message: `Tool "${t.data.name}" (http) needs an http(s) URL` });
   }
 
+  for (const m of makers) {
+    if (!Object.hasOwn(MEDIA_PROVIDERS[m.data.media], m.data.provider))
+      issues.push({ level: "error", nodeId: m.id, message: `${m.data.media === "image" ? "Image" : "Video"} maker "${m.data.name}": pick a service` });
+  }
+
   const modelEdges = new Map<string, { edgeId: string; order: number; model: ModelNode }[]>();
   const toolEdges = new Map<string, ToolNode[]>();
+  const mediaEdges = new Map<string, MediaNode[]>();
   const wired = new Set<string>();
   const pairSeen = new Set<string>();
 
@@ -147,7 +163,7 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
       continue;
     }
     if (!PAIRS.has(`${s.kind}:${t.kind}`)) {
-      issues.push({ level: "error", edgeId: e.id, message: `Cannot connect ${label(s)} to ${label(t)}; wire models and tools to agents` });
+      issues.push({ level: "error", edgeId: e.id, message: `Cannot connect ${label(s)} to ${label(t)}; wire models, tools and makers to agents` });
       continue;
     }
     const agent = (s.kind === "agent" ? s : t) as AgentNode;
@@ -163,6 +179,8 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
       modelEdges.set(agent.id, [...(modelEdges.get(agent.id) ?? []), { edgeId: e.id, order: e.order, model: other }]);
     } else if (other.kind === "tool") {
       toolEdges.set(agent.id, [...(toolEdges.get(agent.id) ?? []), other]);
+    } else if (other.kind === "media") {
+      mediaEdges.set(agent.id, [...(mediaEdges.get(agent.id) ?? []), other]);
     }
   }
 
@@ -175,11 +193,18 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
     if (chain.length === 0)
       issues.push({ level: "error", nodeId: agent.id, message: `Agent "${agent.data.name}" has no model; wire a model node to it` });
     const agentTools = (toolEdges.get(agent.id) ?? []).slice().sort((x, y) => (x.data.name < y.data.name ? -1 : x.data.name > y.data.name ? 1 : 0));
-    bundles.push({ agent, models: chain, tools: agentTools });
+    // Hermes has one provider per kind (image_gen.provider, video_gen.provider).
+    const maker = (kind: "image" | "video"): MediaNode | null => {
+      const wiredMakers = (mediaEdges.get(agent.id) ?? []).filter((m) => m.data.media === kind);
+      if (wiredMakers.length > 1)
+        issues.push({ level: "error", nodeId: agent.id, message: `Agent "${agent.data.name}" has ${wiredMakers.length} ${kind} makers; keep one` });
+      return wiredMakers.length === 1 ? wiredMakers[0]! : null;
+    };
+    bundles.push({ agent, models: chain, tools: agentTools, image: maker("image"), video: maker("video") });
   }
   bundles.sort((x, y) => (x.agent.data.name < y.agent.data.name ? -1 : x.agent.data.name > y.agent.data.name ? 1 : 0));
 
-  for (const n of [...models, ...tools])
+  for (const n of [...models, ...tools, ...makers])
     if (!wired.has(n.id)) issues.push({ level: "warning", nodeId: n.id, message: `${label(n)} is not wired to any agent and will not be compiled` });
   if (agents.length === 0) issues.push({ level: "error", message: "Nothing to compile: add an agent node" });
 

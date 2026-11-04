@@ -22,11 +22,12 @@ Eight small changes inside Hermes, listed in `hermes/MCBOT.md`, make it know
 McBot. One example: `hermes update` says updates come with McBot. Upstream
 releases merge in with `npm run hermes:sync`.
 
-**What needs no extra setup:** Hermes' default tool set is already on for every
-McBot agent: web search, browser, terminal, files, code, memory, image
-generation, text to speech, delegation, schedules and kanban
-(`hermes/toolsets.py` `_HERMES_CORE_TOOLS`). Some tools need a key first; image
-generation, for example, needs an OpenAI, OpenRouter or FAL key.
+**What needs no extra setup:** Hermes' default tool sets are already on for
+every McBot agent: web search, browser, terminal, files, code, memory, image
+generation, text to speech, delegation and schedules. Video and the task board
+are opt-in (`hermes_cli/tools_config.py` `_DEFAULT_OFF_TOOLSETS`). Some tools
+need a key first; image generation, for example, needs an OpenAI, OpenRouter or
+FAL key.
 
 **What does need more:** McBot has no screens yet to turn those tools on or off,
 pick their providers, or show what they produced.

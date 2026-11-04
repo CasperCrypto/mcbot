@@ -47,6 +47,46 @@ export const SkillSchema = z.object({
 });
 export type Skill = z.infer<typeof SkillSchema>;
 
+/**
+ * What an agent can do: Hermes' tool sets, in the order the inspector shows them
+ * (hermes_cli/tools_config.py CONFIGURABLE_TOOLSETS; platform-only ones left out).
+ * McBot runs land on Hermes' `cli` surface, so a list compiles to
+ * `platform_toolsets.cli` (docs/HERMES.md).
+ */
+export const CAPABILITIES = [
+  { key: "web", label: "Web search" },
+  { key: "browser", label: "Browser" },
+  { key: "file", label: "Files" },
+  { key: "terminal", label: "Terminal" },
+  { key: "code_execution", label: "Code" },
+  { key: "vision", label: "See images" },
+  { key: "image_gen", label: "Make images" },
+  { key: "video_gen", label: "Make videos" },
+  { key: "tts", label: "Speak" },
+  { key: "memory", label: "Memory" },
+  { key: "session_search", label: "Past chats" },
+  { key: "skills", label: "Skills" },
+  { key: "todo", label: "Plans" },
+  { key: "clarify", label: "Ask back" },
+  { key: "delegation", label: "Helpers" },
+  { key: "cronjob", label: "Schedules" },
+  { key: "kanban", label: "Task board" },
+  { key: "computer_use", label: "Use the computer" },
+  { key: "connections", label: "Connections" },
+] as const;
+export type Capability = (typeof CAPABILITIES)[number]["key"];
+export const CapabilitySchema = z.enum(CAPABILITIES.map((c) => c.key) as [Capability, ...Capability[]]);
+
+/**
+ * What Hermes gives the `cli` surface when platform_toolsets.cli is unset:
+ * `_get_platform_tools({}, "cli")` in hermes/ at 1e208b280deb. Video and the
+ * task board are opt-in (tools_config.py _DEFAULT_OFF_TOOLSETS).
+ */
+export const DEFAULT_CAPABILITIES: readonly Capability[] = [
+  "web", "browser", "file", "terminal", "code_execution", "vision", "image_gen", "tts", "memory",
+  "session_search", "skills", "todo", "clarify", "delegation", "cronjob", "computer_use", "connections",
+];
+
 export const AgentDataSchema = z.object({
   /** The Hermes profile id: runs as `hermes -p <name>`. */
   name: z.string().regex(PROFILE_NAME_RE, "lowercase profile id: a-z, 0-9, - or _ (max 64)"),
@@ -55,6 +95,8 @@ export const AgentDataSchema = z.object({
   /** SOUL.md — the agent's identity, slot #1 of its system prompt. */
   soul: z.string().default(""),
   skills: z.array(SkillSchema).default([]),
+  /** Tool sets this agent may use; null = Hermes' default (DEFAULT_CAPABILITIES). */
+  capabilities: z.array(CapabilitySchema).nullable().default(null),
 });
 export type AgentData = z.infer<typeof AgentDataSchema>;
 
@@ -89,18 +131,56 @@ export const ToolDataSchema = z.object({
 });
 export type ToolData = z.infer<typeof ToolDataSchema>;
 
+/**
+ * Image and video makers. These are Hermes' own provider plugins, not McBot
+ * providers: the board only names one (`image_gen.provider` / `video_gen.provider`)
+ * and the variable its key is read from. Ids are each plugin's registered name,
+ * keys its `requires_env` (hermes/plugins/image_gen/*, hermes/plugins/video_gen/*).
+ */
+export const MEDIA_PROVIDERS = {
+  image: {
+    openai: { label: "OpenAI", keyEnv: "OPENAI_API_KEY" },
+    openrouter: { label: "OpenRouter", keyEnv: "OPENROUTER_API_KEY" },
+    fal: { label: "FAL", keyEnv: "FAL_KEY" },
+    xai: { label: "xAI", keyEnv: "XAI_API_KEY" },
+    krea: { label: "Krea", keyEnv: "KREA_API_KEY" },
+    deepinfra: { label: "DeepInfra", keyEnv: "DEEPINFRA_API_KEY" },
+    "meta-ai": { label: "Meta", keyEnv: "META_MODEL_API_KEY" },
+  },
+  video: {
+    fal: { label: "FAL", keyEnv: "FAL_KEY" },
+    openrouter: { label: "OpenRouter", keyEnv: "OPENROUTER_API_KEY" },
+    xai: { label: "xAI", keyEnv: "XAI_API_KEY" },
+    deepinfra: { label: "DeepInfra", keyEnv: "DEEPINFRA_API_KEY" },
+  },
+} as const satisfies Record<"image" | "video", Record<string, { label: string; keyEnv: string }>>;
+export type MediaKind = keyof typeof MEDIA_PROVIDERS;
+
+export const MediaDataSchema = z.object({
+  name: slug,
+  label: z.string().default(""),
+  media: z.enum(["image", "video"]),
+  /** A key of MEDIA_PROVIDERS[media]; checked in validate.ts. */
+  provider: z.string().min(1),
+  /** Optional; empty = the provider's default (`image_gen.model` / `video_gen.model`). */
+  model: z.string().default(""),
+});
+export type MediaData = z.infer<typeof MediaDataSchema>;
+
 const nodeBase = { id: z.string().min(1), position: PositionSchema };
 
 export const NodeSchema = z.discriminatedUnion("kind", [
   z.object({ ...nodeBase, kind: z.literal("agent"), data: AgentDataSchema }),
   z.object({ ...nodeBase, kind: z.literal("model"), data: ModelDataSchema }),
   z.object({ ...nodeBase, kind: z.literal("tool"), data: ToolDataSchema }),
+  z.object({ ...nodeBase, kind: z.literal("media"), data: MediaDataSchema }),
 ]);
 export type GraphNode = z.infer<typeof NodeSchema>;
 export type NodeKind = GraphNode["kind"];
 export type AgentNode = Extract<GraphNode, { kind: "agent" }>;
 export type ModelNode = Extract<GraphNode, { kind: "model" }>;
 export type ToolNode = Extract<GraphNode, { kind: "tool" }>;
+export type MediaNode = Extract<GraphNode, { kind: "media" }>;
 
 export const EdgeSchema = z.object({
   id: z.string().min(1),

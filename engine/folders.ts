@@ -9,6 +9,7 @@ import { readdir, stat } from "node:fs/promises";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import type { FsEntry, FsRoot } from "../src/contracts/api";
 import { atomicWrite, readTextOrNull, resolveInside, toPosix } from "./fsutil";
+import { SECRET_FILES } from "./profileEnv";
 
 const MAX_ENTRIES = 400;
 const MAX_PREVIEW = 512_000;
@@ -82,7 +83,7 @@ export class Folders {
       throw new FolderError(err.code === "ENOENT" ? 404 : 403, `cannot read ${rel || "folder"}: ${err.code}`);
     });
     const sorted = items
-      .filter((d) => d.isDirectory() || d.isFile())
+      .filter((d) => (d.isDirectory() || d.isFile()) && !(d.isFile() && SECRET_FILES.has(d.name)))
       .sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()) || a.name.localeCompare(b.name));
     const entries: FsEntry[] = [];
     for (const d of sorted.slice(0, MAX_ENTRIES)) {
@@ -101,6 +102,8 @@ export class Folders {
 
   async read(rootDir: string, rel: string): Promise<{ path: string; bytes: number; text: string | null; reason?: string }> {
     const abs = inside(rootDir, rel);
+    // Keys live in .env files (engine/profileEnv.ts): never shown, whatever the folder.
+    if (SECRET_FILES.has(basename(abs))) throw new FolderError(403, "This file holds keys and is not shown");
     const s = await stat(abs).catch(() => null);
     if (!s?.isFile()) throw new FolderError(404, "no such file");
     if (s.size > MAX_PREVIEW) return { path: rel, bytes: s.size, text: null, reason: "Too large to preview" };

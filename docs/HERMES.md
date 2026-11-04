@@ -36,6 +36,13 @@ booleans and `0755` is octal. McBot emits YAML 1.1 so the library quotes them.
 | fallback models (edge order ≥ 1) | `fallback_providers: [{ provider, model }]` | `hermes_cli/config_defaults.py:24`; `agent/agent_init_fallback.py:11-19` |
 | tool node | `mcp_servers.<name>: { command, args, env }` or `{ url, headers }` | `website/docs/reference/mcp-config-reference.md`; read at `tools/mcp_tool_config.py:710` |
 | — | **no** `_config_version` (an unversioned file is treated as current; "do not copy it into another config") | `cli-config.yaml.example:7-10`; `hermes_cli/config_migrations.py:878-887` |
+| agent abilities (`capabilities`, when set or a video maker is wired) | `platform_toolsets: { cli: [<tool set keys>] }` — McBot's `--source mcbot` runs resolve on the `cli` surface | `gateway/session_policy.py:85-87,654-688` (`SURFACES`, `_resolve_toolsets` → `_get_platform_tools(config, 'cli')`); `hermes_cli/tools_config.py:571-646`; observed: only the listed tool sets reach the model |
+| tool set keys | `web browser file terminal code_execution vision image_gen video_gen tts memory session_search skills todo clarify delegation cronjob kanban computer_use connections` | `hermes_cli/tools_config.py:67-93` (`CONFIGURABLE_TOOLSETS`) |
+| unset list = Hermes' default for `cli` | every key above except `video_gen` and `kanban` | `_get_platform_tools({}, "cli")` run in `hermes/`; `tools_config.py:110` (`_DEFAULT_OFF_TOOLSETS`) |
+| an explicit list keeps MCP servers | configured `mcp_servers` are added unless the list names some | `tools_config.py:733-753` (`_merge_mcp_servers`); run in `hermes/` |
+| image maker | `image_gen: { provider, model? }` | `agent/image_gen_registry.py:28-40` (`image_gen.provider`); `plugins/image_gen/_common.py:71-82` and `hermes_cli/web_routers/tools.py:467` (`image_gen.model`); observed with provider `openai` |
+| video maker | `video_gen: { provider, model? }` | `agent/video_gen_registry.py:5,30-37`; `hermes_cli/web_routers/tools.py:467` |
+| maker ids and keys | image: `openai` OPENAI_API_KEY, `openrouter` OPENROUTER_API_KEY, `fal` FAL_KEY, `xai` XAI_API_KEY, `krea` KREA_API_KEY, `deepinfra` DEEPINFRA_API_KEY, `meta-ai` META_MODEL_API_KEY; video: `fal`, `openrouter`, `xai`, `deepinfra` (same keys) | `provider_id` / `name` in `plugins/image_gen/*/__init__.py`, `plugins/video_gen/*/__init__.py`; `requires_env` in each `plugin.yaml` |
 
 `mcbot-` prefixes the provider key so a model node can never shadow a built-in
 provider id (`openrouter`, `anthropic`, …). API keys are never written: only the
@@ -59,6 +66,8 @@ authoring standard.
 | Exit codes: 0 ok, 1 failed, 130 interrupted | `cli-commands.md:186-198` |
 | MCP tools are named **`mcp__<server>__<tool>`**, `[^A-Za-z0-9_]` → `_` | `tools/mcp_tool_schema.py:147-185`; observed |
 | Deferred MCP tools may be called through the `tool_call` bridge: `{name, arguments}` or `{calls:[…]}` | `tools/tool_labels.py:148-163`; observed |
+| `image_generate` returns `{"success": true, "image": "<path>"}` and saves into the **profile's** `cache/generated/images/`; `video_generate` returns `{"video": "<path>"}` | `agent/image_gen_provider.py:83-123`; `agent/video_gen_provider.py:75-120`; observed |
+| `image_generate` may be deferred behind `tool_search` / `tool_call` like MCP tools | observed |
 | Per-session tokens and cost: `state.db` table `sessions` (`model, billing_provider, billing_base_url, input_tokens, output_tokens, estimated_cost_usd, actual_cost_usd, cost_status, …`) in the **profile's** home | `hermes_state_common.py:461-507`; `hermes_state.py:181` |
 | Custom/local endpoints are recorded with `cost_status: unknown`, `estimated_cost_usd: 0` | observed |
 | `fallback_providers` failover: primary on a dead port, the turn is answered by the fallback and recorded as `billing_provider: custom:mcbot-<fallback>` | observed |
@@ -82,6 +91,7 @@ invent one.
 | Hermes docs: MCP tools are `mcp_<server>_<tool>` (`features/mcp.md:574`) | Code registers `mcp__<server>__<tool>`; the doc is stale. |
 | `${workspaceFolder}` resolves to the session workspace | MCP servers start when the gateway boots, so it resolves to the gateway's own directory. The Files preset uses an absolute folder. |
 | `hermes chat` is a plain CLI process | It auto-starts one multiplex **gateway** per Hermes root (`gateway.pid` JSON, idle-exit after 600 s) that also turns the root into a "default" profile home. The gateway re-scans config on change but discovers MCP servers **only at boot**, so after a config change the engine runs `hermes gateway stop` and waits for the pid to exit — a run started mid-teardown fails with "Gateway starting: deadline". Only done for McBot's own root, never an external `~/.hermes`. |
+| A key in a run's environment reaches the agent | The gateway serves every profile of a root and reads a served profile's keys from **`<profile>/.env` only**; a miss never falls back to the gateway's environment (`agent/secret_scope.py:230-247` `get_secret`, `:407-417` `build_profile_secret_scope`; `gateway/session_local.py:205-218`). Observed: a cloud model's saved key arrived as `Bearer no-key-required`. The engine now writes the keys an agent names into its `.env` before each run (`engine/profileEnv.ts`); the same holds for any setting Hermes reads with `get_secret`, e.g. `OPENAI_BASE_URL`. |
 | Installing Hermes from a wheel | Refused by design; supported: installer, Docker, Nix, or the dev checkout (`scripts/run-in-hermes-env`). |
 
 ## McBot's own Hermes (hermes/)
