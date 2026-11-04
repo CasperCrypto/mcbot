@@ -93,12 +93,41 @@ export interface CostReport {
   sessions: CostSession[];
 }
 
-export interface FileEntry {
+/** A browsable place in the Files graph. */
+export interface FsRoot {
+  /** "profile:<agent>", "workspace:files" or "folder:<hash>" */
+  id: string;
+  kind: "profile" | "workspace" | "folder";
+  name: string;
+  path: string;
+  /** Agent node for profile roots. */
+  nodeId?: string;
+}
+
+export interface FsEntry {
+  name: string;
+  /** POSIX path relative to the root. */
   path: string;
   kind: "file" | "dir";
   bytes: number;
-  /** McBot owns it (listed in the manifest) vs written by Hermes at runtime. */
-  owner: "mcbot" | "hermes";
+  /** Number of children for a directory (null when unreadable or a file). */
+  children: number | null;
+  /** Written by the McBot compiler (listed in the manifest). */
+  owned: boolean;
+}
+
+export interface FsListing {
+  root: string;
+  path: string;
+  entries: FsEntry[];
+  truncated: number;
+}
+
+export interface FsPreview {
+  path: string;
+  bytes: number;
+  text: string | null;
+  reason?: string;
 }
 
 export interface LastCompile {

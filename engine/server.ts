@@ -6,18 +6,17 @@
  * not be able to compile or launch agents (cross-site request / DNS rebinding).
  */
 import { randomBytes } from "node:crypto";
-import { readdir, stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { compile, resolveGraph, type AgentBundle } from "../src/compile";
-import { MANIFEST_PATH } from "../src/contracts/compile";
-import type { AgentMemoryView, BoardInfo, CompileResponse, FileEntry, Health } from "../src/contracts/api";
+import type { AgentMemoryView, BoardInfo, CompileResponse, FsListing, FsPreview, FsRoot, Health } from "../src/contracts/api";
 import type { ModelNode } from "../src/contracts/graph";
 import { buildCostReport } from "./cost";
 import { atomicWrite, readTextOrNull, resolveInside, toPosix } from "./fsutil";
+import { FolderError, Folders } from "./folders";
 import { findHermes } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
 import { BOARD_ID_RE, BoardRelay } from "./relay";
@@ -66,28 +65,6 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   return r.data;
 }
 
-const SKIP_DIRS = new Set(["node_modules", ".npm", ".cache", "cache", "audio_cache", "image_cache", "backups", "runtime", "plugin-update-checks"]);
-
-async function walk(root: string, rel: string, owned: Set<string>, out: FileEntry[], depth = 0): Promise<void> {
-  if (out.length > 3000 || depth > 6) return;
-  let entries;
-  try {
-    entries = await readdir(resolveInside(root, rel), { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-    const p = `${rel}/${e.name}`;
-    if (e.isDirectory()) {
-      out.push({ path: p, kind: "dir", bytes: 0, owner: "hermes" });
-      if (!SKIP_DIRS.has(e.name) && !(depth === 0 && e.name === "home")) await walk(root, p, owned, out, depth + 1);
-    } else if (e.isFile()) {
-      const s = await stat(resolveInside(root, p));
-      out.push({ path: p, kind: "file", bytes: s.size, owner: owned.has(p) ? "mcbot" : "hermes" });
-    }
-  }
-}
-
 export interface Engine {
   server: Server;
   url: string;
@@ -101,6 +78,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   const relay = new BoardRelay(join(cfg.workspace, "boards"));
   const store = new RunStore(join(cfg.workspace, "runs"));
   const runner = new Runner({ store, root: cfg.hermesHome, managedRoot: cfg.managedRoot, findHermes: () => findHermes() });
+  const folders = new Folders(cfg.workspace, cfg.hermesHome);
   const allowed = new Set(cfg.allowedOrigins);
   const sse = new Set<ServerResponse>();
   store.subscribe((e) => {
@@ -196,28 +174,39 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       return buildCostReport(profiles, await store.list(boardId), modelsOf(bundles));
     },
 
-    "GET /api/files": async (_req, url) => {
+    "GET /api/fs/roots": async (_req, url): Promise<FsRoot[]> => {
       const boardId = await requireBoard(url.searchParams.get("boardId"));
       const { bundles } = await bundlesOf(boardId);
       const manifest = await readManifest(cfg.hermesHome);
-      const owned = new Set([...(manifest?.files.map((f) => f.path) ?? []), MANIFEST_PATH]);
-      const out: { profile: string; nodeId: string; files: FileEntry[] }[] = [];
-      for (const b of bundles) {
-        const files: FileEntry[] = [];
-        if (manifest?.profiles.includes(b.agent.data.name)) await walk(cfg.hermesHome, `profiles/${b.agent.data.name}`, owned, files);
-        out.push({ profile: b.agent.data.name, nodeId: b.agent.id, files });
-      }
-      return out;
+      const profiles: FsRoot[] = bundles
+        .filter((b) => manifest?.profiles.includes(b.agent.data.name))
+        .map((b) => ({ id: `profile:${b.agent.data.name}`, kind: "profile", name: b.agent.data.displayName || b.agent.data.name, path: join(cfg.hermesHome, "profiles", b.agent.data.name), nodeId: b.agent.id }));
+      const shared: FsRoot = { id: "workspace:files", kind: "workspace", name: "Shared files", path: join(cfg.workspace, "files") };
+      return [...profiles, shared, ...(await folders.opened())];
     },
-    "GET /api/file": async (_req, url) => {
+    "POST /api/fs/roots": async (req): Promise<FsRoot> => {
+      const { path } = parse(z.object({ path: z.string().trim().min(1) }), await json(req));
+      return folders.open(path);
+    },
+    "POST /api/fs/roots/close": async (req) => {
+      const { id } = parse(z.object({ id: z.string().startsWith("folder:") }), await json(req));
+      await folders.close(id);
+      return { ok: true };
+    },
+    "GET /api/fs/list": async (_req, url): Promise<FsListing> => {
+      const rootId = url.searchParams.get("root") ?? "";
       const rel = url.searchParams.get("path") ?? "";
-      if (!rel.startsWith("profiles/") && rel !== MANIFEST_PATH) throw new HttpError(400, "only files under profiles/ can be read");
-      const abs = resolveInside(cfg.hermesHome, rel);
-      const s = await stat(abs).catch(() => null);
-      if (!s?.isFile()) throw new HttpError(404, "no such file");
-      if (s.size > 512_000) return { path: rel, bytes: s.size, text: null, reason: "too large to preview" };
-      const text = (await readTextOrNull(abs)) ?? "";
-      return /\u0000/.test(text) ? { path: rel, bytes: s.size, text: null, reason: "binary file" } : { path: rel, bytes: s.size, text };
+      const manifest = await readManifest(cfg.hermesHome);
+      const dir = await folders.resolveRoot(rootId, manifest?.profiles ?? []);
+      const owned = new Set(manifest?.files.map((f) => f.path) ?? []);
+      const profile = rootId.startsWith("profile:") ? `profiles/${rootId.slice(8)}/` : null;
+      const { entries, truncated } = await folders.list(dir, rel, (p) => !!profile && owned.has(profile + p));
+      return { root: rootId, path: rel, entries, truncated };
+    },
+    "GET /api/fs/read": async (_req, url): Promise<FsPreview> => {
+      const manifest = await readManifest(cfg.hermesHome);
+      const dir = await folders.resolveRoot(url.searchParams.get("root") ?? "", manifest?.profiles ?? []);
+      return folders.read(dir, url.searchParams.get("path") ?? "");
     },
   };
 
@@ -281,7 +270,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       }
       res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(body));
     } catch (err) {
-      const status = err instanceof HttpError ? err.status : 500;
+      const status = err instanceof HttpError || err instanceof FolderError ? err.status : 500;
       if (status === 500) console.error("[engine]", err);
       const extra = err instanceof HttpError && err.body && typeof err.body === "object" ? err.body : {};
       res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify({ error: (err as Error).message, ...extra }));
