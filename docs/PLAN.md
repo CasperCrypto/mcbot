@@ -58,12 +58,18 @@ Status: ● working today · ◐ started · ○ planned
 | | Scope | Done when |
 |---|---|---|
 | **M5** | Setup assistant ●, key vault ●, local model detection ●, Hermes forked into `hermes/` and run by McBot ●, engine and Hermes inside the app with first-launch preparation ●, unsigned installers from `release.yml` ● (Linux verified here; macOS and Windows need their first CI run) | Someone downloads McBot on a Mac or PC, answers five questions, and talks to a working agent within three minutes, without a terminal |
-| **M6** | Connections hub: providers, MCP catalog, chat apps, keychain | Connecting Slack or a new MCP server takes one screen |
-| **M7** | Workflows: trigger, step, condition and approval nodes; scheduler; history | A weekly report runs itself and waits for a human's OK before sending |
-| **M8** | Copilot and terminal | "Add a researcher that can search our docs" changes the board |
-| **M9** | Teams: shared server, accounts, roles, permissions, audit | Two people on two computers edit and run one board |
-| **M10** | Phones | Approve an agent's action from an iPhone |
-| **M11** | Customization and polish: light theme, layouts, panels, file organisation, languages | Each person arranges McBot their way, and it remembers |
+| **M6** | Capabilities and connections: per-agent tools (web, browser, image, video, voice, terminal, computer use) compiled to Hermes tool sets; image and video providers; skill and MCP catalogs; chat apps through the Hermes gateway; keychain | An agent makes an image, and connecting Slack takes one screen |
+| **M7** | Organisation and orchestration: spaces (departments, projects) in a workspace; agent → agent hand-off edges; Tasks view on Hermes kanban (assign, depend, review); schedules; approval cards | A lead agent splits a goal into tasks for three agents, and a person approves the result |
+| **M8** | Studio and content: gallery of what agents made per space; marketing starter team; post after approval | A post with an image is drafted, approved and published from McBot |
+| **M9** | Workflows: trigger, step, condition and approval nodes on kanban, cron and webhooks; history | A weekly report runs itself and waits for a human's OK before sending |
+| **M10** | Teams: invite on your network, then the Buzz team server; members, roles per space, audit | Two people on two computers edit and run one board |
+| **M11** | Packs: export and import agents, skills, tools and workflows as a folder; starter packs; import from other agents | A "Support desk" pack installs into a new space and runs |
+| **M12** | Copilot and terminal | "Add a researcher that can search our docs" changes the board |
+| **M13** | Phones | Approve an agent's action from an iPhone |
+| **M14** | Brand, customization and polish: logo, agent icons, light theme, layouts, panels, languages | Each person arranges McBot their way, and it remembers |
+
+Why this order, the gaps against Hermes and OpenBot, the workspace → space →
+member model, orchestration and modules: [NEXT.md](NEXT.md).
 
 ## Design
 

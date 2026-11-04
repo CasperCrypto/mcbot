@@ -154,7 +154,7 @@ auth, no cloud: local JSON + the filesystem.
 
 Auth, SSO, Langfuse, OpenTelemetry, a cloud tier, a marketplace, a code
 editor, git integration, ACP, A2A. Everything else on the way is ordered in
-`docs/PLAN.md` (M5–M11); build in that order. Postgres and Redis belong to the
+`docs/PLAN.md` (M5–M14, reasons in `docs/NEXT.md`); build in that order. Postgres and Redis belong to the
 optional team server only, never the desktop app.
 
 ## Commands
