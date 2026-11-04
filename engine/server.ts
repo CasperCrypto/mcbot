@@ -235,8 +235,17 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       res.setHeader("access-control-allow-methods", "GET, POST, PUT, OPTIONS");
     }
   };
-  const permitted = (req: IncomingMessage) =>
-    LOOPBACK_HOST.test(req.headers.host ?? "") && (!req.headers.origin || allowed.has(req.headers.origin));
+  const refusedSeen = new Set<string>();
+  const permitted = (req: IncomingMessage) => {
+    const ok = LOOPBACK_HOST.test(req.headers.host ?? "") && (!req.headers.origin || allowed.has(req.headers.origin));
+    const key = `${req.headers.origin ?? "-"} ${req.headers.host ?? "-"}`;
+    if (!ok && !refusedSeen.has(key)) {
+      // Once per origin/host pair, so a refused page names what it would take to allow it.
+      refusedSeen.add(key);
+      console.warn(`[engine] refused origin ${JSON.stringify(req.headers.origin ?? null)} host ${JSON.stringify(req.headers.host ?? null)} (allow an origin with MCBOT_ALLOWED_ORIGINS)`);
+    }
+    return ok;
+  };
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
