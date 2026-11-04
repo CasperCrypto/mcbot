@@ -32,6 +32,21 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   return data as T;
 }
 
+/** A file the engine streams as itself (images and videos agents made). */
+async function blob(path: string): Promise<Blob> {
+  let res: Response;
+  try {
+    res = await fetch(`${ENGINE_HTTP}${path}`);
+  } catch {
+    throw new EngineError(0, "The McBot engine is not reachable.", {});
+  }
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    throw new EngineError(res.status, String(data.error ?? res.statusText), data);
+  }
+  return res.blob();
+}
+
 const http = {
   health: () => call<Health>("GET", "/api/health"),
   boards: () => call<BoardInfo[]>("GET", "/api/boards"),
@@ -58,6 +73,7 @@ const http = {
   setupComplete: (profile: SetupProfile | null) => call<SetupState>("POST", "/api/setup/complete", { profile }),
   setSecret: (name: string, value: string) => call<{ names: string[] }>("POST", "/api/secrets", { name, value }),
   secrets: () => call<{ names: string[] }>("GET", "/api/secrets"),
+  media: (profile: string, path: string) => blob(`/api/media?profile=${encodeURIComponent(profile)}&path=${encodeURIComponent(path)}`),
   hermes: () => call<HermesInfo>("GET", "/api/hermes"),
   restartGateway: () => call<HermesInfo>("POST", "/api/hermes/gateway/restart", {}),
   prepareHermes: () => call<HermesInfo>("POST", "/api/hermes/prepare", {}),

@@ -1,4 +1,4 @@
-import { ArrowUp, Plug, Square, Waypoints } from "lucide-react";
+import { ArrowUp, Download, Plug, Square, Waypoints } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode, ModelData } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
@@ -24,11 +24,60 @@ function dayLabel(ts: number): string {
   return `${day} ${shortTime(ts)}`;
 }
 
+/** Images and videos a run made: Hermes' image_generate / video_generate results ({ image } / { video }). */
+export function madeMedia(events: RunEvent[] | undefined): { kind: "image" | "video"; path: string; seq: number }[] {
+  const out: { kind: "image" | "video"; path: string; seq: number }[] = [];
+  for (const e of events ?? []) {
+    if (e.type !== "run.tool.finished" || e.isError) continue;
+    try {
+      const r = JSON.parse(e.output) as { success?: boolean; image?: unknown; video?: unknown };
+      if (r.success === false) continue;
+      // Local files only: a bare provider URL would load from the internet, which the app does not allow.
+      for (const kind of ["image", "video"] as const) {
+        const p = r[kind];
+        if (typeof p === "string" && !/^[a-z]+:\/\//i.test(p)) out.push({ kind, path: p, seq: e.seq });
+      }
+    } catch {
+      // not JSON: not a media result
+    }
+  }
+  return out;
+}
+
+/** One made image or video, fetched from the engine (read-only, inside the agent's folder). */
+function Made({ profile, kind, path }: { profile: string; kind: "image" | "video"; path: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    let made: string | null = null;
+    engine.media(profile, path).then((b) => {
+      made = URL.createObjectURL(b);
+      if (alive) setUrl(made);
+      else URL.revokeObjectURL(made);
+    }).catch(() => { if (alive) setFailed(true); });
+    return () => {
+      alive = false;
+      if (made) URL.revokeObjectURL(made);
+    };
+  }, [profile, path]);
+  const file = path.split(/[\\/]/).pop() ?? "";
+  if (failed) return <div className="made missing faint" data-tip={path} data-tip-side="top">{file}</div>;
+  if (!url) return <div className="made loading" />;
+  return (
+    <div className="made" data-testid="made-media">
+      {kind === "image" ? <img src={url} alt="" /> : <video src={url} controls />}
+      <a className="icon-btn sm made-save" href={url} download={file} aria-label="Save" data-tip="Save" data-tip-side="top"><Download size={13} /></a>
+    </div>
+  );
+}
+
 function AgentMessage({ run, events, name }: { run: RunSummary; events: RunEvent[] | undefined; name: string }) {
   const tools = (events ?? []).filter((e): e is Extract<RunEvent, { type: "run.tool.started" }> => e.type === "run.tool.started");
   const failedTools = new Set((events ?? []).filter((e) => e.type === "run.tool.finished" && e.isError).map((e) => (e.type === "run.tool.finished" ? e.tool : "")));
   const text = (run.text || "").trim();
   const failed = run.status === "failed" || run.status === "interrupted";
+  const made = madeMedia(events);
   return (
     <div className={`msg agent${failed ? " failed" : ""}`} data-testid="agent-message">
       <div className="from"><AgentFace seed={run.profile} size={18} status={run.status} /><b>{name}</b></div>
@@ -42,6 +91,7 @@ function AgentMessage({ run, events, name }: { run: RunSummary; events: RunEvent
       ) : (
         <div className="bubble" data-testid="agent-text">{text || (failed ? run.error ?? "Failed" : "")}</div>
       )}
+      {made.length > 0 && <div className="made-grid">{made.map((m) => <Made key={`${m.seq}-${m.kind}`} profile={run.profile} kind={m.kind} path={m.path} />)}</div>}
       {run.status !== "running" && (
         <div className="meta num">
           {run.finishedAt && <span>{duration(run.finishedAt - run.startedAt)}</span>}

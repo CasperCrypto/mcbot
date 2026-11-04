@@ -12,6 +12,13 @@
 .msg.user .bubble { background: #2c2c30; border: 1px solid var(--line); border-bottom-right-radius: 6px; }
 .msg.agent .bubble { background: var(--bg-raised); border: 1px solid var(--line); border-bottom-left-radius: 6px; }
 .msg.agent.failed .bubble { background: var(--fail-soft); border-color: rgba(255, 95, 87, 0.3); color: #ffb3ae; }
+.made-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; max-width: 560px; }
+.made { position: relative; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); background: var(--bg-raised); min-height: 120px; }
+.made img, .made video { display: block; width: 100%; height: auto; }
+.made.loading { animation: pulse 1.4s var(--ease) infinite; }
+.made.missing { display: grid; place-items: center; padding: 12px; font-size: 12px; min-height: 60px; }
+.made-save { position: absolute; top: 6px; right: 6px; background: var(--bg-glass); backdrop-filter: blur(10px); opacity: 0; transition: opacity var(--t-fast) var(--ease); }
+.made:hover .made-save, .made-save:focus-visible { opacity: 1; }
 .msg .meta { font-size: 11px; color: var(--text-4); display: flex; gap: 8px; padding: 0 6px; }
 .msg.user .meta { justify-content: flex-end; }
 .from { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-3); }

@@ -53,6 +53,7 @@
 .tile.cloud { background: linear-gradient(145deg, #6fc6ff, #3a86ff); }
 .tile.tool { background: linear-gradient(145deg, #46e3c0, #10a98a); }
 .tile.agent { background: linear-gradient(145deg, #a597ff, #6d5bff); }
+.tile.media { background: linear-gradient(145deg, #ff8ac2, #e2457f); }
 .tile.folder { background: linear-gradient(145deg, #74b6ff, #3d7ef0); }
 .tile.file { background: rgba(255, 255, 255, 0.08); color: var(--text-2); box-shadow: none; }
 .tile.sm { width: 26px; height: 26px; border-radius: 8px; }
@@ -156,3 +157,11 @@
 .key-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
 .key-entry .btn { height: 34px; }
 .key-saved { min-height: 34px; padding: 0 4px 0 10px; border-radius: var(--r-sm); background: var(--ok-soft); font-size: 12.5px; }
+
+/* Abilities: one switch chip per Hermes tool set. */
+.abilities { display: flex; flex-wrap: wrap; gap: 6px; }
+.ability { height: 26px; padding: 0 10px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: transparent; color: var(--text-3); font: inherit; font-size: 12px; cursor: pointer; transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
+.ability:hover { border-color: var(--line-3); color: var(--text-2); }
+.ability[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--text); }
+.ability:disabled { cursor: default; opacity: 0.8; }
+.ability:focus-visible { outline: none; box-shadow: var(--focus); }

@@ -609,6 +609,10 @@ export const demoEngine = {
     return state.setup;
   }),
   secrets: api(() => ({ names: [...secretNames] })),
+  // Runs are simulated here, so no agent ever makes a real image or video.
+  media: async (_profile: string, _path: string): Promise<Blob> => {
+    throw new EngineError(404, "Runs are simulated in this demo", {});
+  },
   setSecret: api((name: string, value: string) => {
     if (!/^[A-Z_][A-Z0-9_]{0,63}$/.test(name) || !value.trim()) throw new EngineError(400, "That key doesn't look right", {});
     secretNames.add(name);

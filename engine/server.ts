@@ -6,6 +6,7 @@
  * not be able to compile or launch agents (cross-site request / DNS rebinding).
  */
 import { randomBytes } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
@@ -20,6 +21,7 @@ import { FolderError, Folders } from "./folders";
 import { bundledHermes, bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, runHermesSetup, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
 import { keyNamesFor } from "./profileEnv";
+import { MediaError, mediaFile } from "./media";
 import { BOARD_ID_RE, BoardRelay, LooseGraph } from "./relay";
 import { Runner } from "./runner";
 import { RunStore } from "./runStore";
@@ -361,6 +363,21 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
         clearInterval(keep);
         sse.delete(res);
       });
+      return;
+    }
+    // An image or video an agent made, streamed as itself (the chat shows it from a blob URL).
+    if (req.method === "GET" && url.pathname === "/api/media") {
+      try {
+        const profile = url.searchParams.get("profile") ?? "";
+        const manifest = await readManifest(cfg.hermesHome);
+        if (!manifest?.profiles.includes(profile)) throw new MediaError(404, `no compiled agent ${profile}`);
+        const file = await mediaFile(join(cfg.hermesHome, "profiles", profile), url.searchParams.get("path") ?? "");
+        res.writeHead(200, { "content-type": file.type, "content-length": file.size, "cache-control": "private, max-age=3600", "x-content-type-options": "nosniff" });
+        createReadStream(file.abs).pipe(res);
+      } catch (err) {
+        const status = err instanceof MediaError ? err.status : 500;
+        res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify({ error: (err as Error).message }));
+      }
       return;
     }
     const runMatch = /^\/api\/runs\/(run_[a-z0-9]+_[a-f0-9]+)(\/cancel)?$/.exec(url.pathname);

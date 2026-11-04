@@ -1,14 +1,18 @@
-import { ArrowUp, Check, Cloud, HardDrive, MessagesSquare, Plug, Plus, Square, Trash2, X } from "lucide-react";
+import { ArrowUp, Check, Cloud, HardDrive, MessagesSquare, Plug, Plus, RotateCcw, Square, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { removeNodes, setNodeField, updateEdge } from "../../board/ydoc";
 import type { Issue } from "../../compile";
-import { AgentDataSchema, ModelDataSchema, ToolDataSchema, type AgentData, type GraphNode, type ModelData, type Skill, type ToolData } from "../../contracts/graph";
+import {
+  AgentDataSchema, CAPABILITIES, DEFAULT_CAPABILITIES, MEDIA_PROVIDERS, MediaDataSchema, ModelDataSchema, ToolDataSchema,
+  type AgentData, type Capability, type GraphNode, type MediaData, type ModelData, type Skill, type ToolData,
+} from "../../contracts/graph";
 import { runAgent } from "../actions";
 import { engine } from "../lib/engine";
 import { duration, tokens as fmtTokens, usd } from "../lib/format";
 import { useBoard } from "../state/board";
 import { latestRunByAgent, useApp } from "../state/store";
 import { AgentFace, Field, Issues, Segmented, TextListField } from "../ui";
+import { MakerIcon } from "./nodes";
 
 type Errors = Record<string, string>;
 function fieldErrors(schema: { safeParse(v: unknown): { success: boolean; error?: { issues: { path: PropertyKey[]; message: string }[] } } }, data: unknown): Errors {
@@ -27,16 +31,18 @@ export function Inspector({ node, issues }: { node: GraphNode; issues: Issue[] }
   const status = node.kind === "agent" ? latestRunByAgent(runs).get(node.id)?.status : undefined;
 
   const titleField = node.kind === "agent" ? "displayName" : "label";
-  const title = node.kind === "agent" ? (node.data as AgentData).displayName : (node.data as ModelData | ToolData).label;
+  const title = node.kind === "agent" ? node.data.displayName : node.data.label;
   const sub = node.kind === "agent" ? `hermes -p ${node.data.name || "…"}`
-    : node.kind === "model" ? ((node.data as ModelData).endpoint === "local" ? "Local model" : "Cloud model") : "MCP server";
+    : node.kind === "model" ? (node.data.endpoint === "local" ? "Local model" : "Cloud model")
+    : node.kind === "media" ? (node.data.media === "video" ? "Video maker" : "Image maker") : "MCP server";
 
   return (
     <aside className="inspector glass" aria-label="Inspector" data-testid="inspector">
       <div className="inspector-head">
         {node.kind === "agent" ? <AgentFace seed={node.data.name} size={42} status={status} />
-          : <span className={`tile ${node.kind === "tool" ? "tool" : (node.data as ModelData).endpoint === "local" ? "model" : "cloud"}`}>
-            {node.kind === "tool" ? <Plug size={16} /> : (node.data as ModelData).endpoint === "local" ? <HardDrive size={16} /> : <Cloud size={16} />}
+          : node.kind === "media" ? <span className="tile media"><MakerIcon media={node.data.media} size={16} /></span>
+          : <span className={`tile ${node.kind === "tool" ? "tool" : node.data.endpoint === "local" ? "model" : "cloud"}`}>
+            {node.kind === "tool" ? <Plug size={16} /> : node.data.endpoint === "local" ? <HardDrive size={16} /> : <Cloud size={16} />}
           </span>}
         <div className="title">
           <input value={title} placeholder={node.data.name || "Untitled"} onChange={(e) => set(titleField, e.target.value)} aria-label="Name" data-testid="inspector-title" />
@@ -50,6 +56,7 @@ export function Inspector({ node, issues }: { node: GraphNode; issues: Issue[] }
           <Issues issues={issues} />
           {node.kind === "model" && <ModelFields data={node.data} set={set} />}
           {node.kind === "tool" && <ToolFields data={node.data} set={set} />}
+          {node.kind === "media" && <MakerFields data={node.data} set={set} />}
         </div>
       )}
     </aside>
@@ -85,6 +92,7 @@ function AgentSetup({ node, set }: { node: Extract<GraphNode, { kind: "agent" }>
     .filter((x): x is { edge: typeof x.edge; other: GraphNode } => !!x.other);
   const chain = linked.filter((x) => x.other.kind === "model").sort((x, y) => x.edge.order - y.edge.order || (x.edge.id < y.edge.id ? -1 : 1));
   const tools = linked.filter((x) => x.other.kind === "tool");
+  const makers = linked.filter((x): x is { edge: typeof x.edge; other: Extract<GraphNode, { kind: "media" }> } => x.other.kind === "media");
   const makePrimary = (edgeId: string) => {
     const ordered = [chain.find((c) => c.edge.id === edgeId)!, ...chain.filter((c) => c.edge.id !== edgeId)];
     doc.transact(() => ordered.forEach((c, i) => updateEdge(doc, c.edge.id, { order: i })));
@@ -119,6 +127,63 @@ function AgentSetup({ node, set }: { node: Extract<GraphNode, { kind: "agent" }>
           </div>
         </div>
       )}
+      <Abilities data={a} set={set} forced={new Set(makers.map((m): Capability => (m.other.data.media === "video" ? "video_gen" : "image_gen")))} />
+    </>
+  );
+}
+
+/**
+ * The tool sets this agent may use. Untouched, it follows Hermes' default; the first
+ * change pins a list (platform_toolsets.cli). A wired maker keeps its own tool set on.
+ */
+function Abilities({ data, set, forced }: { data: AgentData; set: (f: string, v: unknown) => void; forced: Set<Capability> }) {
+  const on = new Set<Capability>(data.capabilities ?? DEFAULT_CAPABILITIES);
+  const toggle = (k: Capability) => {
+    const next = new Set(on);
+    if (next.has(k)) next.delete(k);
+    else next.add(k);
+    set("capabilities", CAPABILITIES.map((c) => c.key).filter((c) => next.has(c)));
+  };
+  return (
+    <div className="stack" data-testid="abilities">
+      <div className="row">
+        <span className="section-label grow">Abilities</span>
+        {data.capabilities !== null && (
+          <button className="icon-btn sm" aria-label="Back to Hermes' defaults" data-tip="Back to Hermes' defaults" data-tip-side="top" onClick={() => set("capabilities", null)}><RotateCcw size={12} /></button>
+        )}
+      </div>
+      <div className="abilities">
+        {CAPABILITIES.map((c) => {
+          const locked = forced.has(c.key);
+          const active = locked || on.has(c.key);
+          return (
+            <button key={c.key} type="button" className="ability" aria-pressed={active} disabled={locked} onClick={() => toggle(c.key)}
+              data-tip={locked ? "On: a maker is connected" : undefined} data-tip-side="top" data-testid={`ability-${c.key}`}>
+              {c.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MakerFields({ data, set }: { data: MediaData; set: (f: string, v: unknown) => void }) {
+  const errors = fieldErrors(MediaDataSchema, data);
+  const services = MEDIA_PROVIDERS[data.media] as Record<string, { label: string; keyEnv: string }>;
+  const service = services[data.provider];
+  return (
+    <>
+      <label className="field">
+        <span>Service</span>
+        <select value={service ? data.provider : ""} onChange={(e) => set("provider", e.target.value)} data-testid="maker-service">
+          {!service && <option value="" disabled>Pick a service</option>}
+          {Object.entries(services).map(([id, p]) => <option key={id} value={id}>{p.label}</option>)}
+        </select>
+      </label>
+      {service && <KeyField name={service.keyEnv} />}
+      <Field label="Model" value={data.model} onChange={(v) => set("model", v)} mono placeholder="Service default" />
+      <Field label="ID" value={data.name} onChange={(v) => set("name", v)} mono error={errors.name} />
     </>
   );
 }
@@ -202,7 +267,7 @@ function ModelFields({ data, set }: { data: ModelData; set: (f: string, v: unkno
       <Segmented value={data.endpoint} onChange={(v) => set("endpoint", v)} options={[{ value: "local", label: "Local" }, { value: "cloud", label: "Cloud" }]} />
       <Field label="Endpoint" value={data.baseUrl} onChange={(v) => set("baseUrl", v)} mono error={errors.baseUrl} />
       <Field label="Model" value={data.model} onChange={(v) => set("model", v)} mono error={errors.model ? "Required" : null} />
-      {data.endpoint === "cloud" && <ApiKey data={data} set={set} error={errors.apiKeyEnv} />}
+      {data.endpoint === "cloud" && <KeyField name={data.apiKeyEnv || keyNameFor(data)} error={errors.apiKeyEnv} onSaved={(n) => { if (data.apiKeyEnv !== n) set("apiKeyEnv", n); }} />}
       <Field label="ID" value={data.name} onChange={(v) => set("name", v)} mono error={errors.name} />
       <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <Field label="$ / 1M in" type="number" value={price ? String(price.inputPerMTok) : ""} onChange={(v) => setPrice("inputPerMTok", v)} />
@@ -217,8 +282,11 @@ const keyNameFor = (d: ModelData) =>
   /openrouter\.ai/i.test(d.baseUrl) ? "OPENROUTER_API_KEY" : /api\.openai\.com/i.test(d.baseUrl) ? "OPENAI_API_KEY"
     : `MCBOT_${d.name.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_API_KEY`;
 
-/** A cloud model's key: typed once, kept on this computer by the engine, never on the board. */
-function ApiKey({ data, set, error }: { data: ModelData; set: (f: string, v: unknown) => void; error?: string }) {
+/**
+ * A key, typed once and kept on this computer by the engine, never on the board: the
+ * board only names its variable. Shared by cloud models and makers.
+ */
+function KeyField({ name, error, onSaved }: { name: string; error?: string; onSaved?: (name: string) => void }) {
   const [saved, setSaved] = useState<string[] | null>(null);
   const [value, setValue] = useState("");
   const [editing, setEditing] = useState(false);
@@ -226,12 +294,14 @@ function ApiKey({ data, set, error }: { data: ModelData; set: (f: string, v: unk
   useEffect(() => {
     engine.secrets().then((r) => setSaved(r.names)).catch(() => setSaved([]));
   }, []);
-  const name = data.apiKeyEnv || keyNameFor(data);
-  const has = !!data.apiKeyEnv && !!saved?.includes(data.apiKeyEnv);
+  const has = !!saved?.includes(name);
+  useEffect(() => {
+    if (has) onSaved?.(name);
+  }, [has, name]); // eslint-disable-line react-hooks/exhaustive-deps
   const save = async () => {
     try {
       const r = await engine.setSecret(name, value);
-      if (data.apiKeyEnv !== name) set("apiKeyEnv", name);
+      onSaved?.(name);
       setSaved(r.names);
       setValue("");
       setEditing(false);

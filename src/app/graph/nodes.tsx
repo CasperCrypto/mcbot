@@ -1,7 +1,7 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
-import { Cloud, HardDrive, Plug, Server } from "lucide-react";
+import { Clapperboard, Cloud, HardDrive, Image, Plug, Server } from "lucide-react";
 import { memo } from "react";
-import type { AgentData, GraphNode, ModelData, ToolData } from "../../contracts/graph";
+import { MEDIA_PROVIDERS, type AgentData, type GraphNode, type MediaData, type ModelData, type ToolData } from "../../contracts/graph";
 import type { RunSummary } from "../../contracts/run";
 import { ago, usd } from "../lib/format";
 import type { Peer } from "../state/board";
@@ -97,4 +97,29 @@ export const ToolNodeView = memo(function ToolNodeView({ data }: NodeProps<FlowN
   );
 });
 
-export const nodeTypes = { agent: AgentNodeView, model: ModelNodeView, tool: ToolNodeView };
+/** The service a maker uses, by its label; "" when none is picked. */
+export function makerService(m: MediaData): string {
+  return (MEDIA_PROVIDERS[m.media] as Record<string, { label: string } | undefined>)[m.provider]?.label ?? "";
+}
+
+export function MakerIcon({ media, size }: { media: MediaData["media"]; size: number }) {
+  return media === "video" ? <Clapperboard size={size} /> : <Image size={size} />;
+}
+
+export const MediaNodeView = memo(function MediaNodeView({ data }: NodeProps<FlowNode>) {
+  const m = data.node.data as MediaData;
+  const service = makerService(m);
+  return (
+    <div className={`node node-compact${data.hasError ? " has-error" : ""}${data.active ? " calling" : ""}`}>
+      <Peer peer={data.peer} />
+      <Handle type="target" position={Position.Left} id="in" />
+      <div className="tile media"><MakerIcon media={m.media} size={16} /></div>
+      <div className="grow">
+        <div className="label ellipsis">{m.label || (m.media === "video" ? "Videos" : "Images")}</div>
+        <div className="sub ellipsis">{data.active ? "making…" : service ? [service, m.model].filter(Boolean).join(" · ") : "pick a service"}</div>
+      </div>
+    </div>
+  );
+});
+
+export const nodeTypes = { agent: AgentNodeView, model: ModelNodeView, tool: ToolNodeView, media: MediaNodeView };

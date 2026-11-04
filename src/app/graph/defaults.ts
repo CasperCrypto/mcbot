@@ -49,3 +49,9 @@ export function newTool(g: Graph, preset: ToolPreset, position: { x: number; y: 
   }
   return { id: newId("tool"), kind: "tool", position, data: { ...base, name: uniqueName("tool", taken), label: "MCP server", transport: "stdio", command: "" } };
 }
+
+/** An image or video maker; OpenRouter first, since one OpenRouter key also runs cloud models. */
+export function newMaker(g: Graph, media: "image" | "video", position: { x: number; y: number }): GraphNode {
+  const name = uniqueName(media === "image" ? "images" : "videos", namesOf(g, "media"));
+  return { id: newId("maker"), kind: "media", position, data: { name, label: media === "image" ? "Images" : "Videos", media, provider: "openrouter", model: "" } };
+}

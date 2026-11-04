@@ -21,7 +21,8 @@ Status: ● working today · ◐ started · ○ planned
    ● live board, cursors, presence, runs lighting up nodes.
    ○ comments, approvals on the board, workflows on the board, sync across machines.
 4. **Connections.** Models, APIs, MCP servers and connectors in one place.
-   ● local and cloud model nodes, MCP tool nodes.
+   ● local and cloud model nodes, MCP tool nodes, image and video makers,
+   per-agent abilities.
    ◐ local model detection, key vault (setup assistant).
    ○ provider catalog, MCP catalog, chat apps (Slack, Telegram, Discord,
    WhatsApp, email) through the Hermes gateway.
@@ -58,7 +59,7 @@ Status: ● working today · ◐ started · ○ planned
 | | Scope | Done when |
 |---|---|---|
 | **M5** | Setup assistant ●, key vault ●, local model detection ●, Hermes forked into `hermes/` and run by McBot ●, engine and Hermes inside the app with first-launch preparation ●, unsigned installers from `release.yml` ● (Linux verified here; macOS and Windows need their first CI run) | Someone downloads McBot on a Mac or PC, answers five questions, and talks to a working agent within three minutes, without a terminal |
-| **M6** | Capabilities and connections: per-agent tools (web, browser, image, video, voice, terminal, computer use) compiled to Hermes tool sets; image and video providers; skill and MCP catalogs; chat apps through the Hermes gateway; keychain | An agent makes an image, and connecting Slack takes one screen |
+| **M6** | Capabilities and connections: per-agent abilities compiled to Hermes tool sets ●; image and video makers ● (images shown in chat ●); saved keys reach agents through each profile's `.env` ●; skill and MCP catalogs ○; chat apps through the Hermes gateway ○; keychain ○ | An agent makes an image ●, and connecting Slack takes one screen ○ |
 | **M7** | Organisation and orchestration: spaces (departments, projects) in a workspace; agent → agent hand-off edges; Tasks view on Hermes kanban (assign, depend, review); schedules; approval cards | A lead agent splits a goal into tasks for three agents, and a person approves the result |
 | **M8** | Studio and content: gallery of what agents made per space; marketing starter team; post after approval | A post with an image is drafted, approved and published from McBot |
 | **M9** | Workflows: trigger, step, condition and approval nodes on kanban, cron and webhooks; history | A weekly report runs itself and waits for a human's OK before sending |
