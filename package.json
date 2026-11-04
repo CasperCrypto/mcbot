@@ -13,6 +13,7 @@
     "engine": "tsx engine/main.ts",
     "stub-llm": "tsx test/stub-llm/main.ts",
     "build": "tsc --noEmit && vite build",
+    "build:demo": "VITE_MCBOT_DEMO=1 vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

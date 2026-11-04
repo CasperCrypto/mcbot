@@ -7,7 +7,8 @@ import { WebsocketProvider } from "y-websocket";
 import * as Y from "yjs";
 import { graphFromDoc } from "../../board/ydoc";
 import type { Graph } from "../../contracts/graph";
-import { ENGINE_WS } from "../lib/engine";
+import { connectDemoBoard, type DemoLink } from "../demo/engine";
+import { DEMO, ENGINE_WS } from "../lib/engine";
 import { useApp, type Tab } from "./store";
 
 export interface Peer {
@@ -19,10 +20,13 @@ export interface Peer {
   tab: Tab | null;
 }
 
+/** The board's connection: the engine relay (y-websocket), or the in-page link in the browser demo. */
+type Link = DemoLink;
+
 interface Board {
   boardId: string;
   doc: Y.Doc;
-  provider: WebsocketProvider;
+  provider: Link;
   graph: Graph;
   peers: Peer[];
   synced: boolean;
@@ -50,7 +54,7 @@ function useDocGraph(doc: Y.Doc): Graph {
   return useSyncExternalStore(subscribe, () => (cache.current ??= graphFromDoc(doc)));
 }
 
-function readPeers(provider: WebsocketProvider): Peer[] {
+function readPeers(provider: Link): Peer[] {
   const self = provider.awareness.clientID;
   const out: Peer[] = [];
   provider.awareness.getStates().forEach((s, clientId) => {
@@ -62,11 +66,11 @@ function readPeers(provider: WebsocketProvider): Peer[] {
 
 /** Owns the doc + socket. Created in an effect so StrictMode's mount/unmount/mount gets a live one. */
 function Connected({ boardId, children }: { boardId: string; children: ReactNode }) {
-  const [conn, setConn] = useState<{ doc: Y.Doc; provider: WebsocketProvider } | null>(null);
+  const [conn, setConn] = useState<{ doc: Y.Doc; provider: Link } | null>(null);
   useEffect(() => {
     const doc = new Y.Doc();
     // disableBc: every edit must reach the relay, because compile reads the board from it.
-    const provider = new WebsocketProvider(`${ENGINE_WS}/board`, boardId, doc, { disableBc: true });
+    const provider: Link = DEMO ? connectDemoBoard(boardId, doc) : new WebsocketProvider(`${ENGINE_WS}/board`, boardId, doc, { disableBc: true });
     setConn({ doc, provider });
     return () => {
       provider.destroy();
@@ -77,7 +81,7 @@ function Connected({ boardId, children }: { boardId: string; children: ReactNode
   return <Live key={conn.doc.guid} boardId={boardId} doc={conn.doc} provider={conn.provider}>{children}</Live>;
 }
 
-function Live({ boardId, doc, provider, children }: { boardId: string; doc: Y.Doc; provider: WebsocketProvider; children: ReactNode }) {
+function Live({ boardId, doc, provider, children }: { boardId: string; doc: Y.Doc; provider: Link; children: ReactNode }) {
   const identity = useApp((s) => s.identity);
   const tab = useApp((s) => s.tab);
   const selected = useApp((s) => s.selectedNodeId);

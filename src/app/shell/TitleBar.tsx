@@ -2,6 +2,7 @@ import { Check, ChevronDown, Hammer, LoaderCircle, Plus, Search } from "lucide-r
 import { useMemo, useRef, useState } from "react";
 import { resolveGraph } from "../../compile";
 import { compileBoard } from "../actions";
+import { DEMO } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { Kbd, PersonFace } from "../ui";
@@ -66,6 +67,7 @@ export function TitleBar() {
     <header className="titlebar" data-tauri-drag-region>
       <BrandMark />
       <BoardMenu />
+      {DEMO && <span className="chip warn" data-tip="Browser demo: compile is real, runs are simulated" data-tip-side="bottom" data-testid="demo-chip">Demo</span>}
       <div className="spacer" />
       <Island />
       <div className="presence" data-testid="presence">

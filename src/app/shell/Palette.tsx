@@ -1,5 +1,5 @@
 import {
-  Bot, Brain, ChartColumnBig, Cloud, CornerDownLeft, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, MessagesSquare, Plug, Plus, Search, Server, Users, Waypoints, Workflow,
+  Bot, Brain, ChartColumnBig, Cloud, CornerDownLeft, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Users, Waypoints, Workflow,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addNode } from "../../board/ydoc";
@@ -7,7 +7,8 @@ import type { GraphNode } from "../../contracts/graph";
 import { compileBoard } from "../actions";
 import { newAgent, newModel, newTool } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
-import { engine } from "../lib/engine";
+import { resetDemo } from "../demo/engine";
+import { DEMO, engine } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp, type Tab } from "../state/store";
 import { AgentFace, Kbd } from "../ui";
@@ -79,6 +80,7 @@ function useCommands(close: () => void): Command[] {
           },
         },
       },
+      ...(DEMO ? [{ id: "reset-demo", group: "Actions", label: "Reset demo", hint: "Start over with the sample board", icon: <RotateCcw size={15} />, run: resetDemo }] : []),
       ...VIEWS.map((v, i) => ({ id: `go-${v.tab}`, group: "Go to", label: v.label, icon: v.icon, keys: ["⌘", String(i + 1)], run: () => { app.setTab(v.tab); close(); } })),
       ...graph.nodes.filter((n) => n.kind === "agent").map((n) => ({
         id: `chat-${n.id}`, group: "Agents", label: n.data.displayName || n.data.name, hint: `hermes -p ${n.data.name}`,

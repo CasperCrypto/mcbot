@@ -7,11 +7,13 @@ const direct = typeof location !== "undefined" && (location.protocol === "tauri:
 export const ENGINE_HTTP = direct ? "http://127.0.0.1:4317" : "";
 export const ENGINE_WS = direct ? "ws://127.0.0.1:4317" : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
 
-export class EngineError extends Error {
-  constructor(readonly status: number, message: string, readonly body: Record<string, unknown>) {
-    super(message);
-  }
-}
+import { demoEngine, subscribeDemoEvents } from "../demo/engine";
+import { EngineError } from "./engineError";
+
+export { EngineError };
+
+/** Browser-only build (`npm run build:demo`): the engine runs in the page, runs are simulated. */
+export const DEMO = import.meta.env.VITE_MCBOT_DEMO === "1";
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   let res: Response;
@@ -29,7 +31,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   return data as T;
 }
 
-export const engine = {
+const http = {
   health: () => call<Health>("GET", "/api/health"),
   boards: () => call<BoardInfo[]>("GET", "/api/boards"),
   createBoard: (name: string) => call<BoardInfo>("POST", "/api/boards", { name }),
@@ -50,8 +52,11 @@ export const engine = {
   read: (root: string, path: string) => call<FsPreview>("GET", `/api/fs/read?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
 };
 
+export const engine: typeof http = DEMO ? demoEngine : http;
+
 /** Live run events for every run, from the engine's SSE stream. Reconnects on its own. */
 export function subscribeRunEvents(onEvent: (e: RunEvent) => void, onStatus?: (connected: boolean) => void): () => void {
+  if (DEMO) return subscribeDemoEvents(onEvent, onStatus);
   const es = new EventSource(`${ENGINE_HTTP}/api/events`);
   es.onopen = () => onStatus?.(true);
   es.onerror = () => onStatus?.(false);

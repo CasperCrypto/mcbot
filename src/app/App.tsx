@@ -69,7 +69,7 @@ function Shell() {
       <TitleBar />
       <div className="app-body">
         <Rail />
-        <div className="frame" key={tab}>
+        <div className="frame" key={tab} data-tab={tab}>
           <Boundary resetKey={tab}>
             <View />
           </Boundary>
