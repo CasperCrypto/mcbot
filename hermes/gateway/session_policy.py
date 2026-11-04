@@ -82,14 +82,16 @@ _TURN_PROFILE: ContextVar = ContextVar('follow_profile_read', default=None)  # (
 # Creation label -> agent surface. ``tool`` (third-party integrations, ``hermes chat --source tool``) and
 # ``oneshot`` (finite ``chat -q`` / ``-z`` runs) run as the CLI but keep their own stored label, so human
 # pickers hide them (INTERNAL_LISTING_SOURCES).
-SURFACES = {'cli': 'cli', 'tui': 'tui', 'gui': 'desktop', 'acp': 'acp', 'tool': 'cli', 'oneshot': 'cli'}
+SURFACES = {'cli': 'cli', 'tui': 'tui', 'gui': 'desktop', 'acp': 'acp', 'tool': 'cli', 'oneshot': 'cli',
+            # McBot: runs McBot starts (``--source mcbot``) run as the CLI, labelled as McBot's.
+            'mcbot': 'cli'}
 # ``tool`` and ``oneshot`` stay stored under their own labels so pickers can hide them.
 # Creation labels of the owner's own chats: the only LOCAL routes that carry OpenAI Daybreak (agent.daybreak),
 # the approved account's own access (no third-party or downstream use). Not ``tool`` (third-party
 # integrations), ``acp`` (editor clients), or the ``bot_room`` / ``a2a`` policies hosted rooms and peers stage.
 DAYBREAK_LABELS = frozenset({'cli', 'tui', 'gui', 'oneshot'})
 # Every other creation label is rewritten to ``source='local'`` on peer refresh.
-_KEEP_STORED_LABEL = frozenset({'tool', 'oneshot'})
+_KEEP_STORED_LABEL = frozenset({'tool', 'oneshot', 'mcbot'})  # McBot: keep the ``mcbot`` label
 STORED_AS_LOCAL = frozenset(SURFACES) - _KEEP_STORED_LABEL
 # Routing labels and the accounting placeholder: never a creating surface.
 _NOT_A_SURFACE = frozenset({None, '', 'local', 'unknown'})

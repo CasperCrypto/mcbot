@@ -152,7 +152,7 @@ def is_qwen_model(model: str) -> bool:
 # were cold re-writes after a 5–60 min idle gap (1h saves ~42% of write cost there), while
 # 1h on subagents/cron would have cost ~49% more.
 AUTO_CACHE_TTL = "auto"
-MACHINE_PACED_SOURCES = frozenset({"subagent", "cron", "oneshot", "webhook", "kanban", "api", "tool", "batch"})
+MACHINE_PACED_SOURCES = frozenset({"subagent", "cron", "oneshot", "webhook", "kanban", "api", "tool", "batch", "mcbot"})  # McBot: finite runs, like oneshot
 
 
 def auto_cache_ttl_for_source(source: str | None) -> str:
