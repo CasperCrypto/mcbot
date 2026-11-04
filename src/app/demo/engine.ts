@@ -260,6 +260,12 @@ function script(prompt: string, bundle: AgentBundle): { steps: Step[]; text: str
       text: recalled ? `${recalled} Matching tickets:\n${listing}` : `Open tickets:\n${listing}`,
     };
   }
+  if (bundle.agent.data.skills.some((s) => s.name === "route-ticket")) {
+    const owner = /invoice|refund|charge|billing|payment/i.test(prompt) ? "Billing → Sam."
+      : /down|latency|outage|error|slow/i.test(prompt) ? "Outage → paging the on-call."
+      : "Product question → Researcher.";
+    return { steps: [], text: recalled && /Sam|on-call/.test(recalled) && !owner.startsWith("Product") ? `${owner} (${recalled})` : owner };
+  }
   if (recalled) return { steps: [], text: recalled };
   const docs = bundle.tools.find((t) => t.data.transport === "http");
   if (docs) {

@@ -118,6 +118,17 @@ npm run desktop    the Tauri app (runs `npm run dev` itself)
 npm test           all tests; set MCBOT_HERMES_BIN to include a real Hermes run
 npm run typecheck
 npm run stub-llm   deterministic OpenAI-compatible server on :11500 for offline runs
+npm run build:demo browser-only demo in dist-demo/ (in-page engine, simulated runs)
 ```
+
+## Browser demo and website
+
+- `src/app/demo/` serves the engine's API inside the page for `npm run build:demo`.
+  Compile there is the real compiler; runs are simulated, and the UI says so
+  (the Demo chip). When an engine route changes, change the demo to match. The
+  desktop build must tree-shake it out (`DEMO` is a build-time constant).
+- `site/` is the website: static, no build step. `.github/workflows/site.yml`
+  publishes it to GitHub Pages with the demo at `/demo/`. Download buttons read
+  the latest GitHub release and show "Coming soon" until one exists.
 
 Shortcuts: ⌘K commands · ⌘1–7 views · ⌘S compile · ⌘N new window (desktop).

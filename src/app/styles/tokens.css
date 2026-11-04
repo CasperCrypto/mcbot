@@ -18,6 +18,8 @@
   --bg-active: #303035;
   --bg-input: #121214;
   --bg-glass: rgba(34, 34, 38, 0.72);
+  /* Panels that hold text (inspector, sheets): nearly opaque, so the canvas never reads through. */
+  --bg-panel: rgba(31, 31, 34, 0.96);
 
   /* lines */
   --line: rgba(255, 255, 255, 0.055);

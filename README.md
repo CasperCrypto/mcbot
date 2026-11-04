@@ -72,6 +72,14 @@ Compiled agents are ordinary Hermes profiles; run them without McBot too:
 HERMES_HOME=~/McBot/hermes hermes -p triage
 ```
 
+## Website and browser demo
+
+`site/` is the McBot website (static HTML, no build step). `npm run build:demo`
+builds a browser-only McBot into `dist-demo/`: the real UI and compiler with an
+in-page engine and simulated runs, for trying McBot without installing
+anything. `.github/workflows/site.yml` publishes both to GitHub Pages (enable
+Pages with "GitHub Actions" as the source).
+
 ## How the graph maps to Hermes
 
 | On the board | On disk (verified against the Hermes source — see [docs/HERMES.md](docs/HERMES.md)) |
