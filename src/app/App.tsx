@@ -3,6 +3,7 @@ import { compileBoard, refreshDrift } from "./actions";
 import { GraphView } from "./graph/GraphView";
 import { engine, subscribeRunEvents } from "./lib/engine";
 import { Boundary } from "./shell/Boundary";
+import { AboutSheet } from "./shell/AboutSheet";
 import { HermesSheet } from "./shell/HermesSheet";
 import { Palette, VIEWS } from "./shell/Palette";
 import { Rail } from "./shell/Rail";
@@ -82,6 +83,7 @@ function Shell() {
       </Boundary>
       <Boundary>
         <HermesSheet />
+        <AboutSheet />
       </Boundary>
       <BoardEffects />
     </>

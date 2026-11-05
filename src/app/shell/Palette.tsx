@@ -1,5 +1,5 @@
 import {
-  BookOpen, Bot, Brain, Send, ChartColumnBig, Cloud, CornerDownLeft, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Users, Waypoints, Workflow,
+  BookOpen, Bot, Brain, Info, Send, ChartColumnBig, Cloud, CornerDownLeft, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Users, Waypoints, Workflow,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
@@ -100,6 +100,7 @@ function useCommands(close: () => void): Command[] {
           },
         },
       },
+      { id: "about", group: "Actions", label: "About McBot", hint: "Version and licences", icon: <Info size={15} />, run: () => app.setAboutOpen(true) },
       { id: "hermes", group: "Actions", label: "Hermes", hint: "Version, gateway, terminal", icon: <span style={{ width: 15, textAlign: "center", fontSize: 14 }}>☤</span>, run: () => app.setHermesOpen(true) },
       { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Sparkles size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: null }); } },
       ...(DEMO ? [{ id: "reset-demo", group: "Actions", label: "Reset demo", hint: "Start over with the sample board", icon: <RotateCcw size={15} />, run: resetDemo }] : []),
