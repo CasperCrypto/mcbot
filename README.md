@@ -2,11 +2,12 @@
 
 **Draw your AI agent harness. Compile it into a real one.**
 
-McBot is a desktop app (macOS, Windows and Linux) where a team draws a harness of AI
+McBot is a desktop app (macOS, Windows and Linux) where you draw a harness of AI
 agents as a graph — agents, the models they think with, the tools they can use —
 and that graph **compiles into a real, runnable [Hermes Agent](https://github.com/NousResearch/hermes-agent)
 setup on disk**. Then the same graph shows what every agent is doing, what it
-remembers, and what it costs — live, in every window on the board.
+remembers, and what it costs — live, in every McBot window on this computer.
+Working on one board from several computers comes with the team server (M10).
 
 Chat-only agent tools hide the system: you can't see which cron job runs which
 agent, what it remembers, or what it spends. McBot makes the harness the thing

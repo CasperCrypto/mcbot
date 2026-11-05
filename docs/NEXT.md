@@ -34,21 +34,21 @@ pick their providers, or show what they produced.
 
 ## 2. What Hermes has that McBot doesn't show yet
 
-Everything below exists in `hermes/` today. Before any of it reaches the board,
+Everything below exists in `hermes/` today. "McBot today" updated 2026-11-05. Before any of it reaches the board,
 each config key it needs is verified and recorded in `docs/HERMES.md` (hard rule 2).
 
 | Hermes feature | Where in Hermes | McBot today | Plan |
 |---|---|---|---|
-| Tool sets per surface (web, browser, terminal, files, vision, image_gen, video_gen, tts, stt, kanban, cron, delegation, computer use) | `hermes_cli/tools_config.py` `CONFIGURABLE_TOOLSETS`; `platform_toolsets` in config | defaults only, invisible | **M6** Capabilities on each agent |
-| Image generation: OpenAI, OpenRouter, FAL, xAI, Krea, DeepInfra, Meta | `plugins/image_gen/*`, `image_gen.provider` / `.model` | works if a key exists; images land in the profile's `cache/generated/images/`; not shown | **M6** provider pick, **M8** Studio |
-| Video generation: FAL, OpenRouter, xAI, DeepInfra | `plugins/video_gen/*`, `video_gen.provider` (opt-in tool set) | off | **M6**, **M8** |
-| Voice: text to speech, speech to text, voice mode | `tools/tts_*`, `tools/transcription_*` | not shown | **M6**, **M8** |
+| Tool sets per surface (web, browser, terminal, files, vision, image_gen, video_gen, tts, stt, kanban, cron, delegation, computer use) | `hermes_cli/tools_config.py` `CONFIGURABLE_TOOLSETS`; `platform_toolsets` in config | ● Abilities on each agent | done (M6) |
+| Image generation: OpenAI, OpenRouter, FAL, xAI, Krea, DeepInfra, Meta | `plugins/image_gen/*`, `image_gen.provider` / `.model` | ● Image maker block; images show in the chat | **M8** Studio gallery |
+| Video generation: FAL, OpenRouter, xAI, DeepInfra | `plugins/video_gen/*`, `video_gen.provider` (opt-in tool set) | ● Video maker block; videos show in the chat | **M8** Studio gallery |
+| Voice: text to speech, speech to text, voice mode | `tools/tts_*`, `tools/transcription_*` | "Speak" ability on; audio not shown | **M8** |
 | Kanban: one durable task board per project, shared by profiles. It has dependencies, review and changes requested, schedules, a dispatcher and "swarm" (parallel workers → verifier → synthesizer) | `hermes_cli/kanban*.py`, `tools/kanban_tools.py`, `hermes kanban --help` | not shown | **M7** Tasks view, the team's work queue |
 | Projects: named, multi-folder workspaces | `hermes_cli/projects_*.py` | not used | **M7** maps onto Spaces |
 | Delegation: an agent spawns helpers | `tools/delegate_tool*.py` | on, not drawn | **M7** shown in the run graph |
 | Cron jobs | `hermes cron`, `tools/cronjob_tools.py` | on, not shown | **M7** schedules, **M9** workflows |
 | Webhooks | `hermes webhook` | none | **M9** workflow triggers |
-| Chat apps: Slack, Telegram, Discord, WhatsApp, Teams, email, Signal, Matrix and about 20 more, **including Buzz** | `plugins/platforms/*`, `gateway` | none | **M6** connect one per screen |
+| Chat apps: Slack, Telegram, Discord, WhatsApp, Teams, email, Signal, Matrix and about 20 more, **including Buzz** | `plugins/platforms/*`, `gateway` | ◐ Telegram block (one bot per agent) | **M6** WhatsApp, Slack, Discord, email; conversations in McBot's chat |
 | MCP servers | `mcp_servers:` | ● tool nodes | **M6** catalog |
 | Skills hub, bundles, curator | `tools/skills_hub*.py`, `optional-skills/` (~200 skills, e.g. `creative/social-media-content-calendar`, `creative/meme-generation`, `media/youtube-content`, `social-media/xurl`) | inline skills only | **M6** skill catalog on agents |
 | Approvals before risky actions | `tools/approval*.py`, `hermes approvals` | Hermes asks, McBot can't answer | **M7** approval cards on the board |

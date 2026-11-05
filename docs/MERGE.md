@@ -9,6 +9,23 @@ That last part decides what code can come in: a licence that limits commercial
 use binds everyone who uses McBot, even though McBot itself is free, and MIT
 cannot override it.
 
+## How McBot earns
+
+Decision (owner, 2026-11-05): **the app is the funnel, not the product.** McBot
+is MIT and public, and that grant cannot be withdrawn: anyone may ship our UI.
+So the free app is the distribution, and the revenue comes from what one
+download cannot do on its own:
+
+- **McBot Cloud**, the hosted, always-on version: agents that keep working when
+  the laptop is closed, the shared team board (M10), phones (M13), backups. The
+  same server is free to run yourself; people pay for not having to.
+- **For companies**: team accounts, roles and audit (M10), support, and help
+  setting teams up.
+
+So the team server and its hosted version are the paid product, built on the
+free, open app. Code from projects whose licences forbid hosting it for others
+(n8n's Sustainable Use License, OpenBot v0.1.12+) stays out (hard rule 1).
+
 ## What each project brings, and how
 
 Licences checked in each repository on 2026-11-04.
@@ -51,7 +68,8 @@ tools; M9 and M10 (teams, phones) take the Buzz relay and Buzz mobile.
 
 ## Open decisions
 
-- Code signing: Apple Developer ID and a Windows certificate, or unsigned first.
+- ~~Code signing~~: decided 2026-11-04, unsigned while McBot is free (macOS ad-hoc,
+  Windows unsigned; the website explains "Open Anyway").
 - Signing in with a ChatGPT or Claude plan (OpenBot v0.1.11's Codex and Claude
   Code connections) breaks hard rule 4 (two OpenAI-compatible providers, no
   per-vendor SDKs). Taking that code means changing the rule.
