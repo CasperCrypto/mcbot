@@ -26,7 +26,7 @@ can three-way merge every upstream release into them.
 | `agent/managed_worker.py` | `mcbot` is a CLI-surface label | Same as `tool` and `oneshot` |
 | `agent/prompt_caching.py` | `mcbot` runs are machine-paced (short cache) | Same as `oneshot` |
 | `hermes_cli/config.py` | With `HERMES_MANAGED=mcbot`, refusals say Hermes is part of McBot | `npm run hermes -- update` explains that updates arrive with McBot |
-| `plugins/platforms/telegram/adapter.py` | With an own Bot API server (`extra.base_url`), `NO_PROXY` is checked against that server's host and Telegram's fallback IPs are not used | Upstream checked only `api.telegram.org` and routed through its fallback-IP transport, so a local Bot API server went through the system proxy and failed |
+| `plugins/platforms/telegram/adapter.py` | With an own Bot API server (`extra.base_url`), `NO_PROXY` is checked against that server's host and Telegram's fallback IPs are not used | Upstream checked only `api.telegram.org` and routed through its fallback-IP transport, so a local Bot API server went through the system proxy and failed. Offered upstream: `docs/upstream/` |
 
 Not changed on purpose: home initialisation. McBot's runs do not set
 `HERMES_MANAGED`, because a managed install stops creating and securing its

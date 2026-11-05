@@ -1,0 +1,136 @@
+From d5d81429cb8f2af1f3069e3ff7f9122f13b64211 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 5 Nov 2026 07:29:03 +0000
+Subject: [PATCH] fix(telegram): reach an own Bot API server directly,
+ honouring NO_PROXY
+
+With platforms.telegram.extra.base_url set (a local or self-hosted Bot API
+server), the adapter still checked NO_PROXY against api.telegram.org and
+its fallback IPs only, and built TelegramFallbackTransport. So a bot on
+http://127.0.0.1:8081/bot was sent through HTTPS_PROXY and failed to
+connect (seen as 405 from a proxy that refuses plain-HTTP requests).
+
+With base_url set, its host is the one checked against NO_PROXY, and the
+fallback-IP transport (a stand-in for api.telegram.org) is not built.
+Without base_url nothing changes.
+
+Tests: tests/gateway/test_telegram_own_bot_api_server.py (the first test
+fails without this change); test_telegram_closewait_limits.py still passes.
+---
+ plugins/platforms/telegram/adapter.py         |  8 +-
+ .../test_telegram_own_bot_api_server.py       | 77 +++++++++++++++++++
+ 2 files changed, 83 insertions(+), 2 deletions(-)
+ create mode 100644 tests/gateway/test_telegram_own_bot_api_server.py
+
+diff --git a/plugins/platforms/telegram/adapter.py b/plugins/platforms/telegram/adapter.py
+index 94e19720..a2ce72d3 100644
+--- a/plugins/platforms/telegram/adapter.py
++++ b/plugins/platforms/telegram/adapter.py
+@@ -2986,7 +2986,11 @@ class TelegramAdapter(TelegramHeldInboundMixin, TelegramTopicRoutingMixin, BaseP
+                 kwargs["limits"] = _pool_limits
+             return kwargs
+ 
+-        disable_fallback = os.getenv("HERMES_TELEGRAM_DISABLE_FALLBACK_IPS", "").strip().lower() in {"1", "true", "yes", "on"}
++        # An own Bot API server (extra.base_url) is the host requests go to: NO_PROXY is checked
++        # against it, and Telegram's fallback IPs (stand-ins for api.telegram.org) do not apply.
++        from urllib.parse import urlsplit
++        own_api_host = urlsplit(str(self.config.extra.get("base_url") or "")).hostname
++        disable_fallback = bool(own_api_host) or os.getenv("HERMES_TELEGRAM_DISABLE_FALLBACK_IPS", "").strip().lower() in {"1", "true", "yes", "on"}
+         fallback_ips = [] if disable_fallback else self._fallback_ips()
+         if not fallback_ips and not disable_fallback:
+             discovery_timeout = self._env_float_clamped("HERMES_TELEGRAM_FALLBACK_DISCOVERY_TIMEOUT", 5.0, min_value=0.0)
+@@ -3002,7 +3006,7 @@ class TelegramAdapter(TelegramHeldInboundMixin, TelegramTopicRoutingMixin, BaseP
+             else:
+                 logger.info("[%s] Auto-discovered Telegram fallback IPs: %s", self.name, ", ".join(fallback_ips))
+         proxy_url = resolve_proxy_url(
+-            "TELEGRAM_PROXY", target_hosts=["api.telegram.org", *fallback_ips],
++            "TELEGRAM_PROXY", target_hosts=[own_api_host] if own_api_host else ["api.telegram.org", *fallback_ips],
+             configured=self.config.extra.get("proxy_url"))
+ 
+         def _pair(general_httpx: dict, updates_httpx: dict, **extra) -> tuple:
+diff --git a/tests/gateway/test_telegram_own_bot_api_server.py b/tests/gateway/test_telegram_own_bot_api_server.py
+new file mode 100644
+index 00000000..ebb0ce6c
+--- /dev/null
++++ b/tests/gateway/test_telegram_own_bot_api_server.py
+@@ -0,0 +1,77 @@
++"""A bot on its own Bot API server (``extra.base_url``) is reached directly.
++
++Before: the proxy decision checked ``NO_PROXY`` against ``api.telegram.org`` and its fallback IPs
++only, and requests went through ``TelegramFallbackTransport``, so a local Bot API server
++(``http://127.0.0.1:8081/bot``) was sent through ``HTTPS_PROXY`` and failed to connect.
++After: with ``base_url`` set, its host is the one checked against ``NO_PROXY`` and no fallback-IP
++transport is built. Without ``base_url`` nothing changes.
++"""
++
++import asyncio
++from unittest.mock import MagicMock
++
++from gateway.config import PlatformConfig
++from plugins.platforms.telegram import adapter as tg_adapter
++from plugins.platforms.telegram.adapter import TelegramAdapter
++
++
++class _StopConnect(Exception):
++    """Raised once the PTB requests are built, so connect() does no network I/O."""
++
++
++def _build(monkeypatch, extra):
++    """Run connect() up to the PTB request construction; return (proxy target hosts, requests)."""
++    targets: list = []
++    requests: list = []
++
++    def _resolve_proxy_url(*_args, target_hosts=None, **_kwargs):
++        targets.append(list(target_hosts or []))
++        return None
++
++    class _Request:
++        def __init__(self, *args, **kwargs):
++            self.kwargs = kwargs
++            requests.append(self)
++
++    async def _discover():
++        return ["149.154.167.220"]
++
++    monkeypatch.setattr(tg_adapter, "resolve_proxy_url", _resolve_proxy_url)
++    monkeypatch.setattr(tg_adapter, "HTTPXRequest", _Request)
++    monkeypatch.setattr(tg_adapter, "discover_fallback_ips", _discover)
++    monkeypatch.delenv("HERMES_TELEGRAM_DISABLE_FALLBACK_IPS", raising=False)
++
++    adapter = TelegramAdapter(PlatformConfig(enabled=True, token="test-token", extra=dict(extra)))
++    monkeypatch.setattr(adapter, "_acquire_platform_lock", lambda *a, **k: True)
++    monkeypatch.setattr(adapter, "_fallback_ips", lambda: ["149.154.167.220"])
++
++    chain = MagicMock()
++    for name in ("token", "base_url", "base_file_url", "local_mode", "request", "get_updates_request"):
++        getattr(chain, name).return_value = chain
++    chain.build.side_effect = _StopConnect
++    app = MagicMock()
++    app.builder.return_value = chain
++    monkeypatch.setattr(tg_adapter, "Application", app)
++
++    try:
++        asyncio.run(adapter.connect())
++    except Exception:
++        pass
++    return targets, requests
++
++
++def _uses_fallback_transport(requests) -> bool:
++    return any(isinstance(r.kwargs.get("httpx_kwargs", {}).get("transport"), tg_adapter.TelegramFallbackTransport) for r in requests)
++
++
++def test_own_bot_api_server_is_checked_against_no_proxy_and_skips_fallback_ips(monkeypatch):
++    targets, requests = _build(monkeypatch, {"base_url": "http://127.0.0.1:8081/bot"})
++    assert targets == [["127.0.0.1"]]
++    assert requests, "connect() built no HTTPXRequest; the test setup is wrong"
++    assert not _uses_fallback_transport(requests)
++
++
++def test_without_base_url_api_telegram_org_and_fallback_ips_are_unchanged(monkeypatch):
++    targets, requests = _build(monkeypatch, {})
++    assert targets == [["api.telegram.org", "149.154.167.220"]]
++    assert _uses_fallback_transport(requests)
+-- 
+2.43.0
+
