@@ -1,0 +1,40 @@
+# Daily watchdog: has upstream Hermes changed a file McBot patches (patches/hermes/)?
+# Opens one issue when it has (and keeps its report current), closes it once a sync
+# brings hermes/ past those changes. Plain git, no API token needed for the check.
+name: Hermes upstream
+
+on:
+  schedule:
+    - cron: "37 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: check
+        run: node scripts/hermes-upstream-check.mjs report.md
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANGED: ${{ steps.check.outputs.changed }}
+        run: |
+          title="Hermes upstream changed files McBot patches"
+          n=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n1)
+          if [ "$CHANGED" = "true" ]; then
+            if [ -n "$n" ]; then
+              gh issue edit "$n" --repo "$GITHUB_REPOSITORY" --body-file report.md
+            else
+              gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file report.md
+            fi
+          elif [ -n "$n" ]; then
+            gh issue close "$n" --repo "$GITHUB_REPOSITORY" --comment "hermes/ is past these upstream changes now. $(head -n 2 report.md | tail -n 1)"
+          fi
