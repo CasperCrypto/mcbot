@@ -49,7 +49,7 @@ try {
 
   const short = (sha) => sha.slice(0, 10);
   const lines = [
-    `McBot's Hermes is pinned at [\`${short(pin.commit)}\`](${web}/commit/${pin.commit}) (${pin.date.slice(0, 10)}).`,
+    `McBot's engine is pinned at [\`${short(pin.commit)}\`](${web}/commit/${pin.commit}) (${pin.date.slice(0, 10)}).`,
     `Upstream is at [\`${short(head)}\`](${web}/commit/${head}), ${ahead} commit(s) ahead${known ? "" : " (counted by date: the pinned commit is no longer on upstream's main line)"}.`,
     "",
   ];

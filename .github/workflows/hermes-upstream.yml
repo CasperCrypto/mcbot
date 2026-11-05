@@ -1,7 +1,7 @@
-# Daily watchdog: has upstream Hermes changed a file McBot patches (patches/hermes/)?
+# Daily watchdog: has the engine's upstream changed a file McBot patches (patches/hermes/)?
 # Opens one issue when it has (and keeps its report current), closes it once a sync
 # brings hermes/ past those changes. Plain git, no API token needed for the check.
-name: Hermes upstream
+name: Engine upstream
 
 on:
   schedule:
@@ -27,7 +27,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           CHANGED: ${{ steps.check.outputs.changed }}
         run: |
-          title="Hermes upstream changed files McBot patches"
+          title="Engine upstream changed files McBot patches"
           n=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n1)
           if [ "$CHANGED" = "true" ]; then
             if [ -n "$n" ]; then
