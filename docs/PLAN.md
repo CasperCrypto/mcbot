@@ -27,8 +27,8 @@ Status: ● working today · ◐ started · ○ planned
    ○ provider catalog, MCP catalog, chat apps (Slack, Telegram, Discord,
    WhatsApp, email) through the Hermes gateway.
 5. **Copilot and terminal.** ○ "Ask McBot" in ⌘K that edits the board for you;
-   a terminal panel (shell or Hermes' own TUI); a coding agent from Buzz's
-   `buzz-dev-mcp` and OpenBot v0.1.11's Codex and Claude Code connectors.
+   a terminal panel (shell or Hermes' own TUI); a coding agent (Codex and Claude
+   Code connectors, Buzz's `buzz-dev-mcp`).
 6. **Clean, customizable Mac UI.** ● dark design system, rail, ⌘K, graphs everywhere.
    ○ light theme, resizable and pinnable panels, layouts saved per person,
    files as graph or list with tags and search.
@@ -69,7 +69,7 @@ Status: ● working today · ◐ started · ○ planned
 | **M13** | Phones | Approve an agent's action from an iPhone |
 | **M14** | Brand, customization and polish: logo, agent icons, light theme, layouts, panels, languages | Each person arranges McBot their way, and it remembers |
 
-Why this order, the gaps against Hermes and OpenBot, the workspace → space →
+Why this order, the gaps, the workspace → space →
 member model, orchestration and modules: [NEXT.md](NEXT.md).
 
 ## Design

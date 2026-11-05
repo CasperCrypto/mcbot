@@ -29,7 +29,7 @@ const KINDS: { kind: SetupKind; title: string; sub: string; icon: ReactNode }[] 
 ];
 
 /** McBot ships its own Hermes (hermes/); from source it needs one setup run. */
-const INSTALL = "npm run hermes:setup";
+const INSTALL = "npm run engine:setup";
 
 type Status = "wait" | "busy" | "ok" | "warn" | "fail";
 interface Row { label: string; status: Status; detail?: string }
@@ -56,7 +56,7 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
   const index = STEPS.indexOf(step);
   const go = (s: Step) => setStep(s);
 
-  // McBot's own Hermes prepares itself in the background from the first screen (minutes on first launch).
+  // McBot's engine prepares itself in the background from the first screen (minutes on first launch).
   const prep = useRef<Promise<boolean> | null>(null);
   const [prepLine, setPrepLine] = useState<string | null>(null);
   const prepareHermes = () => (prep.current ??= (async () => {
@@ -118,7 +118,7 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
     const hermesOk = !!detect?.hermes.found;
     const preparing = !hermesOk && !!detect?.hermes.source;
     const plan: Row[] = [
-      preparing ? { label: "Preparing Hermes", status: "busy", detail: "first launch, a few minutes" }
+      preparing ? { label: "Preparing the engine", status: "busy", detail: "first launch, a few minutes" }
         : { label: hermesOk ? (detect?.hermes.kind === "bundled" ? "Hermes is built in" : "Hermes is ready") : "Hermes isn't set up yet", status: hermesOk ? "ok" : "warn" },
       { label: "Building your board", status: "wait" },
       { label: "Writing your agents", status: withModels.length ? "wait" : "warn", detail: withModels.length ? undefined : "Add a model on the board, then compile" },
@@ -130,7 +130,7 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
       if (profile.name.trim() && profile.name.trim() !== identity.name) setIdentity({ ...identity, name: profile.name.trim() });
       if (preparing) {
         const ok = await prepareHermes();
-        set(0, ok ? { label: "Hermes is built in", status: "ok", detail: undefined } : { label: "Hermes couldn't be prepared", status: "warn", detail: "McBot tries again on the first run" });
+        set(0, ok ? { label: "Engine ready", status: "ok", detail: undefined } : { label: "The engine couldn't be prepared", status: "warn", detail: "McBot tries again on the first run" });
         if (ok) setDetect((d) => (d ? { ...d, hermes: { ...d.hermes, found: true, kind: "bundled" } } : d));
       }
       set(1, { status: "busy" });
@@ -317,8 +317,8 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
                 <li key={r.label} data-status={r.status}>
                   <span className="mark">{r.status === "busy" ? <LoaderCircle size={15} className="spin-icon" /> : r.status === "ok" ? <Check size={15} strokeWidth={3} /> : r.status === "wait" ? null : <TriangleAlert size={14} />}</span>
                   <span className="grow">{r.label}</span>
-                  {(r.status === "busy" && r.label === "Preparing Hermes" && prepLine ? prepLine : r.detail) && (
-                    <small className="mono ellipsis" style={{ maxWidth: 260 }}>{r.status === "busy" && r.label === "Preparing Hermes" && prepLine ? prepLine : r.detail}</small>
+                  {(r.status === "busy" && r.label === "Preparing the engine" && prepLine ? prepLine : r.detail) && (
+                    <small className="mono ellipsis" style={{ maxWidth: 260 }}>{r.status === "busy" && r.label === "Preparing the engine" && prepLine ? prepLine : r.detail}</small>
                   )}
                 </li>
               ))}

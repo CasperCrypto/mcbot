@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# McBot's own Hermes from a terminal, on McBot's agents: `npm run hermes -- -p <agent>`.
+# McBot's own Hermes from a terminal, on McBot's agents: `npm run cli -- -p <agent>`.
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export HERMES_RUNTIME_DIR="${HERMES_RUNTIME_DIR:-$here/hermes/.hermes-runtime}"

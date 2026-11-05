@@ -3,7 +3,7 @@
  * loaded with Hermes' own `hermes_yaml.safe_load` (ruamel, YAML 1.1) and must
  * mean exactly what McBot intended. Opt-in: needs Hermes' environment.
  *
- *   MCBOT_E2E=1 npm test                         McBot's own hermes/ (after npm run hermes:setup)
+ *   MCBOT_E2E=1 npm test                         McBot's own hermes/ (after npm run engine:setup)
  *   MCBOT_HERMES_SRC=/path/to/hermes-agent npm test   another checkout
  */
 import { execFileSync } from "node:child_process";

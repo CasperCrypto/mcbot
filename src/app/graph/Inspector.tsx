@@ -32,7 +32,7 @@ export function Inspector({ node, issues }: { node: GraphNode; issues: Issue[] }
 
   const titleField = node.kind === "agent" ? "displayName" : "label";
   const title = node.kind === "agent" ? node.data.displayName : node.data.label;
-  const sub = node.kind === "agent" ? `hermes -p ${node.data.name || "…"}`
+  const sub = node.kind === "agent" ? `@${node.data.name || "…"}`
     : node.kind === "model" ? (node.data.endpoint === "local" ? "Local model" : "Cloud model")
     : node.kind === "media" ? (node.data.media === "video" ? "Video maker" : "Image maker")
     : node.kind === "channel" ? "Chat app" : "MCP server";
@@ -152,7 +152,7 @@ function Abilities({ data, set, forced }: { data: AgentData; set: (f: string, v:
       <div className="row">
         <span className="section-label grow">Abilities</span>
         {data.capabilities !== null && (
-          <button className="icon-btn sm" aria-label="Back to Hermes' defaults" data-tip="Back to Hermes' defaults" data-tip-side="top" onClick={() => set("capabilities", null)}><RotateCcw size={12} /></button>
+          <button className="icon-btn sm" aria-label="Back to defaults" data-tip="Back to defaults" data-tip-side="top" onClick={() => set("capabilities", null)}><RotateCcw size={12} /></button>
         )}
       </div>
       <div className="abilities">

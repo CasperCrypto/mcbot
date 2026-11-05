@@ -49,7 +49,6 @@ export function CompileSheet({ wide }: { wide: boolean }) {
         <h3>{res.ok ? `${changes.length} files` : "Can't compile yet"}</h3>
         {res.ok && <span className="faint">{changedCount ? `${changedCount} changed` : "up to date"}</span>}
         <span className="grow" />
-        {res.ok && res.report.profiles.map((p) => <CopyCommand key={p.name} label={`hermes -p ${p.name}`} text={`HERMES_HOME="${res.report.root}" hermes -p ${p.name}`} />)}
         <button className="icon-btn" aria-label="Close" onClick={() => setCompile({ compileOpen: false })}><X size={16} /></button>
       </div>
       {res.ok ? (

@@ -54,7 +54,7 @@ try {
     "",
   ];
   if (moved.length) {
-    lines.push(`**${moved.length} of the ${patched.length} files McBot patches changed upstream.** The next \`npm run hermes:sync\` merges them with our patches (\`patches/hermes/\`); check those merges by hand.`, "");
+    lines.push(`**${moved.length} of the ${patched.length} files McBot patches changed upstream.** The next \`npm run engine:sync\` merges them with our patches (\`patches/hermes/\`); check those merges by hand.`, "");
     for (const m of moved) {
       lines.push(`- \`${m.file}\`: ${m.commits.length} commit(s)`);
       for (const c of m.commits.slice(0, 5)) lines.push(`  - [\`${short(c.sha)}\`](${web}/commit/${c.sha}) ${c.subject.slice(0, 100)}`);

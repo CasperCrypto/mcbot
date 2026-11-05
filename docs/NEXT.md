@@ -2,7 +2,7 @@
 
 Written 2026-11-04 after M5. [PLAN.md](PLAN.md) holds the milestone order; this
 doc explains it: what Hermes already does that McBot doesn't show yet, what
-OpenBot has, how a company is organised in McBot, how agents work together, and
+other agent desktops have, how a company is organised in McBot, how agents work together, and
 how other people add modules.
 
 ## 1. Is Hermes integrated?
@@ -20,7 +20,7 @@ runs every agent with it. In the installed app:
 
 Eight small changes inside Hermes, listed in `hermes/MCBOT.md`, make it know
 McBot. One example: `hermes update` says updates come with McBot. Upstream
-releases merge in with `npm run hermes:sync`.
+releases merge in with `npm run engine:sync`.
 
 **What needs no extra setup:** Hermes' default tool sets are already on for
 every McBot agent: web search, browser, terminal, files, code, memory, image
@@ -58,14 +58,13 @@ each config key it needs is verified and recorded in `docs/HERMES.md` (hard rule
 | Import agents from OpenClaw, Claude Code, Codex | `hermes migrate` / `import` | none | **M11** packs |
 | Backups, checkpoints | `hermes backup`, `checkpoints` | none | later |
 
-## 3. What OpenBot has that McBot doesn't
+## 3. What other agent desktops have
 
-OpenBot's README is a feature reference only. Its code after v0.1.11 is
-PolyForm Noncommercial and never copied (hard rule 1).
+Feature references only; no code is copied (hard rule 1).
 
-| OpenBot | McBot |
+| Elsewhere | McBot |
 |---|---|
-| Many agent CLIs (Codex, Claude Code, Grok, Gemini, Cursor, …) through ACP | Hermes only; ACP is out of scope until asked. Coding agents come in **M12** through v0.1.11 connectors |
+| Many agent CLIs (Codex, Claude Code, Grok, Gemini, Cursor, …) through ACP | Hermes only; ACP is out of scope until asked. Coding agents come in **M12** |
 | Agent-to-agent messages, replies, files | **M7** handoff edges and kanban tasks |
 | Shared channel chats with one task owner, delegation, Stop / Resume / Reassign | **M7** Tasks view (kanban already has assign, reassign, block, review) |
 | Message queues with pause / resume | **M7** (Hermes `pause` / `resume`, kanban dispatcher) |
@@ -75,7 +74,7 @@ PolyForm Noncommercial and never copied (hard rule 1).
 | Phone app | **M13** |
 | Accounts | **M10**, keypair identity, no password server |
 
-McBot already has things OpenBot doesn't: the editable graph that compiles
+McBot already has things they don't: the editable graph that compiles
 into a real runtime, a live shared board with cursors, memory editing, cost per
 agent, and one download with the engine inside.
 

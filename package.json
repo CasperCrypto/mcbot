@@ -15,15 +15,15 @@
     "stub-llm": "tsx test/stub-llm/main.ts",
     "build": "tsc --noEmit && node scripts/notices.mjs && vite build",
     "build:demo": "node scripts/notices.mjs && VITE_MCBOT_DEMO=1 vite build",
-    "hermes": "bash scripts/hermes.sh",
-    "hermes:setup": "bash scripts/hermes-setup.sh",
-    "hermes:sync": "tsx scripts/hermes-sync.ts",
+    "cli": "bash scripts/hermes.sh",
+    "engine:setup": "bash scripts/hermes-setup.sh",
+    "engine:sync": "tsx scripts/hermes-sync.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "tauri": "tauri",
     "desktop": "tauri dev",
-    "hermes:patches": "tsx scripts/hermes-patches.ts"
+    "engine:patches": "tsx scripts/hermes-patches.ts"
   },
   "dependencies": {
     "@blobatar/react": "2.7.0",

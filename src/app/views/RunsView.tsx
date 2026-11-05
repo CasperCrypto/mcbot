@@ -62,8 +62,8 @@ function stepsOf(run: RunSummary, events: RunEvent[]): Step[] {
     const reported = cost.costStatus !== "unknown" && cost.reportedUsd !== null;
     out.push({
       id: "cost", kind: "cost", title: reported ? usd(cost.reportedUsd) : cost.estimatedUsd !== null ? `${usd(cost.estimatedUsd)} est.` : "No price",
-      sub: `${cost.model ?? "?"} · ${reported ? "Hermes" : "model pricing"}`, state: "",
-      detail: [{ label: "Hermes cost record", body: pretty({ model: cost.model, provider: cost.provider, cost_status: cost.costStatus, estimated_cost_usd: cost.reportedUsd }) }],
+      sub: `${cost.model ?? "?"} · ${reported ? "reported" : "model pricing"}`, state: "",
+      detail: [{ label: "Cost record", body: pretty({ model: cost.model, provider: cost.provider, cost_status: cost.costStatus, estimated_cost_usd: cost.reportedUsd }) }],
     });
   }
   return out;

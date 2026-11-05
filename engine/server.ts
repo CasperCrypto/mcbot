@@ -142,7 +142,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     /** Prepare McBot's own Hermes (first launch): tools and dependencies, minutes, progress in GET /api/hermes. */
     "POST /api/hermes/prepare": async (): Promise<HermesInfo> => {
       const src = bundledSource();
-      if (!src) throw new HttpError(404, "This McBot has no Hermes of its own");
+      if (!src) throw new HttpError(404, "This McBot has no engine of its own");
       if (setupJob.state !== "running") {
         setupJob = { state: "running", lines: [] };
         const push = (line: string) => {
@@ -154,7 +154,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
           const bin = ok ? bundledHermes() : null;
           const ready = bin && (await prepareHermes(bin, cfg.hermesHome, push));
           setupJob.state = ready && ready.env?.PYTHONPATH ? "done" : "failed";
-          push(setupJob.state === "done" ? "Hermes is ready" : "Hermes could not be prepared");
+          push(setupJob.state === "done" ? "The engine is ready" : "The engine could not be prepared");
         })();
       }
       return hermesInfo();
@@ -162,7 +162,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     /** Stop McBot's own gateway; the next run starts a fresh one (picks up new keys and MCP servers). */
     "POST /api/hermes/gateway/restart": async (): Promise<HermesInfo> => {
       const bin = await findHermes();
-      if (!cfg.managedRoot) throw new HttpError(409, "This Hermes home is not McBot's own; restart its gateway yourself");
+      if (!cfg.managedRoot) throw new HttpError(409, "This engine home is not McBot's own; restart its gateway yourself");
       if (bin) await stopGateway(bin, cfg.hermesHome);
       return hermesInfo();
     },
@@ -234,7 +234,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const dir = `profiles/${bundle.agent.data.name}/`;
       const stale = drift.report.changes.filter((c) => c.path.startsWith(dir) && c.status !== "unchanged");
       if (stale.length) throw new HttpError(409, `The board changed since ${bundle.agent.data.name} was last compiled. Compile, then run.`, { stale: stale.map((c) => c.path) });
-      if (!(await findHermes())) throw new HttpError(503, "Hermes not found: install it or set MCBOT_HERMES_BIN");
+      if (!(await findHermes())) throw new HttpError(503, "The engine is not set up yet");
       const runId = await runner.start({
         boardId, agentNodeId: bundle.agent.id, profile: bundle.agent.data.name, prompt: body.prompt,
         toolNodes: bundle.tools.map((t) => ({ id: t.id, name: t.data.name })), models: bundle.models,

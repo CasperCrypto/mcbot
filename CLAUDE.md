@@ -14,11 +14,11 @@ McBot and what is rebuilt is decided in `docs/MERGE.md`.
 
 1. **Merge only code we may ship under MIT.** McBot is MIT. MIT, Apache-2.0 and
    BSD code can come in, with its `LICENSE` and notices kept: Hermes Agent (MIT,
-   forked into `hermes/`), Buzz (Apache-2.0) and OpenBot **from tag v0.1.11 or
-   earlier** (Apache-2.0). Never copy OpenBot v0.1.12+ (PolyForm Noncommercial),
-   n8n (Sustainable Use License) or Vorssaint (GPL-3.0): rebuild those features.
+   forked into `hermes/`) and Buzz (Apache-2.0). Never copy code under a
+   noncommercial, source-available or copyleft licence (PolyForm, Sustainable Use,
+   GPL): rebuild those features.
    Changes inside `hermes/` stay small and marked, so upstream updates still merge,
-   and each one is also a patch file in `patches/hermes/` (`npm run hermes:patches --
+   and each one is also a patch file in `patches/hermes/` (`npm run engine:patches --
    make <checkout>` after changing hermes/; `npm test` fails if a patch is not applied).
 2. **Never invent a Hermes config key, path or CLI flag.** Confirm it in the
    Hermes source or with `hermes --help`, then record it with its source line in
@@ -100,9 +100,9 @@ Change them additively; a breaking change bumps the version.
   `--source mcbot`; an external Hermes gets no `--source`. A run that meets
   "Gateway starting/draining" is retried once (a new home's gateway boots slowly).
   Runs never set `HERMES_MANAGED` (a managed install stops creating its home's
-  folders); `npm run hermes` does, so `hermes update` says updates come with McBot.
+  folders); `npm run cli` does, so `hermes update` says updates come with McBot.
   Changes inside `hermes/` are listed in `hermes/MCBOT.md`; upstream releases come
-  in with `npm run hermes:sync`, which also lists upstream files Hermes'
+  in with `npm run engine:sync`, which also lists upstream files Hermes'
   `.gitignore` hides (add them with `git add -f`).
 - First launch runs the setup assistant (`src/app/setup/`): its answers go into
   every agent's SOUL.md and their USER.md memory; `<workspace>/setup.json`
@@ -156,9 +156,9 @@ Change them additively; a breaking change bumps the version.
   `scrollIntoView` returns a Promise in current Chromium, and an effect that
   returns a non-function crashes React on cleanup.
 - Views live behind an error boundary; a broken view must not blank the window.
-- **No n8n, Vorssaint or post-v0.1.11 OpenBot code** (hard rule 1). They are
-  design and feature references only; Vorssaint's trademark policy also rules out
-  copying its look. Blobatar (MIT) and Paper Shaders (Apache-2.0) are fine.
+- **No code under noncommercial, source-available or copyleft licences** (hard
+  rule 1). Other products are feature references only, and McBot never copies
+  another product's look or trade dress. Blobatar (MIT) and Paper Shaders (Apache-2.0) are fine.
 - **Local folders:** the engine reads only inside roots the user opened
   (`<workspace>/folders.json`), the shared files folder and compiled profiles —
   read-only, path-checked.
@@ -185,9 +185,9 @@ npm test           all tests (MCBOT_E2E=1 or MCBOT_HERMES_BIN adds a real Hermes
 npm run typecheck
 npm run stub-llm   deterministic OpenAI-compatible server on :11500 for offline runs
 npm run build:demo browser-only demo in dist-demo/ (in-page engine, simulated runs)
-npm run hermes:setup   prepare McBot's own Hermes (once, and after a Hermes update)
-npm run hermes -- …    McBot's Hermes in a terminal, on McBot's agents (HERMES_HOME=~/McBot/hermes)
-npm run hermes:sync -- <hermes-agent checkout> [ref]   merge an upstream Hermes release into hermes/
+npm run engine:setup   prepare McBot's own Hermes (once, and after a Hermes update)
+npm run cli -- …    McBot's Hermes in a terminal, on McBot's agents (HERMES_HOME=~/McBot/hermes)
+npm run engine:sync -- <hermes-agent checkout> [ref]   merge an upstream Hermes release into hermes/
 npx tauri build    the installer for this computer (engine + Hermes inside; unsigned)
 MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
 ```

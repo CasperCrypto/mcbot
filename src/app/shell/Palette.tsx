@@ -1,5 +1,5 @@
 import {
-  BookOpen, Bot, Brain, Info, Send, ChartColumnBig, Cloud, CornerDownLeft, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Users, Waypoints, Workflow,
+  BookOpen, Bot, Brain, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Users, Waypoints, Workflow,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
@@ -100,13 +100,12 @@ function useCommands(close: () => void): Command[] {
           },
         },
       },
-      { id: "about", group: "Actions", label: "About McBot", hint: "Version and licences", icon: <Info size={15} />, run: () => app.setAboutOpen(true) },
-      { id: "hermes", group: "Actions", label: "Hermes", hint: "Version, gateway, terminal", icon: <span style={{ width: 15, textAlign: "center", fontSize: 14 }}>☤</span>, run: () => app.setHermesOpen(true) },
+      { id: "hermes", group: "Actions", label: "Engine", hint: "Status and restart", icon: <Cpu size={15} />, run: () => app.setHermesOpen(true) },
       { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Sparkles size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: null }); } },
       ...(DEMO ? [{ id: "reset-demo", group: "Actions", label: "Reset demo", hint: "Start over with the sample board", icon: <RotateCcw size={15} />, run: resetDemo }] : []),
       ...VIEWS.map((v, i) => ({ id: `go-${v.tab}`, group: "Go to", label: v.label, icon: v.icon, keys: ["⌘", String(i + 1)], run: () => { app.setTab(v.tab); close(); } })),
       ...graph.nodes.filter((n) => n.kind === "agent").map((n) => ({
-        id: `chat-${n.id}`, group: "Agents", label: n.data.displayName || n.data.name, hint: `hermes -p ${n.data.name}`,
+        id: `chat-${n.id}`, group: "Agents", label: n.data.displayName || n.data.name, hint: `@${n.data.name}`,
         icon: <AgentFace seed={n.data.name} size={22} />, run: () => { app.openChat(n.id); close(); },
       })),
       ...app.boards.filter((b) => b.id !== boardId).map((b) => ({ id: `board-${b.id}`, group: "Boards", label: b.name || b.id, icon: <Layers size={15} />, run: () => { app.setBoard(b.id); close(); } })),

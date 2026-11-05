@@ -114,7 +114,7 @@ describe("engine", () => {
     expect(again.body.ok && again.body.report.changes.every((c) => c.status === "unchanged")).toBe(true);
   });
 
-  // MCBOT_HERMES_BIN: a given Hermes; MCBOT_E2E=1: McBot's own (hermes/, after `npm run hermes:setup`).
+  // MCBOT_HERMES_BIN: a given Hermes; MCBOT_E2E=1: McBot's own (hermes/, after `npm run engine:setup`).
   it.skipIf(!process.env.MCBOT_HERMES_BIN && process.env.MCBOT_E2E !== "1")("runs the compiled agent through real Hermes and records events, memory and cost", async () => {
     const { body } = await api<{ runId: string }>("/api/runs", { method: "POST", body: JSON.stringify({ boardId: "team", agentNodeId: "n-agent", prompt: "remember: Tickets about billing go to Sam" }) });
     expect(body.runId).toMatch(/^run_/);

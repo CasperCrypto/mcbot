@@ -4,9 +4,9 @@
  def format_managed_message(action: str = "modify this Hermes installation") -> str:
      """Build a user-facing error for managed installs."""
      managed_system = get_managed_system() or "a package manager"
-+    # McBot: the copy of Hermes inside McBot runs with HERMES_MANAGED=mcbot.
++    # McBot: the engine inside McBot runs with HERMES_MANAGED=mcbot.
 +    if managed_system == "mcbot":
-+        return f"Cannot {action}: this Hermes is part of McBot. Hermes updates arrive with McBot updates."
++        return f"Cannot {action}: this engine is part of McBot. Its updates arrive with McBot updates."
      return (
          f"Cannot {action}: this Hermes installation is managed by {managed_system}.\n"
          "Use your package manager to upgrade or reinstall Hermes.")

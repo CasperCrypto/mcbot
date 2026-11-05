@@ -121,7 +121,7 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
   const channels = graph.nodes.filter((n): n is ChannelNode => n.kind === "channel");
 
   for (const [name, ns] of duplicates(agents, (n) => n.data.name))
-    for (const n of ns) issues.push({ level: "error", nodeId: n.id, message: `Two agents are named "${name}"; agent names are Hermes profile ids and must be unique` });
+    for (const n of ns) issues.push({ level: "error", nodeId: n.id, message: `Two agents are named "${name}"; agent IDs must be unique` });
   for (const [name, ns] of duplicates(models, (n) => n.data.name))
     for (const n of ns) issues.push({ level: "error", nodeId: n.id, message: `Two models are named "${name}"` });
   for (const [name, ns] of duplicates(tools, (n) => n.data.name))
@@ -137,7 +137,7 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
 
   for (const a of agents) {
     if (RESERVED_PROFILE_NAMES.includes(a.data.name))
-      issues.push({ level: "error", nodeId: a.id, message: `"${a.data.name}" is reserved by Hermes and cannot be a profile name` });
+      issues.push({ level: "error", nodeId: a.id, message: `"${a.data.name}" is reserved and cannot be an agent ID` });
     for (const [name] of duplicates(a.data.skills, (s) => s.name))
       issues.push({ level: "error", nodeId: a.id, message: `Agent "${a.data.name}" has two skills named "${name}"` });
   }

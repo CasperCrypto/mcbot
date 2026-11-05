@@ -150,7 +150,7 @@ function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
             <div className="empty" style={{ height: "auto", paddingTop: 80 }}>
               <AgentFace seed={agent.data.name} size={72} />
               <h3>{name}</h3>
-              <p>{agent.data.description || "Ask anything. Each message runs this agent with Hermes."}</p>
+              <p>{agent.data.description || "Ask anything."}</p>
             </div>
           )}
           {thread.map((r) => {

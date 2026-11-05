@@ -23,7 +23,7 @@ describe("resolveGraph", () => {
 
   it("rejects what Hermes would reject or misread", () => {
     expect(messages(graph([agent("a", "default"), model("m", "local")], [{ id: "e", source: "a", target: "m" }]))).toContain(
-      'error: "default" is reserved by Hermes and cannot be a profile name',
+      'error: "default" is reserved and cannot be an agent ID',
     );
     expect(messages(graph([agent("a", "Bad Name")]))[0]).toMatch(/^error: Agent "Bad Name": ID: lowercase profile id/);
     // A half-filled node is an error, but the rest of the board still resolves for the views.
@@ -35,7 +35,7 @@ describe("resolveGraph", () => {
       'error: Cloud model "c" needs the name of the env var that holds its API key',
     );
     expect(messages(graph([agent("a", "bot"), agent("b", "bot")]))).toContain(
-      'error: Two agents are named "bot"; agent names are Hermes profile ids and must be unique',
+      'error: Two agents are named "bot"; agent IDs must be unique',
     );
     expect(messages(graph([]))).toEqual(["error: Nothing to compile: add an agent node"]);
   });

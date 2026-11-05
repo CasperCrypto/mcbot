@@ -49,7 +49,7 @@
       "../dist-hermes/hermes/": "hermes/"
     },
     "category": "DeveloperTool",
-    "shortDescription": "Draw a team of AI agents; run it with Hermes.",
+    "shortDescription": "Draw a team of AI agents and run it.",
     "license": "MIT",
     "macOS": {
       "minimumSystemVersion": "11.0",

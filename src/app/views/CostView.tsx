@@ -7,7 +7,7 @@ import { useApp } from "../state/store";
 import { AgentFace, Empty } from "../ui";
 
 const SOURCE: Record<CostSource, { label: string; cls: string; tip: string }> = {
-  hermes: { label: "Hermes", cls: "ok", tip: "Priced by Hermes" },
+  hermes: { label: "reported", cls: "ok", tip: "Priced by the provider" },
   estimate: { label: "est.", cls: "warn", tip: "Estimated from the model node's price" },
   none: { label: "—", cls: "", tip: "No price for this endpoint" },
 };
@@ -88,7 +88,7 @@ export function CostView() {
             <div className="card kpi"><small>Spend</small><b>{usd(report.totals.usd)}</b><span>{report.totals.sessions} sessions</span></div>
             <div className="card kpi"><small>Tokens</small><b>{tokens(report.totals.inputTokens + report.totals.outputTokens)}</b><span>{tokens(report.totals.inputTokens)} in · {tokens(report.totals.outputTokens)} out</span></div>
             <div className="card kpi"><small>Per successful run</small><b>{report.costPerSuccessfulRun === null ? "—" : usd(report.costPerSuccessfulRun)}</b><span>{report.totals.successfulRuns} of {report.totals.runs} succeeded</span></div>
-            <div className="card kpi"><small>Local compute</small><b>{report.localInferenceSeconds.toFixed(1)}s</b><span data-tip="Wall-clock time of runs on local models. Hermes does not report GPU time." data-tip-side="top">wall-clock</span></div>
+            <div className="card kpi"><small>Local compute</small><b>{report.localInferenceSeconds.toFixed(1)}s</b><span data-tip="Wall-clock time of runs on local models. GPU time is not reported." data-tip-side="top">wall-clock</span></div>
           </div>
           <Daily rows={report.byDay} />
           <div className="two-col">

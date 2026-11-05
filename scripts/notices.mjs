@@ -39,7 +39,7 @@ const head = [
   "",
   "Also inside: Node.js (MIT, https://github.com/nodejs/node/blob/main/LICENSE), which runs McBot's engine;",
   "the desktop shell is built with Tauri (MIT or Apache-2.0, https://github.com/tauri-apps/tauri) and Rust crates under MIT or Apache-2.0;",
-  "Hermes Agent's own licence and its third-party notices are in the app's hermes/ folder.",
+  "The engine keeps its own licence file and third-party notices in its folder inside the app.",
 ].join("\n");
 mkdirSync(join(ROOT, "public"), { recursive: true });
 writeFileSync(join(ROOT, "public", "third-party-notices.txt"), `${head}\n\n${"=".repeat(72)}\n\n${blocks.join(`\n\n${"=".repeat(72)}\n\n`)}\n`);

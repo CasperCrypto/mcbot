@@ -52,7 +52,7 @@ function storePython(store: string): string | null {
 }
 
 /**
- * McBot's own Hermes, once its tools exist (first launch, or `npm run hermes:setup`): its Python
+ * McBot's own Hermes, once its tools exist (first launch, or `npm run engine:setup`): its Python
  * running the `hermes` launcher. Use it through prepareHermes(), which adds Hermes' environment.
  * Runs do NOT set HERMES_MANAGED: a managed install stops creating its home's folders and securing
  * them (hermes_cli/config_home.py `initialize_home`). Only the terminal launcher sets it.

@@ -285,7 +285,7 @@ function script(prompt: string, bundle: AgentBundle): { steps: Step[]; text: str
       };
     }
   }
-  return { steps: [], text: `Simulated reply from ${bundle.agent.data.displayName || profile}. In the desktop app this prompt goes to Hermes and ${bundle.models[0]?.data.model ?? "its model"}.` };
+  return { steps: [], text: `Simulated reply from ${bundle.agent.data.displayName || profile}. In the desktop app this prompt goes to ${bundle.models[0]?.data.model ?? "its model"}.` };
 }
 
 function listText(path: string): string {

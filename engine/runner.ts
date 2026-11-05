@@ -83,7 +83,7 @@ export class Runner {
     this.gatewayRestart ??= (async () => {
       const started = Date.now();
       const result = await stopGateway(bin, this.opts.root);
-      this.opts.store.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] hermes gateway ${result} after recompile (${Date.now() - started} ms); a fresh one starts with this run` });
+      this.opts.store.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] engine gateway ${result} after recompile (${Date.now() - started} ms); a fresh one starts with this run` });
     })().finally(() => (this.gatewayRestart = null));
     await this.gatewayRestart;
   }
@@ -127,7 +127,7 @@ export class Runner {
     const started = Date.now();
     const bin = found && (await prepareHermes(found, root, (line) => store.emit(runId, { type: "run.log", stream: "stderr", line })));
     if (!bin) {
-      store.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: 0, sessionId: null, error: "Hermes not found: install it or set MCBOT_HERMES_BIN" });
+      store.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: 0, sessionId: null, error: "The engine is not set up yet" });
       return;
     }
     await this.refreshGateway(runId, bin);

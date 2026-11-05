@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>McBot</title>
-<meta name="description" content="Draw a team of AI agents as a graph. McBot compiles it into a real Hermes Agent setup on your computer, then shows what each agent does, remembers and costs.">
+<meta name="description" content="Draw a team of AI agents as a graph. McBot compiles it into a real, running agent setup on your computer, then shows what each agent does, remembers and costs.">
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="color-scheme" content="dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -128,8 +128,8 @@ h2 { margin: 10px 0 0; font-size: clamp(30px, 4.4vw, 46px); line-height: 1.06; l
 /* Zoomed past the app's sidebar onto the graph itself. */
 .view .shot img { position: absolute; left: var(--x, -30%); top: var(--y, -3%); width: 150%; max-width: none; height: auto; aspect-ratio: 16 / 10; }
 
-/* hermes */
-.hermes { margin-top: 40px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+/* engine */
+.engine { margin-top: 40px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
 .card { padding: 24px; border-radius: var(--r-lg); background: var(--raised); border: 1px solid var(--line); }
 .card h3 { margin: 0; font-size: 18px; letter-spacing: -0.012em; }
 .card p { margin: 8px 0 0; color: var(--text-2); font-size: 14.5px; }
@@ -170,7 +170,7 @@ footer .spacer { flex: 1; }
 
 @media (max-width: 860px) {
   .nav-links { display: none; }
-  .steps, .views, .hermes, .dl { grid-template-columns: minmax(0, 1fr); }
+  .steps, .views, .engine, .dl { grid-template-columns: minmax(0, 1fr); }
   .hero { padding-top: 56px; }
   section.block { padding-top: 72px; }
 }
@@ -196,7 +196,7 @@ footer .spacer { flex: 1; }
     <nav class="nav-links" aria-label="Sections">
       <a href="#how">How it works</a>
       <a href="#graphs">Graphs</a>
-      <a href="#hermes">Hermes</a>
+      <a href="#engine">Engine</a>
       <a href="#download">Download</a>
     </nav>
     <span class="spacer"></span>
@@ -211,9 +211,9 @@ footer .spacer { flex: 1; }
 <main id="top">
   <div class="hero">
     <div class="wrap">
-      <span class="pill"><i></i> Open source · Built on Hermes Agent</span>
+      <span class="pill"><i></i> Free and open source · MIT</span>
       <h1>Draw your AI team. <span class="grad">Run it for real.</span></h1>
-      <p class="lede">McBot turns a graph of agents, models and tools into a working Hermes Agent setup on your computer. The same graph shows what every agent is doing, remembers and costs.</p>
+      <p class="lede">McBot turns a graph of agents, models and tools into working agents on your computer. The same graph shows what every agent is doing, remembers and costs.</p>
       <div class="ctas">
         <a class="btn primary" href="#download" data-dl-primary>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14"/></svg>
@@ -251,7 +251,7 @@ footer .spacer { flex: 1; }
       <div class="step">
         <div class="n"><b>2</b> Compile</div>
         <h3>Real files on disk</h3>
-        <p><code>⌘S</code> writes Hermes profiles: <code>SOUL.md</code>, <code>config.yaml</code>, skills. Every file hashed, every change shown as a diff.</p>
+        <p><code>⌘S</code> writes each agent's files: <code>SOUL.md</code>, <code>config.yaml</code>, skills. Every file hashed, every change shown as a diff.</p>
       </div>
       <div class="step">
         <div class="n"><b>3</b> Run</div>
@@ -288,14 +288,14 @@ footer .spacer { flex: 1; }
     </div>
   </section>
 
-  <section class="block wrap" id="hermes">
-    <div class="eyebrow">Built on Hermes Agent</div>
+  <section class="block wrap" id="engine">
+    <div class="eyebrow">Engine inside</div>
     <h2>Your agents stay yours.</h2>
-    <p class="section-lede">McBot is the cockpit. <a href="https://github.com/NousResearch/hermes-agent" style="border-bottom: 1px solid var(--line-2)">Hermes Agent</a> by Nous Research is the engine: memory, skills, tools, self-improvement.</p>
-    <div class="hermes">
+    <p class="section-lede">McBot is the board and the engine: memory, skills, tools and chat apps, running on your own computer.</p>
+    <div class="engine">
       <div class="card">
         <h3>Plain files you can read</h3>
-        <p>Each agent compiles to an ordinary Hermes profile.</p>
+        <p>Each agent compiles to a folder of ordinary files.</p>
         <div class="files">
           <div><span>profiles/triage/SOUL.md</span><span>151 B</span></div>
           <div><span>profiles/triage/config.yaml</span><span>734 B</span></div>
@@ -303,10 +303,12 @@ footer .spacer { flex: 1; }
         </div>
       </div>
       <div class="card">
-        <h3>Runs without McBot too</h3>
-        <p>Close the app and the same agent still answers from a terminal.</p>
-        <div class="term"><span class="p">$ </span>HERMES_HOME=~/McBot/hermes hermes -p triage
-<span class="c">Billing → Sam.</span></div>
+        <h3>Answers where you are</h3>
+        <p>Give an agent its own Telegram bot. It answers the people you allow, while your computer is on.</p>
+        <div class="files">
+          <div><span>You</span><span>Where is the Acme invoice?</span></div>
+          <div><span>Triage desk</span><span>Billing → Sam.</span></div>
+        </div>
       </div>
     </div>
   </section>
@@ -350,7 +352,7 @@ footer .spacer { flex: 1; }
         <span class="soon">Later</span>
       </div>
     </div>
-    <p class="dl-note" data-dl-note>Free and open source, not signed yet, so your computer asks once. <b>macOS:</b> open McBot, then System Settings → Privacy &amp; Security → Open Anyway. <b>Windows:</b> More info → Run anyway. The first launch prepares Hermes in a few minutes. All releases on <a href="https://github.com/CasperCrypto/mcbot/releases" data-gh-releases>GitHub</a>.</p>
+    <p class="dl-note" data-dl-note>Free and open source, not signed yet, so your computer asks once. <b>macOS:</b> open McBot, then System Settings → Privacy &amp; Security → Open Anyway. <b>Windows:</b> More info → Run anyway. The first launch prepares the engine in a few minutes. All releases on <a href="https://github.com/CasperCrypto/mcbot/releases" data-gh-releases>GitHub</a>.</p>
   </section>
 
   <div class="wrap">
@@ -371,8 +373,6 @@ footer .spacer { flex: 1; }
     <span class="spacer"></span>
     <a href="https://github.com/CasperCrypto/mcbot" data-gh>GitHub</a>
     <a href="./demo/" data-demo>Browser demo</a>
-    <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a>
-    <span>Not affiliated with Nous Research.</span>
   </div>
 </footer>
 
