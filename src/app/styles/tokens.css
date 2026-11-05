@@ -55,6 +55,32 @@
   --k-model-cloud: #4fb3ff;
   --k-tool: #2fd4b0;
 
+  /* agent faces: glass food (faces/foods.ts). One colour per agent, from its name. */
+  --food-1: #8b7bff;
+  --food-2: #4f8cff;
+  --food-3: #3ec3ff;
+  --food-4: #2fd4b0;
+  --food-5: #45cf6e;
+  --food-6: #ffc23d;
+  --food-7: #ff8a3d;
+  --food-8: #ff5f5f;
+  --food-9: #ff6fb1;
+  --food-10: #c4865a;
+  /* the McBot logo: the gray burger */
+  --food-logo: #9d9da6;
+  --food-tint: #ffffff;
+  --food-eye: #ffffff;
+  --food-eye-edge: rgba(0, 0, 0, 0.26);
+  --food-glass-hi: rgba(255, 255, 255, 0.5);
+  --food-glass-mid: rgba(255, 255, 255, 0.03);
+  --food-glass-lo: rgba(0, 0, 0, 0.34);
+  --food-caustic: rgba(255, 255, 255, 0.32);
+  --food-rim: rgba(255, 255, 255, 0.5);
+  --food-shine: rgba(255, 255, 255, 0.85);
+  --food-shade: rgba(0, 0, 0, 0.22);
+  --food-shadow: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+  --logo-glow: rgba(190, 190, 210, 0.22);
+
   /* shape */
   --r-xs: 6px;
   --r-sm: 8px;

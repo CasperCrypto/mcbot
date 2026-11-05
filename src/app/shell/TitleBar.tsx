@@ -5,20 +5,13 @@ import { compileBoard } from "../actions";
 import { DEMO } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
+import { Logo } from "../faces/FoodFace";
 import { Kbd, PersonFace } from "../ui";
 import { Island } from "./Island";
 
+/** The McBot logo: the gray glass burger. */
 export function BrandMark({ size = 22 }: { size?: number }) {
-  return (
-    <div className="brand-mark" style={{ width: size, height: size }} aria-hidden>
-      <svg width={size * 0.62} height={size * 0.62} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
-        <path d="M6 12h4M14 12h4" />
-        <circle cx="4" cy="12" r="2.2" fill="currentColor" stroke="none" />
-        <rect x="9.5" y="7.5" width="5" height="9" rx="2" fill="currentColor" stroke="none" />
-        <circle cx="20" cy="12" r="2.2" fill="currentColor" stroke="none" />
-      </svg>
-    </div>
-  );
+  return <Logo size={size} />;
 }
 
 function BoardMenu() {

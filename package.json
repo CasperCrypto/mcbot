@@ -23,7 +23,8 @@
     "test:watch": "vitest",
     "tauri": "tauri",
     "desktop": "tauri dev",
-    "engine:patches": "tsx scripts/hermes-patches.ts"
+    "engine:patches": "tsx scripts/hermes-patches.ts",
+    "site:foods": "tsx scripts/site-foods.ts"
   },
   "dependencies": {
     "@blobatar/react": "2.7.0",
