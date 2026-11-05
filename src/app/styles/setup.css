@@ -8,7 +8,7 @@
 .setup-hero { display: grid; justify-items: center; gap: 14px; text-align: center; padding-top: 9vh; }
 .setup-hero h1 { font-size: 40px; margin-top: 10px; }
 .setup-hero p { margin: 0; color: var(--text-2); font-size: 16px; }
-.setup-hero .brand-mark { border-radius: 18px; box-shadow: 0 18px 50px rgba(103, 104, 255, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+.setup-hero .brand-mark .food { filter: var(--food-shadow) drop-shadow(0 14px 36px var(--logo-glow)); }
 
 /* who is it for */
 .setup-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }

@@ -149,9 +149,14 @@ Change them additively; a breaking change bumps the version.
   canvas; runs, memory and folders use the read-only `views/GraphCanvas.tsx`.
   Give each GraphCanvas a `key` per subject (root, run, agent) so React Flow
   state never leaks between subjects.
-- **Faces:** agents (and people) are Blobatars with `tone={0.48}` (auto tone can
-  be near-black on dark). An agent's expression is its run state: thinking,
-  happy, sad.
+- **Faces:** agents are glass food bots (`src/app/faces/foods.ts`): the name picks
+  the food and its `--food-*` colour, so the same name is always the same bot.
+  An agent's expression is its run state: thinking, happy, sad. People are
+  Blobatars with `tone={0.48}` (auto tone can be near-black on dark).
+- **Logo:** the gray glass burger (`logoSvg`). The website's bots and the logo
+  files (`site/assets/logo.svg`, `design/icon.svg`) are generated from the same
+  code by `npm run site:foods`; `npm test` fails when they are stale. App icons:
+  render `design/icon.svg` to `design/icon-1024.png`, then `npx tauri icon`.
 - **Effects use block bodies.** `useEffect(() => { … })` — never a concise arrow:
   `scrollIntoView` returns a Promise in current Chromium, and an effect that
   returns a non-function crashes React on cleanup.
@@ -187,6 +192,7 @@ npm run stub-llm   deterministic OpenAI-compatible server on :11500 for offline 
 npm run build:demo browser-only demo in dist-demo/ (in-page engine, simulated runs)
 npm run engine:setup   prepare McBot's own Hermes (once, and after a Hermes update)
 npm run cli -- …    McBot's Hermes in a terminal, on McBot's agents (HERMES_HOME=~/McBot/hermes)
+npm run site:foods the website's food bots and the logo files, from src/app/faces/
 npm run engine:sync -- <hermes-agent checkout> [ref]   merge an upstream Hermes release into hermes/
 npx tauri build    the installer for this computer (engine + Hermes inside; unsigned)
 MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes

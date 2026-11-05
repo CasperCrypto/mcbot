@@ -1,14 +1,13 @@
 import { Blobatar } from "@blobatar/react";
-import { happy, idle, sad, thinking } from "blobatar/expression";
 import { CircleAlert } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import type { RunStatus } from "../contracts/run";
+import { FoodFace } from "./faces/FoodFace";
 
-/** An agent's face. Its expression is its state: thinking while it works, happy or sad after. */
+/** An agent's face: a glass food bot, picked by name. Its expression is its state: thinking while it works, happy or sad after. */
 export function AgentFace({ seed, size = 32, status }: { seed: string; size?: number; status?: RunStatus | null }) {
-  const expression = status === "running" || status === "queued" ? thinking : status === "succeeded" ? happy : status === "failed" ? sad : idle;
-  // Tone locked to the vivid middle of the set: the auto tone can land near-black, which disappears on a dark UI.
-  return <Blobatar name={`agent:${seed}`} size={size} tone={0.48} animate="always" expression={expression} title={seed} />;
+  const expression = status === "running" || status === "queued" ? "thinking" : status === "succeeded" ? "happy" : status === "failed" ? "sad" : "idle";
+  return <FoodFace seed={`agent:${seed}`} size={size} expression={expression} title={seed} />;
 }
 
 function hueOf(hex: string): number {
