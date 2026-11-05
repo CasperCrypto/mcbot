@@ -210,9 +210,10 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   publishes it to GitHub Pages with the demo at `/demo/`. Download buttons read
   the latest GitHub release and show "Coming soon" until one exists.
 - The hero is the glass burger photo (`site/assets/burger.webp`, cut from a black
-  background so the glass stays see-through); `site/site.js` layers the moving
-  pupils (in the eye holes), the cursor light and the rainbow sheen on it, masked
-  by `burger-mask.png`. The crew graph and the parade use `site/foods.js`.
+  background so the glass stays see-through); `site/site.js` moves its pupils
+  (in the eye holes) toward the cursor, nothing more. The crew graph and the
+  parade use `site/foods.js`. Clean and flat like a Mac page: system font, black
+  and gray surfaces, white buttons; no gradient text, glows or scroll effects.
   Product shots (`site/assets/*.webp`) are taken from the demo at 1440×900 @2x
   without the Demo chip; re-shoot them when the UI they show changes.
 
