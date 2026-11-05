@@ -1,0 +1,11 @@
+--- a/hermes/agent/managed_worker.py
++++ b/hermes/agent/managed_worker.py
+@@ -368,7 +368,7 @@
+                 enabled_toolsets=list(policy.toolsets), max_iterations=policy.max_turns,
+                 reasoning_config=policy.reasoning_config,
+                 # ``tool`` / ``oneshot`` are storage labels for a CLI-surface agent (session_policy.SURFACES).
+-                platform=policy.platform if policy.source in ('tool', 'oneshot') else policy.source,
++                platform=policy.platform if policy.source in ('tool', 'oneshot', 'mcbot') else policy.source,  # McBot: a CLI-surface label
+                 gateway_session_key=frame['route'], user_id=frame['user_id'], chat_id=frame['chat_id'],
+                 skip_context_files=policy.ignore_rules, load_soul_identity=not policy.ignore_rules,
+                 skip_memory=policy.ignore_rules, skip_background_review=True, quiet_mode=True,

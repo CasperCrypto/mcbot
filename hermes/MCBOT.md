@@ -3,8 +3,18 @@
 This directory is [Hermes Agent](https://github.com/NousResearch/hermes-agent)
 (MIT, © Nous Research; see `LICENSE`) at the upstream commit in
 `UPSTREAM.json`, plus the changes below. Each one is marked `McBot:` in the
-code. Keep them few and small, so that `npm run hermes:sync -- <checkout>`
+code and kept as a patch file in `patches/hermes/` (one per file, against that
+commit). Keep them few and small, so that `npm run hermes:sync -- <checkout>`
 can three-way merge every upstream release into them.
+
+- `npm run hermes:patches -- check` (also part of `npm test`) fails if any patch
+  is no longer applied here, so an edit or a sync cannot drop one silently.
+- After changing a file here, rewrite the patches with
+  `npm run hermes:patches -- make <hermes-agent checkout at UPSTREAM.json's commit>`.
+- `npm run hermes:sync` rewrites them against the new upstream and stops if a
+  file that had a patch no longer differs from upstream.
+- `.github/workflows/hermes-upstream.yml` opens an issue when upstream changes a
+  file we patch.
 
 | File | Change | Why |
 |---|---|---|

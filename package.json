@@ -22,7 +22,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "tauri": "tauri",
-    "desktop": "tauri dev"
+    "desktop": "tauri dev",
+    "hermes:patches": "tsx scripts/hermes-patches.ts"
   },
   "dependencies": {
     "@blobatar/react": "2.7.0",

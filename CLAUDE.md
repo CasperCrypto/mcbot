@@ -17,7 +17,9 @@ McBot and what is rebuilt is decided in `docs/MERGE.md`.
    forked into `hermes/`), Buzz (Apache-2.0) and OpenBot **from tag v0.1.11 or
    earlier** (Apache-2.0). Never copy OpenBot v0.1.12+ (PolyForm Noncommercial),
    n8n (Sustainable Use License) or Vorssaint (GPL-3.0): rebuild those features.
-   Changes inside `hermes/` stay small and marked, so upstream updates still merge.
+   Changes inside `hermes/` stay small and marked, so upstream updates still merge,
+   and each one is also a patch file in `patches/hermes/` (`npm run hermes:patches --
+   make <checkout>` after changing hermes/; `npm test` fails if a patch is not applied).
 2. **Never invent a Hermes config key, path or CLI flag.** Confirm it in the
    Hermes source or with `hermes --help`, then record it with its source line in
    `docs/HERMES.md`. If you cannot verify it, stop and ask. (Hermes' own docs have

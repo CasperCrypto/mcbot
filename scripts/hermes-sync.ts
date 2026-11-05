@@ -17,6 +17,8 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
+import { makePatches, patchedFiles } from "./hermes-patches";
+
 const ROOT = resolve(dirname(new URL(import.meta.url).pathname), "..");
 const DEST = join(ROOT, "hermes");
 const RECORD = join(DEST, "UPSTREAM.json");
@@ -92,6 +94,16 @@ function update(repo: string, ref: string) {
   rmSync(tmp, { recursive: true, force: true });
   record(repo, next);
   console.log(`hermes/: ${base.slice(0, 12)} → ${next.slice(0, 12)}; ${taken} updated, ${merged} merged with our changes, ${removed} removed`);
+  // Our patches, rewritten against the new upstream. A file that had one and now matches upstream
+  // lost McBot's change (or upstream took it, then drop it from hermes/MCBOT.md on purpose).
+  const before = patchedFiles();
+  const made = makePatches(repo, next);
+  const lost = before.filter((p) => !made.includes(p) && !conflicts.includes(p));
+  console.log(`patches/hermes/: ${made.length} patch(es) against ${next.slice(0, 12)}`);
+  if (lost.length) {
+    console.log(`McBot's change is gone from these (upstream took it, or the merge dropped it):\n  ${lost.join("\n  ")}`);
+    process.exitCode = 1;
+  }
   if (conflicts.length) {
     console.log(`Resolve these (conflict markers are in the files):\n  ${conflicts.join("\n  ")}`);
     process.exitCode = 1;
