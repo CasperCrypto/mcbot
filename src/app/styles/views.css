@@ -33,7 +33,7 @@
 .typing i:nth-child(3) { animation-delay: 0.3s; }
 @keyframes typing { 0%, 60%, 100% { opacity: 0.25; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
 .new-line { display: flex; align-items: center; gap: 10px; color: var(--run); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
-.new-line::before, .new-line::after { content: ""; flex: 1; height: 1px; background: rgba(79, 140, 255, 0.45); }
+.new-line::before, .new-line::after { content: ""; flex: 1; height: 1px; background: var(--accent-line); }
 
 .composer-wrap { padding: 10px 22px 18px; }
 .composer { max-width: 820px; margin: 0 auto; display: flex; align-items: flex-end; gap: 8px; padding: 8px 8px 8px 16px; border-radius: 20px; background: var(--bg-raised); border: 1px solid var(--line-2); box-shadow: var(--shadow-2), var(--highlight); transition: border-color var(--t-fast); }
@@ -55,7 +55,7 @@
 .chart-card h3 { margin: 0 0 2px; font-size: 13px; font-weight: 600; }
 .bars { position: relative; display: flex; align-items: flex-end; gap: 8px; height: 160px; padding-top: 22px; border-bottom: 1px solid var(--line-2); }
 .bar { position: relative; flex: 1; max-width: 48px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
-.bar i { display: block; width: 100%; max-width: 24px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #8b7bff, #5b8dff); min-height: 2px; transition: opacity var(--t-fast); }
+.bar i { display: block; width: 100%; max-width: 24px; border-radius: 4px 4px 0 0; background: var(--accent); min-height: 2px; transition: opacity var(--t-fast); }
 .bar .peak { position: absolute; top: 0; font-size: 11px; color: var(--text-2); white-space: nowrap; }
 .bar .tip { position: absolute; bottom: calc(100% + 6px); left: 50%; translate: -50% 0; z-index: 3; min-width: 150px; padding: 8px 10px; border-radius: var(--r); background: #2c2c30; border: 1px solid var(--line-2); box-shadow: var(--shadow-2); font-size: 12px; pointer-events: none; }
 .table-card { overflow: hidden; }

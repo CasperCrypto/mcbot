@@ -1,13 +1,11 @@
 /* ---------- canvas ---------- */
 .canvas { position: absolute; inset: 0; background: var(--bg-canvas); }
-.canvas::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
-  background: radial-gradient(1200px 500px at 50% -10%, rgba(123, 108, 255, 0.09), transparent 60%), radial-gradient(800px 400px at 90% 110%, rgba(79, 140, 255, 0.05), transparent 60%); }
 .react-flow { --xy-background-color: transparent; --xy-edge-stroke: rgba(255, 255, 255, 0.16); --xy-edge-stroke-selected: var(--accent); --xy-connectionline-stroke: var(--accent); --xy-attribution-background-color: transparent; z-index: 1; }
 .react-flow__pane { cursor: default; }
 .react-flow__pane.dragging { cursor: grabbing; }
 .react-flow__edge-path { stroke-width: 1.6; }
 .react-flow__edge.selected .react-flow__edge-path { stroke: var(--accent); stroke-width: 2; }
-.react-flow__edge.live .react-flow__edge-path { stroke: url(#edge-live); stroke-width: 2; stroke-dasharray: 6 6; animation: flow 0.9s linear infinite; }
+.react-flow__edge.live .react-flow__edge-path { stroke: var(--run); stroke-width: 2; stroke-dasharray: 6 6; animation: flow 0.9s linear infinite; }
 .react-flow__edge.problem .react-flow__edge-path { stroke: var(--fail); stroke-dasharray: 4 4; }
 @keyframes flow { to { stroke-dashoffset: -24; } }
 .react-flow__handle { width: 10px; height: 10px; background: var(--bg-main); border: 2px solid rgba(255, 255, 255, 0.28); opacity: 0; transition: opacity var(--t-fast), border-color var(--t-fast), transform var(--t-fast); }
@@ -20,22 +18,18 @@
 .react-flow__minimap { background: var(--bg-glass); border: 1px solid var(--line-2); border-radius: var(--r-md); overflow: hidden; }
 .react-flow__attribution { color: var(--text-4); font-size: 10px; background: transparent; opacity: 0.6; }
 .react-flow__attribution a { color: inherit; }
-.react-flow__selection { background: rgba(123, 108, 255, 0.08); border: 1px solid var(--accent-line); }
+.react-flow__selection { background: rgba(10, 132, 255, 0.08); border: 1px solid var(--accent-line); }
 
 /* ---------- harness nodes ---------- */
 .node {
-  position: relative; background: linear-gradient(180deg, #27272b 0%, #222225 100%); border: 1px solid var(--line-2);
+  position: relative; background: var(--bg-card); border: 1px solid var(--line-2);
   border-radius: var(--r-lg); box-shadow: var(--shadow-2), var(--highlight); transition: border-color var(--t) var(--ease), box-shadow var(--t) var(--ease), transform var(--t) var(--ease);
 }
 .react-flow__node:hover .node { border-color: var(--line-3); }
-.react-flow__node.selected .node { border-color: var(--accent-line); box-shadow: 0 0 0 4px rgba(123, 108, 255, 0.16), var(--shadow-2), var(--highlight); }
-.node.has-error { border-color: rgba(255, 95, 87, 0.5); }
-.node.running::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
-  background: conic-gradient(from var(--spin, 0deg), transparent 0 60%, #7b6cff 75%, #4f8cff 85%, transparent 100%);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: spin 1.6s linear infinite; }
-@property --spin { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
-@keyframes spin { to { --spin: 360deg; } }
-.node.calling { border-color: rgba(47, 212, 176, 0.6); box-shadow: 0 0 0 4px rgba(47, 212, 176, 0.14), 0 0 28px rgba(47, 212, 176, 0.18), var(--shadow-2); }
+.react-flow__node.selected .node { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-2), var(--highlight); }
+.node.has-error { border-color: rgba(255, 69, 58, 0.5); }
+.node.running { border-color: var(--run); box-shadow: 0 0 0 3px var(--run-soft), var(--shadow-2), var(--highlight); }
+.node.calling { border-color: var(--k-tool); box-shadow: 0 0 0 3px rgba(48, 176, 199, 0.16), var(--shadow-2); }
 
 .node-agent { width: 236px; padding: 14px; display: grid; gap: 12px; }
 .node-agent .meta .chip.mono { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; line-height: 20px; }
@@ -48,14 +42,14 @@
 .node-compact { width: 214px; padding: 11px 12px; display: flex; align-items: center; gap: 11px; }
 .node-compact .label { font-weight: 600; font-size: 13px; }
 .node-compact .sub { font-size: 11.5px; color: var(--text-3); font-family: var(--mono); }
-.tile { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex: none; color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 4px 10px rgba(0, 0, 0, 0.25); }
-.tile.model { background: linear-gradient(145deg, #ffb35c, #ff7a2f); }
-.tile.cloud { background: linear-gradient(145deg, #6fc6ff, #3a86ff); }
-.tile.tool { background: linear-gradient(145deg, #46e3c0, #10a98a); }
-.tile.agent { background: linear-gradient(145deg, #a597ff, #6d5bff); }
-.tile.media { background: linear-gradient(145deg, #ff8ac2, #e2457f); }
-.tile.channel { background: linear-gradient(145deg, #c2f06e, #5fbf3a); }
-.tile.folder { background: linear-gradient(145deg, #74b6ff, #3d7ef0); }
+.tile { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; flex: none; color: #fff; box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.14); }
+.tile.model { background: var(--k-model); }
+.tile.cloud { background: var(--k-model-cloud); }
+.tile.tool { background: var(--k-tool); }
+.tile.agent { background: var(--k-agent); }
+.tile.media { background: var(--k-media); }
+.tile.channel { background: var(--k-channel); }
+.tile.folder { background: var(--k-folder); }
 .tile.file { background: rgba(255, 255, 255, 0.08); color: var(--text-2); box-shadow: none; }
 .tile.sm { width: 26px; height: 26px; border-radius: 8px; }
 
@@ -82,7 +76,7 @@
 .welcome .inner { display: grid; justify-items: center; gap: 14px; text-align: center; pointer-events: auto; }
 .welcome h2 { margin: 0; font-size: 28px; font-weight: 650; letter-spacing: -0.03em; }
 .welcome p { margin: 0; color: var(--text-3); font-size: 14px; }
-.welcome .orb { width: 180px; height: 180px; border-radius: 50%; overflow: hidden; -webkit-mask: radial-gradient(circle, #000 55%, transparent 72%); mask: radial-gradient(circle, #000 55%, transparent 72%); opacity: 0.95; }
+.welcome .brand-mark { margin-bottom: 6px; }
 
 /* ---------- inspector ---------- */
 .inspector { position: absolute; top: 10px; right: 10px; bottom: 10px; width: var(--inspector-w); z-index: 6; display: flex; flex-direction: column; border-radius: var(--r-xl); box-shadow: var(--shadow-3), var(--highlight); overflow: hidden; user-select: text; animation: slide-in var(--t-slow) var(--ease) both; }
@@ -125,9 +119,9 @@
 .diff .hunk, .diff .meta { color: var(--text-4); }
 
 /* ---------- generic graph nodes (files, memory, runs) ---------- */
-.gnode { display: flex; align-items: center; gap: 10px; min-width: 150px; max-width: 280px; padding: 9px 12px 9px 9px; border-radius: var(--r-md); background: linear-gradient(180deg, #27272b, #222225); border: 1px solid var(--line-2); box-shadow: var(--shadow-2), var(--highlight); transition: border-color var(--t-fast), transform var(--t-fast) var(--ease); }
+.gnode { display: flex; align-items: center; gap: 10px; min-width: 150px; max-width: 280px; padding: 9px 12px 9px 9px; border-radius: var(--r-md); background: var(--bg-card); border: 1px solid var(--line-2); box-shadow: var(--shadow-2), var(--highlight); transition: border-color var(--t-fast), transform var(--t-fast) var(--ease); }
 .react-flow__node:hover .gnode { border-color: var(--line-3); }
-.react-flow__node.selected .gnode { border-color: var(--accent-line); box-shadow: 0 0 0 4px rgba(123, 108, 255, 0.14), var(--shadow-2); }
+.react-flow__node.selected .gnode { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-2); }
 .gnode .label { font-weight: 600; font-size: 12.5px; }
 .gnode .sub { font-size: 11px; color: var(--text-3); }
 .gnode.root { padding: 12px 14px 12px 12px; border-radius: var(--r-lg); }
@@ -135,15 +129,15 @@
 .gnode.note { align-items: flex-start; width: 280px; max-width: 280px; padding: 11px 12px; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; color: var(--text-2); }
 .gnode.more { min-width: 0; padding: 7px 12px; background: transparent; border-style: dashed; box-shadow: none; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; }
 .react-flow__node:hover .gnode.more { color: var(--text); border-color: var(--line-3); }
-.gnode.ok { border-color: rgba(52, 209, 122, 0.35); }
-.gnode.fail { border-color: rgba(255, 95, 87, 0.45); }
-.gnode.live { border-color: rgba(79, 140, 255, 0.55); }
-.gnode .owned { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); flex: none; }
+.gnode.ok { border-color: rgba(48, 209, 88, 0.35); }
+.gnode.fail { border-color: rgba(255, 69, 58, 0.45); }
+.gnode.live { border-color: var(--accent-line); }
+.gnode .owned { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
 .ext { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font: 700 8.5px/1 var(--mono); letter-spacing: 0.02em; text-transform: uppercase; flex: none; background: rgba(255, 255, 255, 0.07); color: var(--text-2); }
-.ext.md { background: rgba(123, 108, 255, 0.18); color: #c3b9ff; }
+.ext.md { background: rgba(255, 255, 255, 0.1); color: var(--text); }
 .ext.yaml, .ext.yml, .ext.toml { background: rgba(255, 159, 67, 0.16); color: #ffc48a; }
 .ext.json { background: rgba(254, 188, 46, 0.14); color: #ffd36b; }
-.ext.ts, .ext.tsx, .ext.js, .ext.mjs { background: rgba(79, 140, 255, 0.16); color: #9cc0ff; }
+.ext.ts, .ext.tsx, .ext.js, .ext.mjs { background: var(--accent-soft); color: var(--accent-text); }
 .ext.py { background: rgba(47, 212, 176, 0.14); color: #7fe8d0; }
 .ext.db, .ext.sqlite { background: rgba(255, 95, 87, 0.13); color: #ff9a94; }
 

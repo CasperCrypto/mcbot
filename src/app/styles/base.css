@@ -16,7 +16,7 @@ body {
 }
 input, textarea, select, button { font: inherit; color: inherit; letter-spacing: inherit; }
 button { cursor: default; }
-::selection { background: rgba(123, 108, 255, 0.35); }
+::selection { background: rgba(10, 132, 255, 0.4); }
 code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .num { font-variant-numeric: tabular-nums; }
 .muted { color: var(--text-2); }
@@ -42,7 +42,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .btn:active { transform: scale(0.97); }
 .btn:disabled { opacity: 0.4; pointer-events: none; }
 .btn:focus-visible, .icon-btn:focus-visible, .rail-btn:focus-visible, .field input:focus-visible, .field textarea:focus-visible { outline: none; box-shadow: var(--focus); }
-.btn.primary { background: var(--brand-gradient); border-color: transparent; color: #fff; box-shadow: 0 6px 18px rgba(103, 104, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.btn.primary { background: var(--accent); border-color: transparent; color: #fff; box-shadow: none; }
 .btn.primary:hover { filter: brightness(1.08); }
 .btn.light { background: #f5f5f7; color: #111; border-color: transparent; box-shadow: none; }
 .btn.light:hover { background: #fff; }
@@ -68,14 +68,14 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .chip.run { background: var(--run-soft); color: var(--run); }
 .chip.fail { background: var(--fail-soft); color: var(--fail); }
 .chip.warn { background: var(--warn-soft); color: var(--warn); }
-.chip.accent { background: var(--accent-soft); color: #b7adff; }
+.chip.accent { background: var(--accent-soft); color: var(--accent-text); }
 
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-4); flex: none; }
 .dot.ok { background: var(--ok); }
 .dot.fail { background: var(--fail); }
 .dot.warn { background: var(--warn); }
 .dot.run { background: var(--run); animation: pulse 1.6s var(--ease) infinite; }
-@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(79, 140, 255, 0.55); } 100% { box-shadow: 0 0 0 8px rgba(79, 140, 255, 0); } }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0.55); } 100% { box-shadow: 0 0 0 8px rgba(10, 132, 255, 0); } }
 
 /* ---------- fields ---------- */
 .field { display: grid; gap: 6px; }

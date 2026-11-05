@@ -61,14 +61,6 @@ export function GraphCanvas({ nodes, edges, dir = "LR", selected, onSelect, fitS
   const rfEdges = useMemo<Edge[]>(() => edges.map((e) => ({ id: e.id, source: e.source, target: e.target, className: e.live ? "live" : undefined, selectable: false })), [edges]);
   return (
     <div className="canvas">
-      <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden>
-        <defs>
-          <linearGradient id="edge-live" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0" stopColor="#8b7bff" />
-            <stop offset="1" stopColor="#2fd4b0" />
-          </linearGradient>
-        </defs>
-      </svg>
       <ReactFlowProvider>
         <ReactFlow
           nodes={rfNodes} edges={rfEdges} nodeTypes={nodeTypes} colorMode="dark" fitView fitViewOptions={{ padding: 0.14, maxZoom: 1.15 }}

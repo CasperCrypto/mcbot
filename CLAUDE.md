@@ -143,6 +143,8 @@ Change them additively; a breaking change bumps the version.
 - **Look:** dark, quiet, Apple-native. All colours, radii, shadows and motion are
   tokens in `src/app/styles/tokens.css`; components use tokens, not literals.
   Colour means identity (agents, node kinds) or state (running, ok, failed).
+  macOS system colours, flat: the accent is system blue; no gradients, glows or
+  gradient text (the website follows the same rule).
 - **Less text.** No explanatory paragraphs in the UI. Labels are short; detail
   lives in tooltips (`data-tip`). Empty states are one line plus one action.
 - **Everything structural is a graph.** The harness is the editable React Flow
@@ -163,7 +165,7 @@ Change them additively; a breaking change bumps the version.
 - Views live behind an error boundary; a broken view must not blank the window.
 - **No code under noncommercial, source-available or copyleft licences** (hard
   rule 1). Other products are feature references only, and McBot never copies
-  another product's look or trade dress. Blobatar (MIT) and Paper Shaders (Apache-2.0) are fine.
+  another product's look or trade dress. Blobatar (MIT) is fine.
 - **Local folders:** the engine reads only inside roots the user opened
   (`<workspace>/folders.json`), the shared files folder and compiled profiles —
   read-only, path-checked.

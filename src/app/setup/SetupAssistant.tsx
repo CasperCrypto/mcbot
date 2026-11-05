@@ -2,7 +2,6 @@
  * First launch: who McBot is for, who you are, which agents, which model.
  * Ends with a compiled team that already knows who it works for.
  */
-import { MeshGradient } from "@paper-design/shaders-react";
 import { ArrowLeft, Building2, Check, Cloud, Copy, HardDrive, LoaderCircle, RefreshCw, TriangleAlert, User, Users } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { LocalServer, SetupDetect, SetupKind, SetupProfile } from "../../contracts/api";
@@ -187,9 +186,6 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
   return (
     <div className="setup" data-testid="setup">
       <div className="setup-drag" data-tauri-drag-region />
-      <div className="setup-glow" aria-hidden>
-        <MeshGradient style={{ width: "100%", height: "100%" }} colors={["#2a2350", "#16243f", "#121214", "#2b1d3f"]} distortion={0.9} swirl={0.5} speed={0.12} />
-      </div>
       <main className="setup-body" key={step}>
         {step === "welcome" && (
           <div className="setup-hero">

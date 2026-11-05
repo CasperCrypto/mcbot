@@ -1,7 +1,6 @@
-/* McBot website motion: the glass burger in the hero, the crew graph, the parade
-   on the closing card, and small things (nav, reveals, card lights, the tilted
-   product shot). The bots come from foods.js, the same code the app draws them with.
-   Reduced motion: no idling, no pulses, no tilt; eyes still follow the cursor. */
+/* McBot website: the burger's eyes in the hero, the crew graph, and the parade on
+   the closing card. The bots come from foods.js, the same code the app draws them with.
+   Reduced motion: no idling and no pulses; eyes still follow the cursor. */
 (() => {
   window.McBotSite = true;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -27,21 +26,6 @@
   addEventListener("scroll", onScroll, { passive: true });
   onScroll();
 
-  // Sections rise in as they scroll into view.
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
-  }, { rootMargin: "0px 0px -8% 0px", threshold: 0.06 });
-  document.querySelectorAll("[data-reveal]").forEach((el) => io.observe(el));
-
-  // A soft light follows the cursor over cards.
-  for (const el of document.querySelectorAll(".spot")) {
-    el.addEventListener("pointermove", (e) => {
-      const r = el.getBoundingClientRect();
-      el.style.setProperty("--mx", `${e.clientX - r.left}px`);
-      el.style.setProperty("--my", `${e.clientY - r.top}px`);
-    });
-  }
-
   /** Runs `tick` every frame while `el` is on screen. */
   function whileVisible(el, tick) {
     let raf = 0;
@@ -55,7 +39,7 @@
   /* ---------- the glass burger ---------- */
   const bot = document.querySelector("[data-bot]");
   if (bot) {
-    const s = { rx: 0, ry: 0, ex: 0, ey: 0, lx: 32, ly: 24, sq: 0, sqv: 0, blinkAt: 1.6, blinkStart: -9, last: performance.now() };
+    const s = { ex: 0, ey: 0, blinkAt: 1.6, blinkStart: -9, last: performance.now() };
     const set = (k, v) => bot.style.setProperty(k, v);
     whileVisible(bot, (now) => {
       const dt = Math.min(0.05, (now - s.last) / 1000);
@@ -64,38 +48,26 @@
       const r = bot.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height * 0.45;
-      let dx, dy, lx, ly, px, py;
+      let dx, dy, px, py;
       if (live()) {
         px = pointer.x;
         py = pointer.y;
         dx = clamp((px - cx) / (innerWidth * 0.45), -1, 1);
         dy = clamp((py - cy) / (innerHeight * 0.45), -1, 1);
-        // over the glass the light sits under the cursor; outside it, on the edge facing it
-        lx = clamp((px - r.left) / r.width, 0.12, 0.88) * 100;
-        ly = clamp((py - r.top) / r.height, 0.1, 0.9) * 100;
       } else {
         const k = reduce ? 0 : t;
         dx = Math.sin(k * 0.45) * 0.6;
         dy = Math.sin(k * 0.31 + 1) * 0.35;
-        lx = 50 + dx * 48;
-        ly = 30 + dy * 40;
         px = cx + dx * 300;
         py = r.top + r.height * 0.28 + dy * 200;
       }
       const e = 1 - Math.pow(0.002, dt);
-      s.ry = lerp(s.ry, dx * 13, e);
-      s.rx = lerp(s.rx, -dy * 9, e);
-      // the pupils look straight at the light
+      // the pupils look at the cursor
       const vx = px - cx, vy = py - (r.top + r.height * 0.28);
       const len = Math.hypot(vx, vy) || 1;
       const reach = Math.min(1, len / 180) / len;
       s.ex = lerp(s.ex, vx * reach, Math.min(1, e * 1.6));
       s.ey = lerp(s.ey, vy * reach, Math.min(1, e * 1.6));
-      s.lx = lerp(s.lx, lx, e);
-      s.ly = lerp(s.ly, ly, e);
-      // a poke squashes it on a spring
-      s.sqv += (-s.sq * 190 - s.sqv * 11) * dt;
-      s.sq += s.sqv * dt;
       // blink now and then, sometimes twice
       if (!reduce && t > s.blinkAt) {
         s.blinkStart = t;
@@ -104,57 +76,20 @@
       const bp = (t - s.blinkStart) / 0.17;
       const blink = bp >= 0 && bp <= 1 ? 1 - Math.sin(bp * Math.PI) * 0.92 : 1;
 
-      set("--rx", `${s.rx.toFixed(2)}deg`);
-      set("--ry", `${s.ry.toFixed(2)}deg`);
       set("--ex", s.ex.toFixed(3));
       set("--ey", s.ey.toFixed(3));
       set("--blink", blink.toFixed(3));
-      set("--lx", `${s.lx.toFixed(1)}%`);
-      set("--ly", `${s.ly.toFixed(1)}%`);
-      set("--gx", `${(50 - (s.lx - 50) * 0.35).toFixed(1)}%`);
-      set("--gy", `${(46 - (s.ly - 40) * 0.25).toFixed(1)}%`);
-      set("--sa", `${(118 + (s.lx - 50) * 0.5).toFixed(1)}deg`);
-      set("--shx", `${(50 + (s.lx - 50) * 0.9).toFixed(1)}%`);
-      set("--sx", (1 + s.sq * 0.06).toFixed(4));
-      set("--sy", (1 - s.sq * 0.08).toFixed(4));
     });
 
-    // Poke it: it squashes, smiles, and a new agent pops out.
-    let pops = 0, happyTimer = 0;
+    // Click it and it smiles.
+    let happyTimer = 0;
     const poke = () => {
-      s.sqv += 7.5;
       bot.classList.add("happy");
       clearTimeout(happyTimer);
       happyTimer = setTimeout(() => bot.classList.remove("happy"), 1300);
-      if (!F || reduce || bot.querySelectorAll(".pop").length > 6) return;
-      const el = document.createElement("span");
-      el.className = "pop";
-      const side = Math.random() < 0.5 ? -1 : 1;
-      el.style.setProperty("--dx", `${side * rand(130, 240)}px`);
-      el.style.setProperty("--dy", `${-rand(70, 170)}px`);
-      el.style.setProperty("--rot", `${side * rand(8, 28)}deg`);
-      el.innerHTML = F.foodSvg({ seed: `pop${pops}`, food: pick(F.FOODS).id, tone: 1 + Math.floor(Math.random() * F.TONES), size: 64, expression: "happy", uid: `pop${pops++}`, title: "" });
-      el.addEventListener("animationend", () => el.remove());
-      bot.appendChild(el);
     };
     bot.addEventListener("pointerdown", poke);
     bot.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); poke(); } });
-  }
-
-  /* ---------- the product shot lies back, then stands up as you scroll ---------- */
-  const shot = document.querySelector("[data-tilt] .window");
-  if (shot && !reduce) {
-    let queued = false;
-    const update = () => {
-      queued = false;
-      const r = shot.getBoundingClientRect();
-      const p = clamp(1 - (r.top - innerHeight * 0.18) / (innerHeight * 0.62), 0, 1);
-      shot.style.setProperty("--tilt", `${((1 - p) * 24).toFixed(2)}deg`);
-      shot.style.setProperty("--ts", (0.9 + 0.1 * p).toFixed(4));
-    };
-    addEventListener("scroll", () => { if (!queued) { queued = true; requestAnimationFrame(update); } }, { passive: true });
-    addEventListener("resize", update);
-    update();
   }
 
   if (!F) return;

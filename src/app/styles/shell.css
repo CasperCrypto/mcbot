@@ -104,7 +104,7 @@
 .hermes-sheet header { display: flex; align-items: center; gap: 14px; padding: 18px 16px 14px 18px; border-bottom: 1px solid var(--line); }
 .hermes-sheet h2 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -0.015em; }
 .hermes-sheet header small { color: var(--text-3); font-size: 12.5px; }
-.hermes-mark { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; color: #fff; background: var(--brand-gradient); box-shadow: var(--highlight); flex: none; }
+.hermes-mark { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; color: var(--text); background: var(--bg-active); box-shadow: var(--highlight); flex: none; }
 .hermes-sheet dl { margin: 0; padding: 8px 18px 16px; display: grid; }
 .hermes-sheet dl > div { display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: center; gap: 12px; min-height: 40px; border-bottom: 1px solid var(--line); }
 .hermes-sheet dl > div:last-child { border-bottom: 0; }

@@ -13,13 +13,13 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { MeshGradient } from "@paper-design/shaders-react";
 import { Bot, Clapperboard, Cloud, Command, FolderOpen, HardDrive, Image, Plug, Plus, Send, Server } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode, moveNode, removeEdges, removeNodes } from "../../board/ydoc";
 import { resolveGraph } from "../../compile";
 import type { GraphNode, MediaData, ModelData, ToolData } from "../../contracts/graph";
 import { Sidebar, SidebarGroup } from "../shell/Sidebar";
+import { BrandMark } from "../shell/TitleBar";
 import { useBoard } from "../state/board";
 import { latestRunByAgent, toolActivity, useApp } from "../state/store";
 import { AgentFace } from "../ui";
@@ -92,9 +92,7 @@ function Welcome({ onStart }: { onStart: () => void }) {
   return (
     <div className="welcome">
       <div className="inner pop-in">
-        <div className="orb">
-          <MeshGradient style={{ width: 180, height: 180 }} colors={["#7b6cff", "#4f8cff", "#1b1b2e", "#b16cff"]} distortion={0.8} swirl={0.6} speed={0.35} />
-        </div>
+        <BrandMark size={72} />
         <h2>Build your harness</h2>
         <p>Agents, the models they think with, the tools they use.</p>
         <div className="row" style={{ marginTop: 6 }}>
@@ -235,14 +233,6 @@ function Canvas() {
     <div className="canvas" ref={wrap}
       onMouseMove={(e) => setCursor(flow.screenToFlowPosition({ x: e.clientX, y: e.clientY }))}
       onMouseLeave={() => setCursor(null)}>
-      <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden>
-        <defs>
-          <linearGradient id="edge-live" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0" stopColor="#8b7bff" />
-            <stop offset="1" stopColor="#2fd4b0" />
-          </linearGradient>
-        </defs>
-      </svg>
 
       {graph.nodes.length === 0 && <Welcome onStart={() => add("agent", (p) => newAgent(graph, p))} />}
 

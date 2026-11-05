@@ -178,6 +178,5 @@ projects' code may come into McBot, and why, is in [docs/MERGE.md](docs/MERGE.md
 McBot's dependencies are permissively licensed: React, React Flow, Yjs,
 y-websocket, y-protocols, lib0, zod, zustand, ws, @noble/hashes,
 [Blobatar](https://github.com/Alain00/blobatar) (MIT); yaml, lucide-react (ISC);
-diff (BSD-3-Clause); [Paper Shaders](https://github.com/paper-design/shaders),
-Tauri (Apache-2.0 / MIT); Inter (OFL-1.1). Code that came from other open-source
+diff (BSD-3-Clause); Tauri (Apache-2.0 / MIT); Inter (OFL-1.1). Code that came from other open-source
 projects keeps its original licence file next to it, as those licences require.

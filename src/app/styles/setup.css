@@ -1,14 +1,13 @@
 /* ---------- setup assistant (first launch) ---------- */
 .setup { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; background: var(--bg-chrome); overflow: hidden; }
 .setup-drag { position: absolute; inset: 0 0 auto; height: var(--titlebar-h); z-index: 2; }
-.setup-glow { position: absolute; inset: -10% -10% auto; height: 70%; opacity: 0.85; pointer-events: none; -webkit-mask: radial-gradient(60% 70% at 50% 0%, #000, transparent 75%); mask: radial-gradient(60% 70% at 50% 0%, #000, transparent 75%); }
 .setup-body { position: relative; z-index: 1; width: 100%; max-width: 620px; margin: 0 auto; padding: calc(var(--titlebar-h) + 56px) 24px 24px; display: grid; gap: 22px; align-content: start; overflow-y: auto; animation: setup-in var(--t-slow) var(--ease) both; }
 @keyframes setup-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .setup-body h1 { margin: 0; font-size: 30px; font-weight: 680; letter-spacing: -0.035em; text-wrap: balance; }
 .setup-hero { display: grid; justify-items: center; gap: 14px; text-align: center; padding-top: 9vh; }
 .setup-hero h1 { font-size: 40px; margin-top: 10px; }
 .setup-hero p { margin: 0; color: var(--text-2); font-size: 16px; }
-.setup-hero .brand-mark .food { filter: var(--food-shadow) drop-shadow(0 14px 36px var(--logo-glow)); }
+.setup-hero .brand-mark .food { filter: var(--food-shadow); }
 
 /* who is it for */
 .setup-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -18,7 +17,8 @@
 .choice[aria-pressed="true"] { border-color: var(--accent-line); box-shadow: 0 0 0 4px var(--accent-soft); }
 .choice b { font-size: 15px; margin-top: 6px; }
 .choice small { color: var(--text-3); font-size: 12.5px; line-height: 1.4; }
-.choice-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--brand-gradient); color: #fff; box-shadow: var(--highlight); }
+.choice-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--bg-active); color: var(--text); box-shadow: var(--highlight); }
+.choice[aria-pressed="true"] .choice-icon { background: var(--accent); color: #fff; }
 
 .setup-form { display: grid; gap: 14px; }
 .setup-form .field input { height: 40px; font-size: 14px; }

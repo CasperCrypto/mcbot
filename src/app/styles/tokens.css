@@ -3,7 +3,7 @@
 :root {
   color-scheme: dark;
 
-  --font: "Inter Variable", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", system-ui, sans-serif;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Inter Variable", system-ui, sans-serif;
   --mono: "SF Mono", ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
 
   /* surfaces, darkest to lightest */
@@ -33,27 +33,30 @@
   --text-4: #5c5c64;
 
   /* brand + state */
-  --accent: #7b6cff;
-  --accent-2: #4f8cff;
-  --accent-soft: rgba(123, 108, 255, 0.16);
-  --accent-line: rgba(123, 108, 255, 0.55);
-  --brand-gradient: linear-gradient(135deg, #8b7bff 0%, #5b8dff 100%);
-  --focus: 0 0 0 3px rgba(123, 108, 255, 0.35);
+  /* macOS system colours (dark): flat, no gradients */
+  --accent: #0a84ff;
+  --accent-text: #409cff;
+  --accent-soft: rgba(10, 132, 255, 0.16);
+  --accent-line: rgba(10, 132, 255, 0.6);
+  --focus: 0 0 0 3px rgba(10, 132, 255, 0.4);
 
-  --ok: #34d17a;
-  --ok-soft: rgba(52, 209, 122, 0.14);
-  --run: #4f8cff;
-  --run-soft: rgba(79, 140, 255, 0.16);
-  --fail: #ff5f57;
-  --fail-soft: rgba(255, 95, 87, 0.14);
-  --warn: #febc2e;
-  --warn-soft: rgba(254, 188, 46, 0.14);
+  --ok: #30d158;
+  --ok-soft: rgba(48, 209, 88, 0.14);
+  --run: #0a84ff;
+  --run-soft: rgba(10, 132, 255, 0.16);
+  --fail: #ff453a;
+  --fail-soft: rgba(255, 69, 58, 0.14);
+  --warn: #ffd60a;
+  --warn-soft: rgba(255, 214, 10, 0.14);
 
-  /* node kinds */
-  --k-agent: #8b7bff;
-  --k-model: #ff9f43;
-  --k-model-cloud: #4fb3ff;
-  --k-tool: #2fd4b0;
+  /* node kinds (the tiles in graph.css) */
+  --k-agent: #8e8e93;
+  --k-model: #ff9f0a;
+  --k-model-cloud: #0a84ff;
+  --k-tool: #30b0c7;
+  --k-media: #ff375f;
+  --k-channel: #30d158;
+  --k-folder: #ac8e68;
 
   /* agent faces: glass food (faces/foods.ts). One colour per agent, from its name. */
   --food-1: #8b7bff;
