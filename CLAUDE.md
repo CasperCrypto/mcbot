@@ -178,9 +178,11 @@ auth, no cloud: local JSON + the filesystem.
 
 ## Out of scope until asked
 
-Auth, SSO, Langfuse, OpenTelemetry, a cloud tier, a marketplace, a code
-editor, git integration, ACP, A2A. Everything else on the way is ordered in
-`docs/PLAN.md` (M5–M14, reasons in `docs/NEXT.md`); build in that order. Postgres and Redis belong to the
+Auth, SSO, Langfuse, OpenTelemetry, a cloud tier, a marketplace, git
+integration beyond showing status and diffs, ACP (pending the owner's decision
+for M9), A2A. The terminal, code editor and browser panes are planned (M8).
+Everything else on the way is ordered in `docs/PLAN.md` (M5–M15, reasons in
+`docs/NEXT.md`); build in that order. Postgres and Redis belong to the
 optional team server only, never the desktop app.
 
 ## Commands

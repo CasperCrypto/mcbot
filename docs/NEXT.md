@@ -1,7 +1,8 @@
 # What's missing, and how McBot grows
 
-Written 2026-11-04 after M5. [PLAN.md](PLAN.md) holds the milestone order; this
-doc explains it: what Hermes already does that McBot doesn't show yet, what
+Written 2026-11-04 after M5; milestone numbers follow the 2026-11-06 plan.
+[PLAN.md](PLAN.md) holds the milestone order; this doc explains it: what
+Hermes already does that McBot doesn't show yet, what
 other agent desktops have, how a company is organised in McBot, how agents work together, and
 how other people add modules.
 
@@ -40,22 +41,22 @@ each config key it needs is verified and recorded in `docs/HERMES.md` (hard rule
 | Hermes feature | Where in Hermes | McBot today | Plan |
 |---|---|---|---|
 | Tool sets per surface (web, browser, terminal, files, vision, image_gen, video_gen, tts, stt, kanban, cron, delegation, computer use) | `hermes_cli/tools_config.py` `CONFIGURABLE_TOOLSETS`; `platform_toolsets` in config | ● Abilities on each agent | done (M6) |
-| Image generation: OpenAI, OpenRouter, FAL, xAI, Krea, DeepInfra, Meta | `plugins/image_gen/*`, `image_gen.provider` / `.model` | ● Image maker block; images show in the chat | **M8** Studio gallery |
-| Video generation: FAL, OpenRouter, xAI, DeepInfra | `plugins/video_gen/*`, `video_gen.provider` (opt-in tool set) | ● Video maker block; videos show in the chat | **M8** Studio gallery |
-| Voice: text to speech, speech to text, voice mode | `tools/tts_*`, `tools/transcription_*` | "Speak" ability on; audio not shown | **M8** |
+| Image generation: OpenAI, OpenRouter, FAL, xAI, Krea, DeepInfra, Meta | `plugins/image_gen/*`, `image_gen.provider` / `.model` | ● Image maker block; images show in the chat | **M10** Studio gallery |
+| Video generation: FAL, OpenRouter, xAI, DeepInfra | `plugins/video_gen/*`, `video_gen.provider` (opt-in tool set) | ● Video maker block; videos show in the chat | **M10** Studio gallery |
+| Voice: text to speech, speech to text, voice mode | `tools/tts_*`, `tools/transcription_*` | "Speak" ability on; audio not shown | **M10** |
 | Kanban: one durable task board per project, shared by profiles. It has dependencies, review and changes requested, schedules, a dispatcher and "swarm" (parallel workers → verifier → synthesizer) | `hermes_cli/kanban*.py`, `tools/kanban_tools.py`, `hermes kanban --help` | not shown | **M7** Tasks view, the team's work queue |
 | Projects: named, multi-folder workspaces | `hermes_cli/projects_*.py` | not used | **M7** maps onto Spaces |
 | Delegation: an agent spawns helpers | `tools/delegate_tool*.py` | on, not drawn | **M7** shown in the run graph |
-| Cron jobs | `hermes cron`, `tools/cronjob_tools.py` | on, not shown | **M7** schedules, **M9** workflows |
-| Webhooks | `hermes webhook` | none | **M9** workflow triggers |
+| Cron jobs | `hermes cron`, `tools/cronjob_tools.py` | on, not shown | **M7** schedules, **M10** workflows |
+| Webhooks | `hermes webhook` | none | **M10** workflow triggers |
 | Chat apps: Slack, Telegram, Discord, WhatsApp, Teams, email, Signal, Matrix and about 20 more, **including Buzz** | `plugins/platforms/*`, `gateway` | ◐ Telegram block (one bot per agent) | **M6** WhatsApp, Slack, Discord, email; conversations in McBot's chat |
 | MCP servers | `mcp_servers:` | ● tool nodes | **M6** catalog |
 | Skills hub, bundles, curator | `tools/skills_hub*.py`, `optional-skills/` (~200 skills, e.g. `creative/social-media-content-calendar`, `creative/meme-generation`, `media/youtube-content`, `social-media/xurl`) | inline skills only | **M6** skill catalog on agents |
 | Approvals before risky actions | `tools/approval*.py`, `hermes approvals` | Hermes asks, McBot can't answer | **M7** approval cards on the board |
 | Mixture of Agents, fallback chains | `hermes moa`, `fallback_providers` | ● fallbacks | later |
-| Bot-to-bot across machines | `hermes peer` | none | **M10** teams |
+| Bot-to-bot across machines | `hermes peer` | none | **M12** teams |
 | Secrets from Bitwarden / 1Password | `hermes secrets` | own vault | **M6** option next to the keychain |
-| Import agents from OpenClaw, Claude Code, Codex | `hermes migrate` / `import` | none | **M11** packs |
+| Import agents from OpenClaw, Claude Code, Codex | `hermes migrate` / `import` | none | **M13** packs |
 | Backups, checkpoints | `hermes backup`, `checkpoints` | none | later |
 
 ## 3. What other agent desktops have
@@ -64,15 +65,15 @@ Feature references only; no code is copied (hard rule 1).
 
 | Elsewhere | McBot |
 |---|---|
-| Many agent CLIs (Codex, Claude Code, Grok, Gemini, Cursor, …) through ACP | Hermes only; ACP is out of scope until asked. Coding agents come in **M12** |
+| Many agent CLIs (Codex, Claude Code, Grok, Gemini, Cursor, …) through ACP | Hermes only today. **M9**: coding agents through ACP (PLAN.md decision 4) |
 | Agent-to-agent messages, replies, files | **M7** handoff edges and kanban tasks |
 | Shared channel chats with one task owner, delegation, Stop / Resume / Reassign | **M7** Tasks view (kanban already has assign, reassign, block, review) |
 | Message queues with pause / resume | **M7** (Hermes `pause` / `resume`, kanban dispatcher) |
-| Embedded browser agents can drive | Hermes' browser tool, on by default; **M8** shows its screenshots |
+| Embedded browser agents can drive | Hermes' browser tool, on by default; **M8**: the browser pane shows it live, with take-over |
 | Computer use | Hermes `computer_use`, on by default (`cua-driver` ships with Hermes' tools) |
 | Context monitoring and auto-compaction | Hermes compacts itself; **M6** shows context use on the agent |
-| Phone app | **M13** |
-| Accounts | **M10**, keypair identity, no password server |
+| Phone app | **M14** |
+| Accounts | **M12**, keypair identity, no password server |
 
 McBot already has things they don't: the editable graph that compiles
 into a real runtime, a live shared board with cursors, memory editing, cost per
@@ -102,7 +103,7 @@ Workspace          one company, or one person
   folder. Agent ids are unique across the workspace.
 - **Agents belong to a space.** A space can borrow an agent from another
   space; it is drawn as a linked node and edited in its home space.
-- **Today:** a workspace with boards. M7 adds spaces, M10 adds members.
+- **Today:** a workspace with boards. M7 adds spaces, M12 adds members.
 
 ### Roles
 
@@ -123,18 +124,18 @@ The engine listens only on this computer today, so a team shares one
 computer's windows. That keeps it safe while there are no accounts. Three
 steps:
 
-1. **M10a, host on your network.** The owner turns on Share. McBot shows an
+1. **M12a, host on your network.** The owner turns on Share. McBot shows an
    invite link with a one-time code. A teammate opens it in their McBot and gets
    a member key, kept in their keychain. The engine then also accepts that
    computer, but only with a valid key, and still checks `Origin` and `Host`.
    Agents run on the host's computer.
-2. **M10b, team server.** One always-on server per company, built on the Buzz
+2. **M12b, team server.** One always-on server per company, built on the Buzz
    relay (Apache-2.0, may be merged). Boards, tasks, chat and presence sync
    through it, so people on different networks work together. Identity is a
    keypair, as in Buzz: no password database. Hermes already has a Buzz chat
    adapter (`plugins/platforms/buzz`), so agents can sit in the same channels
    as people.
-3. **M13, phones.** Chat, approvals and notifications through the same server.
+3. **M14, phones.** Chat, approvals and notifications through the same server.
 
 ## 6. How agents work together
 
@@ -152,7 +153,7 @@ There are three layers, each compiled to something Hermes already runs.
    - **Manager → specialists:** a lead agent breaks a goal into tasks (`kanban decompose`).
    - **Pipeline:** writer → editor → publisher, through task dependencies.
    - **Swarm:** parallel workers → verifier → synthesizer (`kanban swarm`).
-3. **Over time: workflows.** In M9, trigger, step, condition and approval nodes
+3. **Over time: workflows.** In M10, trigger, step, condition and approval nodes
    on the board. Triggers are a schedule (Hermes cron), a webhook (Hermes
    webhook), a chat message (gateway) or a new file. A step is "give this agent
    this task", so workflows are built on kanban rather than a second engine.
@@ -170,7 +171,7 @@ Hermes runs them.
 - Ask it in chat, or give it a task. Hermes saves the result in the agent's
   folder.
 
-**Collect.** The Studio view (M8) is a gallery for each space with images,
+**Collect.** The Studio view (M10) is a gallery for each space with images,
 video, audio, documents and drafts. Each item shows which agent made it, from
 which prompt and run. Open it, download it, or hand it back to an agent
 ("make it brighter").
@@ -182,7 +183,7 @@ which prompt and run. Open it, download it, or hand it back to an agent
 - X posting already exists as Hermes' `xurl` skill. LinkedIn, Instagram and
   scheduling tools come in as MCP servers.
 
-**A marketing team starter (M8)**
+**A marketing team starter (M10)**
 
 - **Strategist:** plans the calendar, using the `social-media-content-calendar` skill.
 - **Writer:** drafts posts and articles.
@@ -222,10 +223,11 @@ after it.
 ## 9. What's needed from the owner
 
 - **Who comes first: a person or a company?** This changes setup questions and defaults.
-- **Team order.** Is "share from my computer" (M10a) enough to start, or is
+- **Team order.** Is "share from my computer" (M12a) enough to start, or is
   the team server needed first?
-- **Logo, brand and agent icons.** Put the files in `design/` when ready.
-  Design work comes after these features. The food-mascot idea fits "McBot"
-  well. Keep it clearly our own: no golden arches, no red-and-yellow look, no
-  names close to a real chain's. That keeps the brand safe from trademark
-  complaints.
+- ~~Logo, brand and agent icons~~: done 2026-11-05, the gray glass burger and
+  agents as glass food bots (`src/app/faces/foods.ts`). Keep it clearly our
+  own: no golden arches, no red-and-yellow look, no names close to a real
+  chain's. That keeps the brand safe from trademark complaints.
+- More decisions, for the 2026-11-06 plan (AI plans, signing, the editor, ACP,
+  Lightpanda), are in [PLAN.md](PLAN.md#decisions-for-the-owner).

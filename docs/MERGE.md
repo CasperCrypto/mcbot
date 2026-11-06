@@ -17,9 +17,9 @@ So the free app is the distribution, and the revenue comes from what one
 download cannot do on its own:
 
 - **McBot Cloud**, the hosted, always-on version: agents that keep working when
-  the laptop is closed, the shared team board (M10), phones (M13), backups. The
+  the laptop is closed, the shared team board (M12), phones (M14), backups. The
   same server is free to run yourself; people pay for not having to.
-- **For companies**: team accounts, roles and audit (M10), support, and help
+- **For companies**: team accounts, roles and audit (M12), support, and help
   setting teams up.
 
 So the team server and its hosted version are the paid product, built on the
@@ -62,8 +62,8 @@ everyone's app and phone connect to it.
 ## Phases
 
 The order of work is in [PLAN.md](PLAN.md): M5 (one download) merges Hermes;
-M8 (copilot and terminal) builds its coding-agent connectors and takes Buzz's dev
-tools; M9 and M10 (teams, phones) take the Buzz relay and Buzz mobile.
+M9 (Ask McBot and coding agents) builds the coding-agent connectors and takes Buzz's
+dev tools; M12 and M14 (teams, phones) take the Buzz relay and Buzz mobile.
 
 ## Open decisions
 
