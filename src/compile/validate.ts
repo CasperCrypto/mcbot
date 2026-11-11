@@ -31,6 +31,8 @@ export interface AgentBundle {
   video: MediaNode | null;
   /** Chat apps this agent answers in (one bot per app), by platform. */
   channels: ChannelNode[];
+  /** Agents this one hands work to (agent → agent edges, as kanban tasks), by name. */
+  team: AgentNode[];
 }
 
 export interface Resolved {
@@ -39,7 +41,7 @@ export interface Resolved {
   issues: Issue[];
 }
 
-const PAIRS = new Set(["agent:model", "model:agent", "agent:tool", "tool:agent", "agent:media", "media:agent", "agent:channel", "channel:agent"]);
+const PAIRS = new Set(["agent:model", "model:agent", "agent:tool", "tool:agent", "agent:media", "media:agent", "agent:channel", "channel:agent", "agent:agent"]);
 
 function label(n: GraphNode): string {
   const kind = n.kind === "media" ? `${n.data.media} maker` : n.kind === "channel" ? "chat app" : n.kind;
@@ -164,6 +166,7 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
   const mediaEdges = new Map<string, MediaNode[]>();
   const channelEdges = new Map<string, ChannelNode[]>();
   const channelOwners = new Map<string, AgentNode[]>();
+  const handoffs = new Map<string, AgentNode[]>();
   const wired = new Set<string>();
   const pairSeen = new Set<string>();
 
@@ -176,6 +179,17 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
     }
     if (!PAIRS.has(`${s.kind}:${t.kind}`)) {
       issues.push({ level: "error", edgeId: e.id, message: `Cannot connect ${label(s)} to ${label(t)}; wire models, tools, makers and chat apps to agents` });
+      continue;
+    }
+    // agent → agent: the source hands work to the target. Direction matters, so a→b and b→a are two edges.
+    if (s.kind === "agent" && t.kind === "agent") {
+      const pair = `${s.id}>${t.id}`;
+      if (s.id === t.id) issues.push({ level: "error", edgeId: e.id, message: `${label(s)} cannot hand work to itself` });
+      else if (pairSeen.has(pair)) issues.push({ level: "error", edgeId: e.id, message: `${label(s)} hands work to ${label(t)} twice` });
+      else {
+        pairSeen.add(pair);
+        handoffs.set(s.id, [...(handoffs.get(s.id) ?? []), t]);
+      }
       continue;
     }
     const agent = (s.kind === "agent" ? s : t) as AgentNode;
@@ -220,7 +234,8 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
     const agentChannels = (channelEdges.get(agent.id) ?? []).slice().sort((x, y) => (x.data.platform < y.data.platform ? -1 : x.data.platform > y.data.platform ? 1 : 0));
     for (const [platform] of duplicates(agentChannels, (c) => c.data.platform))
       issues.push({ level: "error", nodeId: agent.id, message: `Agent "${agent.data.name}" has two ${platform} bots; keep one` });
-    bundles.push({ agent, models: chain, tools: agentTools, image: maker("image"), video: maker("video"), channels: agentChannels });
+    const team = (handoffs.get(agent.id) ?? []).slice().sort((x, y) => (x.data.name < y.data.name ? -1 : x.data.name > y.data.name ? 1 : 0));
+    bundles.push({ agent, models: chain, tools: agentTools, image: maker("image"), video: maker("video"), channels: agentChannels, team });
   }
   bundles.sort((x, y) => (x.agent.data.name < y.agent.data.name ? -1 : x.agent.data.name > y.agent.data.name ? 1 : 0));
 

@@ -13,13 +13,13 @@
     },
     {
       "path": "profiles/researcher/SOUL.md",
-      "sha256": "eb8039f538dac6b1f95cef301031a8a8028108ccaf5236c51c1c0f3aae9453e7",
-      "bytes": 52
+      "sha256": "e8c985c9c15a5b3aaa8fcc75ac0dcbac9fb3267e1d4fa5cd8ba9bbae3aa78060",
+      "bytes": 279
     },
     {
       "path": "profiles/researcher/config.yaml",
-      "sha256": "a95a9a7eb0c7302bceb15f9676089dcdf65cc98bb6cc275101895c6305269278",
-      "bytes": 1140
+      "sha256": "6b54688ec41c88cdd873950049d565dd1fb68989f00e80cfacb1c2f88d8dac19",
+      "bytes": 1153
     },
     {
       "path": "profiles/researcher/profile.yaml",

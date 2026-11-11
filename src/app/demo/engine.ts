@@ -13,7 +13,7 @@ import { exportFileName } from "../../board/files";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
@@ -36,6 +36,10 @@ interface State {
   memory: Record<string, Record<Target, string[]>>;
   sessions: Record<string, SessionRow[]>;
   sampleOpen: boolean;
+  /** Hermes' kanban, simulated: every task of the demo's Hermes home. */
+  tasks?: TaskDetail[];
+  /** Hermes' cron jobs per profile, simulated (they never fire in the browser). */
+  schedules?: Record<string, ScheduleView[]>;
   /** Setup assistant: done or not, and boards it built (their graphs until a window opens them). */
   setup?: SetupState;
   pending?: Record<string, Graph>;
@@ -473,6 +477,78 @@ async function load(): Promise<void> {
   save();
 }
 
+// ---------- tasks: Hermes' kanban, simulated (the desktop app runs them through Hermes) ----------
+
+const taskId = () => `t_${Math.random().toString(16).slice(2, 10).padEnd(8, "0")}`;
+
+function teamOf(boardId: string): Map<string, string> {
+  const compiled = manifest()?.profiles ?? [];
+  return new Map(bundlesOf(boardId).bundles.filter((b) => compiled.includes(b.agent.data.name)).map((b) => [b.agent.data.name, b.agent.id]));
+}
+
+function taskView(t: TaskDetail, team: Map<string, string>): TaskDetail {
+  return { ...t, agentNodeId: t.assignee ? team.get(t.assignee) ?? null : null, comments: t.thread.length };
+}
+
+function findTask(id: string): TaskDetail {
+  const t = (state.tasks ?? []).find((x) => x.id === id);
+  if (!t) throw new EngineError(404, "no such task", {});
+  return t;
+}
+
+/** The dispatcher, simulated: a ready task with an agent starts, then that agent finishes it. */
+async function dispatch(t: TaskDetail, boardId: string): Promise<void> {
+  if (!t.assignee || t.status !== "ready") return;
+  const bundle = bundlesOf(boardId).bundles.find((b) => b.agent.data.name === t.assignee);
+  if (!bundle) return;
+  await sleep(1200);
+  if (t.status !== "ready") return;
+  const attempt = { id: t.attempts.length + 1, profile: t.assignee, status: "running", outcome: null, summary: null, error: null, startedAt: Date.now(), endedAt: null };
+  t.attempts.push(attempt);
+  Object.assign(t, { status: "running", startedAt: Date.now() });
+  save();
+  await sleep(2600);
+  // A person may have blocked or finished it meanwhile.
+  if ((t.status as string) !== "running") return;
+  const summary = script(`${t.title}\n${t.body}`.trim(), bundle).text;
+  Object.assign(attempt, { status: "done", outcome: "completed", summary, endedAt: Date.now() });
+  Object.assign(t, { status: "done", completedAt: Date.now(), result: summary });
+  save();
+}
+
+function seedTasks(): TaskDetail[] {
+  const now = Date.now();
+  const base = { priority: 0, error: null, parents: [], children: [], comments: 0, thread: [], attempts: [], agentNodeId: null };
+  return [
+    { ...base, id: "t_5eed0001", title: "Route this morning's tickets", body: "Everything in tickets/ from today.", assignee: "triage", status: "done", createdBy: "Ada",
+      createdAt: now - 3 * 3600_000, startedAt: now - 3 * 3600_000 + 60_000, completedAt: now - 3 * 3600_000 + 140_000, result: "Billing → Sam (2). Outage → paging the on-call (1).",
+      attempts: [{ id: 1, profile: "triage", status: "done", outcome: "completed", summary: "Billing → Sam (2). Outage → paging the on-call (1).", error: null, startedAt: now - 3 * 3600_000 + 60_000, endedAt: now - 3 * 3600_000 + 140_000 }] },
+    { ...base, id: "t_5eed0002", title: "Answer: can we export invoices as CSV?", body: "Customer asked in ticket 1042.", assignee: "researcher", status: "review", createdBy: "triage",
+      createdAt: now - 40 * 60_000, startedAt: now - 38 * 60_000, completedAt: null, result: "Yes: Settings → Billing → Export, CSV or PDF (docs/billing.md).",
+      thread: [{ id: 1, author: "researcher", body: "Drafted from docs/billing.md. Please check before it goes out.", at: now - 30 * 60_000 }] },
+    { ...base, id: "t_5eed0003", title: "Find the outage post-mortem template", body: "", assignee: null, status: "todo", createdBy: "Ada", createdAt: now - 10 * 60_000, startedAt: null, completedAt: null, result: null },
+  ];
+}
+
+function nextNine(weekdays: boolean, from = new Date()): number {
+  const d = new Date(from);
+  d.setHours(9, 0, 0, 0);
+  while (d.getTime() <= from.getTime() || (weekdays && (d.getDay() === 0 || d.getDay() === 6))) d.setDate(d.getDate() + 1);
+  return d.getTime();
+}
+
+function demoSchedules(): Record<string, ScheduleView[]> {
+  return (state.schedules ??= {
+    triage: [{ id: "5eed00000001", name: "Morning sweep", prompt: "Route every ticket that came in overnight.", when: "0 9 * * 1-5", enabled: true, state: "scheduled", nextRunAt: nextNine(true), lastRunAt: null, lastStatus: null, lastError: null }],
+  });
+}
+
+function schedulesOf(boardId: string, profile: string): AgentSchedules {
+  const agentNodeId = teamOf(boardId).get(profile);
+  if (!agentNodeId) throw new EngineError(409, `${profile} isn't a compiled agent on this board. Compile, then schedule it.`, {});
+  return { agentNodeId, profile, schedules: demoSchedules()[profile] ?? [] };
+}
+
 /** The fork's real upstream record; the gateway itself is simulated (no Hermes runs in a browser). */
 function demoHermes(): HermesInfo {
   const running = Object.values(state.runs).some((e) => !e.some((x) => x.type === "run.finished"));
@@ -576,6 +652,78 @@ export const demoEngine = {
     const runs = Object.values(state.runs).map((e) => summarizeRun(e)).filter((s): s is RunSummary => !!s && s.boardId === boardId);
     return buildCostReport(profiles, runs, models);
   }),
+  tasks: api((boardId: string): TasksView => {
+    const team = teamOf(requireBoard(boardId));
+    state.tasks ??= boardId === SEED_BOARD.id ? seedTasks() : [];
+    const tasks = state.tasks.filter((t) => t.status !== "archived" && (t.assignee === null || team.has(t.assignee) || (t.createdBy !== null && team.has(t.createdBy))));
+    return { tasks: tasks.map((t) => taskView(t, team)).sort((a, b) => b.createdAt - a.createdAt), gateway: true };
+  }),
+  task: api((boardId: string, id: string): TaskDetail => taskView(findTask(id), teamOf(requireBoard(boardId)))),
+  createTask: api((boardId: string, input: { title: string; body: string; assignee: string | null; by: string; parents?: string[] }): TaskView => {
+    const team = teamOf(requireBoard(boardId));
+    if (input.assignee !== null && !team.has(input.assignee)) throw new EngineError(409, `${input.assignee} isn't a compiled agent on this board. Compile, then give it tasks.`, {});
+    const t: TaskDetail = {
+      id: taskId(), title: input.title.trim(), body: input.body, assignee: input.assignee, agentNodeId: null, status: input.assignee ? "ready" : "todo", priority: 0,
+      createdBy: input.by, createdAt: Date.now(), startedAt: null, completedAt: null, result: null, error: null, parents: input.parents ?? [], children: [], comments: 0, thread: [], attempts: [],
+    };
+    (state.tasks ??= []).push(t);
+    save();
+    void dispatch(t, boardId);
+    return taskView(t, team);
+  }),
+  actOnTask: api((boardId: string, id: string, by: string, a: TaskAction): TaskDetail => {
+    const team = teamOf(requireBoard(boardId));
+    const t = findTask(id);
+    const refuse = (why: string) => { throw new EngineError(409, why, {}); };
+    switch (a.action) {
+      case "comment": t.thread.push({ id: t.thread.length + 1, author: by, body: a.text, at: Date.now() }); break;
+      case "assign":
+        if (a.profile !== null && !team.has(a.profile)) refuse(`${a.profile} isn't a compiled agent on this board`);
+        t.assignee = a.profile;
+        if (t.status === "todo" && a.profile) t.status = "ready";
+        break;
+      case "complete": Object.assign(t, { status: "done", completedAt: Date.now(), result: a.text || t.result }); break;
+      case "block":
+        if (!["ready", "todo", "running", "triage"].includes(t.status)) refuse(`cannot block ${id}: it is ${t.status}`);
+        t.status = "blocked";
+        if (a.text) t.thread.push({ id: t.thread.length + 1, author: by, body: a.text, at: Date.now() });
+        break;
+      case "unblock":
+        if (t.status !== "blocked") refuse(`cannot unblock ${id}: not blocked`);
+        t.status = "ready";
+        break;
+      case "changes":
+        if (t.status !== "review") refuse(`cannot reopen ${id}: not in review`);
+        t.thread.push({ id: t.thread.length + 1, author: by, body: a.text, at: Date.now() });
+        t.status = "ready";
+        break;
+      case "archive": t.status = "archived"; break;
+    }
+    save();
+    if (t.status === "ready") void dispatch(t, boardId);
+    return taskView(t, team);
+  }),
+  schedules: api((boardId: string): AgentSchedules[] => [...teamOf(requireBoard(boardId))].map(([profile, agentNodeId]) => ({ agentNodeId, profile, schedules: demoSchedules()[profile] ?? [] }))),
+  createSchedule: api((boardId: string, input: { profile: string; when: string; prompt: string; name: string }): AgentSchedules => {
+    schedulesOf(requireBoard(boardId), input.profile);
+    const preset = input.when === "0 9 * * *" || input.when === "0 9 * * 1-5";
+    const list = (demoSchedules()[input.profile] ??= []);
+    list.push({ id: Math.random().toString(16).slice(2, 14).padEnd(12, "0"), name: input.name, prompt: input.prompt, when: input.when, enabled: true, state: "scheduled",
+      nextRunAt: preset ? nextNine(input.when.endsWith("1-5")) : null, lastRunAt: null, lastStatus: null, lastError: null });
+    save();
+    return schedulesOf(boardId, input.profile);
+  }),
+  actOnSchedule: api((boardId: string, profile: string, id: string, action: "pause" | "resume" | "run" | "remove"): AgentSchedules => {
+    const list = demoSchedules()[profile] ?? [];
+    const job = list.find((j) => j.id === id);
+    if (!job) throw new EngineError(409, `Job not found: ${id}`, {});
+    if (action === "remove") list.splice(list.indexOf(job), 1);
+    if (action === "pause") Object.assign(job, { enabled: false, state: "paused" });
+    if (action === "resume") Object.assign(job, { enabled: true, state: "scheduled" });
+    if (action === "run") Object.assign(job, { lastRunAt: Date.now(), lastStatus: "ok" });
+    save();
+    return schedulesOf(requireBoard(boardId), profile);
+  }),
   roots: api((boardId: string): FsRoot[] => {
     const compiled = manifest()?.profiles ?? [];
     const profiles: FsRoot[] = bundlesOf(requireBoard(boardId)).bundles
@@ -650,7 +798,16 @@ export const demoEngine = {
     const { files } = filesOf(root);
     const text = files[path];
     if (text === undefined) throw new EngineError(404, "no such file", {});
-    return { path, bytes: utf8Bytes(text).length, text };
+    return { path, bytes: utf8Bytes(text).length, text, sha256: sha256Hex(text) };
+  }),
+  /** The code editor's save, in this browser only (the shared files and the sample project). */
+  writeFile: api((root: string, path: string, text: string, baseSha256: string | null) => {
+    if (root.startsWith("profile:")) throw new EngineError(403, "In the demo, agents' folders are read only", {});
+    const { files } = filesOf(root);
+    const current = files[path];
+    if ((current === undefined ? null : sha256Hex(current)) !== baseSha256) throw new EngineError(409, "The file changed since you opened it. Reopen it to see the change.", {});
+    files[path] = text;
+    return { path, bytes: utf8Bytes(text).length, sha256: sha256Hex(text) };
   }),
 };
 

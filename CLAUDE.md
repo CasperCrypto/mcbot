@@ -121,6 +121,9 @@ Change them additively; a breaking change bumps the version.
   (`engine/bundle.ts`) and keeps tools in `<data>/hermes-runtime`; its log is
   `<data>/engine.log`. First launch: the setup assistant prepares Hermes in the
   background (`POST /api/hermes/prepare`), minutes, with progress.
+- The shell adds a menu bar (tray) icon whose count is Home's "Needs you" (`set_attention`,
+  sent by the window) and system notifications when an agent finishes, fails, asks for a
+  review or is blocked while no McBot window is in front (`src/app/state/signals.ts`).
 - The engine must stay bundleable as CommonJS: no top-level `await`, and guard
   every `import.meta` (it is empty in the bundle).
 - Unsigned on purpose (free and open source): macOS ad-hoc (`signingIdentity: "-"`),
@@ -177,8 +180,13 @@ Change them additively; a breaking change bumps the version.
   rule 1). Other products are feature references only, and McBot never copies
   another product's look or trade dress. Blobatar (MIT) is fine.
 - **Local folders:** the engine reads only inside roots the user opened
-  (`<workspace>/folders.json`), the shared files folder and compiled profiles —
-  read-only, path-checked.
+  (`<workspace>/folders.json`), the shared files folder and compiled profiles,
+  path-checked. The Code view's editor (Monaco, loaded on first use) writes back
+  only to opened folders, the shared files folder and an agent's `workspace/`,
+  never a compiled file or a key file, and only over the sha256 it read.
+- **Terminal:** real shells in the desktop shell (`src-tauri/src/terminal.rs`,
+  portable-pty), never in the engine, so the engine stays one plain executable.
+  The browser has none.
 
 ## Stack (do not substitute)
 
@@ -229,4 +237,4 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   Product shots (`site/assets/*.webp`) are taken from the demo at 1440×900 @2x
   without the Demo chip; re-shoot them when the UI they show changes.
 
-Shortcuts: ⌘K commands · ⌘1–7 views · ⌘S compile · ⌘N new window (desktop).
+Shortcuts: ⌘K commands · ⌘1–9 views · ⌘S compile · ⌘N new window (desktop).

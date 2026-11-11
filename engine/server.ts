@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { compile, resolveGraph, type AgentBundle } from "../src/compile";
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, SetupDetect, SetupState } from "../src/contracts/api";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, AgentSchedules, SetupDetect, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../src/contracts/api";
 import { writeExport } from "./boardFiles";
 import { diagnosticsText, osLine, redact, tail } from "./diagnostics";
 import type { Graph, ModelNode } from "../src/contracts/graph";
@@ -22,6 +22,8 @@ import { atomicWrite } from "./fsutil";
 import { FolderError, Folders } from "./folders";
 import { bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, setupHome, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
+import { JOB_ID_RE, createScheduleArgv, readSchedules, scheduleActionArgv } from "./schedules";
+import { TASK_ID_RE, actionArgv, createArgv, kanbanError, readTask, readTasks, runKanban } from "./kanban";
 import { envEntriesFor, hasLiveChannel, resolveEntries, writeProfileKeys } from "./profileEnv";
 import { MediaError, mediaFile } from "./media";
 import { BOARD_ID_RE, BoardRelay, LooseGraph } from "./relay";
@@ -110,6 +112,25 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   const bundlesOf = async (boardId: string) => resolveGraph(await relay.graph(boardId));
   const modelsOf = (bundles: AgentBundle[]): ModelNode[] => [...new Map(bundles.flatMap((b) => b.models).map((m) => [m.id, m])).values()];
 
+  /** This board's compiled agents: profile name → node id (who can be given a task). */
+  const teamOf = async (boardId: string): Promise<Map<string, string>> => {
+    const [{ bundles }, manifest] = await Promise.all([bundlesOf(boardId), readManifest(cfg.hermesHome)]);
+    return new Map(bundles.filter((b) => manifest?.profiles.includes(b.agent.data.name)).map((b) => [b.agent.data.name, b.agent.id]));
+  };
+  /** `hermes kanban …` on this root's board; a failure becomes Hermes' own words, as a 409. */
+  const kanban = async (argv: string[], stdin = ""): Promise<string> => {
+    const found = await findHermes();
+    if (!found) throw new HttpError(503, "The engine is not set up yet");
+    const r = await runKanban(await prepareHermes(found, cfg.hermesHome), cfg.hermesHome, argv, stdin);
+    if (r.code !== 0) throw new HttpError(409, kanbanError(r));
+    return r.stdout;
+  };
+  /** Run `hermes <argv>` under the root; a failure becomes Hermes' own words, as a 409. */
+  const hermesCli = kanban;
+  /** A ready task starts only while the gateway runs (its dispatcher hands it to the agent). */
+  const wakeDispatcher = () => void runner.ensureGateway().then((r) => console.log(`[engine] tasks: gateway ${r}`)).catch(() => undefined);
+  const person = z.string().trim().min(1).max(64);
+
   /**
    * After a compile, a saved key and at start: fill every compiled agent's .env from the board
    * compiled into this root, and keep the gateway up while any agent has a chat app whose bot
@@ -126,8 +147,10 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       if (!manifest.profiles.includes(b.agent.data.name)) continue;
       await writeProfileKeys(join(cfg.hermesHome, "profiles", b.agent.data.name), resolveEntries(envEntriesFor(b), saved));
       live ||= hasLiveChannel(b, saved);
+      // A schedule fires only while a gateway serves its agent (cron/jobs.py, per-profile stores).
+      live ||= (await readSchedules(cfg.hermesHome, b.agent.data.name)).some((j) => j.enabled);
     }
-    if (live) console.log(`[engine] chat apps: gateway ${await runner.ensureGateway()}`);
+    if (live) console.log(`[engine] chat apps and schedules: gateway ${await runner.ensureGateway()}`);
   }).catch((err: unknown) => console.error("[engine] could not update agents' keys:", err)));
   onBoardSaved = (boardId) => {
     void readManifest(cfg.hermesHome).then((m) => { if (m?.graphId === boardId) void syncAgents(); }).catch(() => undefined);
@@ -268,6 +291,75 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       return { runId };
     },
 
+    // ---- tasks: Hermes' kanban, shared by the agents compiled into this root ----
+    "GET /api/tasks": async (_req, url): Promise<TasksView> => {
+      const team = await teamOf(await requireBoard(url.searchParams.get("boardId")));
+      return { tasks: readTasks(cfg.hermesHome, team), gateway: (await gatewayStatus(cfg.hermesHome)).running };
+    },
+    "GET /api/tasks/one": async (_req, url): Promise<TaskDetail> => {
+      const team = await teamOf(await requireBoard(url.searchParams.get("boardId")));
+      const task = readTask(cfg.hermesHome, url.searchParams.get("id") ?? "", team);
+      if (!task) throw new HttpError(404, "no such task");
+      return task;
+    },
+    "POST /api/tasks": async (req): Promise<TaskView> => {
+      const body = parse(z.object({
+        boardId: z.string(), title: z.string().trim().min(1).max(300), body: z.string().max(20_000).default(""),
+        assignee: z.string().nullable().default(null), parents: z.array(z.string().regex(TASK_ID_RE)).max(20).default([]), by: person,
+      }), await json(req));
+      const team = await teamOf(await requireBoard(body.boardId));
+      if (body.assignee !== null && !team.has(body.assignee)) throw new HttpError(409, `${body.assignee} isn't a compiled agent on this board. Compile, then give it tasks.`);
+      const out = await kanban(createArgv({ title: body.title, body: body.body, assignee: body.assignee, createdBy: body.by, parents: body.parents }), body.body);
+      const id = (JSON.parse(out) as { id?: string }).id ?? "";
+      const task = readTask(cfg.hermesHome, id, team);
+      if (!task) throw new HttpError(500, "Hermes did not create the task");
+      if (task.assignee) wakeDispatcher();
+      return task;
+    },
+    "POST /api/tasks/act": async (req): Promise<TaskDetail> => {
+      const body = parse(z.object({ boardId: z.string(), id: z.string().regex(TASK_ID_RE), by: person }).and(z.discriminatedUnion("action", [
+        z.object({ action: z.literal("comment"), text: z.string().trim().min(1).max(20_000) }),
+        z.object({ action: z.literal("assign"), profile: z.string().nullable() }),
+        z.object({ action: z.literal("complete"), text: z.string().trim().max(20_000).optional() }),
+        z.object({ action: z.literal("block"), text: z.string().trim().max(20_000).optional() }),
+        z.object({ action: z.literal("unblock") }),
+        z.object({ action: z.literal("changes"), text: z.string().trim().min(1).max(20_000) }),
+        z.object({ action: z.literal("archive") }),
+      ])), await json(req));
+      const team = await teamOf(await requireBoard(body.boardId));
+      if (body.action === "assign" && body.profile !== null && !team.has(body.profile)) throw new HttpError(409, `${body.profile} isn't a compiled agent on this board`);
+      if (!readTask(cfg.hermesHome, body.id, team)) throw new HttpError(404, "no such task");
+      await kanban(actionArgv(body.id, body as TaskAction, body.by));
+      const task = readTask(cfg.hermesHome, body.id, team);
+      if (!task) throw new HttpError(404, "no such task");
+      if (task.assignee && ["ready", "todo"].includes(task.status)) wakeDispatcher();
+      return task;
+    },
+
+    // ---- schedules: each agent's Hermes cron jobs ----
+    "GET /api/schedules": async (_req, url): Promise<AgentSchedules[]> => {
+      const team = await teamOf(await requireBoard(url.searchParams.get("boardId")));
+      return Promise.all([...team].map(async ([profile, agentNodeId]) => ({ agentNodeId, profile, schedules: await readSchedules(cfg.hermesHome, profile) })));
+    },
+    "POST /api/schedules": async (req): Promise<AgentSchedules> => {
+      const body = parse(z.object({ boardId: z.string(), profile: z.string(), when: z.string().trim().min(1).max(100), prompt: z.string().trim().min(1).max(20_000), name: z.string().trim().max(80).default("") }), await json(req));
+      const team = await teamOf(await requireBoard(body.boardId));
+      const agentNodeId = team.get(body.profile);
+      if (!agentNodeId) throw new HttpError(409, `${body.profile} isn't a compiled agent on this board. Compile, then schedule it.`);
+      await hermesCli(createScheduleArgv(body.profile, body.when, body.prompt, body.name));
+      wakeDispatcher();
+      return { agentNodeId, profile: body.profile, schedules: await readSchedules(cfg.hermesHome, body.profile) };
+    },
+    "POST /api/schedules/act": async (req): Promise<AgentSchedules> => {
+      const body = parse(z.object({ boardId: z.string(), profile: z.string(), id: z.string().regex(JOB_ID_RE), action: z.enum(["pause", "resume", "run", "remove"]) }), await json(req));
+      const team = await teamOf(await requireBoard(body.boardId));
+      const agentNodeId = team.get(body.profile);
+      if (!agentNodeId) throw new HttpError(404, `no compiled agent ${body.profile}`);
+      await hermesCli(scheduleActionArgv(body.profile, body.id, body.action));
+      if (body.action === "resume" || body.action === "run") wakeDispatcher();
+      return { agentNodeId, profile: body.profile, schedules: await readSchedules(cfg.hermesHome, body.profile) };
+    },
+
     "GET /api/memory": async (_req, url): Promise<AgentMemoryView[]> => {
       const boardId = await requireBoard(url.searchParams.get("boardId"));
       const { bundles } = await bundlesOf(boardId);
@@ -340,6 +432,13 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const manifest = await readManifest(cfg.hermesHome);
       const dir = await folders.resolveRoot(url.searchParams.get("root") ?? "", manifest?.profiles ?? []);
       return folders.read(dir, url.searchParams.get("path") ?? "");
+    },
+    /** The code editor's save: opened folders, the shared files folder and agents' workspace/ only. */
+    "PUT /api/fs/write": async (req) => {
+      const body = parse(z.object({ root: z.string(), path: z.string().min(1).max(1000), text: z.string().max(5_000_000), baseSha256: z.string().nullable() }), await json(req));
+      const manifest = await readManifest(cfg.hermesHome);
+      const dir = await folders.resolveRoot(body.root, manifest?.profiles ?? []);
+      return folders.write(body.root, dir, body.path, body.text, body.baseSha256);
     },
   };
 

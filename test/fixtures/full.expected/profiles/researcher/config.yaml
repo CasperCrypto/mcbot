@@ -49,6 +49,7 @@ platform_toolsets:
     - clarify
     - delegation
     - cronjob
+    - kanban
     - computer_use
     - connections
 video_gen:

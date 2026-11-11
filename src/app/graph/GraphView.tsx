@@ -3,6 +3,7 @@ import {
   Background,
   BackgroundVariant,
   ConnectionMode,
+  MarkerType,
   Controls,
   ReactFlow,
   ReactFlowProvider,
@@ -30,7 +31,7 @@ import { Inspector } from "./Inspector";
 import { MakerIcon, makerService, nodeTypes, type FlowNode } from "./nodes";
 import { freeSpot } from "./place";
 
-const PAIRS = new Set(["agent:model", "model:agent", "agent:tool", "tool:agent", "agent:media", "media:agent", "agent:channel", "channel:agent"]);
+const PAIRS = new Set(["agent:model", "model:agent", "agent:tool", "tool:agent", "agent:media", "media:agent", "agent:channel", "channel:agent", "agent:agent"]);
 const MAKER_TOOLS: Record<string, MediaData["media"]> = { image_generate: "image", video_generate: "video" };
 
 function DockItem({ tile, icon, label, onClick, testId }: { tile: string; icon: ReactNode; label: string; onClick: () => void; testId: string }) {
@@ -177,6 +178,8 @@ function Canvas() {
     const s = graph.nodes.find((n) => n.id === e.source);
     const t = graph.nodes.find((n) => n.id === e.target);
     if (!s || !t) return [];
+    // agent → agent: the source hands work to the target, as tasks.
+    if (s.kind === "agent" && t.kind === "agent" && s.id !== t.id) return [{ id: e.id, source: s.id, target: t.id, sourceHandle: "down", targetHandle: "up", className: "handoff", markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14 } }];
     const agent = s.kind === "agent" ? s : t.kind === "agent" ? t : null;
     const other = agent === s ? t : s;
     const running = agent ? latest.get(agent.id)?.status === "running" : false;
@@ -206,8 +209,10 @@ function Canvas() {
 
   const kindOf = useCallback((id: string | null) => graph.nodes.find((n) => n.id === id)?.kind, [graph]);
   const isValidConnection = useCallback((c: Connection | Edge) => {
-    if (!PAIRS.has(`${kindOf(c.source)}:${kindOf(c.target)}`)) return false;
-    return !graph.edges.some((e) => (e.source === c.source && e.target === c.target) || (e.source === c.target && e.target === c.source));
+    if (!PAIRS.has(`${kindOf(c.source)}:${kindOf(c.target)}`) || c.source === c.target) return false;
+    // Two agents may hand work both ways (two edges); anything else connects once.
+    const both = kindOf(c.source) === "agent" && kindOf(c.target) === "agent";
+    return !graph.edges.some((e) => (e.source === c.source && e.target === c.target) || (!both && e.source === c.target && e.target === c.source));
   }, [graph, kindOf]);
 
   const onConnect = useCallback((c: Connection) => {

@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
@@ -67,6 +67,7 @@ const http = {
   openFolder: (path: string) => call<FsRoot>("POST", "/api/fs/roots", { path }),
   closeFolder: (id: string) => call<{ ok: true }>("POST", "/api/fs/roots/close", { id }),
   list: (root: string, path: string) => call<FsListing>("GET", `/api/fs/list?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
+  writeFile: (root: string, path: string, text: string, baseSha256: string | null) => call<{ path: string; bytes: number; sha256: string }>("PUT", "/api/fs/write", { root, path, text, baseSha256 }),
   read: (root: string, path: string) => call<FsPreview>("GET", `/api/fs/read?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
   setup: () => call<SetupState>("GET", "/api/setup"),
   setupDetect: () => call<SetupDetect>("GET", "/api/setup/detect"),
@@ -80,6 +81,13 @@ const http = {
   restartGateway: () => call<HermesInfo>("POST", "/api/hermes/gateway/restart", {}),
   prepareHermes: () => call<HermesInfo>("POST", "/api/hermes/prepare", {}),
   diagnostics: () => call<Diagnostics>("GET", "/api/diagnostics"),
+  tasks: (boardId: string) => call<TasksView>("GET", `/api/tasks?boardId=${encodeURIComponent(boardId)}`),
+  task: (boardId: string, id: string) => call<TaskDetail>("GET", `/api/tasks/one?boardId=${encodeURIComponent(boardId)}&id=${encodeURIComponent(id)}`),
+  createTask: (boardId: string, t: { title: string; body: string; assignee: string | null; by: string; parents?: string[] }) => call<TaskView>("POST", "/api/tasks", { boardId, ...t }),
+  schedules: (boardId: string) => call<AgentSchedules[]>("GET", `/api/schedules?boardId=${encodeURIComponent(boardId)}`),
+  createSchedule: (boardId: string, s: { profile: string; when: string; prompt: string; name: string }) => call<AgentSchedules>("POST", "/api/schedules", { boardId, ...s }),
+  actOnSchedule: (boardId: string, profile: string, id: string, action: "pause" | "resume" | "run" | "remove") => call<AgentSchedules>("POST", "/api/schedules/act", { boardId, profile, id, action }),
+  actOnTask: (boardId: string, id: string, by: string, a: TaskAction) => call<TaskDetail>("POST", "/api/tasks/act", { boardId, id, by, ...a }),
 };
 
 export const engine: typeof http = DEMO ? demoEngine : http;

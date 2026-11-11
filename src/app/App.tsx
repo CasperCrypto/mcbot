@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect, useMemo } from "react";
+import type { AgentNode } from "../contracts/graph";
 import { compileBoard, refreshDrift } from "./actions";
 import { GraphView } from "./graph/GraphView";
 import { engine, subscribeRunEvents } from "./lib/engine";
@@ -10,17 +11,30 @@ import { Rail } from "./shell/Rail";
 import { SetupAssistant } from "./setup/SetupAssistant";
 import { BrandMark, TitleBar } from "./shell/TitleBar";
 import { BoardProvider, useBoard } from "./state/board";
+import { useSignals } from "./state/signals";
 import { useApp } from "./state/store";
+import { useTasks } from "./views/TasksView";
 import { AgentsView } from "./views/AgentsView";
 import { CostView } from "./views/CostView";
 import { FilesView } from "./views/FilesView";
+import { HomeView } from "./views/HomeView";
 import { MemoryView } from "./views/MemoryView";
 import { RunsView } from "./views/RunsView";
+import { TasksView } from "./views/TasksView";
 import { TeamView } from "./views/TeamView";
 
+/** Monaco and xterm are big: the Code view loads on first use. */
+const CodeView = lazy(() => import("./workbench/CodeView"));
+function CodeTab() {
+  return <Suspense fallback={<section className="main flush-left" />}><CodeView /></Suspense>;
+}
+
 const VIEW_COMPONENTS = {
+  home: HomeView,
   graph: GraphView,
   agents: AgentsView,
+  tasks: TasksView,
+  code: CodeTab,
   workflows: RunsView,
   memory: MemoryView,
   files: FilesView,
@@ -31,6 +45,11 @@ const VIEW_COMPONENTS = {
 function BoardEffects() {
   const { boardId, graph } = useBoard();
   const loadRuns = useApp((s) => s.loadRuns);
+  const runs = useApp((s) => s.runs);
+  const drift = useApp((s) => s.drift);
+  const { tasks } = useTasks(boardId, 5000);
+  const agents = useMemo(() => graph.nodes.filter((n): n is AgentNode => n.kind === "agent"), [graph]);
+  useSignals(tasks, runs, drift, agents);
 
   useEffect(() => {
     engine.runs(boardId).then(loadRuns).catch(() => undefined);
@@ -50,10 +69,11 @@ function BoardEffects() {
       if (k === "k") {
         e.preventDefault();
         app.setPalette(!app.paletteOpen);
-      } else if (k === "s") {
+      } else if (k === "s" && app.tab !== "code") {
+        // In Code, ⌘S saves the file (workbench/CodeView.tsx).
         e.preventDefault();
         void compileBoard(boardId);
-      } else if (/^[1-7]$/.test(k)) {
+      } else if (/^[1-9]$/.test(k) && VIEWS[Number(k) - 1]) {
         e.preventDefault();
         app.setTab(VIEWS[Number(k) - 1]!.tab);
       }

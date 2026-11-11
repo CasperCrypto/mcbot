@@ -3,7 +3,7 @@ import type { BoardInfo, CompileResponse, Health, SetupState } from "../../contr
 import { summarizeRun, type RunEvent, type RunSummary } from "../../contracts/run";
 import { loadIdentity, saveIdentity, type Identity } from "../lib/identity";
 
-export type Tab = "graph" | "agents" | "workflows" | "memory" | "files" | "cost" | "team";
+export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "workflows" | "memory" | "files" | "cost" | "team";
 
 export interface Toast {
   id: number;
@@ -36,6 +36,8 @@ interface State {
   reportOpen: boolean;
   /** The agent whose thread is open in Agents. */
   chatAgentId: string | null;
+  /** The task open in Tasks, or "new" for the new-task form. */
+  openTask: string | null;
   /** First-launch setup: null until the engine answers. */
   setup: SetupState | null;
 
@@ -44,6 +46,7 @@ interface State {
   setHermesOpen(open: boolean): void;
   setReportOpen(open: boolean): void;
   openChat(agentNodeId: string | null): void;
+  showTask(id: string | null, tab?: boolean): void;
   setSetup(setup: SetupState | null): void;
   setBoard(id: string | null): void;
   setBoards(b: BoardInfo[]): void;
@@ -71,7 +74,7 @@ function savedBoard(): string | null {
 }
 
 export const useApp = create<State>((set, get) => ({
-  tab: "graph",
+  tab: "home",
   boardId: savedBoard(),
   boards: [],
   health: null,
@@ -96,6 +99,8 @@ export const useApp = create<State>((set, get) => ({
   reportOpen: false,
   setReportOpen: (reportOpen) => set({ reportOpen, paletteOpen: false }),
   openChat: (chatAgentId) => set({ chatAgentId, tab: "agents" }),
+  openTask: null,
+  showTask: (openTask, tab = true) => set(tab ? { openTask, tab: "tasks", paletteOpen: false } : { openTask }),
   setup: null,
   setSetup: (setup) => set({ setup }),
   setBoard: (boardId) => {
@@ -104,7 +109,7 @@ export const useApp = create<State>((set, get) => ({
     } catch {
       /* remembered for this session only */
     }
-    set({ boardId, selectedNodeId: null, selectedRunId: null, chatAgentId: null, compile: null, compileOpen: false, drift: null, events: {}, runs: {} });
+    set({ boardId, selectedNodeId: null, selectedRunId: null, chatAgentId: null, openTask: null, compile: null, compileOpen: false, drift: null, events: {}, runs: {} });
   },
   setBoards: (boards) => set({ boards }),
   setHealth: (health, engineUp) => set({ health, engineUp }),

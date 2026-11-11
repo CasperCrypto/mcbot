@@ -11,6 +11,21 @@ const tool = (id: string, name: string, extra: object = {}) => ({ id, kind: "too
 const graph = (nodes: object[], edges: object[] = []) => ({ schema: GRAPH_SCHEMA, id: "g", name: "G", nodes, edges });
 const messages = (g: object) => resolveGraph(g).issues.map((i) => `${i.level}: ${i.message}`);
 
+describe("hand-off edges (agent → agent)", () => {
+  const team = (edges: object[]) => resolveGraph(graph([agent("a", "lead"), agent("b", "writer"), agent("c", "editor"), model("m", "local")], [
+    { id: "m1", source: "m", target: "a" }, { id: "m2", source: "m", target: "b" }, { id: "m3", source: "m", target: "c" }, ...edges,
+  ]));
+  it("gives the source agent its team, by name, in either direction once", () => {
+    const r = team([{ id: "h1", source: "a", target: "c" }, { id: "h2", source: "a", target: "b" }, { id: "h3", source: "b", target: "a" }]);
+    expect(r.issues).toEqual([]);
+    expect(r.bundles.map((b) => [b.agent.data.name, b.team.map((t) => t.data.name)])).toEqual([["editor", []], ["lead", ["editor", "writer"]], ["writer", ["lead"]]]);
+  });
+  it("refuses an agent handing work to itself, or to the same agent twice", () => {
+    expect(team([{ id: "h1", source: "a", target: "a" }]).issues.map((i) => i.message)).toEqual(['agent "lead" cannot hand work to itself']);
+    expect(team([{ id: "h1", source: "a", target: "b" }, { id: "h2", source: "a", target: "b" }]).issues.map((i) => i.message)).toEqual(['agent "lead" hands work to agent "writer" twice']);
+  });
+});
+
 describe("resolveGraph", () => {
   it("accepts agent + model + tool", () => {
     const r = resolveGraph(graph([agent("a", "bot"), model("m", "local"), tool("t", "files")], [

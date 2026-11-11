@@ -63,6 +63,7 @@ export const seedGraph: Graph = {
     { id: "e-triage-files", source: "agent-triage", target: "tool-files", order: 0 },
     { id: "e-research-files", source: "agent-research", target: "tool-files", order: 0 },
     { id: "e-research-docs", source: "agent-research", target: "tool-docs", order: 0 },
+    { id: "e-triage-research", source: "agent-triage", target: "agent-research", order: 0 },
   ],
 };
 

@@ -65,7 +65,7 @@ export function compile(graphInput: unknown): CompileResult {
     dirs.add(dir);
     for (const d of PROFILE_DIRS) dirs.add(`${dir}/${d}`);
 
-    files.push(file(`${dir}/SOUL.md`, renderSoul(agent.data), "soul", agent.id));
+    files.push(file(`${dir}/SOUL.md`, renderSoul(agent.data, bundle.team.map((t) => t.data)), "soul", agent.id));
     files.push(file(`${dir}/config.yaml`, renderConfig(graph, bundle), "config", agent.id));
     const meta = renderProfileMeta(agent.data);
     if (meta !== null) files.push(file(`${dir}/profile.yaml`, meta, "profile-meta", agent.id));

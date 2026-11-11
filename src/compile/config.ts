@@ -55,14 +55,17 @@ export function mcpServerEntry(tool: ToolData): Record<string, unknown> {
 /**
  * The tool sets to pin in `platform_toolsets.cli`, or null to leave Hermes'
  * default. A wired maker turns its tool set on: video_gen is off by default,
- * so a video maker alone already needs the list. Catalog order, no duplicates.
+ * so a video maker alone already needs the list. So does a hand-off edge: an
+ * agent gives teammates tasks with the kanban tools, which are off by default
+ * outside a dispatched task (tools/kanban_tools.py `_visible`). Catalog order, no duplicates.
  */
 export function compiledToolsets(bundle: AgentBundle): Capability[] | null {
   const base = bundle.agent.data.capabilities;
-  if (base === null && !bundle.video) return null;
+  if (base === null && !bundle.video && bundle.team.length === 0) return null;
   const on = new Set<Capability>(base ?? DEFAULT_CAPABILITIES);
   if (bundle.image) on.add("image_gen");
   if (bundle.video) on.add("video_gen");
+  if (bundle.team.length) on.add("kanban");
   return CAPABILITIES.map((c) => c.key).filter((k) => on.has(k));
 }
 

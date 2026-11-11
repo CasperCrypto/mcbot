@@ -10,11 +10,15 @@
 //! (`mcbot-engine`, built by scripts/build-engine.mjs) and Hermes inside the
 //! resources (`hermes/`). `tauri dev` runs the engine itself instead.
 
+mod terminal;
+
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
+use tauri::image::Image;
 use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::{AppHandle, Manager, RunEvent, Runtime, WebviewUrl, WebviewWindowBuilder};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{AppHandle, Manager, RunEvent, Runtime, WebviewUrl, WebviewWindowBuilder, Wry};
 
 /// The engine this app started, stopped when the app quits.
 struct Engine(Mutex<Option<Child>>);
@@ -43,6 +47,97 @@ fn start_engine<R: Runtime>(app: &AppHandle<R>) -> Result<Option<Child>, String>
         cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW: no console window
     }
     cmd.spawn().map(Some).map_err(|e| format!("{}: {e}", engine.display()))
+}
+
+/// The menu bar icon's "needs you" line, updated by the windows (`set_attention`).
+struct Attention(Mutex<Option<MenuItem<Wry>>>);
+
+/// Bring a McBot window to the front, opening one if every window was closed.
+fn show<R: Runtime>(app: &AppHandle<R>) {
+    match app.webview_windows().into_values().next() {
+        Some(w) => {
+            let _ = w.unminimize();
+            let _ = w.show();
+            let _ = w.set_focus();
+        }
+        None => {
+            if let Err(err) = new_window(app) {
+                eprintln!("mcbot: could not open a window: {err}");
+            }
+        }
+    }
+}
+
+/// The menu bar icon (macOS menu bar, Windows and Linux tray): open McBot, what needs you, quit.
+fn tray(app: &AppHandle<Wry>) -> tauri::Result<()> {
+    let attention = MenuItem::with_id(app, "attention", "Nothing needs you", false, None::<&str>)?;
+    let menu = Menu::with_items(
+        app,
+        &[
+            &MenuItem::with_id(app, "open", "Open McBot", true, None::<&str>)?,
+            &attention,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "new-window", "New Window", true, None::<&str>)?,
+            &PredefinedMenuItem::quit(app, Some("Quit McBot"))?,
+        ],
+    )?;
+    *app.state::<Attention>().0.lock().unwrap() = Some(attention);
+    TrayIconBuilder::with_id("mcbot")
+        .icon(Image::from_bytes(include_bytes!("../icons/tray.png"))?)
+        .icon_as_template(true)
+        .tooltip("McBot")
+        .menu(&menu)
+        .show_menu_on_left_click(cfg!(target_os = "macos"))
+        .on_tray_icon_event(|icon, event| {
+            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
+                if !cfg!(target_os = "macos") {
+                    show(icon.app_handle());
+                }
+            }
+        })
+        .build(app)?;
+    Ok(())
+}
+
+/// A window reports how many things need the person (Home's "Needs you"): shown next to the
+/// menu bar icon on macOS, and as the tray menu's second line everywhere.
+#[tauri::command]
+fn set_attention(app: AppHandle<Wry>, count: u32) {
+    let text = match count {
+        0 => "Nothing needs you".to_string(),
+        1 => "1 thing needs you".to_string(),
+        n => format!("{n} things need you"),
+    };
+    if let Some(item) = app.state::<Attention>().0.lock().unwrap().as_ref() {
+        let _ = item.set_text(&text);
+    }
+    if let Some(icon) = app.tray_by_id("mcbot") {
+        let _ = icon.set_tooltip(Some(&text));
+        #[cfg(target_os = "macos")]
+        let _ = icon.set_title(if count > 0 { Some(count.to_string()) } else { None });
+    }
+}
+
+/// The workbench's browser: one McBot window showing a web page (what an agent built on
+/// localhost, a report, any https site), reused for the next page. http(s) only. The page gets
+/// no access to McBot (the window's capabilities list only McBot's own windows).
+#[tauri::command]
+fn browser_open(app: AppHandle<Wry>, url: String) -> Result<(), String> {
+    let parsed: tauri::Url = url.parse().map_err(|_| format!("{url} is not a web address"))?;
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return Err("Only http and https pages open here".into());
+    }
+    if let Some(w) = app.get_webview_window("browser") {
+        w.navigate(parsed).map_err(|e| e.to_string())?;
+        let _ = w.show();
+        return w.set_focus().map_err(|e| e.to_string());
+    }
+    WebviewWindowBuilder::new(&app, "browser", WebviewUrl::External(parsed))
+        .title("McBot Browser")
+        .inner_size(1200.0, 820.0)
+        .build()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
 }
 
 static WINDOWS: AtomicUsize = AtomicUsize::new(1);
@@ -105,7 +200,18 @@ fn menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
 pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(Engine(Mutex::new(None)))
+        .manage(Attention(Mutex::new(None)))
+        .manage(terminal::Terminals::default())
+        .invoke_handler(tauri::generate_handler![
+            set_attention,
+            browser_open,
+            terminal::terminal_open,
+            terminal::terminal_write,
+            terminal::terminal_resize,
+            terminal::terminal_close
+        ])
         .setup(|app| {
             let handle = app.handle();
             match start_engine(handle) {
@@ -113,22 +219,28 @@ pub fn run() {
                 Err(err) => eprintln!("mcbot: could not start the engine: {err}"),
             }
             handle.set_menu(menu(handle)?)?;
+            if let Err(err) = tray(handle) {
+                eprintln!("mcbot: no menu bar icon: {err}");
+            }
             if let Some(main) = app.get_webview_window("main") {
                 main.set_focus()?;
             }
             Ok(())
         })
-        .on_menu_event(|app, event| {
-            if event.id() == "new-window" {
+        .on_menu_event(|app, event| match event.id().as_ref() {
+            "new-window" => {
                 if let Err(err) = new_window(app) {
                     eprintln!("mcbot: could not open a window: {err}");
                 }
             }
+            "open" => show(app),
+            _ => {}
         })
         .build(tauri::generate_context!())
         .expect("error while building McBot");
     app.run(|app, event| {
         if let RunEvent::Exit = event {
+            app.state::<terminal::Terminals>().close_all();
             if let Some(mut child) = app.state::<Engine>().0.lock().unwrap().take() {
                 let _ = child.kill();
                 let _ = child.wait();

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -57,6 +57,24 @@ describe("folder browsing", () => {
     const { body: root } = await api<FsRoot>("/api/fs/roots", { path: outside });
     expect((await api(`/api/fs/list?root=${root.id}&path=../`)).status).toBe(400);
     expect((await api(`/api/fs/read?root=${root.id}&path=${encodeURIComponent("../../etc/passwd")}`)).status).toBe(400);
+  });
+
+  it("saves an edited file only over what the editor read, and never a key file or outside the folder", async () => {
+    const { body: root } = await api<FsRoot>("/api/fs/roots", { path: outside });
+    const put = async (body: unknown) => {
+      const res = await fetch(`${engine.url}/api/fs/write`, { method: "PUT", headers: { origin: ORIGIN, "content-type": "application/json" }, body: JSON.stringify(body) });
+      return { status: res.status, body: (await res.json()) as { sha256?: string; error?: string } };
+    };
+    const read = (await api<FsPreview>(`/api/fs/read?root=${root.id}&path=src/index.ts`)).body;
+    expect(read.sha256).toMatch(/^[0-9a-f]{64}$/);
+    const saved = await put({ root: root.id, path: "src/index.ts", text: "export const b = 2;\n", baseSha256: read.sha256 });
+    expect(saved.status).toBe(200);
+    expect(readFileSync(join(outside, "src/index.ts"), "utf8")).toBe("export const b = 2;\n");
+    // Someone (an agent) changed it after the editor read it: refused, nothing lost.
+    expect((await put({ root: root.id, path: "src/index.ts", text: "x", baseSha256: read.sha256 })).status).toBe(409);
+    expect((await put({ root: root.id, path: "new.md", text: "# New\n", baseSha256: null })).status).toBe(200);
+    expect((await put({ root: root.id, path: ".env", text: "KEY=1", baseSha256: null })).status).toBe(403);
+    expect((await put({ root: root.id, path: "../escape.txt", text: "x", baseSha256: null })).status).toBe(400);
   });
 
   it("forgets a closed folder", async () => {
