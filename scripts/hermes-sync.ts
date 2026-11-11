@@ -60,7 +60,8 @@ function init(repo: string) {
 
 function update(repo: string, ref: string) {
   const { commit: base } = JSON.parse(readFileSync(RECORD, "utf8")) as { commit: string };
-  const next = git(repo, "rev-parse", ref).toString().trim();
+  // ^{commit}: a release tag names a tag object; UPSTREAM.json records the commit it points to.
+  const next = git(repo, "rev-parse", `${ref}^{commit}`).toString().trim();
   if (next === base) return console.log("hermes/ is already at", base.slice(0, 12));
   const tmp = join(tmpdir(), `hermes-sync-${process.pid}`);
   mkdirSync(tmp, { recursive: true });

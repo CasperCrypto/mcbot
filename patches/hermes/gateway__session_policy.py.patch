@@ -1,6 +1,6 @@
 --- a/hermes/gateway/session_policy.py
 +++ b/hermes/gateway/session_policy.py
-@@ -82,14 +82,16 @@
+@@ -83,14 +83,16 @@
  # Creation label -> agent surface. ``tool`` (third-party integrations, ``hermes chat --source tool``) and
  # ``oneshot`` (finite ``chat -q`` / ``-z`` runs) run as the CLI but keep their own stored label, so human
  # pickers hide them (INTERNAL_LISTING_SOURCES).

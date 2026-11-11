@@ -1,6 +1,6 @@
 --- a/hermes/agent/managed_worker.py
 +++ b/hermes/agent/managed_worker.py
-@@ -368,7 +368,7 @@
+@@ -369,7 +369,7 @@
                  enabled_toolsets=list(policy.toolsets), max_iterations=policy.max_turns,
                  reasoning_config=policy.reasoning_config,
                  # ``tool`` / ``oneshot`` are storage labels for a CLI-surface agent (session_policy.SURFACES).

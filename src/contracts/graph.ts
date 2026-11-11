@@ -79,8 +79,8 @@ export const CapabilitySchema = z.enum(CAPABILITIES.map((c) => c.key) as [Capabi
 
 /**
  * What Hermes gives the `cli` surface when platform_toolsets.cli is unset:
- * `_get_platform_tools({}, "cli")` in hermes/ at 1e208b280deb. Video and the
- * task board are opt-in (tools_config.py _DEFAULT_OFF_TOOLSETS).
+ * `_get_platform_tools({}, "cli")` in hermes/ at v0.23.1 (3b4215785882), checked again on
+ * every engine sync. Video and the task board are opt-in (tools_config.py _DEFAULT_OFF_TOOLSETS).
  */
 export const DEFAULT_CAPABILITIES: readonly Capability[] = [
   "web", "browser", "file", "terminal", "code_execution", "vision", "image_gen", "tts", "memory",

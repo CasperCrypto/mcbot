@@ -1,6 +1,6 @@
 --- a/hermes/hermes_state_sessions.py
 +++ b/hermes/hermes_state_sessions.py
-@@ -238,7 +238,7 @@
+@@ -240,7 +240,7 @@
  # Sessions that are not human conversations (kanban workers, third-party tool integrations, finite one-shot
  # runs): every human picker — TUI/Desktop session lists, ``/sessions`` in the CLI, ``sessions list`` in the
  # console — excludes them. A deny-list, so new interactive platforms surface automatically.
