@@ -34,6 +34,12 @@ interface State {
   hermesOpen: boolean;
   /** Report a problem. */
   reportOpen: boolean;
+  /** The New agent sheet. */
+  newAgentOpen: boolean;
+  /** The tool catalog. */
+  catalogOpen: boolean;
+  /** A sticky note this window just made: it opens ready to type. */
+  freshNote: string | null;
   /** The agent whose thread is open in Agents. */
   chatAgentId: string | null;
   /** The task open in Tasks, or "new" for the new-task form. */
@@ -45,6 +51,9 @@ interface State {
   setPalette(open: boolean): void;
   setHermesOpen(open: boolean): void;
   setReportOpen(open: boolean): void;
+  setNewAgentOpen(open: boolean): void;
+  setCatalogOpen(open: boolean): void;
+  setFreshNote(id: string | null): void;
   openChat(agentNodeId: string | null): void;
   showTask(id: string | null, tab?: boolean): void;
   setSetup(setup: SetupState | null): void;
@@ -98,6 +107,12 @@ export const useApp = create<State>((set, get) => ({
   setHermesOpen: (hermesOpen) => set({ hermesOpen, paletteOpen: false }),
   reportOpen: false,
   setReportOpen: (reportOpen) => set({ reportOpen, paletteOpen: false }),
+  newAgentOpen: false,
+  setNewAgentOpen: (newAgentOpen) => set({ newAgentOpen, paletteOpen: false }),
+  catalogOpen: false,
+  freshNote: null,
+  setFreshNote: (freshNote) => set({ freshNote }),
+  setCatalogOpen: (catalogOpen) => set({ catalogOpen, paletteOpen: false }),
   openChat: (chatAgentId) => set({ chatAgentId, tab: "agents" }),
   openTask: null,
   showTask: (openTask, tab = true) => set(tab ? { openTask, tab: "tasks", paletteOpen: false } : { openTask }),

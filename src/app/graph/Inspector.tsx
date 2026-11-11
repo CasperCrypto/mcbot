@@ -360,8 +360,11 @@ const parsePairs = (text: string, sep: "=" | ":") =>
 
 function ToolFields({ data, set }: { data: ToolData; set: (f: string, v: unknown) => void }) {
   const errors = fieldErrors(ToolDataSchema, data);
+  // Keys it reads as ${env:NAME}: saved in McBot, written to the agent's .env before each run.
+  const keys = [...new Set([...Object.values(data.env), ...Object.values(data.headers)].flatMap((v) => [...v.matchAll(/\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g)].map((m) => m[1]!)))];
   return (
     <>
+      {keys.map((k) => <KeyField key={k} name={k} label={keys.length > 1 ? k : "API key"} />)}
       <Segmented value={data.transport} onChange={(v) => set("transport", v)} options={[{ value: "stdio", label: "Local" }, { value: "http", label: "Remote" }]} />
       <Field label="Key" value={data.name} onChange={(v) => set("name", v)} mono error={errors.name} />
       {data.transport === "stdio" ? (

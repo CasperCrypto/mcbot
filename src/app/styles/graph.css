@@ -161,3 +161,4 @@
 .ability[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--text); }
 .ability:disabled { cursor: default; opacity: 0.8; }
 .ability:focus-visible { outline: none; box-shadow: var(--focus); }
+.tile.note { background: var(--note-yellow); color: var(--note-ink); }

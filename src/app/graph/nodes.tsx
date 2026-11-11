@@ -1,4 +1,6 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
+import type { Note } from "../../contracts/graph";
+import { StickyNote } from "../notes/StickyNote";
 import { Clapperboard, Cloud, HardDrive, Image, Plug, Send, Server } from "lucide-react";
 import { memo } from "react";
 import { CHANNEL_PLATFORMS, MEDIA_PROVIDERS, type AgentData, type ChannelData, type GraphNode, type MediaData, type ModelData, type ToolData } from "../../contracts/graph";
@@ -141,4 +143,9 @@ export const ChannelNodeView = memo(function ChannelNodeView({ data }: NodeProps
   );
 });
 
-export const nodeTypes = { agent: AgentNodeView, model: ModelNodeView, tool: ToolNodeView, media: MediaNodeView, channel: ChannelNodeView };
+/** A sticky note on the canvas (not part of the harness: never compiled). */
+export const NoteNodeView = memo(function NoteNodeView({ data }: NodeProps<Node<{ note: Note }>>) {
+  return <StickyNote note={data.note} canvas />;
+});
+
+export const nodeTypes = { note: NoteNodeView, agent: AgentNodeView, model: ModelNodeView, tool: ToolNodeView, media: MediaNodeView, channel: ChannelNodeView };

@@ -6,6 +6,8 @@ import { engine, subscribeRunEvents } from "./lib/engine";
 import { Boundary } from "./shell/Boundary";
 import { HermesSheet } from "./shell/HermesSheet";
 import { ReportSheet } from "./shell/ReportSheet";
+import { NewAgentSheet } from "./shell/NewAgentSheet";
+import { ToolCatalog } from "./shell/ToolCatalog";
 import { Palette, VIEWS } from "./shell/Palette";
 import { Rail } from "./shell/Rail";
 import { SetupAssistant } from "./setup/SetupAssistant";
@@ -106,6 +108,12 @@ function Shell() {
       </Boundary>
       <Boundary>
         <ReportSheet />
+      </Boundary>
+      <Boundary>
+        <NewAgentSheet />
+      </Boundary>
+      <Boundary>
+        <ToolCatalog />
       </Boundary>
       <BoardEffects />
     </>

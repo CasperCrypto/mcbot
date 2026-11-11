@@ -14,9 +14,9 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Bot, Clapperboard, Cloud, Command, FolderOpen, HardDrive, Image, Plug, Plus, Send, Server } from "lucide-react";
+import { Bot, StickyNote as NoteIcon, Clapperboard, Cloud, Command, FolderOpen, HardDrive, Image, Plug, Plus, Send, Server } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { addEdge, addNode, moveNode, removeEdges, removeNodes } from "../../board/ydoc";
+import { addEdge, addNode, addNote, moveNode, removeEdges, removeNodes, setNoteField } from "../../board/ydoc";
 import { resolveGraph } from "../../compile";
 import type { GraphNode, MediaData, ModelData, ToolData } from "../../contracts/graph";
 import { Sidebar, SidebarGroup } from "../shell/Sidebar";
@@ -26,7 +26,7 @@ import { latestRunByAgent, toolActivity, useApp } from "../state/store";
 import { AgentFace } from "../ui";
 import { CompileSheet } from "./CompileSheet";
 import { Cursors } from "./Cursors";
-import { newAgent, newChannel, newId, newMaker, newModel, newTool } from "./defaults";
+import { newChannel, newId, newMaker, newModel, newTool } from "./defaults";
 import { Inspector } from "./Inspector";
 import { MakerIcon, makerService, nodeTypes, type FlowNode } from "./nodes";
 import { freeSpot } from "./place";
@@ -148,7 +148,13 @@ function Canvas() {
   useEffect(() => {
     setRfNodes((prev) => {
       const old = new Map(prev.map((n) => [n.id, n]));
-      return graph.nodes.map((n): FlowNode => {
+      // Sticky notes ride along as their own node type, id "note:<id>".
+      const notes = (graph.notes ?? []).map((n) => {
+        const id = `note:${n.id}`;
+        const p = old.get(id);
+        return { id, type: "note", position: p?.dragging ? p.position : n.position, dragging: p?.dragging, measured: p?.measured, zIndex: -1, data: { note: n } } as unknown as FlowNode;
+      });
+      return [...notes, ...graph.nodes.map((n): FlowNode => {
         const p = old.get(n.id);
         const bundle = resolved.bundles.find((b) => b.agent.id === n.id);
         const run = n.kind === "agent" ? latest.get(n.id) ?? null : null;
@@ -170,7 +176,7 @@ function Canvas() {
             errored: activity.errored.has(n.id),
           },
         };
-      });
+      })];
     });
   }, [graph, resolved, issuesByNode, latest, activity, compiledProfiles, peerOnNode, selectedNodeId]);
 
@@ -192,6 +198,12 @@ function Canvas() {
     setRfNodes((nds) => applyNodeChanges(changes, nds));
     const removed: string[] = [];
     for (const c of changes) {
+      const note = c.type !== "add" && c.id.startsWith("note:") ? c.id.slice(5) : null;
+      if (note) {
+        if (c.type === "position" && c.position) setNoteField(doc, note, "position", { x: Math.round(c.position.x), y: Math.round(c.position.y) });
+        // A note is deleted with its own button; Backspace in its text must not remove it.
+        continue;
+      }
       if (c.type === "position" && c.position) moveNode(doc, c.id, c.position);
       if (c.type === "remove") removed.push(c.id);
       if (c.type === "select" && c.selected) select(c.id);
@@ -239,7 +251,7 @@ function Canvas() {
       onMouseMove={(e) => setCursor(flow.screenToFlowPosition({ x: e.clientX, y: e.clientY }))}
       onMouseLeave={() => setCursor(null)}>
 
-      {graph.nodes.length === 0 && <Welcome onStart={() => add("agent", (p) => newAgent(graph, p))} />}
+      {graph.nodes.length === 0 && <Welcome onStart={() => useApp.getState().setNewAgentOpen(true)} />}
 
       <ReactFlow
         nodes={rfNodes}
@@ -266,18 +278,24 @@ function Canvas() {
       {graph.nodes.length > 0 && (
         <div className={`dock-wrap${selected ? " shifted" : ""}`}>
           <div className="dock glass" role="toolbar" aria-label="Add to the harness">
-            <DockItem tile="agent" icon={<Bot size={20} />} label="Agent" testId="add-agent" onClick={() => add("agent", (p) => newAgent(graph, p))} />
+            <DockItem tile="agent" icon={<Bot size={20} />} label="New agent" testId="add-agent" onClick={() => useApp.getState().setNewAgentOpen(true)} />
             <div className="dock-sep" />
             <DockItem tile="model" icon={<HardDrive size={19} />} label="Local model" testId="add-model-local" onClick={() => add("model", (p) => newModel(graph, "local", p))} />
             <DockItem tile="cloud" icon={<Cloud size={19} />} label="Cloud model" testId="add-model-cloud" onClick={() => add("model", (p) => newModel(graph, "cloud", p))} />
             <div className="dock-sep" />
             <DockItem tile="tool" icon={<FolderOpen size={19} />} label="Files tool" testId="add-tool-files" onClick={() => add("tool", (p) => newTool(graph, "filesystem", p, health?.workspace ?? null))} />
-            <DockItem tile="tool" icon={<Server size={19} />} label="MCP server" testId="add-tool" onClick={() => add("tool", (p) => newTool(graph, "stdio", p, null))} />
+            <DockItem tile="tool" icon={<Plug size={19} />} label="Add a tool" testId="add-tool" onClick={() => useApp.getState().setCatalogOpen(true)} />
             <div className="dock-sep" />
             <DockItem tile="media" icon={<Image size={19} />} label="Image maker" testId="add-maker-image" onClick={() => add("media", (p) => newMaker(graph, "image", p))} />
             <DockItem tile="media" icon={<Clapperboard size={19} />} label="Video maker" testId="add-maker-video" onClick={() => add("media", (p) => newMaker(graph, "video", p))} />
             <DockItem tile="channel" icon={<Send size={18} />} label="Telegram" testId="add-telegram" onClick={() => add("channel", (p) => newChannel(graph, "telegram", p))} />
             <div className="dock-sep" />
+            <DockItem tile="note" icon={<NoteIcon size={19} />} label="Sticky note" testId="add-note" onClick={() => {
+              const at = center();
+              const id = newId("note");
+              addNote(doc, { id, text: "", color: "yellow", position: { x: Math.round(at.x - 110), y: Math.round(at.y - 75) }, pinned: false, author: useApp.getState().identity.name, at: Date.now() });
+              useApp.getState().setFreshNote(id);
+            }} />
             <DockItem tile="file" icon={<Command size={19} />} label="Commands ⌘K" testId="dock-palette" onClick={() => setPalette(true)} />
           </div>
         </div>

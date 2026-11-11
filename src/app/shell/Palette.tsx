@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
 import type { GraphNode } from "../../contracts/graph";
 import { compileBoard, exportBoardFile, importBoardFile } from "../actions";
-import { newAgent, newChannel, newId, newModel, newTool, newVault } from "../graph/defaults";
+import { newChannel, newId, newModel, newTool, newVault } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { resetDemo } from "../demo/engine";
 import { DEMO, engine } from "../lib/engine";
@@ -31,7 +31,7 @@ export const VIEWS: { tab: Tab; label: string; icon: ReactNode }[] = [
   { tab: "agents", label: "Agents", icon: <MessagesSquare size={15} /> },
   { tab: "tasks", label: "Tasks", icon: <ListChecks size={15} /> },
   { tab: "code", label: "Code", icon: <Code2 size={15} /> },
-  { tab: "workflows", label: "Runs", icon: <Workflow size={15} /> },
+  { tab: "workflows", label: "Activity", icon: <Workflow size={15} /> },
   { tab: "memory", label: "Memory", icon: <Brain size={15} /> },
   { tab: "files", label: "Files", icon: <FolderOpen size={15} /> },
   { tab: "cost", label: "Cost", icon: <ChartColumnBig size={15} /> },
@@ -50,11 +50,12 @@ function useCommands(close: () => void): Command[] {
     };
     const at = (kind: GraphNode["kind"]) => freeSpot(graph, kind, null, app.selectedNodeId);
     const cmds: Command[] = [
-      { id: "add-agent", group: "Create", label: "Agent", icon: <Bot size={15} />, run: () => place(newAgent(graph, at("agent"))) },
+      { id: "add-agent", group: "Create", label: "Agent", hint: "Name it, say what it does", icon: <Bot size={15} />, run: () => app.setNewAgentOpen(true) },
       { id: "add-task", group: "Create", label: "Task", hint: "Give an agent something to do", icon: <ListChecks size={15} />, run: () => app.showTask("new") },
       { id: "add-local", group: "Create", label: "Local model", hint: "Ollama, LM Studio, vLLM…", icon: <HardDrive size={15} />, run: () => place(newModel(graph, "local", at("model"))) },
       { id: "add-cloud", group: "Create", label: "Cloud model", hint: "Any OpenAI-compatible API", icon: <Cloud size={15} />, run: () => place(newModel(graph, "cloud", at("model"))) },
       { id: "add-files", group: "Create", label: "Files tool", icon: <Plug size={15} />, run: () => place(newTool(graph, "filesystem", at("tool"), app.health?.workspace ?? null)) },
+      { id: "add-tool-catalog", group: "Create", label: "Tool…", hint: "Browser, web search, Notion…", icon: <Plug size={15} />, run: () => app.setCatalogOpen(true) },
       { id: "add-mcp", group: "Create", label: "MCP server", icon: <Server size={15} />, run: () => place(newTool(graph, "stdio", at("tool"), null)) },
       { id: "add-telegram", group: "Create", label: "Telegram bot", hint: "Talk to an agent from Telegram", icon: <Send size={15} />, run: () => place(newChannel(graph, "telegram", at("channel"))) },
       {

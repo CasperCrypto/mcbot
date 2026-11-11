@@ -16,7 +16,7 @@ import * as syncProtocol from "y-protocols/sync";
 import type { WebSocket } from "ws";
 import * as Y from "yjs";
 import { z } from "zod";
-import { GRAPH_SCHEMA, emptyGraph, type Graph } from "../src/contracts/graph";
+import { GRAPH_SCHEMA, NoteSchema, emptyGraph, type Graph } from "../src/contracts/graph";
 import { graphFromDoc, loadGraphIntoDoc } from "../src/board/ydoc";
 import { atomicWrite, readTextOrNull } from "./fsutil";
 
@@ -36,6 +36,8 @@ export const LooseGraph = z.object({
   name: z.string().default(""),
   nodes: z.array(z.object({ id: z.string(), kind: z.string(), position: z.object({ x: z.number(), y: z.number() }), data: z.record(z.string(), z.unknown()) })),
   edges: z.array(z.object({ id: z.string(), source: z.string(), target: z.string(), order: z.number().default(0) })),
+  /** Sticky notes; a malformed one is dropped, never the board. */
+  notes: z.array(z.unknown()).optional().transform((list) => list?.flatMap((n) => { const r = NoteSchema.safeParse(n); return r.success ? [r.data] : []; })),
 });
 
 interface Room {

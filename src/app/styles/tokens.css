@@ -71,6 +71,16 @@
   --food-10: #c4865a;
   /* the McBot logo: the gray burger */
   --food-logo: #9d9da6;
+
+  /* sticky notes: soft paper colours, dark ink (they are paper, not UI chrome) */
+  --note-yellow: #f5e08a;
+  --note-green: #b9e4a6;
+  --note-blue: #a9d1f5;
+  --note-pink: #f5b5c8;
+  --note-purple: #cdb8f2;
+  --note-gray: #d8d8dc;
+  --note-ink: #1d1d1f;
+  --note-ink-2: rgba(29, 29, 31, 0.55);
   --food-tint: #ffffff;
   --food-eye: #ffffff;
   --food-eye-edge: rgba(0, 0, 0, 0.26);

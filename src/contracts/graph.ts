@@ -218,12 +218,34 @@ export const EdgeSchema = z.object({
 });
 export type GraphEdge = z.infer<typeof EdgeSchema>;
 
+/** Sticky-note colours: names, so each theme picks its own shade (tokens.css `--note-*`). */
+export const NOTE_COLORS = ["yellow", "green", "blue", "pink", "purple", "gray"] as const;
+
+/**
+ * A sticky note on the board: for the people, never compiled. Pinned notes also show on Home.
+ * Added to mcbot.graph/v1 additively: a board without notes is unchanged, and the compiler
+ * never reads them.
+ */
+export const NoteSchema = z.object({
+  id: z.string().min(1),
+  text: z.string().max(10_000).default(""),
+  color: z.enum(NOTE_COLORS).default("yellow"),
+  position: PositionSchema,
+  pinned: z.boolean().default(false),
+  /** Who wrote it, and when (Unix ms). */
+  author: z.string().max(64).default(""),
+  at: z.number().int().nonnegative().default(0),
+});
+export type Note = z.infer<typeof NoteSchema>;
+
 export const GraphSchema = z.object({
   schema: z.literal(GRAPH_SCHEMA),
   id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
   name: z.string().default(""),
   nodes: z.array(NodeSchema),
   edges: z.array(EdgeSchema),
+  /** Sticky notes (optional, never compiled). */
+  notes: z.array(NoteSchema).optional(),
 });
 export type Graph = z.infer<typeof GraphSchema>;
 
