@@ -23,3 +23,15 @@ export async function notify(title: string, body: string): Promise<void> {
   allowed ??= (await n.isPermissionGranted()) || (await n.requestPermission()) === "granted";
   if (allowed) n.sendNotification({ title, body: body.slice(0, 180) });
 }
+
+/** Show a web page in McBot's browser window (desktop), or a new tab (browser). http(s) only. */
+export async function openBrowser(url: string): Promise<void> {
+  const u = /^[a-z]+:\/\//i.test(url) ? url : `http://${url}`;
+  if (!/^https?:\/\//i.test(u)) throw new Error("Only http and https pages open here");
+  if (!inApp()) {
+    window.open(u, "_blank", "noopener,noreferrer");
+    return;
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("browser_open", { url: u });
+}

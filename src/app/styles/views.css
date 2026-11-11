@@ -167,3 +167,4 @@
 .terminal-host { position: absolute; inset: 8px 4px 4px 12px; }
 .terminal-ended { position: absolute; right: 12px; bottom: 10px; display: flex; align-items: center; gap: 10px; }
 .terminal-off { display: grid; place-items: center; height: 100%; }
+.code-url { width: 260px; height: 26px; padding: 0 10px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: var(--bg-input); outline: none; font-family: var(--mono); font-size: 11.5px; user-select: text; }

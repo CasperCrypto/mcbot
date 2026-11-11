@@ -118,6 +118,28 @@ fn set_attention(app: AppHandle<Wry>, count: u32) {
     }
 }
 
+/// The workbench's browser: one McBot window showing a web page (what an agent built on
+/// localhost, a report, any https site), reused for the next page. http(s) only. The page gets
+/// no access to McBot (the window's capabilities list only McBot's own windows).
+#[tauri::command]
+fn browser_open(app: AppHandle<Wry>, url: String) -> Result<(), String> {
+    let parsed: tauri::Url = url.parse().map_err(|_| format!("{url} is not a web address"))?;
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return Err("Only http and https pages open here".into());
+    }
+    if let Some(w) = app.get_webview_window("browser") {
+        w.navigate(parsed).map_err(|e| e.to_string())?;
+        let _ = w.show();
+        return w.set_focus().map_err(|e| e.to_string());
+    }
+    WebviewWindowBuilder::new(&app, "browser", WebviewUrl::External(parsed))
+        .title("McBot Browser")
+        .inner_size(1200.0, 820.0)
+        .build()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
 static WINDOWS: AtomicUsize = AtomicUsize::new(1);
 
 /// A new window on the same app URL; it joins the same live board.
@@ -184,6 +206,7 @@ pub fn run() {
         .manage(terminal::Terminals::default())
         .invoke_handler(tauri::generate_handler![
             set_attention,
+            browser_open,
             terminal::terminal_open,
             terminal::terminal_write,
             terminal::terminal_resize,

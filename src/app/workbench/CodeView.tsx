@@ -1,8 +1,9 @@
-import { ChevronDown, ChevronRight, File, FileLock, Folder, FolderPlus, PanelBottom, Save, Sparkles, X } from "lucide-react";
+import { ChevronDown, ChevronRight, File, FileLock, Folder, FolderPlus, Globe, PanelBottom, Save, Sparkles, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FsEntry, FsRoot } from "../../contracts/api";
 import type { AgentNode } from "../../contracts/graph";
 import { runAgent } from "../actions";
+import { openBrowser } from "../lib/desktop";
 import { engine } from "../lib/engine";
 import { Sidebar, SidebarGroup } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
@@ -64,6 +65,7 @@ export default function CodeView() {
   const [dirty, setDirty] = useState<Set<string>>(new Set());
   const [terminal, setTerminal] = useState(false);
   const [ask, setAsk] = useState("");
+  const [url, setUrl] = useState<string | null>(null);
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const agents = useMemo(() => graph.nodes.filter((n): n is AgentNode => n.kind === "agent"), [graph]);
@@ -232,6 +234,15 @@ export default function CodeView() {
           ))}
           <span className="grow" />
           {doc && !doc.readOnly && <button className="btn sm ghost" disabled={!dirty.has(doc.key)} onClick={() => void save()} data-tip="⌘S"><Save size={12} /> Save</button>}
+          {url !== null ? (
+            <input className="code-url" autoFocus value={url} onChange={(e) => setUrl(e.target.value)} aria-label="Web address" data-testid="browser-url"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setUrl(null);
+                if (e.key === "Enter" && url.trim()) void openBrowser(url.trim()).then(() => setUrl(null)).catch((err: unknown) => toast({ kind: "fail", text: String(err) }));
+              }} onBlur={() => setUrl(null)} />
+          ) : (
+            <button className="icon-btn sm" aria-label="Preview in the browser" data-tip="Preview a page: what an agent built, a report…" onClick={() => setUrl("http://localhost:3000")} data-testid="browser-open"><Globe size={14} /></button>
+          )}
           <button className="icon-btn sm" aria-pressed={terminal} aria-label="Terminal" data-tip="Terminal  ⌃`" onClick={() => setTerminal(!terminal)} data-testid="terminal-toggle"><PanelBottom size={14} /></button>
         </div>
         <div className={`code-body${terminal ? " with-terminal" : ""}`}>
