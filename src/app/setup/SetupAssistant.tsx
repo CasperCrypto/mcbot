@@ -6,6 +6,7 @@ import { ArrowLeft, Building2, Check, Cloud, Copy, HardDrive, LoaderCircle, Refr
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { LocalServer, SetupDetect, SetupKind, SetupProfile } from "../../contracts/api";
 import { engine } from "../lib/engine";
+import { openExternal } from "../lib/open";
 import { BrandMark } from "../shell/TitleBar";
 import { useApp } from "../state/store";
 import { AgentFace, Field, Segmented } from "../ui";
@@ -258,7 +259,7 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
               ) : detect.local.length === 0 ? (
                 <div className="setup-row muted">
                   <span className="grow">No local model found</span>
-                  <a className="btn sm" href="https://ollama.com/download" target="_blank" rel="noreferrer">Get Ollama</a>
+                  <a className="btn sm" href="https://ollama.com/download" target="_blank" rel="noreferrer" onClick={(e) => { e.preventDefault(); void openExternal("https://ollama.com/download"); }}>Get Ollama</a>
                 </div>
               ) : (
                 <div className="setup-models" role="radiogroup" aria-label="Local models">

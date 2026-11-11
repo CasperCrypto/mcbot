@@ -4,6 +4,7 @@ import { GraphView } from "./graph/GraphView";
 import { engine, subscribeRunEvents } from "./lib/engine";
 import { Boundary } from "./shell/Boundary";
 import { HermesSheet } from "./shell/HermesSheet";
+import { ReportSheet } from "./shell/ReportSheet";
 import { Palette, VIEWS } from "./shell/Palette";
 import { Rail } from "./shell/Rail";
 import { SetupAssistant } from "./setup/SetupAssistant";
@@ -82,6 +83,9 @@ function Shell() {
       </Boundary>
       <Boundary>
         <HermesSheet />
+      </Boundary>
+      <Boundary>
+        <ReportSheet />
       </Boundary>
       <BoardEffects />
     </>

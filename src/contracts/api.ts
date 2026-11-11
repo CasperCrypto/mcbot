@@ -33,6 +33,11 @@ export interface HermesInfo {
   setup: { state: "idle" | "running" | "done" | "failed"; lines: string[] };
 }
 
+/** "Report a problem": plain text the person copies into an issue; saved keys and the home folder hidden. */
+export interface Diagnostics {
+  text: string;
+}
+
 export interface BoardInfo {
   id: string;
   name: string;

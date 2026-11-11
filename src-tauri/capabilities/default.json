@@ -1,7 +1,10 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "McBot windows: core APIs only. The engine is reached over loopback HTTP/WebSocket, not IPC.",
+  "description": "McBot windows: core APIs, and opening https pages in the system browser (Report a problem, Get Ollama). The engine is reached over loopback HTTP/WebSocket, not IPC.",
   "windows": ["main", "board-*"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    { "identifier": "opener:allow-open-url", "allow": [{ "url": "https://*" }] }
+  ]
 }

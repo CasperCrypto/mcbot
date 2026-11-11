@@ -101,6 +101,9 @@
 
 /* ---------- Hermes sheet ---------- */
 .hermes-sheet { width: min(520px, calc(100vw - 32px)); }
+.report-sheet { width: min(640px, calc(100vw - 32px)); }
+.report-sheet textarea { display: block; width: calc(100% - 32px); height: min(320px, 44vh); margin: 14px 16px 0; padding: 12px; resize: none; border: 1px solid var(--line-2); border-radius: var(--r-md); background: var(--bg-input); color: var(--text-2); font-size: 11.5px; line-height: 1.55; white-space: pre; user-select: text; }
+.report-sheet footer { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 16px 16px; }
 .hermes-sheet header { display: flex; align-items: center; gap: 14px; padding: 18px 16px 14px 18px; border-bottom: 1px solid var(--line); }
 .hermes-sheet h2 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -0.015em; }
 .hermes-sheet header small { color: var(--text-3); font-size: 12.5px; }

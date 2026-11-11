@@ -12,7 +12,7 @@ import type { SessionRow } from "../../../engine/hermesData";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
-import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
+import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, Diagnostics, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import type { Graph } from "../../contracts/graph";
@@ -499,6 +499,18 @@ const api = <A extends unknown[], R>(f: (...a: A) => R | Promise<R>) => async (.
 export const demoEngine = {
   health: api((): Health => ({ ok: true, version: "0.1.0", workspace: WORKSPACE, hermesHome: ROOT, managedRoot: true, hermes: { found: true, path: "simulated in this browser", kind: "bundled" } })),
   hermes: api((): HermesInfo => demoHermes()),
+  diagnostics: api((): Diagnostics => ({
+    text: [
+      "McBot 0.1.0 · browser demo",
+      `System: ${navigator.userAgent}`,
+      "Engine: simulated in this browser",
+      `Boards: ${state.boards.length}`,
+      `Time: ${new Date().toISOString()}`,
+      "",
+      "No engine log: the browser demo simulates its runs.",
+      "",
+    ].join("\n"),
+  })),
   prepareHermes: api((): HermesInfo => demoHermes()),
   restartGateway: api(async (): Promise<HermesInfo> => {
     await sleep(600);

@@ -47,6 +47,7 @@ async function main(): Promise<void> {
     port,
     host: "127.0.0.1",
     allowedOrigins: [...DEFAULT_ORIGINS, ...(process.env.MCBOT_ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean)],
+    logFile: dataDir ? join(dataDir, "engine.log") : undefined,
   });
 
   if ((await engine.relay.list()).length === 0) await engine.relay.create("main", "My first harness");

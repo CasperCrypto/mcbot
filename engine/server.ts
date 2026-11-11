@@ -13,7 +13,8 @@ import { join } from "node:path";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { compile, resolveGraph, type AgentBundle } from "../src/compile";
-import type { AgentMemoryView, BoardInfo, CompileResponse, FsListing, FsPreview, FsRoot, Health, HermesInfo, SetupDetect, SetupState } from "../src/contracts/api";
+import type { AgentMemoryView, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, SetupDetect, SetupState } from "../src/contracts/api";
+import { diagnosticsText, osLine, redact, tail } from "./diagnostics";
 import type { Graph, ModelNode } from "../src/contracts/graph";
 import { buildCostReport } from "./cost";
 import { atomicWrite } from "./fsutil";
@@ -38,6 +39,8 @@ export interface EngineConfig {
   port: number;
   host: string;
   allowedOrigins: string[];
+  /** The installed app's engine log (the shell writes it), for "Report a problem"; absent in development. */
+  logFile?: string;
 }
 
 export const DEFAULT_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"];
@@ -136,6 +139,12 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     },
 
     "GET /api/boards": async (): Promise<BoardInfo[]> => relay.list(),
+    /** "Report a problem": version, system, engine state and the log's last lines, keys hidden. */
+    "GET /api/diagnostics": async (): Promise<Diagnostics> => {
+      const [hermes, boards, saved, log] = await Promise.all([hermesInfo(), relay.list(), secrets.env(), cfg.logFile ? tail(cfg.logFile) : Promise.resolve(null)]);
+      const text = diagnosticsText({ version: ENGINE_VERSION, os: osLine(), installed: hermes.installed, hermes, boards: boards.length, log, at: new Date() });
+      return { text: redact(text, Object.values(saved)) };
+    },
 
     // ---- the Hermes runtime ----
     "GET /api/hermes": async (): Promise<HermesInfo> => hermesInfo(),

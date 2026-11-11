@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
+import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
@@ -77,6 +77,7 @@ const http = {
   hermes: () => call<HermesInfo>("GET", "/api/hermes"),
   restartGateway: () => call<HermesInfo>("POST", "/api/hermes/gateway/restart", {}),
   prepareHermes: () => call<HermesInfo>("POST", "/api/hermes/prepare", {}),
+  diagnostics: () => call<Diagnostics>("GET", "/api/diagnostics"),
 };
 
 export const engine: typeof http = DEMO ? demoEngine : http;
