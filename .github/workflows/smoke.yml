@@ -1,0 +1,60 @@
+# The installed app's path on each platform, without its window: the engine as the one
+# executable the app ships, Hermes staged as the installer bundles it, the first-launch
+# preparation (minutes: Python, uv and the engine's tools are downloaded), then a real agent
+# run against the stub model. See scripts/smoke.mjs.
+#
+# Runs when the engine, Hermes or the build scripts change, weekly (the tools first launch
+# downloads can move under us), and by hand.
+name: Smoke
+
+on:
+  pull_request:
+    paths:
+      - "engine/**"
+      - "hermes/**"
+      - "src/compile/**"
+      - "src/contracts/**"
+      - "scripts/build-engine.mjs"
+      - "scripts/stage-hermes.mjs"
+      - "scripts/smoke.mjs"
+      - "test/stub-llm/**"
+      - "package-lock.json"
+      - ".github/workflows/smoke.yml"
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Engine executable
+        run: node scripts/build-engine.mjs --target ${{ matrix.target }}
+      - name: Hermes as the installer ships it
+        run: node scripts/stage-hermes.mjs
+      - name: First launch and a real run
+        run: node scripts/smoke.mjs
