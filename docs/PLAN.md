@@ -122,7 +122,7 @@ dependencies, review and "changes requested".
 - **Delegation** drawn in the run graph; **approval cards** answer Hermes'
   approvals from McBot; **schedules** (Hermes cron) on each agent.
 
-### 5. Workbench: terminal, code and browser ○ (M8)
+### 5. Workbench: terminal, code and browser ◐ (M8)
 
 Build things in McBot, next to the agents doing the work.
 
@@ -232,7 +232,7 @@ whether setup works.
 | **M5** ● | Setup assistant, key vault, local model detection, Hermes inside the app, unsigned installers | Someone downloads McBot, answers five questions and talks to a working agent within three minutes, without a terminal |
 | **M6** ◐ | Connections: abilities ●, image and video makers ●, Obsidian ●, keys through each profile's `.env` ●, Telegram ●; keychain ○, app catalog with sign-in ○, skill catalog ○, WhatsApp, Slack, Discord, email ○, chat-app conversations in McBot ○, context meter ○ | Connecting Gmail or Slack takes one screen, and an agent uses it |
 | **M7** ◐ | Command center and team work: Home (inbox, live, today, ask bar) ●, notifications and the menu bar icon ●; Tasks view on Hermes kanban ●; hand-off edges ●; schedules ●; queue ○; delegation in the run graph ○; approval cards ○; spaces ○ | A lead agent splits a goal into tasks for three agents, a person approves the result from the inbox, and a scheduled job runs while they watch Home |
-| **M8** ○ | Workbench: terminal panel, code editor with agent diffs, browser pane (watch, take over, browse, preview), resizable panes | An agent builds a small web page in a folder; you read its diff in the editor, run it in the terminal and see it in the browser pane, without leaving McBot |
+| **M8** ◐ | Workbench: terminal panel ●, code editor ● (agent diffs ○), browser: preview window ●, watch the agent's browser and take over ○, resizable panes ○ | An agent builds a small web page in a folder; you read its diff in the editor, run it in the terminal and see it in the browser pane, without leaving McBot |
 | **M9** ○ | Ask McBot (board copilot) and coding agents through ACP; running agents on a ChatGPT or Claude plan (decisions 1 and 4) | "Add a researcher that can search our docs" changes the board, and a Claude Code agent fixes a bug in the editor's folder |
 | **M10** ○ | Workflows (trigger, step, condition, approval) and Studio (gallery, posting after approval) | A weekly report runs itself and waits for a person's OK before it is sent |
 | **M11** ○ | Always on and launch: background gateway, launch at login, auto-update, signing (decision 2), crash reports, docs site | Agents keep their schedules with the window closed, and McBot updates itself |
