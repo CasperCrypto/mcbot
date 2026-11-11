@@ -35,8 +35,11 @@ install McBot, trust it and keep it up to date.
 2. **Install it on a real Mac and PC.** Download, open, setup assistant, engine
    preparation, first answer. Write down every snag and fix it.
 3. **A faster, sturdier first launch.** Preparing the engine takes minutes and
-   needs internet. Show honest progress, resume after a failure, explain offline
-   errors, and consider shipping the prepared runtime per platform.
+   needs internet. ● A run that starts during preparation waits for it instead
+   of setting the engine up a second time, and says so; the smoke test measures
+   it on macOS, Windows and Linux (here: prepared in 51 s, first answer in 12 s).
+   ○ Explain offline errors, start the gateway right after preparing (most of
+   the first answer's 12 s), and consider shipping the prepared runtime per platform.
 4. **Updates.** The Tauri updater, signed with an update key (the release logs
    say "Signature not found for the updater JSON"), and "Update available" in the app.
 5. **Signing (decision 2).** Apple Developer ID with notarization, and a Windows

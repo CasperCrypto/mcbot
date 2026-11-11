@@ -20,7 +20,7 @@ import type { Graph, ModelNode } from "../src/contracts/graph";
 import { buildCostReport } from "./cost";
 import { atomicWrite } from "./fsutil";
 import { FolderError, Folders } from "./folders";
-import { bundledHermes, bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, runHermesSetup, stopGateway } from "./hermes";
+import { bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, setupHome, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
 import { envEntriesFor, hasLiveChannel, resolveEntries, writeProfileKeys } from "./profileEnv";
 import { MediaError, mediaFile } from "./media";
@@ -176,10 +176,9 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
           if (setupJob.lines.length > 200) setupJob.lines.splice(0, setupJob.lines.length - 200);
         };
         void (async () => {
-          const ok = await runHermesSetup(src, cfg.hermesHome, push);
-          const bin = ok ? bundledHermes() : null;
-          const ready = bin && (await prepareHermes(bin, cfg.hermesHome, push));
-          setupJob.state = ready && ready.env?.PYTHONPATH ? "done" : "failed";
+          // A run that starts meanwhile waits for this preparation (engine/hermes.ts setupHome).
+          const ready = await setupHome(src, cfg.hermesHome, push);
+          setupJob.state = ready?.env?.PYTHONPATH ? "done" : "failed";
           push(setupJob.state === "done" ? "The engine is ready" : "The engine could not be prepared");
         })();
       }

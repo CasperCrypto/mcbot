@@ -8,7 +8,7 @@ how other people add modules.
 
 ## 1. Is Hermes integrated?
 
-Yes. McBot ships its own copy of Hermes (`hermes/`, upstream 1e208b280deb) and
+Yes. McBot ships its own copy of Hermes (`hermes/`, upstream v0.23.1) and
 runs every agent with it. In the installed app:
 
 1. The download contains the app shell, the engine (one executable) and Hermes.

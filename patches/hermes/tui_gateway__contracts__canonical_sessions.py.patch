@@ -1,6 +1,6 @@
 --- a/hermes/tui_gateway/contracts/canonical_sessions.py
 +++ b/hermes/tui_gateway/contracts/canonical_sessions.py
-@@ -20,7 +20,7 @@
+@@ -29,7 +29,7 @@
  
  class CanonicalCreateParams(ProfileParams):
      request_id: str | None = None

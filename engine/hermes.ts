@@ -59,9 +59,12 @@ function storePython(store: string): string | null {
  */
 export function bundledHermes(env: NodeJS.ProcessEnv = process.env): HermesBinary | null {
   const src = bundledSource(env);
-  const py = src && storePython(src.runtime);
-  if (!src || !py) return null;
-  return { path: py, shell: false, kind: "bundled", prefix: [join(src.dir, "hermes")], env: { HERMES_RUNTIME_DIR: src.runtime } };
+  return src && bundledFrom(src);
+}
+
+function bundledFrom(src: { dir: string; runtime: string }): HermesBinary | null {
+  const py = storePython(src.runtime);
+  return py ? { path: py, shell: false, kind: "bundled", prefix: [join(src.dir, "hermes")], env: { HERMES_RUNTIME_DIR: src.runtime } } : null;
 }
 
 /**
@@ -88,13 +91,25 @@ function composeEnv(bin: HermesBinary, dir: string, home: string): Promise<Recor
   });
 }
 
+/**
+ * The environment for Hermes' setup. On Windows it runs in Windows PowerShell (powershell.exe), which
+ * must find its own modules: started from PowerShell 7 (a pwsh terminal, CI), McBot inherits a
+ * PSModulePath of PowerShell 7's modules, and Windows PowerShell then cannot load Get-FileHash, which
+ * setup-hermes.ps1 needs. Without PSModulePath, Windows PowerShell uses its default.
+ */
+export function setupEnv(src: { runtime: string }, home: string, base: NodeJS.ProcessEnv = process.env, platform: string = process.platform): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...base, HERMES_RUNTIME_DIR: src.runtime, HERMES_HOME: home, PYTHONHOME: "", PYTHONPATH: "", VIRTUAL_ENV: "" };
+  if (platform === "win32") for (const k of Object.keys(env)) if (k.toLowerCase() === "psmodulepath") delete env[k];
+  return env;
+}
+
 /** Hermes' own setup (`setup-hermes.sh --runtime-only`, `setup-hermes.ps1 -RuntimeOnly` on Windows): tools into the store, dependencies for `home`. */
 export function runHermesSetup(src: { dir: string; runtime: string }, home: string, onLine: (line: string) => void = () => undefined): Promise<boolean> {
   const win = process.platform === "win32";
   const [file, args] = win
     ? ["powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", join(src.dir, "setup-hermes.ps1"), "-RuntimeOnly"]]
     : ["bash", [join(src.dir, "setup-hermes.sh"), "--runtime-only"]];
-  const env: NodeJS.ProcessEnv = { ...process.env, HERMES_RUNTIME_DIR: src.runtime, HERMES_HOME: home, PYTHONHOME: "", PYTHONPATH: "", VIRTUAL_ENV: "" };
+  const env = setupEnv(src, home);
   return new Promise((resolve) => {
     const child = spawn(file, args as string[], { cwd: src.dir, env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
     let tail = "";
@@ -115,7 +130,31 @@ export function runHermesSetup(src: { dir: string; runtime: string }, home: stri
   });
 }
 
+/**
+ * One preparation per Hermes home at a time. A run that starts while the home is being prepared
+ * (the setup assistant's Prepare, or another run) waits for that preparation instead of starting
+ * a second Hermes setup on the same home, which would only queue behind its install lock.
+ */
 const prepared = new Map<string, Promise<Record<string, string> | null>>();
+const preparing = new Set<string>();
+const homeKey = (src: { dir: string }, home: string) => `${src.dir}\0${home}`;
+
+function once(key: string, make: () => Promise<Record<string, string> | null>): Promise<Record<string, string> | null> {
+  let ready = prepared.get(key);
+  if (!ready) {
+    preparing.add(key);
+    ready = make().catch(() => null).finally(() => preparing.delete(key));
+    prepared.set(key, ready);
+    void ready.then((r) => { if (!r) prepared.delete(key); }); // try again next time
+  }
+  return ready;
+}
+
+const sourceOf = (bin: HermesBinary) => {
+  // bundledHermes(): prefix[0] is <dir>/hermes, the store is HERMES_RUNTIME_DIR.
+  const dir = dirname(bin.prefix![0]!);
+  return { dir, runtime: bin.env?.HERMES_RUNTIME_DIR ?? join(dir, ".hermes-runtime") };
+};
 
 /**
  * McBot's own Hermes, ready to launch for `home`: its environment composed once per home and
@@ -124,23 +163,34 @@ const prepared = new Map<string, Promise<Record<string, string> | null>>();
  */
 export async function prepareHermes(bin: HermesBinary, home: string, onLine?: (line: string) => void): Promise<HermesBinary> {
   if (bin.kind !== "bundled" || !bin.prefix?.[0]) return bin;
-  // bundledHermes(): prefix[0] is <dir>/hermes, the store is HERMES_RUNTIME_DIR.
-  const src = { dir: dirname(bin.prefix[0]), runtime: bin.env?.HERMES_RUNTIME_DIR ?? join(dirname(bin.prefix[0]), ".hermes-runtime") };
-  const key = `${bin.path}\0${src.dir}\0${home}`;
-  let ready = prepared.get(key);
-  if (!ready) {
-    ready = (async () => {
-      const env = await composeEnv(bin, src.dir, home);
-      if (env) return env;
-      onLine?.("Preparing Hermes for this home (first use)…");
-      if (!(await runHermesSetup(src, home, onLine))) return null;
-      return composeEnv(bin, src.dir, home);
-    })();
-    prepared.set(key, ready);
-    void ready.then((r) => { if (!r) prepared.delete(key); }); // try again next time
-  }
-  const env = await ready;
+  const src = sourceOf(bin);
+  const key = homeKey(src, home);
+  if (preparing.has(key)) onLine?.("Waiting for the engine to finish preparing…");
+  const env = await once(key, async () => {
+    const env = await composeEnv(bin, src.dir, home);
+    if (env) return env;
+    onLine?.("Preparing Hermes for this home (first use)…");
+    if (!(await runHermesSetup(src, home, onLine))) return null;
+    return composeEnv(bin, src.dir, home);
+  });
   return env ? { ...bin, env: { ...bin.env, ...env } } : bin;
+}
+
+/**
+ * First launch (POST /api/hermes/prepare): Hermes' setup for `home`, which also fills the tool
+ * store, then its environment. It always runs Hermes' setup, unless a preparation of this home is
+ * already under way, which it joins. Null when it failed.
+ */
+export async function setupHome(src: { dir: string; runtime: string }, home: string, onLine: (line: string) => void): Promise<HermesBinary | null> {
+  const key = homeKey(src, home);
+  if (!preparing.has(key)) prepared.delete(key);
+  const env = await once(key, async () => {
+    if (!(await runHermesSetup(src, home, onLine))) return null;
+    const bin = bundledFrom(src);
+    return bin && composeEnv(bin, src.dir, home);
+  });
+  const bin = bundledFrom(src);
+  return env && bin ? { ...bin, env: { ...bin.env, ...env } } : null;
 }
 
 /** How to start Hermes with `argv`, and the environment it needs. */

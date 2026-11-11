@@ -15,7 +15,7 @@ from types import SimpleNamespace
 import uuid
 
 from gateway.session_contract import (
-    CANONICAL_GATEWAY_PROTOCOL, AdmissionReceipt, PendingAdmission, Principal, SessionHandle, SessionRef, Submission,
+    CANONICAL_GATEWAY_PROTOCOL, AdmissionReceipt, PendingAdmission, SessionActor, SessionHandle, SessionRef, Submission,
     SubscriptionSnapshot,
 )
 from gateway.session_events import SessionEvents
@@ -691,7 +691,7 @@ class SessionAuthority:
                 results[sid] = exc.reason
         return results
 
-    async def submit(self, actor: Principal, request: Submission, *, _authorize_write=None, queue_while_restarting=False,
+    async def submit(self, actor: SessionActor, request: Submission, *, _authorize_write=None, queue_while_restarting=False,
                      _replay_guard=None, _kanban_card=None):
         """``queue_while_restarting``: the caller is an interactive client attached to a restart's
         after-turn wait, which commits the input queued for the next owner. Machine callers (a2a,
@@ -1276,13 +1276,16 @@ class SessionAuthority:
         from gateway.session_finite import execute_finite_admission
         from gateway.session_managed_worker import ManagedExecutionUnknown
         review = getattr(live.review, '_background_review_run', None)
-        if review is not None and not review.request_done.is_set():
-            # A cold /refine's review shares the session id, as the resident agent's does: cancel it
-            # before the turn (its bounded wait runs off-loop).
-            from agent.background_review import cancel_background_review_for_live_turn
-            await asyncio.to_thread(cancel_background_review_for_live_turn, live.review)
+        from gateway.session_open import settled
         try:
             try:
+                if review is not None and not review.request_done.is_set():
+                    # A cold /refine's review shares the session id, as the resident agent's does:
+                    # cancel it before the turn (its bounded wait runs off-loop). Inside the try: a
+                    # drain cancelled here must still clear the executing stamp.
+                    from agent.background_review import cancel_background_review_for_live_turn
+                    await asyncio.to_thread(cancel_background_review_for_live_turn, live.review)
+                await settled(ref)  # plugins see a session's open before its first turn
                 return await execute_finite_admission(self, ref, row), 'completed'
             finally:
                 with live.event_stream.lock:
