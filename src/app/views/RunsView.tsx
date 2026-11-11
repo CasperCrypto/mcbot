@@ -112,8 +112,8 @@ export function RunsView() {
 
   return (
     <>
-      <Sidebar title="Runs" testId="runs-sidebar">
-        {list.length === 0 && <div className="faint" style={{ padding: "8px 10px" }}>No runs yet.</div>}
+      <Sidebar title="Activity" testId="runs-sidebar">
+        {list.length === 0 && <div className="faint" style={{ padding: "8px 10px" }}>Nothing yet.</div>}
         {list.map((r) => (
           <button key={r.runId} className="list-row" aria-selected={run?.runId === r.runId} onClick={() => selectRun(r.runId)} style={{ alignItems: "flex-start" }} data-testid="run-row">
             <AgentFace seed={r.profile} size={30} status={r.status} />
@@ -125,7 +125,7 @@ export function RunsView() {
         ))}
       </Sidebar>
       <section className="main">
-        {!run ? <Empty title="No runs yet">Each run appears here, step by step.</Empty> : (
+        {!run ? <Empty title="Nothing yet">Every time an agent works, you see each step here: what it was asked, the tools it used, its answer and cost.</Empty> : (
           <div className="view">
             <div className="view-head">
               <AgentFace seed={run.profile} size={26} status={run.status} />

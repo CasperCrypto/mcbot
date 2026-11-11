@@ -1,4 +1,4 @@
-import { ArrowUp, Download, Plug, Square, Waypoints } from "lucide-react";
+import { ArrowUp, Download, Plug, Plus, Square, Waypoints } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode, ModelData } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
@@ -206,7 +206,7 @@ export function AgentsView() {
 
   return (
     <>
-      <Sidebar title="Agents" search={q} onSearch={setQ} testId="agents-sidebar">
+      <Sidebar title="Agents" search={q} onSearch={setQ} testId="agents-sidebar" action={<button className="icon-btn sm" aria-label="New agent" data-tip="New agent" onClick={() => useApp.getState().setNewAgentOpen(true)} data-testid="agents-new"><Plus size={14} /></button>}>
         {shown.map((a) => {
           const r = last.get(a.id);
           const preview = r ? (r.status === "running" ? "Working…" : (r.text || r.error || r.prompt).trim().split("\n")[0]) : a.data.description || "No messages yet";
@@ -226,7 +226,7 @@ export function AgentsView() {
       </Sidebar>
       <section className="main">
         {current ? <Thread key={current.id} agent={current} model={modelOf(current.id)} /> : (
-          <Empty title="No agents yet" action={<button className="btn light" onClick={() => setTab("graph")}><Waypoints size={14} /> Open graph</button>}>
+          <Empty title="No agents yet" action={<button className="btn light" onClick={() => useApp.getState().setNewAgentOpen(true)}><Plus size={14} /> New agent</button>}>
             Add an agent on the graph, compile, then talk to it here.
           </Empty>
         )}

@@ -9,14 +9,13 @@ import { ago, usd } from "../lib/format";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, Segmented } from "../ui";
+import { NOTE_COLORS, type Note } from "../../contracts/graph";
+import { addNote } from "../../board/ydoc";
+import { newId } from "../graph/defaults";
+import { StickyNote } from "../notes/StickyNote";
 import { useTasks } from "./TasksView";
 
 const DAY = 86_400_000;
-
-function greeting(name: string, now = new Date()): string {
-  const h = now.getHours();
-  return `${h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"}, ${name}`;
-}
 
 /** What a running agent is doing right now, from its live events. */
 function stepOf(events: RunEvent[] | undefined): string {
@@ -187,6 +186,27 @@ function Schedules({ agents }: { agents: AgentNode[] }) {
   );
 }
 
+/** Pinned sticky notes from the board, and a card to add one (also placed on the canvas). */
+function Notes() {
+  const { doc, graph } = useBoard();
+  const identity = useApp((s) => s.identity);
+  const pinned = (graph.notes ?? []).filter((n) => n.pinned).sort((a, b) => b.at - a.at);
+  const add = () => {
+    // On the canvas, notes from Home stack in a column left of everything, never over an agent.
+    const left = Math.min(0, ...graph.nodes.map((n) => n.position.x)) - 300;
+    const fromHome = (graph.notes ?? []).filter((n) => n.position.x === left).length;
+    const note: Note = { id: newId("note"), text: "", color: NOTE_COLORS[(graph.notes?.length ?? 0) % 4]!, position: { x: Math.round(left), y: fromHome * 200 }, pinned: true, author: identity.name, at: Date.now() };
+    addNote(doc, note);
+    useApp.getState().setFreshNote(note.id);
+  };
+  return (
+    <section className="notes-grid" data-testid="home-notes" aria-label="Notes">
+      {pinned.map((n) => <StickyNote key={n.id} note={n} />)}
+      <button className="sticky-add" onClick={add} data-testid="note-add"><span className="row" style={{ gap: 6 }}><Plus size={14} /> Note</span></button>
+    </section>
+  );
+}
+
 export function HomeView() {
   const { boardId, graph } = useBoard();
   const identity = useApp((s) => s.identity);
@@ -258,10 +278,7 @@ export function HomeView() {
     <section className="main flush-left">
       <div className="scroll-page home" data-testid="home">
         <div className="home-inner">
-          <header className="home-head">
-            <h1>{greeting(identity.name)}</h1>
-            <span className="faint">{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</span>
-          </header>
+          <Notes />
           <Ask agents={agents} />
 
           <div className="home-grid">
@@ -340,7 +357,7 @@ export function HomeView() {
 
               {agents.length === 0 && (
                 <section className="card home-card">
-                  <div className="home-empty"><CircleAlert size={14} /> No agents yet <button className="btn sm" onClick={() => app.setTab("graph")}>Open graph</button></div>
+                  <div className="home-empty"><CircleAlert size={14} /> No agents yet <button className="btn sm primary" onClick={() => app.setNewAgentOpen(true)}><Plus size={12} /> New agent</button></div>
                 </section>
               )}
             </div>

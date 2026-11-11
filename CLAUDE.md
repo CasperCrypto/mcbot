@@ -136,6 +136,9 @@ Change them additively; a breaking change bumps the version.
 - One Y.Doc per board, everything keyed by id (no Y.Array), node fields as
   separate map entries. Persisted as plain JSON by the relay; loaded loosely
   (a half-edited board is not compile-valid and must still load).
+- Sticky notes live in the board too (`notes`, optional in `mcbot.graph/v1`, keyed by id like
+  everything else): on the canvas for everyone, pinned ones on Home. The compiler never reads them.
+  Their paper colours (`--note-*`) are content, not UI chrome.
 - Clients use `disableBc: true`: every edit must reach the relay, because compile
   reads the board from the relay, never from a client payload.
 - Board files: export writes the relay's copy as `mcbot.graph/v1` JSON to

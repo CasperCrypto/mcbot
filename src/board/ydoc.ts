@@ -5,6 +5,7 @@
  *   meta   Y.Map  schema, id, name
  *   nodes  Y.Map  nodeId -> Y.Map { kind, position, data: Y.Map<field, json> }
  *   edges  Y.Map  edgeId -> { id, source, target, order }
+ *   notes  Y.Map  noteId -> Y.Map { text, color, position, pinned, author, at }  (sticky notes)
  *
  * Everything is keyed by id (never a Y.Array), so a relay restarted from the
  * JSON file and a window still holding the old document merge without
@@ -12,7 +13,7 @@
  * editing different fields of one node both keep their change.
  */
 import * as Y from "yjs";
-import { GRAPH_SCHEMA, type Graph, type GraphEdge, type GraphNode } from "../contracts/graph";
+import { GRAPH_SCHEMA, type Graph, type GraphEdge, type GraphNode, type Note } from "../contracts/graph";
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -21,6 +22,7 @@ export function boardMaps(doc: Y.Doc) {
     meta: doc.getMap<Json>("meta"),
     nodes: doc.getMap<Y.Map<unknown>>("nodes"),
     edges: doc.getMap<GraphEdge>("edges"),
+    notes: doc.getMap<Y.Map<unknown>>("notes"),
   };
 }
 
@@ -44,23 +46,39 @@ function nodeFromY(id: string, m: Y.Map<unknown>): GraphNode {
   } as GraphNode;
 }
 
+function noteToY(note: Note): Y.Map<unknown> {
+  const m = new Y.Map<unknown>();
+  for (const [k, v] of Object.entries(note)) if (k !== "id") m.set(k, structuredClone(v));
+  return m;
+}
+
+function noteFromY(id: string, m: Y.Map<unknown>): Note {
+  const j = m.toJSON() as Partial<Note>;
+  return { id, text: j.text ?? "", color: j.color ?? "yellow", position: j.position ?? { x: 0, y: 0 }, pinned: j.pinned ?? false, author: j.author ?? "", at: j.at ?? 0 };
+}
+
 /** Read the graph out of the doc (unvalidated: the compiler validates). Sorted by id. */
 export function graphFromDoc(doc: Y.Doc): Graph {
-  const { meta, nodes, edges } = boardMaps(doc);
+  const { meta, nodes, edges, notes } = boardMaps(doc);
   const byId = <T extends { id: string }>(a: T, b: T) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-  return {
+  const graph: Graph = {
     schema: GRAPH_SCHEMA,
     id: String(meta.get("id") ?? ""),
     name: String(meta.get("name") ?? ""),
     nodes: [...nodes.entries()].map(([id, m]) => nodeFromY(id, m)).sort(byId),
     edges: [...edges.values()].map((e) => ({ ...e })).sort(byId),
   };
+  // Only boards that have notes carry the field, so every other board reads exactly as before.
+  if (notes.size) graph.notes = [...notes.entries()].map(([id, m]) => noteFromY(id, m)).sort(byId);
+  return graph;
 }
 
 /** Replace the doc's content with `graph` in one transaction. */
 export function loadGraphIntoDoc(doc: Y.Doc, graph: Graph): void {
-  const { meta, nodes, edges } = boardMaps(doc);
+  const { meta, nodes, edges, notes } = boardMaps(doc);
   doc.transact(() => {
+    for (const id of [...notes.keys()]) if (!(graph.notes ?? []).some((n) => n.id === id)) notes.delete(id);
+    for (const n of graph.notes ?? []) notes.set(n.id, noteToY(n));
     meta.set("schema", GRAPH_SCHEMA);
     meta.set("id", graph.id);
     meta.set("name", graph.name);
@@ -111,4 +129,18 @@ export function removeEdges(doc: Y.Doc, ids: readonly string[]): void {
 
 export function renameBoard(doc: Y.Doc, name: string): void {
   boardMaps(doc).meta.set("name", name);
+}
+
+// ---- sticky notes ----
+
+export function addNote(doc: Y.Doc, note: Note): void {
+  boardMaps(doc).notes.set(note.id, noteToY(note));
+}
+
+export function setNoteField<K extends keyof Omit<Note, "id">>(doc: Y.Doc, id: string, field: K, value: Note[K]): void {
+  boardMaps(doc).notes.get(id)?.set(field, structuredClone(value));
+}
+
+export function removeNote(doc: Y.Doc, id: string): void {
+  boardMaps(doc).notes.delete(id);
 }

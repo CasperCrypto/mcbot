@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import { GraphSchema } from "../contracts/graph";
 import { compile } from "../compile";
-import { graphFromDoc, loadGraphIntoDoc, moveNode, removeNodes, setNodeField } from "./ydoc";
+import { addNote, graphFromDoc, loadGraphIntoDoc, moveNode, removeNodes, setNodeField, setNoteField } from "./ydoc";
 
 const fixture = GraphSchema.parse(JSON.parse(readFileSync(join(import.meta.dirname, "../../test/fixtures/full.graph.json"), "utf8")));
 
@@ -51,5 +51,22 @@ describe("board ydoc", () => {
     loadGraphIntoDoc(doc, fixture);
     removeNodes(doc, ["m-local"]);
     expect(graphFromDoc(doc).edges.map((e) => e.id)).toEqual(["e1", "e10", "e3", "e4", "e6", "e7", "e8", "e9"]);
+  });
+
+  it("keeps sticky notes, merges edits to them, and leaves a board without notes as it was", () => {
+    const a = new Y.Doc();
+    loadGraphIntoDoc(a, fixture);
+    expect("notes" in graphFromDoc(a)).toBe(false);
+    addNote(a, { id: "note-1", text: "Ship Friday", color: "yellow", position: { x: 10, y: 20 }, pinned: true, author: "Ada", at: 1 });
+    const b = new Y.Doc();
+    sync(a, b);
+    setNoteField(a, "note-1", "text", "Ship Friday, after review");
+    setNoteField(b, "note-1", "color", "green");
+    sync(a, b);
+    expect(graphFromDoc(b).notes).toEqual([{ id: "note-1", text: "Ship Friday, after review", color: "green", position: { x: 10, y: 20 }, pinned: true, author: "Ada", at: 1 }]);
+    const c = new Y.Doc();
+    loadGraphIntoDoc(c, GraphSchema.parse(JSON.parse(JSON.stringify(graphFromDoc(b)))));
+    expect(graphFromDoc(c).notes?.[0]?.text).toBe("Ship Friday, after review");
+    expect(compile(graphFromDoc(b)).files).toEqual(compile(fixture).files);
   });
 });
