@@ -1,10 +1,11 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "McBot windows: core APIs, and opening https pages in the system browser (Report a problem, Get Ollama). The engine is reached over loopback HTTP/WebSocket, not IPC.",
+  "description": "McBot windows: core APIs; opening https pages in the system browser (Report a problem, Get Ollama) and showing an exported board in Finder or Explorer. The engine is reached over loopback HTTP/WebSocket, not IPC.",
   "windows": ["main", "board-*"],
   "permissions": [
     "core:default",
-    { "identifier": "opener:allow-open-url", "allow": [{ "url": "https://*" }] }
+    { "identifier": "opener:allow-open-url", "allow": [{ "url": "https://*" }] },
+    "opener:allow-reveal-item-in-dir"
   ]
 }

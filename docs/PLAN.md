@@ -44,15 +44,15 @@ install McBot, trust it and keep it up to date.
 6. **Engine sync.** Upstream Hermes is about 275 commits past our pin, and one
    patched file (the Telegram adapter) changed: run `npm run engine:sync` and
    re-check every patch.
-7. **Tests on every pull request.** CI has no test job: add `npm test` and the
-   typecheck on PRs, and a smoke test that starts the built app and its engine
-   on macOS and Windows runners.
-8. **CI upkeep.** Move the workflows off Node 20 actions (checkout, setup-node,
-   deploy-pages warn on every run).
-9. **Say only what is true.** The website's crew graph shows agents handing work
-   to each other, which arrives in M7: change it until then.
-10. **When something breaks.** "Report a problem" that bundles `engine.log` and
-    the app version; opt-in crash reports later (M11).
+7. **Tests on every pull request.** ● `ci.yml` runs the tests, the typecheck
+   and both builds on every PR. ○ A smoke test that starts the built app and its
+   engine on macOS and Windows runners.
+8. ● **CI upkeep.** The workflows run on Node 24 actions.
+9. ● **Say only what is true.** The website's crew graph shows agents using
+   their models and tools, not hand-offs, until M7 brings them.
+10. ● **When something breaks.** ⌘K → Report a problem: version, system,
+    engine state and the log's last lines, keys hidden, to paste into an issue.
+    Opt-in crash reports later (M11).
 
 ## The parts, and how they connect
 
@@ -87,8 +87,8 @@ The graph of agents, models, tools, makers and chat apps. ● nodes, wiring,
 fallbacks, compile with hashes and diffs, live cursors.
 ○ undo history, multi-select and align, notes and sections, templates,
 agent → agent hand-off edges (M7), trigger, step, condition and approval nodes (M10).
-○ Export a board to a file and import it again (`mcbot.graph/v1` JSON): small,
-any time, and the first step toward packs (M13).
+● Export a board to a file and import it as a new board (`mcbot.graph/v1`
+JSON), the first step toward packs (M13).
 
 ### 2. Agents ●
 

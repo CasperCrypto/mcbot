@@ -9,13 +9,14 @@ import * as Y from "yjs";
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate, removeAwarenessStates } from "y-protocols/awareness";
 import { buildCostReport } from "../../../engine/cost";
 import type { SessionRow } from "../../../engine/hermesData";
+import { exportFileName } from "../../board/files";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
-import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, Diagnostics, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
-import type { Graph } from "../../contracts/graph";
+import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
 import { RUN_EVENT_VERSION, summarizeRun, type RunEvent, type RunEventInput, type RunSummary } from "../../contracts/run";
 import { EngineError } from "../lib/engineError";
 import { ROOT, SEED_BOARD, WORKSPACE, sampleProject, seedGraph, seedMemory, seedRuns, sharedFiles } from "./seed";
@@ -607,6 +608,21 @@ export const demoEngine = {
     return { hermes: { found: true, path: "simulated in this browser", kind: "bundled" }, local: [{ name: "Ollama", baseUrl: "http://127.0.0.1:11434/v1", models: ["gemma3:4b", "llama3.2:3b", "qwen3:8b"] }], secrets: [...secretNames] };
   }),
   setupModels: api((_baseUrl: string, _keyName?: string) => ({ models: null as string[] | null })),
+  exportBoard: api((boardId: string): BoardExport => {
+    const graph = graphOf(requireBoard(boardId));
+    return { file: exportFileName(graph.name), path: null, shown: null, graph };
+  }),
+  importBoard: api((graph: unknown, fallbackName?: string): BoardInfo => {
+    const g = graph as Partial<Graph> | null;
+    if (!g || g.schema !== GRAPH_SCHEMA || !Array.isArray(g.nodes) || !Array.isArray(g.edges)) throw new EngineError(400, "This file isn't a McBot board.", {});
+    const name = ((typeof g.name === "string" && g.name.trim()) || fallbackName?.trim() || "Imported board").slice(0, 80);
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "board";
+    const b = { id: `${slug}-${Math.random().toString(16).slice(2, 6)}`, name };
+    state.boards.push(b);
+    (state.pending ??= {})[b.id] = { ...(g as Graph), id: b.id, name };
+    save();
+    return b;
+  }),
   setupBoard: api((name: string, graph: Graph): BoardInfo => {
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "board";
     const b = { id: `${slug}-${Math.random().toString(16).slice(2, 6)}`, name };

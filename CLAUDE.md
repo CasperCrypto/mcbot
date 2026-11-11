@@ -135,6 +135,10 @@ Change them additively; a breaking change bumps the version.
   (a half-edited board is not compile-valid and must still load).
 - Clients use `disableBc: true`: every edit must reach the relay, because compile
   reads the board from the relay, never from a client payload.
+- Board files: export writes the relay's copy as `mcbot.graph/v1` JSON to
+  `<workspace>/exports/`, never overwriting (the browser demo downloads it);
+  import always makes a new board and loads it loosely. Boards hold key names
+  only, so a board file holds no secrets.
 - The engine listens on loopback only and checks `Origin` and `Host` on every
   request and WebSocket upgrade. No auth in v0.
 
@@ -163,6 +167,12 @@ Change them additively; a breaking change bumps the version.
   `scrollIntoView` returns a Promise in current Chromium, and an effect that
   returns a non-function crashes React on cleanup.
 - Views live behind an error boundary; a broken view must not blank the window.
+- **Links out of the app** go through `openExternal` (`src/app/lib/open.ts`): the
+  Tauri opener plugin, https only. A plain `target="_blank"` link does nothing
+  inside the app window.
+- **Report a problem** (⌘K): `GET /api/diagnostics` (`engine/diagnostics.ts`),
+  with saved key values, token-shaped strings and the home folder hidden.
+  Nothing is sent; the person copies it into an issue.
 - **No code under noncommercial, source-available or copyleft licences** (hard
   rule 1). Other products are feature references only, and McBot never copies
   another product's look or trade dress. Blobatar (MIT) is fine.
@@ -190,7 +200,7 @@ optional team server only, never the desktop app.
 ```
 npm run dev        engine (:4317) + Vite (:5173)
 npm run desktop    the Tauri app (runs `npm run dev` itself)
-npm test           all tests (MCBOT_E2E=1 or MCBOT_HERMES_BIN adds a real Hermes run)
+npm test           all tests (MCBOT_E2E=1 or MCBOT_HERMES_BIN adds a real Hermes run); CI runs them on every PR
 npm run typecheck
 npm run stub-llm   deterministic OpenAI-compatible server on :11500 for offline runs
 npm run build:demo browser-only demo in dist-demo/ (in-page engine, simulated runs)
