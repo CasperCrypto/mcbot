@@ -6,7 +6,7 @@ McBot is a desktop app (macOS, Windows and Linux) where you draw a harness of AI
 agents as a graph — agents, the models they think with, the tools they can use —
 and that graph **compiles into a real, runnable agent setup on disk**. Then the same graph shows what every agent is doing, what it
 remembers, and what it costs — live, in every McBot window on this computer.
-Working on one board from several computers comes with the team server (M10).
+Working on one board from several computers comes with the team server (M12).
 
 Chat-only agent tools hide the system: you can't see which cron job runs which
 agent, what it remembers, or what it spends. McBot makes the harness the thing
@@ -167,7 +167,7 @@ setup assistant, the engine inside the app and unsigned installers for
 macOS, Windows and Linux (M5). Under way (M6): abilities, image and video makers,
 Obsidian and Telegram are in; WhatsApp, Slack, Discord and email, tool and
 skill catalogs and the OS keychain are next. No accounts yet: the engine only
-listens on this computer and checks origins. The whole plan, M6–M14, is in
+listens on this computer and checks origins. The whole plan, M6–M15, is in
 [docs/PLAN.md](docs/PLAN.md); why that order, in [docs/NEXT.md](docs/NEXT.md).
 
 ## Licences and credits

@@ -1,10 +1,10 @@
 import {
-  BookOpen, Bot, Brain, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Users, Waypoints, Workflow,
+  BookOpen, Bot, Brain, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
 import type { GraphNode } from "../../contracts/graph";
-import { compileBoard } from "../actions";
+import { compileBoard, exportBoardFile, importBoardFile } from "../actions";
 import { newAgent, newChannel, newId, newModel, newTool, newVault } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { resetDemo } from "../demo/engine";
@@ -100,7 +100,10 @@ function useCommands(close: () => void): Command[] {
           },
         },
       },
+      { id: "export-board", group: "Actions", label: "Export board", hint: "Save it as a file", icon: <Download size={15} />, run: () => { close(); void exportBoardFile(boardId); } },
+      { id: "import-board", group: "Actions", label: "Import board…", hint: "Open a board file", icon: <Upload size={15} />, run: () => { close(); importBoardFile(); } },
       { id: "hermes", group: "Actions", label: "Engine", hint: "Status and restart", icon: <Cpu size={15} />, run: () => app.setHermesOpen(true) },
+      { id: "report", group: "Actions", label: "Report a problem…", hint: "Details to paste into an issue", icon: <LifeBuoy size={15} />, run: () => app.setReportOpen(true) },
       { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Sparkles size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: null }); } },
       ...(DEMO ? [{ id: "reset-demo", group: "Actions", label: "Reset demo", hint: "Start over with the sample board", icon: <RotateCcw size={15} />, run: resetDemo }] : []),
       ...VIEWS.map((v, i) => ({ id: `go-${v.tab}`, group: "Go to", label: v.label, icon: v.icon, keys: ["⌘", String(i + 1)], run: () => { app.setTab(v.tab); close(); } })),

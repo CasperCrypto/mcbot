@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { AgentMemoryView, BoardInfo, CompileResponse, CostReport, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
@@ -51,6 +51,8 @@ const http = {
   health: () => call<Health>("GET", "/api/health"),
   boards: () => call<BoardInfo[]>("GET", "/api/boards"),
   createBoard: (name: string) => call<BoardInfo>("POST", "/api/boards", { name }),
+  exportBoard: (boardId: string) => call<BoardExport>("POST", "/api/boards/export", { boardId }),
+  importBoard: (graph: unknown, fallbackName?: string) => call<BoardInfo>("POST", "/api/boards/import", { graph, fallbackName }),
   compile: (boardId: string) => call<CompileResponse>("POST", "/api/compile", { boardId }),
   preview: (boardId: string) => call<CompileResponse>("GET", `/api/compile?boardId=${encodeURIComponent(boardId)}`),
   runs: (boardId: string) => call<RunSummary[]>("GET", `/api/runs?boardId=${encodeURIComponent(boardId)}`),
@@ -77,6 +79,7 @@ const http = {
   hermes: () => call<HermesInfo>("GET", "/api/hermes"),
   restartGateway: () => call<HermesInfo>("POST", "/api/hermes/gateway/restart", {}),
   prepareHermes: () => call<HermesInfo>("POST", "/api/hermes/prepare", {}),
+  diagnostics: () => call<Diagnostics>("GET", "/api/diagnostics"),
 };
 
 export const engine: typeof http = DEMO ? demoEngine : http;

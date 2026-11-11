@@ -1,7 +1,7 @@
-import { Check, ChevronDown, Hammer, LoaderCircle, Plus, Search } from "lucide-react";
+import { Check, ChevronDown, Download, Hammer, LoaderCircle, Plus, Search, Upload } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { resolveGraph } from "../../compile";
-import { compileBoard } from "../actions";
+import { compileBoard, exportBoardFile, importBoardFile } from "../actions";
 import { DEMO } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
@@ -40,6 +40,8 @@ function BoardMenu() {
             ))}
             <hr />
             <button role="menuitem" onClick={() => { setOpen(false); setPalette(true); }}><Plus size={14} /> New board…</button>
+            <button role="menuitem" onClick={() => { setOpen(false); importBoardFile(); }}><Upload size={14} /> Import board…</button>
+            {boardId && <button role="menuitem" onClick={() => { setOpen(false); void exportBoardFile(boardId); }}><Download size={14} /> Export this board</button>}
           </div>
         </>
       )}

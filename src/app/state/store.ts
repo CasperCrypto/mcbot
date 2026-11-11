@@ -32,6 +32,8 @@ interface State {
   paletteOpen: boolean;
   /** The Hermes runtime sheet. */
   hermesOpen: boolean;
+  /** Report a problem. */
+  reportOpen: boolean;
   /** The agent whose thread is open in Agents. */
   chatAgentId: string | null;
   /** First-launch setup: null until the engine answers. */
@@ -40,6 +42,7 @@ interface State {
   setTab(tab: Tab): void;
   setPalette(open: boolean): void;
   setHermesOpen(open: boolean): void;
+  setReportOpen(open: boolean): void;
   openChat(agentNodeId: string | null): void;
   setSetup(setup: SetupState | null): void;
   setBoard(id: string | null): void;
@@ -90,6 +93,8 @@ export const useApp = create<State>((set, get) => ({
   setPalette: (paletteOpen) => set({ paletteOpen }),
   hermesOpen: false,
   setHermesOpen: (hermesOpen) => set({ hermesOpen, paletteOpen: false }),
+  reportOpen: false,
+  setReportOpen: (reportOpen) => set({ reportOpen, paletteOpen: false }),
   openChat: (chatAgentId) => set({ chatAgentId, tab: "agents" }),
   setup: null,
   setSetup: (setup) => set({ setup }),

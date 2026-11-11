@@ -13,7 +13,9 @@ import { join } from "node:path";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { compile, resolveGraph, type AgentBundle } from "../src/compile";
-import type { AgentMemoryView, BoardInfo, CompileResponse, FsListing, FsPreview, FsRoot, Health, HermesInfo, SetupDetect, SetupState } from "../src/contracts/api";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, SetupDetect, SetupState } from "../src/contracts/api";
+import { writeExport } from "./boardFiles";
+import { diagnosticsText, osLine, redact, tail } from "./diagnostics";
 import type { Graph, ModelNode } from "../src/contracts/graph";
 import { buildCostReport } from "./cost";
 import { atomicWrite } from "./fsutil";
@@ -38,6 +40,8 @@ export interface EngineConfig {
   port: number;
   host: string;
   allowedOrigins: string[];
+  /** The installed app's engine log (the shell writes it), for "Report a problem"; absent in development. */
+  logFile?: string;
 }
 
 export const DEFAULT_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"];
@@ -136,6 +140,28 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     },
 
     "GET /api/boards": async (): Promise<BoardInfo[]> => relay.list(),
+    /** Save a board as a file in <workspace>/exports/ (never overwriting an earlier one). */
+    "POST /api/boards/export": async (req): Promise<BoardExport> => {
+      const body = parse(z.object({ boardId: z.string() }), await json(req));
+      const graph = await relay.graph(await requireBoard(body.boardId));
+      return { ...(await writeExport(join(cfg.workspace, "exports"), graph)), graph };
+    },
+    /** A board file becomes a new board; nothing existing is replaced. Loaded loosely, like any board. */
+    "POST /api/boards/import": async (req): Promise<BoardInfo> => {
+      const body = parse(z.object({ graph: z.unknown(), fallbackName: z.string().max(80).optional() }), await json(req));
+      const graph = LooseGraph.safeParse(body.graph);
+      if (!graph.success) throw new HttpError(400, "This file isn't a McBot board.");
+      const name = (graph.data.name.trim() || body.fallbackName?.trim() || "Imported board").slice(0, 80);
+      const id = `${slugOf(name)}-${randomBytes(2).toString("hex")}`;
+      await relay.create(id, name, graph.data as Graph);
+      return { id, name };
+    },
+    /** "Report a problem": version, system, engine state and the log's last lines, keys hidden. */
+    "GET /api/diagnostics": async (): Promise<Diagnostics> => {
+      const [hermes, boards, saved, log] = await Promise.all([hermesInfo(), relay.list(), secrets.env(), cfg.logFile ? tail(cfg.logFile) : Promise.resolve(null)]);
+      const text = diagnosticsText({ version: ENGINE_VERSION, os: osLine(), installed: hermes.installed, hermes, boards: boards.length, log, at: new Date() });
+      return { text: redact(text, Object.values(saved)) };
+    },
 
     // ---- the Hermes runtime ----
     "GET /api/hermes": async (): Promise<HermesInfo> => hermesInfo(),

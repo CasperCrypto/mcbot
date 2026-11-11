@@ -1,4 +1,6 @@
+import { exportText, nameFromFile } from "../board/files";
 import { engine, EngineError } from "./lib/engine";
+import { canReveal, revealFile } from "./lib/open";
 import { useApp } from "./state/store";
 
 const changedCount = (r: Awaited<ReturnType<typeof engine.compile>>) => (r.ok ? r.report.changes.filter((c) => c.status !== "unchanged").length : 0);
@@ -52,4 +54,50 @@ export async function runAgent(boardId: string, agentNodeId: string, prompt: str
     }
     return null;
   }
+}
+
+/** Save the board as a file: into the McBot folder's exports/ (desktop), or a download (browser demo). */
+export async function exportBoardFile(boardId: string): Promise<void> {
+  const app = useApp.getState();
+  try {
+    const res = await engine.exportBoard(boardId);
+    if (res.path) {
+      const path = res.path;
+      app.toast({ kind: "ok", text: `Exported to ${res.shown ?? path}`, action: canReveal() ? { label: "Show", run: () => void revealFile(path) } : undefined });
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([exportText(res.graph)], { type: "application/json" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: res.file });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    app.toast({ kind: "ok", text: `Downloaded ${res.file}` });
+  } catch (err) {
+    app.toast({ kind: "fail", text: (err as Error).message });
+  }
+}
+
+/** Pick a board file and open it as a new board. Nothing existing is replaced. */
+export function importBoardFile(): void {
+  const input = Object.assign(document.createElement("input"), { type: "file", accept: ".json,application/json" });
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    const app = useApp.getState();
+    try {
+      let graph: unknown;
+      try {
+        graph = JSON.parse(await file.text());
+      } catch {
+        throw new Error("This file isn't a McBot board.");
+      }
+      const b = await engine.importBoard(graph, nameFromFile(file.name));
+      app.setBoards(await engine.boards());
+      app.setBoard(b.id);
+      app.setTab("graph");
+      app.toast({ kind: "ok", text: `Imported “${b.name}”` });
+    } catch (err) {
+      app.toast({ kind: "fail", text: (err as Error).message });
+    }
+  };
+  input.click();
 }

@@ -3,6 +3,7 @@
  * contracts). Shared by engine/ and the UI.
  */
 import type { CompileReport } from "./compile";
+import type { Graph } from "./graph";
 
 export interface Health {
   ok: true;
@@ -33,9 +34,23 @@ export interface HermesInfo {
   setup: { state: "idle" | "running" | "done" | "failed"; lines: string[] };
 }
 
+/** "Report a problem": plain text the person copies into an issue; saved keys and the home folder hidden. */
+export interface Diagnostics {
+  text: string;
+}
+
 export interface BoardInfo {
   id: string;
   name: string;
+}
+
+/** A board saved as a file: where it went (null in the browser demo, which downloads it instead). */
+export interface BoardExport {
+  file: string;
+  path: string | null;
+  /** The path to show: the home folder as ~. */
+  shown: string | null;
+  graph: Graph;
 }
 
 export interface IssueView {

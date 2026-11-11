@@ -119,25 +119,40 @@
     g.setAttribute("transform", `translate(${(ex + now[0] * 2.2).toFixed(2)} ${(ey + now[1] * 1.6 + (exp === "sad" ? 1 : 0)).toFixed(2)})`);
   }
 
-  /* ---------- the crew: ten agents passing work along a graph ---------- */
+  /* ---------- the crew: ten agents and the models and tools they use ----------
+     As on McBot's canvas: each agent works on its own, and while it runs, the wire
+     to its model (then to a tool) lights up. Agents handing work to each other
+     comes with the Tasks milestone (M7), so the graph does not show it yet. */
   const crew = document.querySelector("[data-crew]");
   if (crew) {
-    // name, x%, y% (wide), x%, y% (narrow). The name picks the bot, as in the app.
+    // name, x%, y% (wide), x%, y% (narrow), its model, its tool (or null). The name picks the bot, as in the app.
     const CREW = [
-      ["Triage", 8, 50, 50, 8], ["Researcher", 24, 20, 18, 24], ["Coder", 25, 79, 82, 24],
-      ["Archivist", 42, 48, 50, 38], ["Writer", 57, 18, 18, 53], ["Designer", 59, 79, 82, 53],
-      ["Sage", 75, 46, 50, 67], ["Tester", 80, 83, 82, 83], ["Finance", 91, 17, 18, 83], ["Muse", 93, 58, 50, 94],
+      ["Triage", 10, 18, 16, 10, 0, 3], ["Researcher", 30, 18, 16, 30, 1, 2], ["Writer", 50, 18, 16, 50, 1, null],
+      ["Designer", 70, 18, 16, 70, 1, 3], ["Finance", 90, 18, 16, 90, 0, 3], ["Coder", 10, 84, 84, 10, 0, 3],
+      ["Archivist", 30, 84, 84, 30, 0, 2], ["Sage", 50, 84, 84, 50, 1, 2], ["Tester", 70, 84, 84, 70, 0, 3], ["Muse", 90, 84, 84, 90, 1, null],
     ];
-    const EDGES = [[0, 1], [0, 2], [1, 3], [2, 3], [3, 4], [3, 5], [4, 6], [5, 6], [5, 7], [6, 8], [6, 9], [4, 8], [7, 9]];
+    // kind, label, x%, y% (wide), x%, y% (narrow), glyph
+    const PARTS = [
+      ["model", "Local model", 20, 51, 50, 20, '<rect x="5" y="6" width="14" height="12" rx="2.5"/><path d="M9 10.5h6M9 13.5h6"/>'],
+      ["cloud", "Cloud model", 40, 51, 50, 40, '<path d="M7.5 18h9.5a4 4 0 0 0 .4-8A5.5 5.5 0 0 0 6.9 11.6 3.3 3.3 0 0 0 7.5 18Z"/>'],
+      ["tool", "Docs search", 60, 51, 50, 60, '<circle cx="11" cy="11" r="5"/><path d="m15 15 4 4"/>'],
+      ["tool", "Shared files", 80, 51, 50, 80, '<path d="M4 7.5A1.5 1.5 0 0 1 5.5 6H10l2 2h6.5A1.5 1.5 0 0 1 20 9.5v8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5Z"/>'],
+    ];
     const wires = crew.querySelector("svg.wires");
-    const bots = CREW.map(([name], i) => {
+    const parts = PARTS.map(([kind, label, , , , , glyph]) => {
+      const el = document.createElement("div");
+      el.className = "crew-part";
+      el.innerHTML = `<span class="tile ${kind}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyph}</svg></span><b>${label}</b>`;
+      crew.appendChild(el);
+      return { el, busy: 0 };
+    });
+    const bots = CREW.map(([name, , , , , model, tool], i) => {
       const el = document.createElement("div");
       el.className = "crew-bot";
       el.dataset.state = "idle";
-      el.style.setProperty("--delay", `${-rand(0, 5).toFixed(2)}s`);
       el.innerHTML = `<span class="face"></span><b>${name}</b>`;
       crew.appendChild(el);
-      return { el, face: el.firstChild, name, exp: "", busy: 0, tone: F.foodOf(`agent:${name.toLowerCase()}`).tone, i };
+      return { el, face: el.firstChild, name, exp: "", busy: 0, tone: F.foodOf(`agent:${name.toLowerCase()}`).tone, model, tool, i };
     });
     let size = 64;
     function draw(b, exp) {
@@ -145,47 +160,52 @@
       b.el.dataset.state = exp;
       b.face.innerHTML = F.foodSvg({ seed: `agent:${b.name.toLowerCase()}`, size, expression: exp, uid: `crew${b.i}`, title: b.name });
     }
-    let paths = [];
+    // one wire per agent → part, keyed "agent:part"
+    let paths = {};
     function layout() {
       const narrow = crew.clientWidth < 640;
-      size = narrow ? 50 : 64;
+      size = narrow ? 48 : 60;
       const W = crew.clientWidth, H = crew.clientHeight;
-      const at = CREW.map(([, x, y, nx, ny]) => [((narrow ? nx : x) / 100) * W, ((narrow ? ny : y) / 100) * H]);
-      bots.forEach((b, i) => {
-        b.el.style.left = `${at[i][0]}px`;
-        b.el.style.top = `${at[i][1]}px`;
-        draw(b, b.exp || "idle");
-      });
-      // wires meet at the faces, above the name tags
-      const lift = size / 2 - (size + 30) / 2;
+      const pos = (x, y, nx, ny) => [((narrow ? nx : x) / 100) * W, ((narrow ? ny : y) / 100) * H];
+      const at = CREW.map(([, x, y, nx, ny]) => pos(x, y, nx, ny));
+      const pat = PARTS.map(([, , x, y, nx, ny]) => pos(x, y, nx, ny));
+      bots.forEach((b, i) => { b.el.style.left = `${at[i][0]}px`; b.el.style.top = `${at[i][1]}px`; draw(b, b.exp || "idle"); });
+      parts.forEach((p, i) => { p.el.style.left = `${pat[i][0]}px`; p.el.style.top = `${pat[i][1]}px`; });
+      // wires meet at the faces and tiles, above their name tags
+      const botLift = -15, partLift = -12;
       wires.setAttribute("viewBox", `0 0 ${W} ${H}`);
-      wires.innerHTML = EDGES.map(([a, b]) => {
-        const [ax, ay0] = at[a], [bx, by0] = at[b];
-        const ay = ay0 + lift, by = by0 + lift;
-        const dx = bx - ax, dy = by - ay;
-        const c = Math.abs(dx) > Math.abs(dy)
-          ? `C${ax + dx * 0.5} ${ay} ${bx - dx * 0.5} ${by}`
-          : `C${ax} ${ay + dy * 0.5} ${bx} ${by - dy * 0.5}`;
-        return `<path d="M${ax} ${ay} ${c} ${bx} ${by}"/>`;
-      }).join("");
-      paths = [...wires.querySelectorAll("path")];
+      const out = [];
+      bots.forEach((b, i) => {
+        for (const k of [b.model, b.tool]) {
+          if (k === null) continue;
+          const [ax, ay] = [at[i][0], at[i][1] + botLift], [bx, by] = [pat[k][0], pat[k][1] + partLift];
+          const dx = bx - ax, dy = by - ay;
+          const c = narrow ? `C${ax + dx * 0.5} ${ay} ${bx - dx * 0.5} ${by}` : `C${ax} ${ay + dy * 0.5} ${bx} ${by - dy * 0.5}`;
+          out.push(`<path data-k="${i}:${k}" d="M${ax} ${ay} ${c} ${bx} ${by}"/>`);
+        }
+      });
+      wires.innerHTML = out.join("");
+      paths = Object.fromEntries([...wires.querySelectorAll("path")].map((p) => [p.dataset.k, p]));
     }
     new ResizeObserver(layout).observe(crew);
     layout();
 
-    function pulse(edge, from) {
-      const base = paths[edge];
+    /** Light the wire from an agent to a model or tool, the way a live edge does in the app. */
+    function pulse(b, k) {
+      const base = paths[`${b.i}:${k}`];
       if (!base || reduce) return 700;
       const p = base.cloneNode();
       p.setAttribute("class", "pulse");
-      p.style.color = `var(--food-${bots[from].tone})`;
+      p.style.color = `var(--food-${b.tone})`;
       const len = base.getTotalLength();
-      const seg = 52;
+      const seg = 46;
       p.style.strokeDasharray = `${seg} ${len + seg}`;
       wires.appendChild(p);
-      const forward = EDGES[edge][0] === from;
-      const dur = clamp(len * 2.4, 650, 1500);
-      p.animate([{ strokeDashoffset: forward ? seg : -len }, { strokeDashoffset: forward ? -len : seg }], { duration: dur, easing: "cubic-bezier(.45,0,.25,1)" }).onfinish = () => p.remove();
+      const dur = clamp(len * 2.6, 650, 1400);
+      p.animate([{ strokeDashoffset: seg }, { strokeDashoffset: -len }], { duration: dur, easing: "cubic-bezier(.45,0,.25,1)" }).onfinish = () => p.remove();
+      parts[k].el.classList.add("live");
+      parts[k].busy = performance.now() + dur;
+      setTimeout(() => { if (parts[k].busy <= performance.now() + 20) parts[k].el.classList.remove("live"); }, dur);
       return dur;
     }
 
@@ -194,21 +214,20 @@
     function work() {
       if (!visible || document.hidden || reduce) return;
       const now = performance.now();
-      const free = EDGES.map((e, i) => [e, i]).filter(([[a, b]]) => bots[a].busy < now && bots[b].busy < now);
+      const free = bots.filter((b) => b.busy < now);
       if (!free.length) return;
-      const [[a0, b0], edge] = pick(free);
-      const [a, b] = Math.random() < 0.5 ? [a0, b0] : [b0, a0];
-      bots[a].busy = bots[b].busy = now + 5200;
-      draw(bots[a], "thinking");
+      const b = pick(free);
+      b.busy = now + 6000;
+      draw(b, "thinking");
       setTimeout(() => {
-        const dur = pulse(edge, a);
-        setTimeout(() => { draw(bots[a], "happy"); draw(bots[b], "thinking"); }, dur);
-        setTimeout(() => draw(bots[a], "idle"), dur + 2000);
-        setTimeout(() => draw(bots[b], Math.random() < 0.12 ? "sad" : "happy"), dur + 1500);
-        setTimeout(() => draw(bots[b], "idle"), dur + 3400);
-      }, 700);
+        const d1 = pulse(b, b.model);
+        const d2 = b.tool === null ? 0 : (setTimeout(() => pulse(b, b.tool), d1 + 250), d1 + 250 + 900);
+        const done = Math.max(d1, d2) + 500;
+        setTimeout(() => draw(b, Math.random() < 0.12 ? "sad" : "happy"), done);
+        setTimeout(() => draw(b, "idle"), done + 1900);
+      }, 500);
     }
-    setInterval(work, 1150);
+    setInterval(work, 900);
 
     for (const b of bots) {
       b.el.addEventListener("pointerenter", () => {
