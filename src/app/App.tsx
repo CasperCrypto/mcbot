@@ -16,11 +16,13 @@ import { CostView } from "./views/CostView";
 import { FilesView } from "./views/FilesView";
 import { MemoryView } from "./views/MemoryView";
 import { RunsView } from "./views/RunsView";
+import { TasksView } from "./views/TasksView";
 import { TeamView } from "./views/TeamView";
 
 const VIEW_COMPONENTS = {
   graph: GraphView,
   agents: AgentsView,
+  tasks: TasksView,
   workflows: RunsView,
   memory: MemoryView,
   files: FilesView,
@@ -53,7 +55,7 @@ function BoardEffects() {
       } else if (k === "s") {
         e.preventDefault();
         void compileBoard(boardId);
-      } else if (/^[1-7]$/.test(k)) {
+      } else if (/^[1-9]$/.test(k) && VIEWS[Number(k) - 1]) {
         e.preventDefault();
         app.setTab(VIEWS[Number(k) - 1]!.tab);
       }

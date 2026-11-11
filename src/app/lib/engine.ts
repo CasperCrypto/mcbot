@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState } from "../../contracts/api";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
@@ -80,6 +80,10 @@ const http = {
   restartGateway: () => call<HermesInfo>("POST", "/api/hermes/gateway/restart", {}),
   prepareHermes: () => call<HermesInfo>("POST", "/api/hermes/prepare", {}),
   diagnostics: () => call<Diagnostics>("GET", "/api/diagnostics"),
+  tasks: (boardId: string) => call<TasksView>("GET", `/api/tasks?boardId=${encodeURIComponent(boardId)}`),
+  task: (boardId: string, id: string) => call<TaskDetail>("GET", `/api/tasks/one?boardId=${encodeURIComponent(boardId)}&id=${encodeURIComponent(id)}`),
+  createTask: (boardId: string, t: { title: string; body: string; assignee: string | null; by: string; parents?: string[] }) => call<TaskView>("POST", "/api/tasks", { boardId, ...t }),
+  actOnTask: (boardId: string, id: string, by: string, a: TaskAction) => call<TaskDetail>("POST", "/api/tasks/act", { boardId, id, by, ...a }),
 };
 
 export const engine: typeof http = DEMO ? demoEngine : http;

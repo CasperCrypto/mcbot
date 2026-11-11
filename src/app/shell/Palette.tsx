@@ -1,5 +1,5 @@
 import {
-  BookOpen, Bot, Brain, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
+  BookOpen, Bot, Brain, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
@@ -28,6 +28,7 @@ interface Command {
 export const VIEWS: { tab: Tab; label: string; icon: ReactNode }[] = [
   { tab: "graph", label: "Graph", icon: <Waypoints size={15} /> },
   { tab: "agents", label: "Agents", icon: <MessagesSquare size={15} /> },
+  { tab: "tasks", label: "Tasks", icon: <ListChecks size={15} /> },
   { tab: "workflows", label: "Runs", icon: <Workflow size={15} /> },
   { tab: "memory", label: "Memory", icon: <Brain size={15} /> },
   { tab: "files", label: "Files", icon: <FolderOpen size={15} /> },
@@ -48,6 +49,7 @@ function useCommands(close: () => void): Command[] {
     const at = (kind: GraphNode["kind"]) => freeSpot(graph, kind, null, app.selectedNodeId);
     const cmds: Command[] = [
       { id: "add-agent", group: "Create", label: "Agent", icon: <Bot size={15} />, run: () => place(newAgent(graph, at("agent"))) },
+      { id: "add-task", group: "Create", label: "Task", hint: "Give an agent something to do", icon: <ListChecks size={15} />, run: () => app.showTask("new") },
       { id: "add-local", group: "Create", label: "Local model", hint: "Ollama, LM Studio, vLLM…", icon: <HardDrive size={15} />, run: () => place(newModel(graph, "local", at("model"))) },
       { id: "add-cloud", group: "Create", label: "Cloud model", hint: "Any OpenAI-compatible API", icon: <Cloud size={15} />, run: () => place(newModel(graph, "cloud", at("model"))) },
       { id: "add-files", group: "Create", label: "Files tool", icon: <Plug size={15} />, run: () => place(newTool(graph, "filesystem", at("tool"), app.health?.workspace ?? null)) },

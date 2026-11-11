@@ -89,6 +89,19 @@ edits while a run of that profile is active and requires the sha256 the editor
 read (optimistic concurrency). Hermes memory has **no "pin"** — McBot does not
 invent one.
 
+## Tasks: Hermes' kanban
+
+| Fact | Source |
+|---|---|
+| One board per Hermes home, shared by every profile in it ("forking the board per profile would break the dispatcher/worker handoff"): `kanban_home()` is `HERMES_KANBAN_HOME`, else the default root; the default board's database is `<root>/kanban.db` | `hermes_cli/kanban_db.py:401-409` (`kanban_home`), `:563-566` (`kanban_db_path`), `:330` (`DEFAULT_BOARD`); observed: `hermes -p triage kanban create … --assignee writer` and `hermes -p writer kanban list` read the same `<root>/kanban.db` |
+| Tables McBot reads: `tasks`, `task_links (parent_id, child_id)`, `task_comments`, `task_runs` (one row per attempt; a worker's `kanban_complete --summary` lands in `task_runs.summary`, not `tasks.result`); times are Unix seconds | `hermes_cli/kanban_db.py:777-955` (`SCHEMA_SQL`); observed |
+| Statuses, in Hermes' column order: `triage todo scheduled ready running blocked review done`, plus `archived` | `hermes_cli/kanban_workflow.py:114-142` (`DEFAULT_WORKFLOW`, `DEFAULT_STATUSES`) |
+| Task ids are `t_` + 8 hex | `hermes_cli/kanban_db.py:988-991` (`_new_task_id`) |
+| `hermes kanban create <title> --body-file - --assignee <profile> --parent <id> --created-by <name> --json` (prints the task as JSON); `comment <id> <text…> --author <name>`; `assign <id> <profile\|none>`; `complete <id> --result <text>`; `block <id> [reason…]`; `unblock <id>`; `reopen-review <id> --reason <text>` (a person's "ask for changes": review → ready); `archive <id>`. McBot puts free text after `--` | `hermes_cli/kanban_parser.py:160-372`; `hermes kanban <cmd> --help`; observed |
+| A ready task with an assignee starts only while the root's gateway runs: it embeds the dispatcher (`kanban.dispatch_in_gateway`, default true; a tick every `kanban.dispatch_interval_seconds`, default 60). Without a gateway, tasks stay in `ready` | `gateway/kanban_watchers.py:209-262`, `gateway/kanban_watchers_dispatcher.py:49`; `hermes kanban init` prints the same. The engine runs `hermes gateway ensure` after a person creates, assigns or unblocks a task |
+| The dispatcher hands the task to its profile's owner in the gateway (`hermes_cli.kanban_worker_client`), with `HERMES_KANBAN_TASK` set, so the worker gets the task-scoped tools (`kanban_complete`, `kanban_block`, `kanban_comment`, `kanban_create`, …) without the `kanban` tool set | `hermes_cli/kanban_db_dispatch.py:2697-2700,2754-2873`; `tools/kanban_tools.py:83-90` (`_visible`); observed: a worker on the stub model called `kanban_complete` and the task went `ready → running → done` |
+| Outside a dispatched task, an agent gets the kanban tools (create, list, link, unblock…) only with the `kanban` tool set in its `platform_toolsets` | `tools/kanban_tools.py:1-5,37,83-96`; `toolsets.py:153-163` |
+
 ## Things that differ from what we were told
 
 | Claim | Reality |

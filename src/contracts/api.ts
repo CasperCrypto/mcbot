@@ -200,3 +200,75 @@ export interface SetupDetect {
   /** Names of the API keys McBot holds (never the values). */
   secrets: string[];
 }
+
+// ---- tasks: Hermes' kanban (engine/kanban.ts) ----
+
+/** Hermes' columns in its own order (hermes_cli/kanban_workflow.py DEFAULT_WORKFLOW), then archived. */
+export const TASK_STATUSES = ["triage", "todo", "scheduled", "ready", "running", "blocked", "review", "done", "archived"] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+
+export interface TaskView {
+  id: string;
+  title: string;
+  body: string;
+  /** The Hermes profile it is assigned to; null = nobody yet. */
+  assignee: string | null;
+  /** That profile's agent on this board, when it has one. */
+  agentNodeId: string | null;
+  status: TaskStatus;
+  priority: number;
+  /** A profile, or the person who created it in McBot. */
+  createdBy: string | null;
+  /** Unix ms. */
+  createdAt: number;
+  startedAt: number | null;
+  completedAt: number | null;
+  /** What came of it: the task's result, else its latest attempt's summary. */
+  result: string | null;
+  /** The latest failure Hermes recorded. */
+  error: string | null;
+  /** Tasks this one waits for, and tasks that wait for it. */
+  parents: string[];
+  children: string[];
+  comments: number;
+}
+
+export interface TaskComment {
+  id: number;
+  author: string;
+  body: string;
+  at: number;
+}
+
+/** One attempt: each time the dispatcher hands the task to its agent (task_runs). */
+export interface TaskAttempt {
+  id: number;
+  profile: string | null;
+  status: string;
+  outcome: string | null;
+  summary: string | null;
+  error: string | null;
+  startedAt: number;
+  endedAt: number | null;
+}
+
+export interface TaskDetail extends TaskView {
+  thread: TaskComment[];
+  attempts: TaskAttempt[];
+}
+
+export interface TasksView {
+  tasks: TaskView[];
+  /** Tasks only start while the gateway runs: its dispatcher hands ready tasks to their agents. */
+  gateway: boolean;
+}
+
+/** What a person can do to a task (each is one `hermes kanban` command). */
+export type TaskAction =
+  | { action: "comment"; text: string }
+  | { action: "assign"; profile: string | null }
+  | { action: "complete"; text?: string }
+  | { action: "block"; text?: string }
+  | { action: "unblock" }
+  | { action: "changes"; text: string }
+  | { action: "archive" };

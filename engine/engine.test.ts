@@ -6,7 +6,7 @@ import WebSocket from "ws";
 import { WebsocketProvider } from "y-websocket";
 import * as Y from "yjs";
 import { addEdge, addNode, graphFromDoc, setNodeField } from "../src/board/ydoc";
-import type { CompileResponse } from "../src/contracts/api";
+import type { CompileResponse, TaskDetail, TasksView, TaskView } from "../src/contracts/api";
 import type { RunEvent, RunSummary } from "../src/contracts/run";
 import { startStubLlm, type StubLlm } from "../test/stub-llm/server";
 import { startStubTelegram, type StubTelegram } from "../test/stub-telegram/server";
@@ -136,6 +136,31 @@ describe("engine", () => {
     expect(cost.body.totals).toMatchObject({ sessions: 1, successfulRuns: 1 });
     const runs = await api<RunSummary[]>("/api/runs?boardId=team");
     expect(runs.body[0]).toMatchObject({ status: "succeeded", profile: "triage" });
+  }, 300_000);
+
+  // Hermes' kanban: a task created in McBot goes to the agent through the gateway's dispatcher.
+  it.skipIf(!process.env.MCBOT_HERMES_BIN && process.env.MCBOT_E2E !== "1")("gives the agent a task; Hermes hands it over, the agent finishes it, and a person comments and archives it", async () => {
+    const created = await api<TaskView>("/api/tasks", { method: "POST", body: JSON.stringify({
+      boardId: "team", title: "Sort the billing tickets", body: 'call:kanban_complete {"summary":"Sorted 3 tickets"}', assignee: "triage", by: "Ada",
+    }) });
+    expect(created.status, JSON.stringify(created.body)).toBe(200);
+    expect(created.body).toMatchObject({ title: "Sort the billing tickets", assignee: "triage", agentNodeId: "n-agent", createdBy: "Ada", status: "ready" });
+    const id = created.body.id;
+    let task: TaskView | undefined;
+    const end = Date.now() + 240_000;
+    while (Date.now() < end) {
+      task = (await api<TasksView>("/api/tasks?boardId=team")).body.tasks.find((t) => t.id === id);
+      if (task && ["done", "blocked"].includes(task.status)) break;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    expect(task).toMatchObject({ status: "done", result: "Sorted 3 tickets" });
+    const commented = await api<TaskDetail>("/api/tasks/act", { method: "POST", body: JSON.stringify({ boardId: "team", id, by: "Ada", action: "comment", text: "--thanks, all three" }) });
+    expect(commented.body.thread.at(-1)).toMatchObject({ author: "Ada", body: "--thanks, all three" });
+    expect(commented.body.attempts.at(-1)).toMatchObject({ profile: "triage", outcome: "completed", summary: "Sorted 3 tickets" });
+    const wrong = await api<{ error: string }>("/api/tasks/act", { method: "POST", body: JSON.stringify({ boardId: "team", id, by: "Ada", action: "unblock" }) });
+    expect(wrong.status).toBe(409);
+    await api("/api/tasks/act", { method: "POST", body: JSON.stringify({ boardId: "team", id, by: "Ada", action: "archive" }) });
+    expect((await api<TasksView>("/api/tasks?boardId=team")).body.tasks.some((t) => t.id === id)).toBe(false);
   }, 300_000);
 
   // The agent's abilities and its image maker, as Hermes reads them: only the chosen tool sets are
