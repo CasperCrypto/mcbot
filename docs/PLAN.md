@@ -87,6 +87,8 @@ The graph of agents, models, tools, makers and chat apps. ● nodes, wiring,
 fallbacks, compile with hashes and diffs, live cursors.
 ○ undo history, multi-select and align, notes and sections, templates,
 agent → agent hand-off edges (M7), trigger, step, condition and approval nodes (M10).
+○ Export a board to a file and import it again (`mcbot.graph/v1` JSON): small,
+any time, and the first step toward packs (M13).
 
 ### 2. Agents ●
 
@@ -103,7 +105,8 @@ what needs me, what it cost, what runs next.
 - **Inbox:** approvals, questions agents asked, finished work, failures, each
   with one action (approve, answer, open, retry).
 - **Live:** every agent with its face and current step; stop or redirect it.
-- **Today:** spend, tokens and runs; the next scheduled jobs.
+- **Today:** spend, tokens and runs, updating as each run finishes; the next
+  scheduled jobs.
 - **Ask bar:** "give Triage this", "what did Researcher find?".
 - **Everywhere:** macOS notifications and a menu bar icon with the same inbox.
 
@@ -128,7 +131,9 @@ Build things in McBot, next to the agents doing the work.
 - **Code editor:** tabs and a file tree for any opened folder or agent
   workspace (decision 3). Review what an agent changed as a diff, accept or
   undo it, and send a selection to an agent ("fix this", "explain this").
-  Git: show status and diffs; commits stay in the terminal for now.
+  Git: show status and diffs; commits stay in the terminal for now. The
+  inspector's long fields (soul, skill instructions) use the same editor;
+  compiled files open read-only, because the next compile rewrites them.
 - **Browser:** a browser pane with two modes.
   - **Watch:** the agent's own browser, live (Hermes drives Chromium over CDP;
     screencast frames into the pane), with "take over" and "hand back".
@@ -143,7 +148,8 @@ Build things in McBot, next to the agents doing the work.
 
 - **Ask McBot:** in ⌘K and the Home ask bar, a copilot that edits the board:
   "add a researcher that can search our docs" adds the nodes, wires them and
-  shows the diff before it compiles. It also explains compile errors and failed runs.
+  shows the diff before it compiles. It also explains compile errors and failed
+  runs. Speak instead of typing: Hermes already has speech to text.
 - **Coding agents:** Claude Code, Codex and Gemini CLI as agents on the board,
   through ACP (decision 4), working in the code editor's folder.
 - **Your own AI plan:** run agents on a ChatGPT or Claude plan the person already
