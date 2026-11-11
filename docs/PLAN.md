@@ -44,12 +44,10 @@ install McBot, trust it and keep it up to date.
    say "Signature not found for the updater JSON"), and "Update available" in the app.
 5. **Signing (decision 2).** Apple Developer ID with notarization, and a Windows
    signature, remove the one-time "Open Anyway" and "Run anyway" warnings.
-6. **Engine sync.** Upstream Hermes is about 275 commits past our pin, and one
-   patched file (the Telegram adapter) changed: run `npm run engine:sync` and
-   re-check every patch.
+6. ● **Engine sync.** `hermes/` is on the v0.23.1 release; every patch and every cited source line re-checked.
 7. **Tests on every pull request.** ● `ci.yml` runs the tests, the typecheck
-   and both builds on every PR. ○ A smoke test that starts the built app and its
-   engine on macOS and Windows runners.
+   and both builds on every PR. ● `smoke.yml` runs the built engine, first-launch preparation
+   and a real agent run on macOS, Windows and Linux.
 8. ● **CI upkeep.** The workflows run on Node 24 actions.
 9. ● **Say only what is true.** The website's crew graph shows agents using
    their models and tools, not hand-offs, until M7 brings them.
@@ -100,7 +98,7 @@ that reach each agent. ◐ role presets (setup assistant).
 ○ per-agent knowledge files, permissions (folders, tools, spend), a context
 meter, a model switch that keeps the agent's memory and history.
 
-### 3. Home: the command center ○ (M7)
+### 3. Home: the command center ◐ (M7)
 
 The first screen of the day. One glance answers: who is working, what finished,
 what needs me, what it cost, what runs next.
@@ -113,7 +111,7 @@ what needs me, what it cost, what runs next.
 - **Ask bar:** "give Triage this", "what did Researcher find?".
 - **Everywhere:** macOS notifications and a menu bar icon with the same inbox.
 
-### 4. Tasks and orchestration ○ (M7)
+### 4. Tasks and orchestration ◐ (M7)
 
 Agents work as a team through Hermes' kanban, which already has owners,
 dependencies, review and "changes requested".
@@ -233,7 +231,7 @@ whether setup works.
 |---|---|---|
 | **M5** ● | Setup assistant, key vault, local model detection, Hermes inside the app, unsigned installers | Someone downloads McBot, answers five questions and talks to a working agent within three minutes, without a terminal |
 | **M6** ◐ | Connections: abilities ●, image and video makers ●, Obsidian ●, keys through each profile's `.env` ●, Telegram ●; keychain ○, app catalog with sign-in ○, skill catalog ○, WhatsApp, Slack, Discord, email ○, chat-app conversations in McBot ○, context meter ○ | Connecting Gmail or Slack takes one screen, and an agent uses it |
-| **M7** ○ | Command center and team work: Home (inbox, live, today, ask bar), notifications and the menu bar icon; Tasks view on Hermes kanban; hand-off edges; queue; delegation in the run graph; approval cards; schedules; spaces | A lead agent splits a goal into tasks for three agents, a person approves the result from the inbox, and a scheduled job runs while they watch Home |
+| **M7** ◐ | Command center and team work: Home (inbox, live, today, ask bar) ●, notifications and the menu bar icon ●; Tasks view on Hermes kanban ●; hand-off edges ●; schedules ●; queue ○; delegation in the run graph ○; approval cards ○; spaces ○ | A lead agent splits a goal into tasks for three agents, a person approves the result from the inbox, and a scheduled job runs while they watch Home |
 | **M8** ○ | Workbench: terminal panel, code editor with agent diffs, browser pane (watch, take over, browse, preview), resizable panes | An agent builds a small web page in a folder; you read its diff in the editor, run it in the terminal and see it in the browser pane, without leaving McBot |
 | **M9** ○ | Ask McBot (board copilot) and coding agents through ACP; running agents on a ChatGPT or Claude plan (decisions 1 and 4) | "Add a researcher that can search our docs" changes the board, and a Claude Code agent fixes a bug in the editor's folder |
 | **M10** ○ | Workflows (trigger, step, condition, approval) and Studio (gallery, posting after approval) | A weekly report runs itself and waits for a person's OK before it is sent |
