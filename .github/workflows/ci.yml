@@ -1,0 +1,34 @@
+# Every pull request and every push to the default branch: the tests, the typecheck,
+# the desktop UI build and the browser demo build. Real-Hermes tests skip themselves
+# here (no prepared engine); run them locally with MCBOT_E2E=1 npm test.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, claude/eloquent-ramanujan-4h1z53]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tests
+        run: npm test
+      - name: Typecheck and UI build
+        run: npm run build
+      - name: Browser demo build
+        run: npm run build:demo
