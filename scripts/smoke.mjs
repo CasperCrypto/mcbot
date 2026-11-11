@@ -96,7 +96,8 @@ async function main() {
     for (const line of h.setup.lines.slice(shown)) console.log(`  ${line}`);
     shown = Math.max(shown, h.setup.lines.length);
     if (h.setup.state === "failed") throw Object.assign(new Error("preparing the engine failed"), { fatal: true });
-    return h.kind === "bundled" ? h : null;
+    // done, not just "bundled": its Python appears long before the setup has finished
+    return h.setup.state === "done" && h.kind === "bundled" ? h : null;
   }, 3000);
   console.log(`prepared in ${since(t0)}: ${info.path}`);
 
@@ -121,6 +122,7 @@ async function main() {
     const ev = await call("GET", `/api/runs/${runId}`);
     return ev.some((e) => e.type === "run.finished") ? ev : null;
   }, 1000);
+  for (const e of events.filter((e) => e.type === "run.log")) console.log(`  ${e.line}`);
   const finished = events.find((e) => e.type === "run.finished");
   const tool = events.find((e) => e.type === "run.tool.started");
   console.log(`run ${finished.status} in ${since(t1)}: ${JSON.stringify(finished.text)}${tool ? `, tool ${tool.tool}` : ""}`);

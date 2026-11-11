@@ -2,17 +2,25 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { bundledHermes, chatArgv, findHermes, hermesCommand, prepareHermes } from "./hermes";
+import { readFileSync } from "node:fs";
+import { bundledHermes, chatArgv, findHermes, hermesCommand, prepareHermes, setupHome } from "./hermes";
 
 /**
  * A stand-in hermes/: its "Python" answers `-m pm.environments --format json` like Hermes' package
  * manager (dependencies only once the home is set up), and setup-hermes.sh sets a home up.
  */
-function fakeHermesDir(withPython: boolean): string {
+function fakeHermesDir(withPython: boolean, setupSeconds = 0): string {
   const dir = mkdtempSync(join(tmpdir(), "mcbot-hermes-dir-"));
   mkdirSync(join(dir, "pm"));
   writeFileSync(join(dir, "hermes"), "");
-  writeFileSync(join(dir, "setup-hermes.sh"), 'echo "→ Installing dependencies"\nmkdir -p "$HERMES_HOME" && touch "$HERMES_HOME/installed"\necho "✓ done"\n');
+  writeFileSync(join(dir, "setup-hermes.sh"), [
+    'echo "→ Installing dependencies"',
+    'mkdir -p "$HERMES_HOME" && echo x >> "$HERMES_HOME/setups"',
+    ...(setupSeconds ? [`sleep ${setupSeconds}`] : []),
+    'touch "$HERMES_HOME/installed"',
+    'echo "✓ done"',
+    "",
+  ].join("\n"));
   if (withPython) {
     const py = join(dir, ".hermes-runtime", "python-3.14.9-linux-x64", "bin", "python3");
     mkdirSync(join(py, ".."), { recursive: true });
@@ -63,5 +71,30 @@ describe("McBot's own Hermes", () => {
     await prepareHermes(bin, home, (l) => again.push(l));
     expect(again).toEqual([]);
     expect(await prepareHermes({ path: "/usr/bin/hermes", shell: false, kind: "external" }, home)).toEqual({ path: "/usr/bin/hermes", shell: false, kind: "external" });
+  });
+
+  it("makes a run that starts during first-launch preparation wait for it, not set the home up twice", async () => {
+    const dir = fakeHermesDir(true, 0.4);
+    const home = join(mkdtempSync(join(tmpdir(), "mcbot-home-")), "hermes");
+    const bin = bundledHermes({ MCBOT_HERMES_DIR: dir })!;
+    const setupLines: string[] = [];
+    const preparing = setupHome({ dir, runtime: join(dir, ".hermes-runtime") }, home, (l) => setupLines.push(l));
+    await new Promise((r) => setTimeout(r, 100)); // the setup assistant's Prepare is under way
+    const runLines: string[] = [];
+    const [run, setup] = await Promise.all([prepareHermes(bin, home, (l) => runLines.push(l)), preparing]);
+    expect(readFileSync(join(home, "setups"), "utf8")).toBe("x\n"); // Hermes' setup ran once
+    expect(runLines).toEqual(["Waiting for the engine to finish preparing…"]);
+    expect(setupLines).toEqual(["→ Installing dependencies", "✓ done"]);
+    expect(run.env?.PYTHONPATH).toBe(`${dir}:/venv/lib/python3.14/site-packages`);
+    expect(setup?.env?.PYTHONPATH).toBe(run.env?.PYTHONPATH);
+  });
+
+  it("runs Hermes' setup again when Prepare is asked for after a ready home", async () => {
+    const dir = fakeHermesDir(true);
+    const home = join(mkdtempSync(join(tmpdir(), "mcbot-home-")), "hermes");
+    const src = { dir, runtime: join(dir, ".hermes-runtime") };
+    expect((await setupHome(src, home, () => undefined))?.env?.PYTHONPATH).toContain("site-packages");
+    expect((await setupHome(src, home, () => undefined))?.env?.PYTHONPATH).toContain("site-packages");
+    expect(readFileSync(join(home, "setups"), "utf8")).toBe("x\nx\n");
   });
 });
