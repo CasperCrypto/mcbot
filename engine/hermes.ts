@@ -91,13 +91,25 @@ function composeEnv(bin: HermesBinary, dir: string, home: string): Promise<Recor
   });
 }
 
+/**
+ * The environment for Hermes' setup. On Windows it runs in Windows PowerShell (powershell.exe), which
+ * must find its own modules: started from PowerShell 7 (a pwsh terminal, CI), McBot inherits a
+ * PSModulePath of PowerShell 7's modules, and Windows PowerShell then cannot load Get-FileHash, which
+ * setup-hermes.ps1 needs. Without PSModulePath, Windows PowerShell uses its default.
+ */
+export function setupEnv(src: { runtime: string }, home: string, base: NodeJS.ProcessEnv = process.env, platform: string = process.platform): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...base, HERMES_RUNTIME_DIR: src.runtime, HERMES_HOME: home, PYTHONHOME: "", PYTHONPATH: "", VIRTUAL_ENV: "" };
+  if (platform === "win32") for (const k of Object.keys(env)) if (k.toLowerCase() === "psmodulepath") delete env[k];
+  return env;
+}
+
 /** Hermes' own setup (`setup-hermes.sh --runtime-only`, `setup-hermes.ps1 -RuntimeOnly` on Windows): tools into the store, dependencies for `home`. */
 export function runHermesSetup(src: { dir: string; runtime: string }, home: string, onLine: (line: string) => void = () => undefined): Promise<boolean> {
   const win = process.platform === "win32";
   const [file, args] = win
     ? ["powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", join(src.dir, "setup-hermes.ps1"), "-RuntimeOnly"]]
     : ["bash", [join(src.dir, "setup-hermes.sh"), "--runtime-only"]];
-  const env: NodeJS.ProcessEnv = { ...process.env, HERMES_RUNTIME_DIR: src.runtime, HERMES_HOME: home, PYTHONHOME: "", PYTHONPATH: "", VIRTUAL_ENV: "" };
+  const env = setupEnv(src, home);
   return new Promise((resolve) => {
     const child = spawn(file, args as string[], { cwd: src.dir, env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
     let tail = "";

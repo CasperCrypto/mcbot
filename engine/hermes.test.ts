@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { bundledHermes, chatArgv, findHermes, hermesCommand, prepareHermes, setupHome } from "./hermes";
+import { bundledHermes, chatArgv, findHermes, hermesCommand, prepareHermes, setupEnv, setupHome } from "./hermes";
 
 /**
  * A stand-in hermes/: its "Python" answers `-m pm.environments --format json` like Hermes' package
@@ -96,5 +96,14 @@ describe("McBot's own Hermes", () => {
     expect((await setupHome(src, home, () => undefined))?.env?.PYTHONPATH).toContain("site-packages");
     expect((await setupHome(src, home, () => undefined))?.env?.PYTHONPATH).toContain("site-packages");
     expect(readFileSync(join(home, "setups"), "utf8")).toBe("x\nx\n");
+  });
+
+  it("lets Windows PowerShell find its own modules when McBot was started from PowerShell 7", () => {
+    const base = { PATH: "C:\\Windows", PSModulePath: "C:\\Program Files\\PowerShell\\7\\Modules", PYTHONPATH: "x" };
+    const win = setupEnv({ runtime: "R" }, "H", base, "win32");
+    expect(win).not.toHaveProperty("PSModulePath");
+    expect(win).toMatchObject({ PATH: "C:\\Windows", HERMES_RUNTIME_DIR: "R", HERMES_HOME: "H", PYTHONPATH: "" });
+    expect(setupEnv({ runtime: "R" }, "H", { psmodulepath: "x" }, "win32")).not.toHaveProperty("psmodulepath");
+    expect(setupEnv({ runtime: "R" }, "H", base, "darwin")).toHaveProperty("PSModulePath"); // only Windows changes
   });
 });
