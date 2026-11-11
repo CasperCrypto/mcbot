@@ -62,6 +62,9 @@ export const AgentNodeView = memo(function AgentNodeView({ data }: NodeProps<Flo
         {s.cost && <span className="num">{s.cost}</span>}
       </div>
       <Handle type="source" position={Position.Right} id="out" />
+      {/* Hand-offs run top to bottom: drag from an agent's bottom to the agent it gives work to. */}
+      <Handle type="source" position={Position.Bottom} id="down" className="handoff-handle" />
+      <Handle type="target" position={Position.Top} id="up" className="handoff-handle" />
     </div>
   );
 });
