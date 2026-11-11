@@ -180,8 +180,13 @@ Change them additively; a breaking change bumps the version.
   rule 1). Other products are feature references only, and McBot never copies
   another product's look or trade dress. Blobatar (MIT) is fine.
 - **Local folders:** the engine reads only inside roots the user opened
-  (`<workspace>/folders.json`), the shared files folder and compiled profiles —
-  read-only, path-checked.
+  (`<workspace>/folders.json`), the shared files folder and compiled profiles,
+  path-checked. The Code view's editor (Monaco, loaded on first use) writes back
+  only to opened folders, the shared files folder and an agent's `workspace/`,
+  never a compiled file or a key file, and only over the sha256 it read.
+- **Terminal:** real shells in the desktop shell (`src-tauri/src/terminal.rs`,
+  portable-pty), never in the engine, so the engine stays one plain executable.
+  The browser has none.
 
 ## Stack (do not substitute)
 

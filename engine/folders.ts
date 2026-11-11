@@ -2,10 +2,15 @@
  * Read-only folder browsing for the Files graph. The engine only lists or reads
  * inside a "root": a folder the user explicitly opened, the shared workspace
  * files folder, or an agent's compiled profile. Opened folders persist in
- * <workspace>/folders.json. Nothing here writes to the browsed folders.
+ * <workspace>/folders.json.
+ *
+ * The code editor writes back (`write`) only where a person works: an opened folder, the shared
+ * files folder, and an agent's `workspace/`. Never a compiled file, memory, logs or a key file,
+ * and only over the exact bytes the editor read (sha256), so an agent's change is never lost.
  */
 import { createHash } from "node:crypto";
 import { readdir, stat } from "node:fs/promises";
+import { sha256Hex } from "../src/compile/text";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import type { FsEntry, FsRoot } from "../src/contracts/api";
 import { atomicWrite, readTextOrNull, resolveInside, toPosix } from "./fsutil";
@@ -100,7 +105,7 @@ export class Folders {
     return { entries, truncated: Math.max(0, sorted.length - MAX_ENTRIES) };
   }
 
-  async read(rootDir: string, rel: string): Promise<{ path: string; bytes: number; text: string | null; reason?: string }> {
+  async read(rootDir: string, rel: string): Promise<{ path: string; bytes: number; text: string | null; reason?: string; sha256?: string }> {
     const abs = inside(rootDir, rel);
     // Keys live in .env files (engine/profileEnv.ts): never shown, whatever the folder.
     if (SECRET_FILES.has(basename(abs))) throw new FolderError(403, "This file holds keys and is not shown");
@@ -108,6 +113,22 @@ export class Folders {
     if (!s?.isFile()) throw new FolderError(404, "no such file");
     if (s.size > MAX_PREVIEW) return { path: rel, bytes: s.size, text: null, reason: "Too large to preview" };
     const text = (await readTextOrNull(abs)) ?? "";
-    return text.includes("\u0000") ? { path: rel, bytes: s.size, text: null, reason: "Binary file" } : { path: rel, bytes: s.size, text };
+    return text.includes("\u0000") ? { path: rel, bytes: s.size, text: null, reason: "Binary file" } : { path: rel, bytes: s.size, text, sha256: sha256Hex(text) };
+  }
+
+  /**
+   * Save a text file the editor opened. `rootId` decides what may be written (see the header);
+   * `baseSha256` is what the editor read (null = a new file that must not exist yet).
+   */
+  async write(rootId: string, rootDir: string, rel: string, text: string, baseSha256: string | null): Promise<{ path: string; bytes: number; sha256: string }> {
+    const posix = rel.replace(/\\/g, "/");
+    if (rootId.startsWith("profile:") && !posix.startsWith("workspace/")) throw new FolderError(403, "Only an agent's workspace folder can be edited here; its settings come from the board");
+    const abs = inside(rootDir, posix);
+    if (SECRET_FILES.has(basename(abs))) throw new FolderError(403, "This file holds keys and is not edited here");
+    const current = await readTextOrNull(abs);
+    const now = current === null ? null : sha256Hex(current);
+    if (now !== baseSha256) throw new FolderError(409, current === null ? "The file was deleted since you opened it" : "The file changed since you opened it. Reopen it to see the change.");
+    await atomicWrite(abs, text);
+    return { path: posix, bytes: Buffer.byteLength(text), sha256: sha256Hex(text) };
   }
 }

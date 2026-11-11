@@ -143,3 +143,27 @@
 .schedule-row .schedule-actions { display: flex; opacity: 0; transition: opacity var(--t-fast); }
 .schedule-row:hover .schedule-actions, .schedule-row:focus-within .schedule-actions { opacity: 1; }
 .schedule-row[data-enabled="false"] .title { color: var(--text-3); }
+
+/* ---------- code: editor, files, terminal ---------- */
+.tree-row { display: flex; align-items: center; gap: 6px; width: 100%; height: 26px; padding: 0 8px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text-2); font-size: 12.5px; text-align: left; }
+.tree-row:hover { background: rgba(255, 255, 255, 0.04); color: var(--text); }
+.tree-row[aria-selected="true"] { background: rgba(255, 255, 255, 0.075); color: var(--text); }
+.tree-row.root { color: var(--text); font-weight: 600; }
+.tree-row svg { flex: none; color: var(--text-3); }
+.code-main { display: flex; flex-direction: column; }
+.code-tabs { display: flex; align-items: center; gap: 2px; height: 40px; padding: 0 8px; border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; }
+.code-tab { display: flex; align-items: center; gap: 6px; height: 28px; max-width: 220px; padding: 0 4px 0 10px; border-radius: var(--r-sm); color: var(--text-3); font-size: 12.5px; }
+.code-tab:hover { background: rgba(255, 255, 255, 0.04); }
+.code-tab[aria-selected="true"] { background: var(--bg-raised); color: var(--text); box-shadow: var(--highlight); }
+.code-body { position: relative; flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+.code-body.with-terminal { grid-template-rows: minmax(0, 1fr) auto minmax(160px, 34%); }
+.code-editor { grid-row: 1; position: relative; min-height: 0; }
+.monaco-host { position: absolute; inset: 0; }
+.code-ask { grid-row: 2; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); }
+.code-ask select { height: 28px; border-radius: var(--r-sm); border: 1px solid var(--line-2); background: var(--bg-input); padding: 0 6px; }
+.code-ask input { flex: 1; height: 28px; border: 0; outline: 0; background: transparent; user-select: text; }
+.code-terminal { grid-row: 3; min-height: 0; border-top: 1px solid var(--line); background: var(--bg-canvas); }
+.terminal-wrap { position: relative; height: 100%; }
+.terminal-host { position: absolute; inset: 8px 4px 4px 12px; }
+.terminal-ended { position: absolute; right: 12px; bottom: 10px; display: flex; align-items: center; gap: 10px; }
+.terminal-off { display: grid; place-items: center; height: 100%; }

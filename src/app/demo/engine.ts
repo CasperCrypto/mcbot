@@ -798,7 +798,16 @@ export const demoEngine = {
     const { files } = filesOf(root);
     const text = files[path];
     if (text === undefined) throw new EngineError(404, "no such file", {});
-    return { path, bytes: utf8Bytes(text).length, text };
+    return { path, bytes: utf8Bytes(text).length, text, sha256: sha256Hex(text) };
+  }),
+  /** The code editor's save, in this browser only (the shared files and the sample project). */
+  writeFile: api((root: string, path: string, text: string, baseSha256: string | null) => {
+    if (root.startsWith("profile:")) throw new EngineError(403, "In the demo, agents' folders are read only", {});
+    const { files } = filesOf(root);
+    const current = files[path];
+    if ((current === undefined ? null : sha256Hex(current)) !== baseSha256) throw new EngineError(409, "The file changed since you opened it. Reopen it to see the change.", {});
+    files[path] = text;
+    return { path, bytes: utf8Bytes(text).length, sha256: sha256Hex(text) };
   }),
 };
 

@@ -162,6 +162,8 @@ export interface FsPreview {
   bytes: number;
   text: string | null;
   reason?: string;
+  /** sha256 of `text`: send it back to save (the code editor). */
+  sha256?: string;
 }
 
 export interface LastCompile {

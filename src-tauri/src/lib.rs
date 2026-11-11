@@ -10,6 +10,8 @@
 //! (`mcbot-engine`, built by scripts/build-engine.mjs) and Hermes inside the
 //! resources (`hermes/`). `tauri dev` runs the engine itself instead.
 
+mod terminal;
+
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
@@ -179,7 +181,14 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .manage(Engine(Mutex::new(None)))
         .manage(Attention(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![set_attention])
+        .manage(terminal::Terminals::default())
+        .invoke_handler(tauri::generate_handler![
+            set_attention,
+            terminal::terminal_open,
+            terminal::terminal_write,
+            terminal::terminal_resize,
+            terminal::terminal_close
+        ])
         .setup(|app| {
             let handle = app.handle();
             match start_engine(handle) {
@@ -208,6 +217,7 @@ pub fn run() {
         .expect("error while building McBot");
     app.run(|app, event| {
         if let RunEvent::Exit = event {
+            app.state::<terminal::Terminals>().close_all();
             if let Some(mut child) = app.state::<Engine>().0.lock().unwrap().take() {
                 let _ = child.kill();
                 let _ = child.wait();

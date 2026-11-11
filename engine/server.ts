@@ -433,6 +433,13 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const dir = await folders.resolveRoot(url.searchParams.get("root") ?? "", manifest?.profiles ?? []);
       return folders.read(dir, url.searchParams.get("path") ?? "");
     },
+    /** The code editor's save: opened folders, the shared files folder and agents' workspace/ only. */
+    "PUT /api/fs/write": async (req) => {
+      const body = parse(z.object({ root: z.string(), path: z.string().min(1).max(1000), text: z.string().max(5_000_000), baseSha256: z.string().nullable() }), await json(req));
+      const manifest = await readManifest(cfg.hermesHome);
+      const dir = await folders.resolveRoot(body.root, manifest?.profiles ?? []);
+      return folders.write(body.root, dir, body.path, body.text, body.baseSha256);
+    },
   };
 
   async function hermesInfo(): Promise<HermesInfo> {

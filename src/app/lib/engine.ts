@@ -67,6 +67,7 @@ const http = {
   openFolder: (path: string) => call<FsRoot>("POST", "/api/fs/roots", { path }),
   closeFolder: (id: string) => call<{ ok: true }>("POST", "/api/fs/roots/close", { id }),
   list: (root: string, path: string) => call<FsListing>("GET", `/api/fs/list?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
+  writeFile: (root: string, path: string, text: string, baseSha256: string | null) => call<{ path: string; bytes: number; sha256: string }>("PUT", "/api/fs/write", { root, path, text, baseSha256 }),
   read: (root: string, path: string) => call<FsPreview>("GET", `/api/fs/read?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
   setup: () => call<SetupState>("GET", "/api/setup"),
   setupDetect: () => call<SetupDetect>("GET", "/api/setup/detect"),

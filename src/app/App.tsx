@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo } from "react";
 import type { AgentNode } from "../contracts/graph";
 import { compileBoard, refreshDrift } from "./actions";
 import { GraphView } from "./graph/GraphView";
@@ -23,11 +23,18 @@ import { RunsView } from "./views/RunsView";
 import { TasksView } from "./views/TasksView";
 import { TeamView } from "./views/TeamView";
 
+/** Monaco and xterm are big: the Code view loads on first use. */
+const CodeView = lazy(() => import("./workbench/CodeView"));
+function CodeTab() {
+  return <Suspense fallback={<section className="main flush-left" />}><CodeView /></Suspense>;
+}
+
 const VIEW_COMPONENTS = {
   home: HomeView,
   graph: GraphView,
   agents: AgentsView,
   tasks: TasksView,
+  code: CodeTab,
   workflows: RunsView,
   memory: MemoryView,
   files: FilesView,
@@ -62,7 +69,8 @@ function BoardEffects() {
       if (k === "k") {
         e.preventDefault();
         app.setPalette(!app.paletteOpen);
-      } else if (k === "s") {
+      } else if (k === "s" && app.tab !== "code") {
+        // In Code, ⌘S saves the file (workbench/CodeView.tsx).
         e.preventDefault();
         void compileBoard(boardId);
       } else if (/^[1-9]$/.test(k) && VIEWS[Number(k) - 1]) {
