@@ -14,12 +14,14 @@ import { useApp } from "./state/store";
 import { AgentsView } from "./views/AgentsView";
 import { CostView } from "./views/CostView";
 import { FilesView } from "./views/FilesView";
+import { HomeView } from "./views/HomeView";
 import { MemoryView } from "./views/MemoryView";
 import { RunsView } from "./views/RunsView";
 import { TasksView } from "./views/TasksView";
 import { TeamView } from "./views/TeamView";
 
 const VIEW_COMPONENTS = {
+  home: HomeView,
   graph: GraphView,
   agents: AgentsView,
   tasks: TasksView,

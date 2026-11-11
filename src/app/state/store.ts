@@ -3,7 +3,7 @@ import type { BoardInfo, CompileResponse, Health, SetupState } from "../../contr
 import { summarizeRun, type RunEvent, type RunSummary } from "../../contracts/run";
 import { loadIdentity, saveIdentity, type Identity } from "../lib/identity";
 
-export type Tab = "graph" | "agents" | "tasks" | "workflows" | "memory" | "files" | "cost" | "team";
+export type Tab = "home" | "graph" | "agents" | "tasks" | "workflows" | "memory" | "files" | "cost" | "team";
 
 export interface Toast {
   id: number;
@@ -74,7 +74,7 @@ function savedBoard(): string | null {
 }
 
 export const useApp = create<State>((set, get) => ({
-  tab: "graph",
+  tab: "home",
   boardId: savedBoard(),
   boards: [],
   health: null,

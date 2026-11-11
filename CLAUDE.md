@@ -229,4 +229,4 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   Product shots (`site/assets/*.webp`) are taken from the demo at 1440×900 @2x
   without the Demo chip; re-shoot them when the UI they show changes.
 
-Shortcuts: ⌘K commands · ⌘1–7 views · ⌘S compile · ⌘N new window (desktop).
+Shortcuts: ⌘K commands · ⌘1–9 views · ⌘S compile · ⌘N new window (desktop).

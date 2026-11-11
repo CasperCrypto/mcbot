@@ -1,5 +1,5 @@
 import {
-  BookOpen, Bot, Brain, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
+  BookOpen, Bot, Brain, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
@@ -26,6 +26,7 @@ interface Command {
 }
 
 export const VIEWS: { tab: Tab; label: string; icon: ReactNode }[] = [
+  { tab: "home", label: "Home", icon: <House size={15} /> },
   { tab: "graph", label: "Graph", icon: <Waypoints size={15} /> },
   { tab: "agents", label: "Agents", icon: <MessagesSquare size={15} /> },
   { tab: "tasks", label: "Tasks", icon: <ListChecks size={15} /> },
