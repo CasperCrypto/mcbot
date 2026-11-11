@@ -121,6 +121,9 @@ Change them additively; a breaking change bumps the version.
   (`engine/bundle.ts`) and keeps tools in `<data>/hermes-runtime`; its log is
   `<data>/engine.log`. First launch: the setup assistant prepares Hermes in the
   background (`POST /api/hermes/prepare`), minutes, with progress.
+- The shell adds a menu bar (tray) icon whose count is Home's "Needs you" (`set_attention`,
+  sent by the window) and system notifications when an agent finishes, fails, asks for a
+  review or is blocked while no McBot window is in front (`src/app/state/signals.ts`).
 - The engine must stay bundleable as CommonJS: no top-level `await`, and guard
   every `import.meta` (it is empty in the bundle).
 - Unsigned on purpose (free and open source): macOS ad-hoc (`signingIdentity: "-"`),

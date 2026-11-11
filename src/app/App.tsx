@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import type { AgentNode } from "../contracts/graph";
 import { compileBoard, refreshDrift } from "./actions";
 import { GraphView } from "./graph/GraphView";
 import { engine, subscribeRunEvents } from "./lib/engine";
@@ -10,7 +11,9 @@ import { Rail } from "./shell/Rail";
 import { SetupAssistant } from "./setup/SetupAssistant";
 import { BrandMark, TitleBar } from "./shell/TitleBar";
 import { BoardProvider, useBoard } from "./state/board";
+import { useSignals } from "./state/signals";
 import { useApp } from "./state/store";
+import { useTasks } from "./views/TasksView";
 import { AgentsView } from "./views/AgentsView";
 import { CostView } from "./views/CostView";
 import { FilesView } from "./views/FilesView";
@@ -35,6 +38,11 @@ const VIEW_COMPONENTS = {
 function BoardEffects() {
   const { boardId, graph } = useBoard();
   const loadRuns = useApp((s) => s.loadRuns);
+  const runs = useApp((s) => s.runs);
+  const drift = useApp((s) => s.drift);
+  const { tasks } = useTasks(boardId, 5000);
+  const agents = useMemo(() => graph.nodes.filter((n): n is AgentNode => n.kind === "agent"), [graph]);
+  useSignals(tasks, runs, drift, agents);
 
   useEffect(() => {
     engine.runs(boardId).then(loadRuns).catch(() => undefined);
