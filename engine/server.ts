@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { compile, resolveGraph, type AgentBundle } from "../src/compile";
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, SetupDetect, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../src/contracts/api";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, AgentSchedules, SetupDetect, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../src/contracts/api";
 import { writeExport } from "./boardFiles";
 import { diagnosticsText, osLine, redact, tail } from "./diagnostics";
 import type { Graph, ModelNode } from "../src/contracts/graph";
@@ -22,6 +22,7 @@ import { atomicWrite } from "./fsutil";
 import { FolderError, Folders } from "./folders";
 import { bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, setupHome, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
+import { JOB_ID_RE, createScheduleArgv, readSchedules, scheduleActionArgv } from "./schedules";
 import { TASK_ID_RE, actionArgv, createArgv, kanbanError, readTask, readTasks, runKanban } from "./kanban";
 import { envEntriesFor, hasLiveChannel, resolveEntries, writeProfileKeys } from "./profileEnv";
 import { MediaError, mediaFile } from "./media";
@@ -124,6 +125,8 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     if (r.code !== 0) throw new HttpError(409, kanbanError(r));
     return r.stdout;
   };
+  /** Run `hermes <argv>` under the root; a failure becomes Hermes' own words, as a 409. */
+  const hermesCli = kanban;
   /** A ready task starts only while the gateway runs (its dispatcher hands it to the agent). */
   const wakeDispatcher = () => void runner.ensureGateway().then((r) => console.log(`[engine] tasks: gateway ${r}`)).catch(() => undefined);
   const person = z.string().trim().min(1).max(64);
@@ -144,8 +147,10 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       if (!manifest.profiles.includes(b.agent.data.name)) continue;
       await writeProfileKeys(join(cfg.hermesHome, "profiles", b.agent.data.name), resolveEntries(envEntriesFor(b), saved));
       live ||= hasLiveChannel(b, saved);
+      // A schedule fires only while a gateway serves its agent (cron/jobs.py, per-profile stores).
+      live ||= (await readSchedules(cfg.hermesHome, b.agent.data.name)).some((j) => j.enabled);
     }
-    if (live) console.log(`[engine] chat apps: gateway ${await runner.ensureGateway()}`);
+    if (live) console.log(`[engine] chat apps and schedules: gateway ${await runner.ensureGateway()}`);
   }).catch((err: unknown) => console.error("[engine] could not update agents' keys:", err)));
   onBoardSaved = (boardId) => {
     void readManifest(cfg.hermesHome).then((m) => { if (m?.graphId === boardId) void syncAgents(); }).catch(() => undefined);
@@ -329,6 +334,30 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       if (!task) throw new HttpError(404, "no such task");
       if (task.assignee && ["ready", "todo"].includes(task.status)) wakeDispatcher();
       return task;
+    },
+
+    // ---- schedules: each agent's Hermes cron jobs ----
+    "GET /api/schedules": async (_req, url): Promise<AgentSchedules[]> => {
+      const team = await teamOf(await requireBoard(url.searchParams.get("boardId")));
+      return Promise.all([...team].map(async ([profile, agentNodeId]) => ({ agentNodeId, profile, schedules: await readSchedules(cfg.hermesHome, profile) })));
+    },
+    "POST /api/schedules": async (req): Promise<AgentSchedules> => {
+      const body = parse(z.object({ boardId: z.string(), profile: z.string(), when: z.string().trim().min(1).max(100), prompt: z.string().trim().min(1).max(20_000), name: z.string().trim().max(80).default("") }), await json(req));
+      const team = await teamOf(await requireBoard(body.boardId));
+      const agentNodeId = team.get(body.profile);
+      if (!agentNodeId) throw new HttpError(409, `${body.profile} isn't a compiled agent on this board. Compile, then schedule it.`);
+      await hermesCli(createScheduleArgv(body.profile, body.when, body.prompt, body.name));
+      wakeDispatcher();
+      return { agentNodeId, profile: body.profile, schedules: await readSchedules(cfg.hermesHome, body.profile) };
+    },
+    "POST /api/schedules/act": async (req): Promise<AgentSchedules> => {
+      const body = parse(z.object({ boardId: z.string(), profile: z.string(), id: z.string().regex(JOB_ID_RE), action: z.enum(["pause", "resume", "run", "remove"]) }), await json(req));
+      const team = await teamOf(await requireBoard(body.boardId));
+      const agentNodeId = team.get(body.profile);
+      if (!agentNodeId) throw new HttpError(404, `no compiled agent ${body.profile}`);
+      await hermesCli(scheduleActionArgv(body.profile, body.id, body.action));
+      if (body.action === "resume" || body.action === "run") wakeDispatcher();
+      return { agentNodeId, profile: body.profile, schedules: await readSchedules(cfg.hermesHome, body.profile) };
     },
 
     "GET /api/memory": async (_req, url): Promise<AgentMemoryView[]> => {

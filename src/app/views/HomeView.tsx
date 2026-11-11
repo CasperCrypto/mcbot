@@ -1,6 +1,6 @@
-import { ArrowUp, Check, CircleAlert, CircleDashed, Hammer, ListChecks, RotateCcw, Square } from "lucide-react";
+import { ArrowUp, Check, CircleAlert, CircleDashed, Clock, Hammer, ListChecks, Pause, Play, Plus, RotateCcw, Square, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { CostReport, TaskView } from "../../contracts/api";
+import type { AgentSchedules, CostReport, TaskView } from "../../contracts/api";
 import type { AgentNode } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 import { compileBoard, runAgent } from "../actions";
@@ -91,6 +91,99 @@ function Ask({ agents }: { agents: AgentNode[] }) {
         <button className="send" aria-label="Send" disabled={!text.trim() || busy} onClick={() => void send()}><ArrowUp size={16} /></button>
       </div>
     </div>
+  );
+}
+
+
+/** Hermes' schedule grammar ('every 2h', '0 9 * * *'): the common ones as presets. */
+const WHEN = [
+  { value: "every 1h", label: "Hourly" },
+  { value: "0 9 * * *", label: "Daily 9:00" },
+  { value: "0 9 * * 1-5", label: "Weekdays" },
+  { value: "custom", label: "Custom" },
+] as const;
+
+function when(ts: number | null): string {
+  if (!ts) return "";
+  const d = new Date(ts);
+  const sameDay = d.toDateString() === new Date().toDateString();
+  return `${sameDay ? "Today" : d.toLocaleDateString([], { weekday: "short" })} ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+}
+
+function Schedules({ agents }: { agents: AgentNode[] }) {
+  const { boardId } = useBoard();
+  const [data, setData] = useState<AgentSchedules[] | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [profile, setProfile] = useState(agents[0]?.data.name ?? "");
+  const [preset, setPreset] = useState<(typeof WHEN)[number]["value"]>("0 9 * * 1-5");
+  const [custom, setCustom] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const toast = useApp((s) => s.toast);
+  useEffect(() => {
+    let alive = true;
+    const load = () => engine.schedules(boardId).then((d) => { if (alive) setData(d); }).catch(() => undefined);
+    void load();
+    const t = setInterval(load, 15_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [boardId]);
+  const merge = (one: AgentSchedules) => setData((d) => [...(d ?? []).filter((x) => x.profile !== one.profile), one]);
+  const run = async (f: () => Promise<AgentSchedules>) => {
+    try {
+      merge(await f());
+      return true;
+    } catch (err) {
+      toast({ kind: "fail", text: (err as Error).message });
+      return false;
+    }
+  };
+  const add = async () => {
+    const w = preset === "custom" ? custom.trim() : preset;
+    if (!profile || !w || !prompt.trim()) return;
+    if (await run(() => engine.createSchedule(boardId, { profile, when: w, prompt: prompt.trim(), name: prompt.trim().split("\n")[0]!.slice(0, 60) }))) {
+      setPrompt("");
+      setAdding(false);
+    }
+  };
+  const jobs = (data ?? []).flatMap((a) => a.schedules.map((j) => ({ ...j, profile: a.profile })))
+    .sort((a, b) => Number(b.enabled) - Number(a.enabled) || (a.nextRunAt ?? Infinity) - (b.nextRunAt ?? Infinity));
+  const nameOf = (p: string) => agents.find((a) => a.data.name === p)?.data.displayName || p;
+  return (
+    <section className="card home-card" data-testid="home-schedules">
+      <div className="home-card-head">
+        <h2>Scheduled</h2><span className="grow" />
+        <button className="icon-btn sm" aria-label={adding ? "Close" : "New schedule"} data-tip={adding ? undefined : "New schedule"} onClick={() => setAdding(!adding)} data-testid="schedule-add">{adding ? <X size={13} /> : <Plus size={14} />}</button>
+      </div>
+      {adding && (
+        <div className="stack schedule-form" style={{ gap: 10 }}>
+          <select value={profile} onChange={(e) => setProfile(e.target.value)} aria-label="Agent">
+            {agents.map((a) => <option key={a.id} value={a.data.name}>{a.data.displayName || a.data.name}</option>)}
+          </select>
+          <Segmented value={preset} onChange={setPreset} options={WHEN.map((w) => ({ value: w.value, label: w.label }))} />
+          {preset === "custom" && <input className="mono" value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="every 2h · 30m · 0 9 * * 1" aria-label="Schedule" data-tip="'every 2h', '30m' (once), or a cron line" />}
+          <textarea rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="What to do each time" aria-label="What to do" data-testid="schedule-prompt" />
+          <div className="row"><span className="grow" /><button className="btn sm primary" disabled={!prompt.trim() || (preset === "custom" && !custom.trim())} onClick={() => void add()} data-testid="schedule-create">Schedule</button></div>
+        </div>
+      )}
+      {jobs.length === 0 && !adding ? <div className="home-empty"><Clock size={14} /> Nothing scheduled</div> : jobs.map((j) => (
+        <div key={j.id} className="home-row schedule-row" data-enabled={j.enabled}>
+          <div className="home-row-main" data-tip={j.lastError ?? undefined}>
+            <AgentFace seed={j.profile} size={30} status={j.lastStatus === "error" ? "failed" : null} />
+            <span className="grow" style={{ display: "grid", gap: 1 }}>
+              <span className="title ellipsis">{j.name || j.prompt}</span>
+              <span className="sub ellipsis">{nameOf(j.profile)} · {j.enabled ? (when(j.nextRunAt) || j.when) : "Paused"}</span>
+            </span>
+          </div>
+          <span className="schedule-actions">
+            <button className="icon-btn sm" aria-label="Run now" data-tip="Run now" onClick={() => void run(() => engine.actOnSchedule(boardId, j.profile, j.id, "run"))}><Play size={12} /></button>
+            <button className="icon-btn sm" aria-label={j.enabled ? "Pause" : "Resume"} data-tip={j.enabled ? "Pause" : "Resume"} onClick={() => void run(() => engine.actOnSchedule(boardId, j.profile, j.id, j.enabled ? "pause" : "resume"))}>{j.enabled ? <Pause size={12} /> : <RotateCcw size={12} />}</button>
+            <button className="icon-btn sm" aria-label="Remove" data-tip="Remove" onClick={() => void run(() => engine.actOnSchedule(boardId, j.profile, j.id, "remove"))}><Trash2 size={12} /></button>
+          </span>
+        </div>
+      ))}
+    </section>
   );
 }
 
@@ -242,6 +335,8 @@ export function HomeView() {
                   <div><b className="num">{doneToday}</b><small>Tasks done</small></div>
                 </div>
               </section>
+
+              <Schedules agents={agents} />
 
               {agents.length === 0 && (
                 <section className="card home-card">

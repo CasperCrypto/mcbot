@@ -13,7 +13,7 @@ import { exportFileName } from "../../board/files";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, SetupDetect, SetupProfile, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
@@ -38,6 +38,8 @@ interface State {
   sampleOpen: boolean;
   /** Hermes' kanban, simulated: every task of the demo's Hermes home. */
   tasks?: TaskDetail[];
+  /** Hermes' cron jobs per profile, simulated (they never fire in the browser). */
+  schedules?: Record<string, ScheduleView[]>;
   /** Setup assistant: done or not, and boards it built (their graphs until a window opens them). */
   setup?: SetupState;
   pending?: Record<string, Graph>;
@@ -528,6 +530,25 @@ function seedTasks(): TaskDetail[] {
   ];
 }
 
+function nextNine(weekdays: boolean, from = new Date()): number {
+  const d = new Date(from);
+  d.setHours(9, 0, 0, 0);
+  while (d.getTime() <= from.getTime() || (weekdays && (d.getDay() === 0 || d.getDay() === 6))) d.setDate(d.getDate() + 1);
+  return d.getTime();
+}
+
+function demoSchedules(): Record<string, ScheduleView[]> {
+  return (state.schedules ??= {
+    triage: [{ id: "5eed00000001", name: "Morning sweep", prompt: "Route every ticket that came in overnight.", when: "0 9 * * 1-5", enabled: true, state: "scheduled", nextRunAt: nextNine(true), lastRunAt: null, lastStatus: null, lastError: null }],
+  });
+}
+
+function schedulesOf(boardId: string, profile: string): AgentSchedules {
+  const agentNodeId = teamOf(boardId).get(profile);
+  if (!agentNodeId) throw new EngineError(409, `${profile} isn't a compiled agent on this board. Compile, then schedule it.`, {});
+  return { agentNodeId, profile, schedules: demoSchedules()[profile] ?? [] };
+}
+
 /** The fork's real upstream record; the gateway itself is simulated (no Hermes runs in a browser). */
 function demoHermes(): HermesInfo {
   const running = Object.values(state.runs).some((e) => !e.some((x) => x.type === "run.finished"));
@@ -681,6 +702,27 @@ export const demoEngine = {
     save();
     if (t.status === "ready") void dispatch(t, boardId);
     return taskView(t, team);
+  }),
+  schedules: api((boardId: string): AgentSchedules[] => [...teamOf(requireBoard(boardId))].map(([profile, agentNodeId]) => ({ agentNodeId, profile, schedules: demoSchedules()[profile] ?? [] }))),
+  createSchedule: api((boardId: string, input: { profile: string; when: string; prompt: string; name: string }): AgentSchedules => {
+    schedulesOf(requireBoard(boardId), input.profile);
+    const preset = input.when === "0 9 * * *" || input.when === "0 9 * * 1-5";
+    const list = (demoSchedules()[input.profile] ??= []);
+    list.push({ id: Math.random().toString(16).slice(2, 14).padEnd(12, "0"), name: input.name, prompt: input.prompt, when: input.when, enabled: true, state: "scheduled",
+      nextRunAt: preset ? nextNine(input.when.endsWith("1-5")) : null, lastRunAt: null, lastStatus: null, lastError: null });
+    save();
+    return schedulesOf(boardId, input.profile);
+  }),
+  actOnSchedule: api((boardId: string, profile: string, id: string, action: "pause" | "resume" | "run" | "remove"): AgentSchedules => {
+    const list = demoSchedules()[profile] ?? [];
+    const job = list.find((j) => j.id === id);
+    if (!job) throw new EngineError(409, `Job not found: ${id}`, {});
+    if (action === "remove") list.splice(list.indexOf(job), 1);
+    if (action === "pause") Object.assign(job, { enabled: false, state: "paused" });
+    if (action === "resume") Object.assign(job, { enabled: true, state: "scheduled" });
+    if (action === "run") Object.assign(job, { lastRunAt: Date.now(), lastStatus: "ok" });
+    save();
+    return schedulesOf(requireBoard(boardId), profile);
   }),
   roots: api((boardId: string): FsRoot[] => {
     const compiled = manifest()?.profiles ?? [];

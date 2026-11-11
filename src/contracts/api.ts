@@ -272,3 +272,25 @@ export type TaskAction =
   | { action: "unblock" }
   | { action: "changes"; text: string }
   | { action: "archive" };
+
+// ---- schedules: Hermes' cron jobs, per agent (engine/schedules.ts) ----
+
+export interface ScheduleView {
+  id: string;
+  name: string;
+  prompt: string;
+  /** As Hermes shows it: '0 9 * * 1-5', 'every 2h', … */
+  when: string;
+  enabled: boolean;
+  state: string;
+  nextRunAt: number | null;
+  lastRunAt: number | null;
+  lastStatus: string | null;
+  lastError: string | null;
+}
+
+export interface AgentSchedules {
+  agentNodeId: string;
+  profile: string;
+  schedules: ScheduleView[];
+}

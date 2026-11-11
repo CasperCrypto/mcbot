@@ -7,7 +7,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { CompileResponse, TasksView } from "../src/contracts/api";
+import type { AgentSchedules, CompileResponse, TasksView } from "../src/contracts/api";
 import { GRAPH_SCHEMA, type Graph } from "../src/contracts/graph";
 import type { RunEvent } from "../src/contracts/run";
 import { startStubLlm, type StubLlm } from "../test/stub-llm/server";
@@ -83,4 +83,21 @@ describe.skipIf(!E2E)("a team through Hermes' kanban", () => {
     }
     expect(task).toMatchObject({ assignee: "writer", agentNodeId: "n-writer", createdBy: "lead", status: "done", result: "Drafted the post" });
   }, 600_000);
+
+  it("schedules the writer; Hermes stores it, runs it on request, and pauses and removes it", async () => {
+    const made = await api<AgentSchedules>("/api/schedules", { boardId: "launch", profile: "writer", when: "0 9 * * 1-5", prompt: "what is 2+2", name: "Morning sum" });
+    expect(made.schedules).toEqual([expect.objectContaining({ name: "Morning sum", prompt: "what is 2+2", when: "0 9 * * 1-5", enabled: true, nextRunAt: expect.any(Number) })]);
+    const id = made.schedules[0]!.id;
+    await api("/api/schedules/act", { boardId: "launch", profile: "writer", id, action: "run" });
+    let job = made.schedules[0]!;
+    for (const end = Date.now() + 240_000; Date.now() < end && !job.lastRunAt;) {
+      await new Promise((r) => setTimeout(r, 2000));
+      job = (await api<AgentSchedules[]>("/api/schedules?boardId=launch")).find((a) => a.profile === "writer")!.schedules[0]!;
+    }
+    expect(job).toMatchObject({ lastRunAt: expect.any(Number), lastStatus: "ok" });
+    const paused = await api<AgentSchedules>("/api/schedules/act", { boardId: "launch", profile: "writer", id, action: "pause" });
+    expect(paused.schedules[0]).toMatchObject({ enabled: false });
+    const gone = await api<AgentSchedules>("/api/schedules/act", { boardId: "launch", profile: "writer", id, action: "remove" });
+    expect(gone.schedules).toEqual([]);
+  }, 300_000);
 });

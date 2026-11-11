@@ -102,6 +102,15 @@ invent one.
 | The dispatcher hands the task to its profile's owner in the gateway (`hermes_cli.kanban_worker_client`), with `HERMES_KANBAN_TASK` set, so the worker gets the task-scoped tools (`kanban_complete`, `kanban_block`, `kanban_comment`, `kanban_create`, …) without the `kanban` tool set | `hermes_cli/kanban_db_dispatch.py:2697-2700,2754-2873`; `tools/kanban_tools.py:83-90` (`_visible`); observed: a worker on the stub model called `kanban_complete` and the task went `ready → running → done` |
 | Outside a dispatched task, an agent gets the kanban tools (create, list, link, unblock…) only with the `kanban` tool set in its `platform_toolsets` | `tools/kanban_tools.py:1-5,37,83-96`; `toolsets.py:153-163` |
 
+## Schedules: Hermes' cron
+
+| Fact | Source |
+|---|---|
+| Cron is per profile: each agent's jobs live in `<profile>/cron/jobs.json` as `{ jobs: [...], updated_at }` and run with that profile's `.env`, config and skills | `cron/jobs.py:82-95` (comment and `JOBS_FILE`), `:1377` (`load_jobs`); observed |
+| Job fields McBot reads: `id` (12 hex), `name`, `prompt`, `schedule_display`, `enabled`, `state`, `next_run_at`, `last_run_at`, `last_status`, `last_error` | `cron/jobs.py:1866` (`uuid4().hex[:12]`); a job `hermes -p triage cron create` wrote |
+| `hermes -p <agent> cron create [--name N] <schedule> [prompt]` (schedule: `30m`, `every 2h` or a cron line); `pause`, `resume`, `run` (on the next scheduler tick), `remove` `<job_id>` | `hermes_cli/subcommands/cron.py:39,188-207`; `hermes cron <cmd> --help` |
+| Jobs fire only while a gateway serves the profile ("Scheduler is not ready … no gateway serves it"). The engine runs `hermes gateway ensure` after a schedule is added, resumed or run, and at start while any compiled agent has an enabled job | `hermes cron create` output; observed: `cron run` fired within seconds under the multiplex gateway, `last_status: ok` |
+
 ## Things that differ from what we were told
 
 | Claim | Reality |
