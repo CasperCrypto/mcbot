@@ -76,6 +76,21 @@ export async function exportBoardFile(boardId: string): Promise<void> {
   }
 }
 
+/** Draw this computer's Hermes setup (~/.hermes) as a new board. */
+export async function openHermesSetup(): Promise<void> {
+  const app = useApp.getState();
+  try {
+    const b = await engine.openHermes();
+    app.setBoards(await engine.boards());
+    app.setBoard(b.id);
+    app.setTab("graph");
+    const more = b.unshown.length ? ` · ${b.unshown.length} not shown yet (see the gray note)` : "";
+    app.toast({ kind: "ok", text: `Opened your Hermes setup${more}` });
+  } catch (err) {
+    app.toast({ kind: "fail", text: (err as Error).message });
+  }
+}
+
 /** Pick a board file and open it as a new board. Nothing existing is replaced. */
 export function importBoardFile(): void {
   const input = Object.assign(document.createElement("input"), { type: "file", accept: ".json,application/json" });

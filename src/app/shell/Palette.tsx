@@ -4,7 +4,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
 import type { GraphNode } from "../../contracts/graph";
-import { compileBoard, exportBoardFile, importBoardFile } from "../actions";
+import { compileBoard, exportBoardFile, importBoardFile, openHermesSetup } from "../actions";
 import { newChannel, newId, newModel, newTool, newVault } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { resetDemo } from "../demo/engine";
@@ -109,6 +109,7 @@ function useCommands(close: () => void): Command[] {
         },
       },
       { id: "export-board", group: "Actions", label: "Export board", hint: "Save it as a file", icon: <Download size={15} />, run: () => { close(); void exportBoardFile(boardId); } },
+      { id: "open-hermes", group: "Actions", label: "Open my Hermes setup", hint: "Draw ~/.hermes as a board", icon: <FolderOpen size={15} />, run: () => { close(); void openHermesSetup(); } },
       { id: "import-board", group: "Actions", label: "Import board…", hint: "Open a board file", icon: <Upload size={15} />, run: () => { close(); importBoardFile(); } },
       { id: "hermes", group: "Actions", label: "Engine", hint: "Status and restart", icon: <Cpu size={15} />, run: () => app.setHermesOpen(true) },
       { id: "report", group: "Actions", label: "Report a problem…", hint: "Details to paste into an issue", icon: <LifeBuoy size={15} />, run: () => app.setReportOpen(true) },

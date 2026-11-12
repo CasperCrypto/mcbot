@@ -1,7 +1,7 @@
-import { Check, ChevronDown, Download, Hammer, LoaderCircle, Plus, Search, Upload, Users } from "lucide-react";
+import { Check, ChevronDown, Download, FolderOpen, Hammer, LoaderCircle, Plus, Search, Upload, Users } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { resolveGraph } from "../../compile";
-import { compileBoard, exportBoardFile, importBoardFile } from "../actions";
+import { compileBoard, exportBoardFile, importBoardFile, openHermesSetup } from "../actions";
 import { DEMO, REMOTE } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
@@ -41,6 +41,7 @@ function BoardMenu() {
             <hr />
             <button role="menuitem" onClick={() => { setOpen(false); setPalette(true); }}><Plus size={14} /> New board…</button>
             <button role="menuitem" onClick={() => { setOpen(false); importBoardFile(); }}><Upload size={14} /> Import board…</button>
+            {!REMOTE && <button role="menuitem" onClick={() => { setOpen(false); void openHermesSetup(); }} data-tip="Draw the agents in ~/.hermes as a board"><FolderOpen size={14} /> Open my Hermes setup</button>}
             {boardId && <button role="menuitem" onClick={() => { setOpen(false); void exportBoardFile(boardId); }}><Download size={14} /> Export this board</button>}
           </div>
         </>
