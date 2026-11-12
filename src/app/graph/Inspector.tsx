@@ -105,14 +105,14 @@ function AgentSetup({ node, set }: { node: Extract<GraphNode, { kind: "agent" }>
     <>
       <Field label="Profile" value={a.name} onChange={(v) => set("name", v)} mono error={errors.name} testId="agent-name" />
       <Field label="Description" value={a.description} onChange={(v) => set("description", v)} multiline rows={2} />
-      <Field label="Soul" value={a.soul} onChange={(v) => set("soul", v)} multiline rows={7} mono placeholder={"Who this agent is.\nHow it speaks. What it avoids."} />
+      <Field label="Soul" value={a.soul} onChange={(v) => set("soul", v)} multiline rows={7} placeholder={"Who this agent is.\nHow it speaks. What it avoids."} />
       <div className="stack">
         <span className="section-label">Models</span>
         {chain.length === 0 ? <span className="faint">Connect a model to this agent.</span> : (
           <div className="chain">
             {chain.map((c, i) => (
               <div key={c.edge.id} className="chain-item">
-                <span className={`chip ${i === 0 ? "accent" : ""}`}>{i === 0 ? "Primary" : `Fallback ${i}`}</span>
+                <span className="chip">{i === 0 ? "Primary" : `Fallback ${i}`}</span>
                 <span className="mono grow ellipsis">{(c.other.data as ModelData).model || c.other.data.name}</span>
                 {i > 0 && <button className="icon-btn sm" aria-label="Make primary" data-tip="Make primary" data-tip-side="top" onClick={() => makePrimary(c.edge.id)}><ArrowUp size={13} /></button>}
               </div>
@@ -162,7 +162,7 @@ function Abilities({ data, set, forced }: { data: AgentData; set: (f: string, v:
           return (
             <button key={c.key} type="button" className="ability" aria-pressed={active} disabled={locked} onClick={() => toggle(c.key)}
               data-tip={locked ? "On: a maker is connected" : undefined} data-tip-side="top" data-testid={`ability-${c.key}`}>
-              {c.label}
+              {active && <Check size={11} strokeWidth={2.6} />}{c.label}
             </button>
           );
         })}
