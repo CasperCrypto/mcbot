@@ -244,28 +244,42 @@ whether setup works.
 "Now" runs before and alongside M6. Hermes upstream syncs happen whenever the
 daily watchdog opens an issue.
 
-## Decisions for the owner
+## Decisions (made by the owner, 2026-11-12)
 
-1. **Your own AI plan.** Signing in with a ChatGPT or Claude plan instead of an
-   API key is what many people expect, but it breaks hard rule 4 (two
-   OpenAI-compatible providers, no vendor SDKs). Recommendation: allow it only
-   through runtimes Hermes or the vendor's own CLI already provide (Codex
-   runtime, ACP agents), never vendor SDKs inside McBot, and change the rule to say so.
-2. **Signing.** Apple Developer ID (yearly fee) with notarization and a Windows
-   code-signing service. Recommendation: before the public launch; unsigned
-   apps lose many first-time users at the warning screen.
-3. **Code editor.** Monaco (MIT, the VS Code editor, with a built-in diff view)
-   or CodeMirror 6 (MIT, lighter). Recommendation: Monaco, for the diff view and
-   familiar keys.
-4. **ACP.** Driving Claude Code, Codex and Gemini CLI as agents means taking ACP
-   off the out-of-scope list (CLAUDE.md). Recommendation: yes, in M9.
-5. **Lightpanda.** Its licence is AGPL-3.0, so McBot never copies or bundles
-   it; Hermes can use it when the person installs it. Recommendation: offer it
-   as an optional engine, off by default.
-6. **Who comes first:** a person or a company? This changes setup questions,
-   defaults and the starter teams ([NEXT.md](NEXT.md) §9).
-7. **Team order.** Is sharing from one computer (M12a) enough to start, or is
-   the team server needed first?
+1. **Your own AI plan: yes.** People can use a ChatGPT or Claude plan they already pay for,
+   only through runtimes the vendor or Hermes ships (Codex runtime, the vendor's own CLI as an
+   agent), never a vendor SDK inside McBot. Hard rule 4 says so now.
+2. **Signing: free only.** Windows: SignPath Foundation's free open-source signing, and the
+   Microsoft Store (free for individual developers). Linux: Flathub. macOS: no free way to
+   avoid Gatekeeper (Developer ID is $99/year; Homebrew now requires notarization), so the Mac
+   download keeps the one-time "Open Anyway" with clear steps until that changes. Phones: an
+   installable web app (iPhone and Android, no store, no warning).
+3. **Code editor: Monaco** (done).
+4. **ACP: yes**, for Claude Code, Codex and Gemini CLI as agents (M9). It is also how a Claude
+   or ChatGPT plan runs in McBot (decision 1).
+5. **Lightpanda: optional**, installed by the person, off by default (done).
+6. **People and companies both come first.** Setup asks which, and the starter teams cover both.
+7. **Teams: network sharing first** (done, M12a), then the team server for remote teams (M12b).
+8. **Name and domain:** McBot, on the cheapest available McBot domain (the owner buys it).
+
+## Launch checklist
+
+| | Item | Who |
+|---|---|---|
+| ○ | v0.2.0 installers, installed on a real Mac and PC | owner tests, Claude fixes |
+| ○ | A real model end to end (Ollama, one cloud model) | owner's key, through a secure form |
+| ○ | Approval cards: answer Hermes' "may I?" from McBot | Claude |
+| ○ | Always on: background engine, launch at login | Claude |
+| ○ | Budgets per agent, with alerts | Claude |
+| ○ | Auto-update (signed update manifest) | owner makes the key, Claude wires it |
+| ○ | Windows: SignPath Foundation signing in release.yml; Microsoft Store listing | owner applies and registers, Claude wires it |
+| ○ | Linux: Flathub | Claude prepares, owner submits |
+| ○ | Phones: installable web app for chat and approvals | Claude |
+| ○ | Your own ChatGPT / Claude plan (decision 1) | Claude |
+| ○ | Ask McBot | Claude |
+| ○ | Google and Slack sign-in | Claude |
+| ○ | Docs, changelog, website on the domain, fresh screenshots, a short video | Claude, owner records the video |
+| ○ | Licences and notices check | Claude |
 
 ## Design
 

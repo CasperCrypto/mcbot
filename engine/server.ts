@@ -34,7 +34,7 @@ import { SetupStore, detectLocal, listModels } from "./setup";
 import { OwnershipError, readManifest, writeCompileResult } from "./writer";
 import { Sharing, guestAllowed, type SharingView } from "./sharing";
 
-export const ENGINE_VERSION = "0.1.0";
+export const ENGINE_VERSION = "0.2.0";
 
 export interface EngineConfig {
   workspace: string;

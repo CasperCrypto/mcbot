@@ -98,7 +98,7 @@ describe("GET /api/diagnostics", () => {
       const res = await fetch(`${engine.url}/api/diagnostics`, { headers });
       const { text } = (await res.json()) as { text: string };
       expect(res.status).toBe(200);
-      expect(text).toMatch(/^McBot 0\.1\.0 · /);
+      expect(text).toMatch(/^McBot 0\.2\.0 · /);
       expect(text).toContain("Boards: 1");
       expect(text).toContain(`request with ${HIDDEN} failed: 401`);
       expect(text).not.toContain("ck-live-9f8e7d6c5b4a");

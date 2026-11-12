@@ -574,11 +574,11 @@ const api = <A extends unknown[], R>(f: (...a: A) => R | Promise<R>) => async (.
 };
 
 export const demoEngine = {
-  health: api((): Health => ({ ok: true, version: "0.1.0", workspace: WORKSPACE, hermesHome: ROOT, managedRoot: true, hermes: { found: true, path: "simulated in this browser", kind: "bundled" } })),
+  health: api((): Health => ({ ok: true, version: "0.2.0", workspace: WORKSPACE, hermesHome: ROOT, managedRoot: true, hermes: { found: true, path: "simulated in this browser", kind: "bundled" } })),
   hermes: api((): HermesInfo => demoHermes()),
   diagnostics: api((): Diagnostics => ({
     text: [
-      "McBot 0.1.0 · browser demo",
+      "McBot 0.2.0 · browser demo",
       `System: ${navigator.userAgent}`,
       "Engine: simulated in this browser",
       `Boards: ${state.boards.length}`,
