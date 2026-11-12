@@ -113,7 +113,7 @@ export function renderConfig(graph: Graph, bundle: AgentBundle): string {
 
   const header = yamlComment([
     `Compiled by McBot from board "${graph.name || graph.id}" (${graph.id}), agent node ${bundle.agent.id}.`,
-    "Recompiling overwrites this file: change the board, not this file.",
+    "McBot changes only the keys its board shows; other keys stay as you or Hermes set them.",
   ]);
   return canonicalText(header + toYaml(doc));
 }

@@ -37,7 +37,7 @@ export function envFacts(text: string | null): { names: Set<string>; allowedTele
   return { names, allowedTelegram: allowed.split(",").map((s) => s.trim()).filter((s) => /^\d{1,20}$/.test(s)) };
 }
 
-async function profileFiles(name: string, dir: string): Promise<{ files: ProfileFiles; env: string | null }> {
+export async function profileFiles(name: string, dir: string): Promise<{ files: ProfileFiles; env: string | null }> {
   const skills: Record<string, string> = {};
   for (const d of await dirs(join(dir, "skills"))) {
     // A folder without its own SKILL.md is one of Hermes' skill categories (seeded or installed):

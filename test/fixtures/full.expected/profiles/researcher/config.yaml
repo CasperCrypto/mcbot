@@ -1,5 +1,5 @@
 # Compiled by McBot from board "Acme ops" (acme-ops), agent node a1.
-# Recompiling overwrites this file: change the board, not this file.
+# McBot changes only the keys its board shows; other keys stay as you or Hermes set them.
 model:
   provider: custom:mcbot-cloud
   default: frontier-1

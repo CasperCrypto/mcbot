@@ -17,7 +17,10 @@ import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostRepo
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
+import { applyToDoc, agentEditable } from "../../harness/live";
+import { mergeConfig } from "../../harness/merge";
 import { readHermes, unshownNote, type ProfileFiles } from "../../harness/read";
+import { followChanges } from "../../harness/reconcile";
 import { RUN_EVENT_VERSION, summarizeRun, type RunEvent, type RunEventInput, type RunSummary } from "../../contracts/run";
 import { EngineError } from "../lib/engineError";
 import { ROOT, SEED_BOARD, WORKSPACE, sampleProject, seedGraph, seedMemory, seedRuns, sharedFiles } from "./seed";
@@ -187,7 +190,13 @@ function compileBoard(boardId: string, dryRun: boolean): CompileResponse {
   const graph = graphOf(boardId);
   const { issues } = resolveGraph(graph);
   if (issues.some((i) => i.level === "error")) return { ok: false, issues, error: "The board has errors" };
-  const result = compile(graph);
+  const compiled = compile(graph);
+  // As the engine's writer: config.yaml is merged, so settings made outside the board stay.
+  const result = { ...compiled, files: compiled.files.map((f) => {
+    if (f.role !== "config") return f;
+    const content = mergeConfig(state.disk[f.path] ?? null, f.content);
+    return content === f.content ? f : { ...f, content, sha256: sha256Hex(content), bytes: utf8Bytes(content).length };
+  }) };
   const next = new Set(result.files.map((f) => f.path));
   const changes: FileChange[] = result.files.map((f) => {
     const before = state.disk[f.path] ?? null;
@@ -843,7 +852,7 @@ export const demoEngine = {
   }),
   /** The code editor's save, in this browser only (the shared files and the sample project). */
   writeFile: api((root: string, path: string, text: string, baseSha256: string | null) => {
-    if (root.startsWith("profile:")) throw new EngineError(403, "In the demo, agents' folders are read only", {});
+    if (root.startsWith("profile:")) return saveAgentFile(root.slice(8), path, text, baseSha256);
     const { files } = filesOf(root);
     const current = files[path];
     if ((current === undefined ? null : sha256Hex(current)) !== baseSha256) throw new EngineError(409, "The file changed since you opened it. Reopen it to see the change.", {});
@@ -851,6 +860,35 @@ export const demoEngine = {
     return { path, bytes: utf8Bytes(text).length, sha256: sha256Hex(text) };
   }),
 };
+
+/** An agent's settings saved in the Code view: the file changes, and the board follows (as in the app). */
+function saveAgentFile(profile: string, path: string, text: string, baseSha256: string | null) {
+  if (!agentEditable(path) || path.startsWith("workspace/")) throw new EngineError(403, "In the demo, an agent's settings files can be edited, not its other folders", {});
+  const full = `profiles/${profile}/${path}`;
+  const current = state.disk[full];
+  if ((current === undefined ? null : sha256Hex(current)) !== baseSha256) throw new EngineError(409, "The file changed since you opened it. Reopen it to see the change.", {});
+  const files = (): ProfileFiles => {
+    const dir = `profiles/${profile}/`;
+    const skills: Record<string, string> = {};
+    for (const [p, body] of Object.entries(state.disk)) {
+      const m = /^skills\/([^/]+)\/SKILL\.md$/.exec(p.slice(dir.length));
+      if (p.startsWith(dir) && m) skills[m[1]!] = body;
+    }
+    return { name: profile, config: state.disk[`${dir}config.yaml`] ?? null, soul: state.disk[`${dir}SOUL.md`] ?? null, profileYaml: state.disk[`${dir}profile.yaml`] ?? null, skills };
+  };
+  const base = files();
+  state.disk[full] = text;
+  const boardId = manifest()?.graphId ?? "";
+  let followed: string[] = [];
+  const doc = docs.get(boardId);
+  if (doc) {
+    const { edits, changed } = followChanges(graphFromDoc(doc), base, files());
+    applyToDoc(doc, edits);
+    followed = edits.length ? changed : [];
+  }
+  save();
+  return { path, bytes: utf8Bytes(text).length, sha256: sha256Hex(text), followed };
+}
 
 export function subscribeDemoEvents(onEvent: Listener, onStatus?: (connected: boolean) => void): () => void {
   listeners.add(onEvent);
