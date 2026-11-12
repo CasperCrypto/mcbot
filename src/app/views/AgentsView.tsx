@@ -10,6 +10,7 @@ import { Sidebar } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, Empty } from "../ui";
+import { toolLabel } from "../lib/toolLabel";
 import { ApprovalCard } from "../approvals/ApprovalCard";
 
 function shortTime(ts: number): string {
@@ -84,7 +85,7 @@ function AgentMessage({ run, events, name }: { run: RunSummary; events: RunEvent
       <div className="from"><AgentFace seed={run.profile} size={18} status={run.status} /><b>{name}</b></div>
       {tools.length > 0 && (
         <div className="steps">
-          {tools.map((t) => <span key={t.seq} className={`step-chip${failedTools.has(t.tool) ? " fail" : ""}`}><Plug size={11} /><span className="mono">{t.tool}</span></span>)}
+          {tools.map((t) => <span key={t.seq} className={`step-chip${failedTools.has(t.tool) ? " fail" : ""}`} data-tip={t.tool}><Plug size={11} /><span>{toolLabel(t.tool)}</span></span>)}
         </div>
       )}
       <ApprovalCard run={run} />

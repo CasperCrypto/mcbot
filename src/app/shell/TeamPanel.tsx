@@ -87,15 +87,20 @@ export function TeamChat() {
         <>
           <div className="team-scroll" ref={scroller} data-testid="team-chat">
             {messages.length === 0 && <div className="faint team-empty">Say hi. Type @{agents[0]?.data.name ?? "agent"} to ask an agent.</div>}
-            {messages.map((m) => (
-              <div key={m.id} className={`team-msg${m.agent ? " agent" : ""}${!m.agent && m.author === identity.name ? " mine" : ""}`} data-testid="team-message">
+            {messages.map((m, i) => {
+              // One person's run of messages (within five minutes) shares one name and face.
+              const prev = messages[i - 1];
+              const cont = !!prev && prev.author === m.author && prev.agent === m.agent && m.at - prev.at < 5 * 60_000;
+              return (
+              <div key={m.id} className={`team-msg${m.agent ? " agent" : ""}${!m.agent && m.author === identity.name ? " mine" : ""}${cont ? " cont" : ""}`} data-testid="team-message">
                 {m.agent ? <AgentFace seed={m.agent} size={24} /> : <PersonFace name={m.author} color={m.color || "#888"} size={24} />}
                 <div className="grow" style={{ minWidth: 0 }}>
                   <div className="team-meta"><b>{m.author || "Someone"}</b><span className="faint">{ago(m.at)}</span></div>
                   <div className="team-text">{m.text}</div>
                 </div>
               </div>
-            ))}
+              );
+            })}
             {asking > 0 && <div className="faint team-empty"><span className="typing"><i /><i /><i /></span></div>}
           </div>
           <div className="team-compose">
