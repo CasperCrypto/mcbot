@@ -179,6 +179,12 @@ h2 { margin: 0; font: 700 clamp(32px, 4.6vw, 48px)/1.08 var(--display); letter-s
 .os .links .btn { width: 100%; justify-content: space-between; font-size: 15px; }
 .os .links .btn span { color: var(--text-3); font-weight: 400; font-size: 13px; }
 .os .links .btn.primary span { color: rgba(0, 0, 0, 0.55); }
+.os { min-width: 0; }
+.install { display: grid; gap: 6px; min-width: 0; }
+.install .cmd { min-width: 0; display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+.install code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font: 12.5px/1.4 ui-monospace, "SF Mono", Menlo, monospace; color: var(--text); }
+.install button { flex: none; border: 0; border-radius: 8px; padding: 6px 10px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+.install small { color: var(--text-3); font-size: 13px; }
 .soon { display: inline-flex; align-items: center; height: 26px; padding: 0 11px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--text-2); background: rgba(255, 255, 255, 0.08); width: fit-content; }
 .mobile { margin-top: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .mobile .os { grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; }
@@ -378,6 +384,10 @@ footer .spacer { flex: 1; }
         <div class="head">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4.1ZM13.9 5c.7-.8 1.2-2 1-3.1-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3 1.1.1 2.2-.6 2.9-1.4Z"/></svg>
           <div><h3>macOS</h3><small>Apple silicon and Intel</small></div>
+        </div>
+        <div class="install">
+          <div class="cmd"><code>curl -fsSL https://caspercrypto.github.io/mcbot/install.sh | sh</code><button type="button" data-copy>Copy</button></div>
+          <small>Paste in Terminal. It installs McBot and opens it, no security prompt.</small>
         </div>
         <div class="links" data-links></div>
       </div>

@@ -112,6 +112,22 @@ invent one.
 | `hermes -p <agent> cron create [--name N] <schedule> [prompt]` (schedule: `30m`, `every 2h` or a cron line); `pause`, `resume`, `run` (on the next scheduler tick), `remove` `<job_id>` | `hermes_cli/subcommands/cron.py:39,188-207`; `hermes cron <cmd> --help` |
 | Jobs fire only while a gateway serves the profile ("Scheduler is not ready … no gateway serves it"). The engine runs `hermes gateway ensure` after a schedule is added, resumed or run, and at start while any compiled agent has an enabled job | `hermes cron create` output; observed: `cron run` fired within seconds under the multiplex gateway, `last_status: ok` |
 
+## Runs over Hermes' API server (approvals) — verified, not used yet
+
+What approval cards are built on. Verified end to end against the stub model on 2026-11-12:
+a run asked to `rm -rf`, Hermes paused with `approval.request`, McBot answered `once`, the
+command ran, the run completed.
+
+| Fact | Source |
+|---|---|
+| The gateway starts its API server when its environment has `API_SERVER_KEY` (16+ characters); `API_SERVER_PORT` and `API_SERVER_HOST` set where it listens (default 8642) | `gateway/config_env.py:121-129` (`_api_server`), `gateway/config.py:550-565`; `gateway/platforms/api_server.py:165-168` |
+| Under the multiplex gateway each profile is at `/p/<profile>/v1/...`, authorized by that profile's own `API_SERVER_KEY` (its `.env`); no key there = 401 | `gateway/platforms/api_server.py:1-6`, `:1389-1430` (`_expected_api_key`, `_check_auth`); `gateway/config_env.py:111-113` |
+| `POST /v1/runs` with `{"input": "<prompt>"}` → 202 `{"run_id": "run_…", "status": "started"}` | `gateway/platforms/api_server_runs.py:285-292,768-860`; observed |
+| `GET /v1/runs/{id}/events` is SSE: `data: {"event", "run_id", "timestamp", "seq", …}`, `: keepalive` comments. Seen: `tool.started {tool, preview, tool_call_id}`, `approval.request {kind, prompt_id, execution_generation, command, description, choices}`, `approval.settled {prompt_id}`, `tool.completed {tool, duration, error}`, `message.delta {delta}`, `run.completed {output, usage: {input_tokens, output_tokens, total_tokens}, runtime}` | `api_server_runs.py:224-226` (`_run_event`), `:1256` (`_handle_run_events`); observed |
+| Answer: `POST /v1/runs/{id}/approval` with exactly `{"request_id": <prompt_id>, "execution_generation": <n>, "choice": "once"\|"session"\|"always"\|"deny"}` → `{"status": "resolved"}`; any other key set → 400 `invalid_params` | `gateway/platforms/api_server_authority_runs.py:114-136` (`respond_run`); observed |
+| Whether a command asks: `approvals.mode` (`smart` by default: a guardian model decides and escalates; `manual` always asks for dangerous commands); one-shot `hermes chat` runs use `approvals.single_query_mode` (`deny`), which is why McBot's runs today never ask | `hermes_cli/config_defaults.py:1646-1662` |
+| A port another process holds parks the API server ("Port … already in use") while the gateway keeps running | observed in `gateway.log` |
+
 ## Things that differ from what we were told
 
 | Claim | Reality |
