@@ -38,6 +38,8 @@ interface State {
   newAgentOpen: boolean;
   /** The tool catalog. */
   catalogOpen: boolean;
+  /** Starter teams. */
+  teamsOpen: boolean;
   /** A sticky note this window just made: it opens ready to type. */
   freshNote: string | null;
   /** The agent whose thread is open in Agents. */
@@ -53,6 +55,7 @@ interface State {
   setReportOpen(open: boolean): void;
   setNewAgentOpen(open: boolean): void;
   setCatalogOpen(open: boolean): void;
+  setTeamsOpen(open: boolean): void;
   setFreshNote(id: string | null): void;
   openChat(agentNodeId: string | null): void;
   showTask(id: string | null, tab?: boolean): void;
@@ -110,6 +113,8 @@ export const useApp = create<State>((set, get) => ({
   newAgentOpen: false,
   setNewAgentOpen: (newAgentOpen) => set({ newAgentOpen, paletteOpen: false }),
   catalogOpen: false,
+  teamsOpen: false,
+  setTeamsOpen: (teamsOpen) => set({ teamsOpen, paletteOpen: false, newAgentOpen: false }),
   freshNote: null,
   setFreshNote: (freshNote) => set({ freshNote }),
   setCatalogOpen: (catalogOpen) => set({ catalogOpen, paletteOpen: false }),

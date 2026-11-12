@@ -8,6 +8,7 @@ import { HermesSheet } from "./shell/HermesSheet";
 import { ReportSheet } from "./shell/ReportSheet";
 import { NewAgentSheet } from "./shell/NewAgentSheet";
 import { ToolCatalog } from "./shell/ToolCatalog";
+import { TeamsSheet } from "./shell/TeamsSheet";
 import { Palette, VIEWS } from "./shell/Palette";
 import { Rail } from "./shell/Rail";
 import { SetupAssistant } from "./setup/SetupAssistant";
@@ -120,6 +121,9 @@ function Shell() {
       </Boundary>
       <Boundary>
         <ToolCatalog />
+      </Boundary>
+      <Boundary>
+        <TeamsSheet />
       </Boundary>
       <BoardEffects />
     </>

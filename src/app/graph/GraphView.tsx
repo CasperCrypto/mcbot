@@ -97,7 +97,8 @@ function Welcome({ onStart }: { onStart: () => void }) {
         <h2>Build your harness</h2>
         <p>Agents, the models they think with, the tools they use.</p>
         <div className="row" style={{ marginTop: 6 }}>
-          <button className="btn light lg" onClick={onStart} data-testid="welcome-add-agent"><Plus size={15} /> Add an agent</button>
+          <button className="btn light lg" onClick={() => useApp.getState().setTeamsOpen(true)} data-testid="welcome-team">Start with a team</button>
+          <button className="btn lg" onClick={onStart} data-testid="welcome-add-agent"><Plus size={15} /> Add an agent</button>
         </div>
       </div>
     </div>

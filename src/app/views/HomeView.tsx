@@ -357,7 +357,7 @@ export function HomeView() {
 
               {agents.length === 0 && (
                 <section className="card home-card">
-                  <div className="home-empty"><CircleAlert size={14} /> No agents yet <button className="btn sm primary" onClick={() => app.setNewAgentOpen(true)}><Plus size={12} /> New agent</button></div>
+                  <div className="home-empty"><CircleAlert size={14} /> No agents yet <button className="btn sm primary" onClick={() => app.setTeamsOpen(true)}>Start with a team</button><button className="btn sm" onClick={() => app.setNewAgentOpen(true)}><Plus size={12} /> New agent</button></div>
                 </section>
               )}
             </div>
