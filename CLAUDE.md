@@ -209,6 +209,11 @@ Change them additively; a breaking change bumps the version.
 - **Terminal:** real shells in the desktop shell (`src-tauri/src/terminal.rs`,
   portable-pty), never in the engine, so the engine stays one plain executable.
   The browser has none.
+- **Browser view:** on macOS and Windows the page is a real child webview over the view's page
+  area (`src-tauri/src/browser.rs`, Tauri `unstable` feature, one `page-<window>` per window), so
+  sites that refuse iframes still load; it hides while a sheet or ⌘K is open (native views draw
+  above HTML). Remote pages get no IPC. Linux (GTK ignores child bounds) and the demo use an
+  iframe plus "Open in a window".
 
 ## Stack (do not substitute)
 

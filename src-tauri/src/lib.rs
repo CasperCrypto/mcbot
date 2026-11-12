@@ -10,6 +10,7 @@
 //! (`mcbot-engine`, built by scripts/build-engine.mjs) and Hermes inside the
 //! resources (`hermes/`). `tauri dev` runs the engine itself instead.
 
+mod browser;
 mod terminal;
 
 use std::process::{Child, Command, Stdio};
@@ -207,6 +208,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             set_attention,
             browser_open,
+            browser::browser_show,
+            browser::browser_bounds,
+            browser::browser_hide,
+            browser::browser_go,
             terminal::terminal_open,
             terminal::terminal_write,
             terminal::terminal_resize,
