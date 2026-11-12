@@ -28,7 +28,10 @@ McBot and what is rebuilt is decided in `docs/MERGE.md`.
    output lives in `test/fixtures/*.expected/`; regenerate only after reviewing
    the diff (`npx tsx scripts/update-golden.ts`).
 4. **Two providers only:** one local OpenAI-compatible endpoint, one cloud
-   OpenAI-compatible endpoint. No per-vendor SDKs, ever.
+   OpenAI-compatible endpoint. No per-vendor SDKs, ever. A ChatGPT or Claude plan the
+   person already pays for runs only through runtimes Hermes or the vendor ship (Hermes'
+   Codex runtime, the vendor's own CLI as an agent over ACP), never an SDK inside McBot
+   (owner's decision, docs/PLAN.md).
 5. Keep this file current when an invariant changes.
 
 ## The three contracts (docs/BUILD.md §2.2, code in `src/contracts/`)
@@ -207,8 +210,7 @@ auth, no cloud: local JSON + the filesystem.
 ## Out of scope until asked
 
 Auth, SSO, Langfuse, OpenTelemetry, a cloud tier, a marketplace, git
-integration beyond showing status and diffs, ACP (pending the owner's decision
-for M9), A2A. The terminal, code editor and browser panes are planned (M8).
+integration beyond showing status and diffs, A2A. (ACP is in: M9, owner's decision.) The terminal, code editor and browser panes are planned (M8).
 Everything else on the way is ordered in `docs/PLAN.md` (M5–M15, reasons in
 `docs/NEXT.md`); build in that order. Postgres and Redis belong to the
 optional team server only, never the desktop app.
