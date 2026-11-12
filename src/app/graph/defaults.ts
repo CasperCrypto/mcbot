@@ -1,4 +1,4 @@
-import type { Graph, GraphNode } from "../../contracts/graph";
+import { PLATFORMS, type Graph, type GraphNode, type PlatformId } from "../../contracts/graph";
 
 export function newId(prefix: string): string {
   const rand = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).slice(2, 10);
@@ -69,9 +69,8 @@ export function newMaker(g: Graph, media: "image" | "video", position: { x: numb
   return { id: newId("maker"), kind: "media", position, data: { name, label: media === "image" ? "Images" : "Videos", media, provider: "openrouter", model: "" } };
 }
 
-/** A chat app bot (one per agent and app). Its token is saved under a name of its own, so two agents can have two bots. */
-export function newChannel(g: Graph, platform: "telegram", position: { x: number; y: number }): GraphNode {
-  const name = uniqueName(platform, namesOf(g, "channel"));
-  const tokenEnv = `MCBOT_${platform.toUpperCase()}_${name.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_TOKEN`;
-  return { id: newId("chat"), kind: "channel", position, data: { name, label: "Telegram", platform, tokenEnv, allowedUsers: [], apiBase: "" } };
+/** A chat app bot (one per agent and app). Its secrets are saved under names of its own (`channelKeyName`), so two agents can have two bots. */
+export function newChannel(g: Graph, platform: PlatformId, position: { x: number; y: number }): GraphNode {
+  const name = uniqueName(platform.replace(/_/g, "-"), namesOf(g, "channel"));
+  return { id: newId("chat"), kind: "channel", position, data: { name, label: PLATFORMS[platform].label, platform, tokenEnv: "", settings: {}, allowedUsers: [], apiBase: "" } };
 }

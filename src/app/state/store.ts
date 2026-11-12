@@ -38,6 +38,7 @@ interface State {
   newAgentOpen: boolean;
   /** The tool catalog. */
   catalogOpen: boolean;
+  chatAppsOpen: boolean;
   /** Starter teams. */
   teamsOpen: boolean;
   /** Share on your network / join. */
@@ -57,6 +58,7 @@ interface State {
   setReportOpen(open: boolean): void;
   setNewAgentOpen(open: boolean): void;
   setCatalogOpen(open: boolean): void;
+  setChatAppsOpen(open: boolean): void;
   setTeamsOpen(open: boolean): void;
   setShareOpen(open: boolean): void;
   setFreshNote(id: string | null): void;
@@ -116,6 +118,7 @@ export const useApp = create<State>((set, get) => ({
   newAgentOpen: false,
   setNewAgentOpen: (newAgentOpen) => set({ newAgentOpen, paletteOpen: false }),
   catalogOpen: false,
+  chatAppsOpen: false,
   teamsOpen: false,
   shareOpen: false,
   setShareOpen: (shareOpen) => set({ shareOpen, paletteOpen: false }),
@@ -123,6 +126,7 @@ export const useApp = create<State>((set, get) => ({
   freshNote: null,
   setFreshNote: (freshNote) => set({ freshNote }),
   setCatalogOpen: (catalogOpen) => set({ catalogOpen, paletteOpen: false }),
+  setChatAppsOpen: (chatAppsOpen) => set({ chatAppsOpen, paletteOpen: false }),
   openChat: (chatAgentId) => set({ chatAgentId, tab: "agents" }),
   openTask: null,
   showTask: (openTask, tab = true) => set(tab ? { openTask, tab: "tasks", paletteOpen: false } : { openTask }),

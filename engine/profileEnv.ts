@@ -18,7 +18,7 @@
  */
 import { chmod, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { CHANNEL_PLATFORMS, MEDIA_PROVIDERS } from "../src/contracts/graph";
+import { MEDIA_PROVIDERS, PLATFORMS, channelKeyName } from "../src/contracts/graph";
 import type { AgentBundle } from "../src/compile";
 import { readTextOrNull } from "./fsutil";
 
@@ -34,7 +34,7 @@ const ENV_REF = /\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g;
  * One line of an agent's McBot block: a saved key under its own or another name, or a plain
  * setting that only makes sense next to a key (a bot's allowed users without its token).
  */
-export type EnvEntry = { name: string; secret: string } | { name: string; value: string; with: string };
+export type EnvEntry = { name: string; secret: string } | { name: string; value: string; with?: string };
 
 /** Everything an agent's .env should hold from the board, sorted by variable name. */
 export function envEntriesFor(bundle: AgentBundle): EnvEntry[] {
@@ -49,11 +49,20 @@ export function envEntriesFor(bundle: AgentBundle): EnvEntry[] {
   for (const t of bundle.tools)
     for (const v of [...Object.values(t.data.env), ...Object.values(t.data.headers)])
       for (const m of v.matchAll(ENV_REF)) secret(m[1]!);
+  // A chat app: its secrets (saved in McBot), its plain settings and who may message it, under the
+  // variables its Hermes platform plugin declares (src/contracts/platforms.generated.ts). Settings
+  // go in only with its first secret, so a bot without its token does not half-start.
   for (const c of bundle.channels) {
-    const p = CHANNEL_PLATFORMS[c.data.platform];
-    if (!c.data.tokenEnv) continue;
-    secret(p.tokenEnv, c.data.tokenEnv);
-    out.set(p.allowedUsersEnv, { name: p.allowedUsersEnv, value: c.data.allowedUsers.join(","), with: p.tokenEnv });
+    const p = PLATFORMS[c.data.platform];
+    const first = p.required.find((f) => f.secret)?.env ?? null;
+    for (const f of p.required) {
+      if (f.secret) secret(f.env, channelKeyName(c.data, f.env));
+      else if (c.data.settings[f.env]?.trim()) out.set(f.env, first ? { name: f.env, value: c.data.settings[f.env]!.trim(), with: first } : { name: f.env, value: c.data.settings[f.env]!.trim() });
+    }
+    if (p.allowedUsersEnv && c.data.allowedUsers.length) {
+      const value = c.data.allowedUsers.join(",");
+      out.set(p.allowedUsersEnv, first ? { name: p.allowedUsersEnv, value, with: first } : { name: p.allowedUsersEnv, value });
+    }
   }
   return [...out.values()].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
@@ -62,13 +71,14 @@ export function envEntriesFor(bundle: AgentBundle): EnvEntry[] {
 export function resolveEntries(entries: readonly EnvEntry[], saved: Readonly<Record<string, string>>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const e of entries) if ("secret" in e && e.secret in saved) out[e.name] = saved[e.secret]!;
-  for (const e of entries) if ("value" in e && e.with in out && e.value) out[e.name] = e.value;
+  for (const e of entries) if ("value" in e && (e.with === undefined || e.with in out) && e.value) out[e.name] = e.value;
   return out;
 }
 
-/** Does this agent have a chat app whose bot token is saved? */
+/** Does this agent have a chat app with every secret saved and every setting filled in? */
 export function hasLiveChannel(bundle: AgentBundle, saved: Readonly<Record<string, string>>): boolean {
-  return bundle.channels.some((c) => !!c.data.tokenEnv && c.data.tokenEnv in saved);
+  return bundle.channels.some((c) =>
+    PLATFORMS[c.data.platform].required.every((f) => (f.secret ? channelKeyName(c.data, f.env) in saved : !!c.data.settings[f.env]?.trim())));
 }
 
 /** Hermes' dotenv subset: double quotes with \" and \\ escapes (agent/secret_scope.py _parse_env_value). */

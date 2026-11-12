@@ -89,12 +89,15 @@ Change them additively; a breaking change bumps the version.
   `image_gen` / `video_gen` and turns its tool set on. Makers are Hermes' own
   provider plugins: McBot only names one and its key variable, so hard rule 4 (two
   chat-model providers, no vendor SDKs in McBot) still holds.
-- A chat app node (Telegram) is one bot for one agent. Its token (saved in McBot
-  under the node's `tokenEnv`) and allowed users go into that agent's `.env` as
-  `TELEGRAM_BOT_TOKEN` / `TELEGRAM_ALLOWED_USERS`; only an own Bot API server is
-  compiled (`platforms.telegram.extra.base_url`). The engine refreshes agents'
+- A chat app node is one bot for one agent, on any platform Hermes ships: the list is generated
+  from `hermes/plugins/platforms/*/plugin.yaml` (`npm run engine:platforms` →
+  `src/contracts/platforms.generated.ts`; `npm test` fails while it is stale). Its secrets are saved
+  in McBot under `channelKeyName` (Telegram boards keep their `tokenEnv`), its plain settings sit on
+  the board (`settings`), and both, with who may message it, go into that agent's `.env` under the
+  plugin's own variables (settings only once its first secret is saved). Only Telegram's own Bot
+  API server is compiled (`platforms.telegram.extra.base_url`). The engine refreshes agents'
   `.env` after a compile, a saved key, a board save and at start, and runs
-  `hermes gateway ensure` while any compiled agent has a bot with a saved token.
+  `hermes gateway ensure` while any compiled agent has a bot with everything filled in.
   No allowed users = nobody can message it (Hermes refuses unknown senders).
 - Run is refused (409) if the agent's files on disk differ from the board — compile first.
 - Memory edits: Hermes' `§` format byte for byte, refused while the profile is

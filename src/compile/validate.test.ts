@@ -76,3 +76,28 @@ describe("resolveGraph", () => {
     expect(rev).toEqual(fwd);
   });
 });
+
+describe("chat apps", () => {
+  const withChat = (chat: Record<string, unknown>) => resolveGraph({
+    schema: GRAPH_SCHEMA, id: "b", name: "b",
+    nodes: [
+      { id: "a", kind: "agent", position: { x: 0, y: 0 }, data: { name: "desk" } },
+      { id: "m", kind: "model", position: { x: 0, y: 0 }, data: { name: "local", endpoint: "local", baseUrl: "http://127.0.0.1:11434/v1", model: "m" } },
+      { id: "c", kind: "channel", position: { x: 0, y: 0 }, data: { name: "chat", ...chat } },
+    ],
+    edges: [{ id: "e1", source: "a", target: "m" }, { id: "e2", source: "a", target: "c" }],
+  }).issues.map((i) => `${i.level}: ${i.message}`);
+
+  it("asks for each plain setting an app needs, and for who may message it", () => {
+    expect(withChat({ platform: "irc", settings: { IRC_SERVER: "irc.libera.chat" } })).toEqual([
+      'warning: chat app "chat": add your user id, or nobody can message it',
+      'warning: chat app "chat": fill in IRC channel',
+      'warning: chat app "chat": fill in Bot nickname',
+    ]);
+  });
+
+  it("keeps Telegram's numeric user ids, and lets other apps use their own ids", () => {
+    expect(withChat({ platform: "telegram", allowedUsers: ["ada"] })).toEqual(['error: chat app "chat": Telegram user ids are numbers, like 123456789']);
+    expect(withChat({ platform: "slack", allowedUsers: ["U012AB3CD"] })).toEqual([]);
+  });
+});

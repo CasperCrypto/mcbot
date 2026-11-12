@@ -3,6 +3,7 @@ import {
   GraphSchema,
   MEDIA_PROVIDERS,
   NodeSchema,
+  PLATFORMS,
   RESERVED_PROFILE_NAMES,
   type AgentNode,
   type ChannelNode,
@@ -133,8 +134,13 @@ function resolveValid(graph: Graph, issues: Issue[]): Resolved {
   for (const [name, ns] of duplicates(channels, (n) => n.data.name))
     for (const n of ns) issues.push({ level: "error", nodeId: n.id, message: `Two chat apps are named "${name}"` });
   for (const c of channels) {
-    if (c.data.allowedUsers.length === 0)
+    const p = PLATFORMS[c.data.platform];
+    if (p.allowedUsersEnv && c.data.allowedUsers.length === 0)
       issues.push({ level: "warning", nodeId: c.id, message: `${label(c)}: add your user id, or nobody can message it` });
+    if (c.data.platform === "telegram" && c.data.allowedUsers.some((u) => !/^\d{1,20}$/.test(u)))
+      issues.push({ level: "error", nodeId: c.id, message: `${label(c)}: Telegram user ids are numbers, like 123456789` });
+    for (const f of p.required)
+      if (!f.secret && !c.data.settings[f.env]?.trim()) issues.push({ level: "warning", nodeId: c.id, message: `${label(c)}: fill in ${f.prompt}` });
   }
 
   for (const a of agents) {

@@ -257,7 +257,7 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
       }
       const name = `${p.name}-telegram`.slice(0, 64);
       const id = `n-${name}`;
-      nodes.push({ id, kind: "channel", position: { x: SIDE_X, y: sideY++ * 120 }, data: { name, label: "", platform: "telegram", tokenEnv: "", allowedUsers: [], apiBase: str(extra.base_url) } });
+      nodes.push({ id, kind: "channel", position: { x: SIDE_X, y: sideY++ * 120 }, data: { name, label: "", platform: "telegram", tokenEnv: "", settings: {}, allowedUsers: [], apiBase: str(extra.base_url) } });
       edge(agentId, id);
     }
 
