@@ -1,0 +1,84 @@
+/*
+ * The finishing layer: Apple's type, hairlines and motion over every view. Loaded last.
+ * On a Mac the font is San Francisco (-apple-system); Windows and Linux fall back to Segoe UI or
+ * Inter, since SF may not be shipped to other systems.
+ */
+:root {
+  /* SF tracking: text tightens as it grows (Apple's dynamic tracking, approximated). */
+  --fs-caption: 11px;
+  --fs-footnote: 12px;
+  --fs-body: 13px;
+  --fs-callout: 14px;
+  --fs-headline: 15px;
+  --fs-title3: 17px;
+  --fs-title2: 20px;
+  --fs-title1: 24px;
+  --hairline: 1px;
+  /* layered, soft shadows: a tight contact shadow under a wide ambient one */
+  --shadow-1: 0 0.5px 1px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.18);
+  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px rgba(0, 0, 0, 0.28), 0 16px 40px rgba(0, 0, 0, 0.22);
+  --shadow-3: 0 2px 6px rgba(0, 0, 0, 0.35), 0 18px 48px rgba(0, 0, 0, 0.45), 0 40px 90px rgba(0, 0, 0, 0.35);
+  --ease-out-spring: cubic-bezier(0.2, 1.16, 0.36, 1);
+}
+/* Retina: half-pixel hairlines, as macOS draws them. */
+@media (min-resolution: 2dppx) {
+  :root { --hairline: 0.5px; --line: rgba(255, 255, 255, 0.085); --line-2: rgba(255, 255, 255, 0.13); --line-3: rgba(255, 255, 255, 0.19); }
+}
+
+body { font-feature-settings: normal; letter-spacing: -0.006em; text-rendering: optimizeLegibility; }
+h1, .h1 { font-size: var(--fs-title1); font-weight: 700; letter-spacing: -0.022em; line-height: 1.15; }
+h2, .h2 { letter-spacing: -0.016em; }
+h3 { letter-spacing: -0.012em; }
+.section-label { font-size: var(--fs-caption); font-weight: 600; letter-spacing: 0.01em; text-transform: none; color: var(--text-3); }
+
+/* Hairline borders everywhere a surface meets another. */
+.card, .main, .lane, .composer, .search-pill, .btn, .field input, .field textarea, .field select, .catalog-card, .team-panel, .palette, .inspector, .segmented, button.presence {
+  border-width: var(--hairline);
+}
+
+/* Cards: a whisper of depth, and a gentle lift where they can be clicked. */
+.card { box-shadow: var(--highlight), var(--shadow-1); }
+.catalog-card, .task-card, .home-row-main { transition: background var(--t-fast) var(--ease), transform var(--t) var(--ease-out-spring), box-shadow var(--t) var(--ease); }
+.catalog-card:hover, .task-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+.catalog-card:active, .task-card:active { transform: scale(0.985); }
+
+/* Buttons: springy press, crisp primary. */
+.btn { transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), transform var(--t) var(--ease-out-spring), box-shadow var(--t-fast); }
+.btn:active { transform: scale(0.96); }
+.btn.primary { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 0.5px 0 rgba(255, 255, 255, 0.25); }
+.icon-btn { transition: background var(--t-fast), color var(--t-fast), transform var(--t) var(--ease-out-spring); }
+.icon-btn:active { transform: scale(0.9); }
+
+/* The rail: the current view's tile springs in. */
+.rail-btn { transition: background var(--t) var(--ease), color var(--t-fast), transform var(--t) var(--ease-out-spring); }
+.rail-btn:active { transform: scale(0.92); }
+.rail-btn[aria-current="page"] { animation: rail-pick var(--t-slow) var(--ease-out-spring) both; }
+@keyframes rail-pick { from { transform: scale(0.86); background: rgba(255, 255, 255, 0.02); } to { transform: none; } }
+
+/* Sheets and panels arrive with a spring, from a little below. */
+.palette, .team-panel { animation: sheet-in var(--t-slow) var(--ease-out-spring) both; }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(10px) scale(0.975); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.palette-scrim { background: rgba(0, 0, 0, 0.42); backdrop-filter: blur(6px) saturate(120%); -webkit-backdrop-filter: blur(6px) saturate(120%); }
+
+/* Lists cascade in when a view opens (the first dozen rows). */
+.list-row, .home-row, .team-msg, .team-person, .task-card, .catalog-card { animation: row-in var(--t-slow) var(--ease) both; }
+@keyframes row-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.list-row:nth-child(1), .home-row:nth-child(1), .catalog-card:nth-child(1) { animation-delay: 0ms; }
+.list-row:nth-child(2), .home-row:nth-child(2), .catalog-card:nth-child(2) { animation-delay: 25ms; }
+.list-row:nth-child(3), .home-row:nth-child(3), .catalog-card:nth-child(3) { animation-delay: 50ms; }
+.list-row:nth-child(4), .home-row:nth-child(4), .catalog-card:nth-child(4) { animation-delay: 75ms; }
+.list-row:nth-child(5), .home-row:nth-child(5), .catalog-card:nth-child(5) { animation-delay: 100ms; }
+.list-row:nth-child(6), .home-row:nth-child(6), .catalog-card:nth-child(6) { animation-delay: 125ms; }
+.list-row:nth-child(n+7), .home-row:nth-child(n+7), .catalog-card:nth-child(n+7) { animation-delay: 150ms; }
+
+/* Inputs: Apple's soft focus halo. */
+.field input:focus, .field textarea:focus, .composer:focus-within, .team-compose textarea:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3.5px rgba(10, 132, 255, 0.22); }
+.composer { transition: border-color var(--t-fast), box-shadow var(--t) var(--ease); }
+
+/* Selection in sidebars: a rounded, quiet tile (as in Finder and Notes). */
+.list-row[aria-selected="true"], .list-row[aria-current="true"] { background: rgba(255, 255, 255, 0.085); box-shadow: var(--highlight); }
+
+/* Whoever prefers less motion gets none of it. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
+}

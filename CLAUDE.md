@@ -196,6 +196,15 @@ Change them additively; a breaking change bumps the version.
   gradient text (the website follows the same rule).
 - **Less text.** No explanatory paragraphs in the UI. Labels are short; detail
   lives in tooltips (`data-tip`). Empty states are one line plus one action.
+- **Board | Hermes** (top of the board): Board is what you edit; Hermes (`src/app/graph/HermesView.tsx`)
+  draws the whole harness behind it, read-only: gateway, chat apps, each agent's model chain,
+  abilities, tools, makers, skills, memory, schedules, the shared task board, approvals.
+- Connections are agent-centred (Hermes' model): a model, tool, maker or chat app connects only to
+  an agent. While a connection is drawn the rest dims; a refused drop says why. Chains between
+  them are workflows (M10).
+- **Type:** San Francisco on a Mac (`-apple-system`; SF may not be shipped elsewhere, so Windows
+  and Linux fall back to Segoe UI or Inter). `src/app/styles/premium.css` (loaded last) holds the
+  type scale, hairlines, layered shadows and spring motion; reduced motion turns it off.
 - **Everything structural is a graph.** The harness is the editable React Flow
   canvas; runs, memory and folders use the read-only `views/GraphCanvas.tsx`.
   Give each GraphCanvas a `key` per subject (root, run, agent) so React Flow
