@@ -78,8 +78,9 @@ function Ask({ agents }: { agents: AgentNode[] }) {
     <div className="ask" data-testid="home-ask">
       <div className="ask-agents" role="radiogroup" aria-label="Agent">
         {agents.map((a) => (
-          <button key={a.id} role="radio" aria-checked={a.id === agent} className="ask-agent" onClick={() => setAgent(a.id)} data-tip={a.data.displayName || a.data.name}>
-            <AgentFace seed={a.data.name} size={26} />
+          <button key={a.id} role="radio" aria-checked={a.id === agent} className="ask-agent" onClick={() => setAgent(a.id)}>
+            <AgentFace seed={a.data.name} size={20} />
+            <span>{a.data.displayName || a.data.name}</span>
           </button>
         ))}
       </div>
@@ -203,7 +204,7 @@ function Notes() {
   return (
     <section className="notes-grid" data-testid="home-notes" aria-label="Notes">
       {pinned.map((n) => <StickyNote key={n.id} note={n} />)}
-      <button className="sticky-add" onClick={add} data-testid="note-add"><span className="row" style={{ gap: 6 }}><Plus size={14} /> Note</span></button>
+      <button className="sticky-add" onClick={add} data-testid="note-add"><span className="row" style={{ gap: 6 }}><Plus size={14} /> {pinned.length ? "Note" : "Pin a note for the team"}</span></button>
     </section>
   );
 }
@@ -279,8 +280,8 @@ export function HomeView() {
     <section className="main flush-left">
       <div className="scroll-page home" data-testid="home">
         <div className="home-inner">
-          <Notes />
           <Ask agents={agents} />
+          <Notes />
 
           <div className="home-grid">
             <div className="stack" style={{ gap: 14 }}>

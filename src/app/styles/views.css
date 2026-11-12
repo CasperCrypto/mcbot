@@ -80,14 +80,17 @@
 .name-input:hover, .name-input:focus { background: rgba(255, 255, 255, 0.05); }
 
 /* ---------- tasks (Hermes' kanban) ---------- */
-.lanes { position: absolute; inset: 0; display: flex; gap: 10px; padding: 14px; overflow-x: auto; overflow-y: hidden; }
-.lane { flex: 1 0 200px; max-width: 340px; display: flex; flex-direction: column; min-height: 0; border-radius: var(--r-lg); background: rgba(255, 255, 255, 0.02); border: 1px solid var(--line); }
-.lane-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 6px; font-size: 12px; font-weight: 600; color: var(--text-2); }
-.lane[data-status="running"] .lane-head span:first-child { color: var(--run); }
-.lane[data-status="review"] .lane-head span:first-child { color: var(--warn); }
-.lane[data-status="blocked"] .lane-head span:first-child { color: var(--fail); }
-.lane[data-status="done"] .lane-head span:first-child { color: var(--ok); }
-.lane-body { flex: 1; overflow-y: auto; display: grid; align-content: start; gap: 8px; padding: 4px 8px 10px; }
+.lanes { position: absolute; inset: 0; display: flex; align-items: flex-start; gap: 12px; padding: 16px; overflow-x: auto; overflow-y: hidden; }
+.lane { flex: 1 0 200px; max-width: 340px; max-height: 100%; display: flex; flex-direction: column; min-height: 0; border-radius: var(--r-lg); background: rgba(255, 255, 255, 0.025); border: 1px solid var(--line); }
+.lane-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 8px; font-size: 12.5px; font-weight: 600; color: var(--text); }
+.lane-head span:first-child { display: inline-flex; align-items: center; gap: 8px; }
+.lane-head span:first-child::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--text-4); }
+.lane-head span:last-child:not(:first-child) { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.lane[data-status="running"] .lane-head span:first-child::before { background: var(--run); }
+.lane[data-status="review"] .lane-head span:first-child::before { background: var(--warn); }
+.lane[data-status="blocked"] .lane-head span:first-child::before { background: var(--fail); }
+.lane[data-status="done"] .lane-head span:first-child::before { background: var(--ok); }
+.lane-body { flex: 1; overflow-y: auto; display: grid; align-content: start; gap: 8px; padding: 2px 8px 10px; min-height: 64px; }
 .task-card {
   display: grid; gap: 6px; width: 100%; padding: 10px 11px; text-align: left; border-radius: var(--r-md); border: 1px solid var(--line);
   background: var(--bg-card); box-shadow: var(--highlight); color: var(--text); animation: pop-in var(--t) var(--ease) both;
@@ -113,19 +116,20 @@
 .task-composer { margin: 0; box-shadow: none; }
 
 /* ---------- home ---------- */
-.home-inner { max-width: 1040px; margin: 0 auto; display: grid; gap: 18px; }
+.home-inner { max-width: 1040px; margin: 0 auto; display: grid; gap: 20px; }
 .home-head { display: grid; gap: 2px; }
 .home-head h1 { margin: 0; font-size: 24px; font-weight: 650; letter-spacing: -0.02em; }
 .ask { display: grid; gap: 10px; }
 .ask-agents { display: flex; gap: 6px; flex-wrap: wrap; }
-.ask-agent { width: 38px; height: 38px; display: grid; place-items: center; border-radius: var(--r-md); border: 1px solid transparent; background: transparent; opacity: 0.55; transition: opacity var(--t-fast), border-color var(--t-fast), background var(--t-fast); }
-.ask-agent:hover { opacity: 0.9; }
-.ask-agent[aria-checked="true"] { opacity: 1; border-color: var(--line-3); background: var(--bg-raised); }
+.ask-agent { height: 30px; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px 0 6px; border-radius: var(--r-pill); border: 1px solid var(--line); background: transparent; color: var(--text-2); font-size: 12.5px; font-weight: 500; transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast), transform var(--t-fast) var(--ease); }
+.ask-agent:hover { color: var(--text); background: var(--bg-hover); }
+.ask-agent:active { transform: scale(0.96); }
+.ask-agent[aria-checked="true"] { color: var(--text); border-color: var(--line-3); background: var(--bg-raised); box-shadow: var(--highlight); }
 .ask .composer { max-width: none; width: 100%; margin: 0; align-items: center; }
-.home-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 14px; align-items: start; }
-.home-card { padding: 6px 6px 8px; }
-.home-card-head { display: flex; align-items: center; gap: 8px; padding: 10px 10px 6px; }
-.home-card-head h2 { margin: 0; font-size: 13px; font-weight: 600; }
+.home-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.home-card { padding: 6px 8px 10px; }
+.home-card-head { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px; }
+.home-card-head h2 { margin: 0; font-size: 14px; font-weight: 650; letter-spacing: -0.01em; }
 .home-row { display: flex; align-items: center; gap: 8px; width: 100%; padding: 2px 6px 2px 0; border-radius: var(--r-md); }
 .home-row-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; padding: 7px 8px; border: 0; border-radius: var(--r-md); background: transparent; text-align: left; color: var(--text); transition: background var(--t-fast); }
 .home-row-main:hover { background: rgba(255, 255, 255, 0.04); }
@@ -191,6 +195,8 @@
 .note-gray { background: var(--note-gray); }
 .sticky.on-canvas { width: 220px; }
 .notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.notes-grid:not(:has(.sticky)) { grid-template-columns: 1fr; }
+.notes-grid:not(:has(.sticky)) .sticky-add { min-height: 44px; border-radius: var(--r-md); justify-items: start; padding: 0 14px; }
 .sticky-add { min-height: 150px; display: grid; place-items: center; gap: 4px; border-radius: 4px 4px 14px 4px; border: 1.5px dashed var(--line-3); background: transparent; color: var(--text-3); transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast); }
 .sticky-add:hover { color: var(--text); border-color: var(--text-3); background: rgba(255, 255, 255, 0.02); }
 .sticky:hover .sticky-by, .sticky:focus-within .sticky-by { visibility: hidden; }
