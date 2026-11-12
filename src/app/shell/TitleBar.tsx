@@ -1,8 +1,8 @@
-import { Check, ChevronDown, Download, Hammer, LoaderCircle, Plus, Search, Upload } from "lucide-react";
+import { Check, ChevronDown, Download, Hammer, LoaderCircle, Plus, Search, Upload, Users } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { resolveGraph } from "../../compile";
 import { compileBoard, exportBoardFile, importBoardFile } from "../actions";
-import { DEMO } from "../lib/engine";
+import { DEMO, REMOTE } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { Logo } from "../faces/FoodFace";
@@ -72,6 +72,10 @@ export function TitleBar() {
           </span>
         ))}
       </div>
+      <button className={`btn sm share-btn${REMOTE ? " remote" : ""}`} onClick={() => useApp.getState().setShareOpen(true)} data-testid="share-open"
+        data-tip={REMOTE ? `On ${REMOTE.label}'s boards` : "Share on your network"} data-tip-side="bottom">
+        <Users size={13} /> {REMOTE ? REMOTE.label : "Share"}
+      </button>
       <button className="search-pill" onClick={() => setPalette(true)} data-testid="open-palette">
         <Search size={14} /> Search <Kbd>⌘K</Kbd>
       </button>

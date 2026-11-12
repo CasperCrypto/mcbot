@@ -296,3 +296,14 @@ export interface AgentSchedules {
   profile: string;
   schedules: ScheduleView[];
 }
+
+// ---- share on your network (engine/sharing.ts) ----
+
+export interface SharingView {
+  on: boolean;
+  /** Where teammates reach this computer: LAN address:port. */
+  addresses: string[];
+  port: number;
+  members: { id: string; name: string; joinedAt: number; lastSeen: number }[];
+  invite: { code: string; expiresAt: number } | null;
+}

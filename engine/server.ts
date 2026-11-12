@@ -32,6 +32,7 @@ import { RunStore } from "./runStore";
 import { SecretError, Secrets } from "./secrets";
 import { SetupStore, detectLocal, listModels } from "./setup";
 import { OwnershipError, readManifest, writeCompileResult } from "./writer";
+import { Sharing, guestAllowed, type SharingView } from "./sharing";
 
 export const ENGINE_VERSION = "0.1.0";
 
@@ -44,6 +45,8 @@ export interface EngineConfig {
   allowedOrigins: string[];
   /** The installed app's engine log (the shell writes it), for "Report a problem"; absent in development. */
   logFile?: string;
+  /** Share on your network: the port teammates connect to while sharing is on (default 4318; 0 = any). */
+  sharePort?: number;
 }
 
 export const DEFAULT_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"];
@@ -97,6 +100,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   const setup = new SetupStore(join(cfg.workspace, "setup.json"));
   const runner = new Runner({ store, root: cfg.hermesHome, managedRoot: cfg.managedRoot, findHermes: () => findHermes(), secrets: () => secrets.env() });
   const folders = new Folders(cfg.workspace, cfg.hermesHome);
+  const sharing = new Sharing(join(cfg.workspace, "sharing.json"), cfg.sharePort ?? 4318);
   const allowed = new Set(cfg.allowedOrigins);
   const sse = new Set<ServerResponse>();
   store.subscribe((e) => {
@@ -291,6 +295,24 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       return { runId };
     },
 
+    // ---- share on your network (this computer only: members never reach these) ----
+    "GET /api/share": async (): Promise<SharingView> => sharing.view(),
+    "POST /api/share": async (req): Promise<SharingView> => {
+      const { on } = parse(z.object({ on: z.boolean() }), await json(req));
+      await sharing.setOn(on);
+      await applySharing();
+      return sharing.view();
+    },
+    "POST /api/share/invite": async (): Promise<SharingView> => {
+      await sharing.newInvite();
+      return sharing.view();
+    },
+    "POST /api/share/remove": async (req): Promise<SharingView> => {
+      const { id } = parse(z.object({ id: z.string() }), await json(req));
+      await sharing.remove(id);
+      return sharing.view();
+    },
+
     // ---- tasks: Hermes' kanban, shared by the agents compiled into this root ----
     "GET /api/tasks": async (_req, url): Promise<TasksView> => {
       const team = await teamOf(await requireBoard(url.searchParams.get("boardId")));
@@ -480,7 +502,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     if (origin && allowed.has(origin)) {
       res.setHeader("access-control-allow-origin", origin);
       res.setHeader("vary", "origin");
-      res.setHeader("access-control-allow-headers", "content-type");
+      res.setHeader("access-control-allow-headers", "content-type, authorization");
       res.setHeader("access-control-allow-methods", "GET, POST, PUT, OPTIONS");
     }
   };
@@ -496,14 +518,37 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     return ok;
   };
 
-  const server = createServer(async (req, res) => {
+  const deny = (res: ServerResponse, status: number, error: string) => void res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify({ error }));
+  /** A teammate's key: `Authorization: Bearer <key>`, or `?key=` where a header cannot be set (WebSocket, SSE). */
+  const keyOf = (req: IncomingMessage, url: URL) => /^Bearer\s+(\S+)$/.exec(req.headers.authorization ?? "")?.[1] ?? url.searchParams.get("key");
+
+  /**
+   * Every request. `shared`: it came in on the network port, from a teammate's McBot: an allowed
+   * Origin, a member key (except to join), and only the routes a member may use.
+   */
+  const handle = async (req: IncomingMessage, res: ServerResponse, shared: boolean) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     cors(req, res);
-    if (!permitted(req)) {
-      res.writeHead(403, { "content-type": "application/json" }).end(JSON.stringify({ error: "origin or host not allowed" }));
-      return;
+    if (shared) {
+      if (!req.headers.origin || !allowed.has(req.headers.origin)) return deny(res, 403, "origin not allowed");
+      if (req.method === "OPTIONS") return void res.writeHead(204).end();
+      if (req.method === "POST" && url.pathname === "/api/join") {
+        try {
+          const body = parse(z.object({ code: z.string().max(20), name: z.string().max(64).default("") }), await json(req));
+          const joined = await sharing.join(body.code, body.name);
+          if (!joined) return deny(res, 403, "That code is wrong or used up. Ask for a new one.");
+          console.log(`[engine] ${joined.member.name} joined over the network`);
+          return void res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ key: joined.key, name: joined.member.name }));
+        } catch (err) {
+          return deny(res, err instanceof HttpError ? err.status : 400, (err as Error).message);
+        }
+      }
+      if (!(await sharing.member(keyOf(req, url)))) return deny(res, 401, "not a member of this computer's boards");
+      if (!guestAllowed(req.method ?? "", url.pathname)) return deny(res, 403, "Only the person sharing can do that");
+    } else {
+      if (!permitted(req)) return deny(res, 403, "origin or host not allowed");
+      if (req.method === "OPTIONS") return void res.writeHead(204).end();
     }
-    if (req.method === "OPTIONS") return void res.writeHead(204).end();
 
     if (req.method === "GET" && url.pathname === "/api/events") {
       res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache", connection: "keep-alive" });
@@ -548,12 +593,17 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const extra = err instanceof HttpError && err.body && typeof err.body === "object" ? err.body : {};
       res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify({ error: (err as Error).message, ...extra }));
     }
-  });
+  };
+  const server = createServer((req, res) => void handle(req, res, false));
 
   const wss = new WebSocketServer({ noServer: true });
-  server.on("upgrade", (req, socket, head) => {
-    const m = /^\/board\/([a-z0-9][a-z0-9-]{0,63})$/.exec(new URL(req.url ?? "/", "http://127.0.0.1").pathname);
-    if (!m || !permitted(req)) {
+  const upgrade = async (req: IncomingMessage, socket: import("node:stream").Duplex, head: Buffer, shared: boolean) => {
+    const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    const m = /^\/board\/([a-z0-9][a-z0-9-]{0,63})$/.exec(url.pathname);
+    const ok = shared
+      ? !!req.headers.origin && allowed.has(req.headers.origin) && !!(await sharing.member(keyOf(req, url)))
+      : permitted(req);
+    if (!m || !ok) {
       socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
       socket.destroy();
       return;
@@ -564,7 +614,34 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
         ws.close(1011, "board unavailable");
       });
     });
-  });
+  };
+  server.on("upgrade", (req, socket, head) => void upgrade(req, socket, head, false));
+
+  /** The network port, open only while sharing is on. */
+  let shareServer: Server | null = null;
+  const applySharing = async () => {
+    const on = await sharing.isOn();
+    if (on && !shareServer) {
+      const s2 = createServer((req, res) => void handle(req, res, true));
+      s2.on("upgrade", (req, socket, head) => void upgrade(req, socket, head, true));
+      await new Promise<void>((resolve, reject) => {
+        s2.once("error", reject);
+        s2.listen(sharing.port, "0.0.0.0", () => resolve());
+      }).catch((err: Error) => {
+        console.error(`[engine] could not share on port ${sharing.port}: ${err.message}`);
+        throw new HttpError(409, `Port ${sharing.port} is in use, so this computer cannot share right now`);
+      });
+      shareServer = s2;
+      console.log(`[engine] sharing on the network, port ${sharing.port}`);
+    } else if (!on && shareServer) {
+      const s2 = shareServer;
+      shareServer = null;
+      const closed = new Promise<void>((resolve) => s2.close(() => resolve()));
+      s2.closeAllConnections();
+      await closed;
+      console.log("[engine] stopped sharing");
+    }
+  };
 
   await new Promise<void>((resolve, reject) => {
     server.once("error", (err: NodeJS.ErrnoException) =>
@@ -573,6 +650,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   });
   const { port } = server.address() as AddressInfo;
   void syncAgents();
+  await applySharing().catch(() => undefined);
   return {
     server,
     url: `http://${cfg.host}:${port}`,
@@ -584,6 +662,13 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       for (const c of wss.clients) c.terminate();
       await relay.flush();
       await store.flush();
+      if (shareServer) {
+        const s2 = shareServer;
+        shareServer = null;
+        const done = new Promise<void>((resolve) => s2.close(() => resolve()));
+        s2.closeAllConnections();
+        await done;
+      }
       const closed = new Promise<void>((resolve) => server.close(() => resolve()));
       server.closeAllConnections();
       await closed;

@@ -56,6 +56,7 @@ function useCommands(close: () => void): Command[] {
       { id: "add-local", group: "Create", label: "Local model", hint: "Ollama, LM Studio, vLLM…", icon: <HardDrive size={15} />, run: () => place(newModel(graph, "local", at("model"))) },
       { id: "add-cloud", group: "Create", label: "Cloud model", hint: "Any OpenAI-compatible API", icon: <Cloud size={15} />, run: () => place(newModel(graph, "cloud", at("model"))) },
       { id: "add-files", group: "Create", label: "Files tool", icon: <Plug size={15} />, run: () => place(newTool(graph, "filesystem", at("tool"), app.health?.workspace ?? null)) },
+      { id: "share", group: "Actions", label: "Share on your network…", icon: <Users size={15} />, run: () => app.setShareOpen(true) },
       { id: "add-team", group: "Create", label: "Team…", hint: "Research & write, Support desk, Dev team…", icon: <Users size={15} />, run: () => app.setTeamsOpen(true) },
       { id: "add-tool-catalog", group: "Create", label: "Tool…", hint: "Browser, web search, Notion…", icon: <Plug size={15} />, run: () => app.setCatalogOpen(true) },
       { id: "add-mcp", group: "Create", label: "MCP server", icon: <Server size={15} />, run: () => place(newTool(graph, "stdio", at("tool"), null)) },

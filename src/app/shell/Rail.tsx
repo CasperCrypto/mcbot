@@ -1,6 +1,10 @@
 import { Command } from "lucide-react";
 import { useApp } from "../state/store";
+import { REMOTE } from "../lib/engine";
 import { VIEWS } from "./Palette";
+
+/** On another computer's boards: its files and folders stay there, so Code and Files are hidden. */
+export const HIDDEN_FOR_GUESTS = new Set(["code", "files"]);
 
 export function Rail() {
   const tab = useApp((s) => s.tab);
@@ -12,7 +16,7 @@ export function Rail() {
 
   return (
     <nav className="rail" aria-label="Views">
-      {VIEWS.map((v, i) => (
+      {VIEWS.filter((v) => !REMOTE || !HIDDEN_FOR_GUESTS.has(v.tab)).map((v, i) => (
         <button key={v.tab} className="rail-btn" aria-current={tab === v.tab ? "page" : undefined} onClick={() => setTab(v.tab)}
           data-tip={`${v.label}  ⌘${i + 1}`} data-tip-side="right" data-testid={`tab-${v.tab}`} aria-label={v.label}>
           {v.icon}
