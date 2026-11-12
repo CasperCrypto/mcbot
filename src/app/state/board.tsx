@@ -8,7 +8,7 @@ import * as Y from "yjs";
 import { graphFromDoc } from "../../board/ydoc";
 import type { Graph } from "../../contracts/graph";
 import { connectDemoBoard, type DemoLink } from "../demo/engine";
-import { DEMO, ENGINE_WS } from "../lib/engine";
+import { DEMO, ENGINE_WS, REMOTE } from "../lib/engine";
 import { useApp, type Tab } from "./store";
 
 export interface Peer {
@@ -70,7 +70,7 @@ function Connected({ boardId, children }: { boardId: string; children: ReactNode
   useEffect(() => {
     const doc = new Y.Doc();
     // disableBc: every edit must reach the relay, because compile reads the board from it.
-    const provider: Link = DEMO ? connectDemoBoard(boardId, doc) : new WebsocketProvider(`${ENGINE_WS}/board`, boardId, doc, { disableBc: true });
+    const provider: Link = DEMO ? connectDemoBoard(boardId, doc) : new WebsocketProvider(`${ENGINE_WS}/board`, boardId, doc, { disableBc: true, params: REMOTE ? { key: REMOTE.key } : {} });
     setConn({ doc, provider });
     return () => {
       provider.destroy();

@@ -1,12 +1,18 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
+import { loadRemote } from "./remote";
+
 /** The Tauri production webview has no dev proxy; everything else (Vite, Tauri dev) does. */
 const direct = typeof location !== "undefined" && (location.protocol === "tauri:" || location.hostname === "tauri.localhost");
-export const ENGINE_HTTP = direct ? "http://127.0.0.1:4317" : "";
-export const ENGINE_WS = direct ? "ws://127.0.0.1:4317" : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+/** A board shared from another computer this window joined, or null for this computer's own engine. */
+export const REMOTE = typeof localStorage !== "undefined" ? loadRemote() : null;
+export const ENGINE_HTTP = REMOTE ? REMOTE.url : direct ? "http://127.0.0.1:4317" : "";
+export const ENGINE_WS = REMOTE ? REMOTE.url.replace(/^http/, "ws") : direct ? "ws://127.0.0.1:4317" : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+/** A member key goes with every request to a shared engine. */
+const auth = (): Record<string, string> => (REMOTE ? { authorization: `Bearer ${REMOTE.key}` } : {});
 
 import { demoEngine, subscribeDemoEvents } from "../demo/engine";
 import { EngineError } from "./engineError";
@@ -21,7 +27,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   try {
     res = await fetch(`${ENGINE_HTTP}${path}`, {
       method,
-      headers: body === undefined ? {} : { "content-type": "application/json" },
+      headers: { ...auth(), ...(body === undefined ? {} : { "content-type": "application/json" }) },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
@@ -36,7 +42,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
 async function blob(path: string): Promise<Blob> {
   let res: Response;
   try {
-    res = await fetch(`${ENGINE_HTTP}${path}`);
+    res = await fetch(`${ENGINE_HTTP}${path}`, { headers: auth() });
   } catch {
     throw new EngineError(0, "The McBot engine is not reachable.", {});
   }
@@ -81,6 +87,10 @@ const http = {
   restartGateway: () => call<HermesInfo>("POST", "/api/hermes/gateway/restart", {}),
   prepareHermes: () => call<HermesInfo>("POST", "/api/hermes/prepare", {}),
   diagnostics: () => call<Diagnostics>("GET", "/api/diagnostics"),
+  share: () => call<SharingView>("GET", "/api/share"),
+  setShare: (on: boolean) => call<SharingView>("POST", "/api/share", { on }),
+  newInvite: () => call<SharingView>("POST", "/api/share/invite", {}),
+  removeMember: (id: string) => call<SharingView>("POST", "/api/share/remove", { id }),
   tasks: (boardId: string) => call<TasksView>("GET", `/api/tasks?boardId=${encodeURIComponent(boardId)}`),
   task: (boardId: string, id: string) => call<TaskDetail>("GET", `/api/tasks/one?boardId=${encodeURIComponent(boardId)}&id=${encodeURIComponent(id)}`),
   createTask: (boardId: string, t: { title: string; body: string; assignee: string | null; by: string; parents?: string[] }) => call<TaskView>("POST", "/api/tasks", { boardId, ...t }),
@@ -95,7 +105,7 @@ export const engine: typeof http = DEMO ? demoEngine : http;
 /** Live run events for every run, from the engine's SSE stream. Reconnects on its own. */
 export function subscribeRunEvents(onEvent: (e: RunEvent) => void, onStatus?: (connected: boolean) => void): () => void {
   if (DEMO) return subscribeDemoEvents(onEvent, onStatus);
-  const es = new EventSource(`${ENGINE_HTTP}/api/events`);
+  const es = new EventSource(`${ENGINE_HTTP}/api/events${REMOTE ? `?key=${encodeURIComponent(REMOTE.key)}` : ""}`);
   es.onopen = () => onStatus?.(true);
   es.onerror = () => onStatus?.(false);
   es.onmessage = (m) => {

@@ -145,8 +145,15 @@ Change them additively; a breaking change bumps the version.
   `<workspace>/exports/`, never overwriting (the browser demo downloads it);
   import always makes a new board and loads it loosely. Boards hold key names
   only, so a board file holds no secrets.
-- The engine listens on loopback only and checks `Origin` and `Host` on every
-  request and WebSocket upgrade. No auth in v0.
+- The engine listens on loopback and checks `Origin` and `Host` on every
+  request and WebSocket upgrade. **Share on your network** (`engine/sharing.ts`, off by
+  default) also opens port 4318 to the LAN while it is on: every request there needs an
+  allowed `Origin` and a member key (`Authorization: Bearer`, or `?key=` for WebSocket/SSE),
+  got once with a one-time invite code (15 min, failed joins rate-limited); only key hashes
+  are stored (`<workspace>/sharing.json`, owner-only). Members reach boards, compile, runs,
+  tasks, schedules, memory and cost (`guestAllowed`), never keys, files, setup, sharing or
+  the engine's controls. Agents always run on the host. A joined window keeps the host's
+  address and its key in localStorage (`src/app/lib/remote.ts`) and hides Code and Files.
 
 ## UI invariants
 

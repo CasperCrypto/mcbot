@@ -40,6 +40,8 @@ interface State {
   catalogOpen: boolean;
   /** Starter teams. */
   teamsOpen: boolean;
+  /** Share on your network / join. */
+  shareOpen: boolean;
   /** A sticky note this window just made: it opens ready to type. */
   freshNote: string | null;
   /** The agent whose thread is open in Agents. */
@@ -56,6 +58,7 @@ interface State {
   setNewAgentOpen(open: boolean): void;
   setCatalogOpen(open: boolean): void;
   setTeamsOpen(open: boolean): void;
+  setShareOpen(open: boolean): void;
   setFreshNote(id: string | null): void;
   openChat(agentNodeId: string | null): void;
   showTask(id: string | null, tab?: boolean): void;
@@ -114,6 +117,8 @@ export const useApp = create<State>((set, get) => ({
   setNewAgentOpen: (newAgentOpen) => set({ newAgentOpen, paletteOpen: false }),
   catalogOpen: false,
   teamsOpen: false,
+  shareOpen: false,
+  setShareOpen: (shareOpen) => set({ shareOpen, paletteOpen: false }),
   setTeamsOpen: (teamsOpen) => set({ teamsOpen, paletteOpen: false, newAgentOpen: false }),
   freshNote: null,
   setFreshNote: (freshNote) => set({ freshNote }),

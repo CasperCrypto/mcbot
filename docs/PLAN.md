@@ -195,7 +195,7 @@ overnight, notifications when something needs you.
 
 ### 12. Teams and McBot Cloud ○ (M12)
 
-Share a board on your network with an invite link (M12a), then the team server
+● Share a board on your network with an invite code (M12a), then the team server
 on the Buzz relay (M12b): members, roles per space, audit, presence. McBot Cloud
 is the hosted, always-on version and the paid product ([MERGE.md](MERGE.md)).
 
@@ -236,7 +236,7 @@ whether setup works.
 | **M9** ○ | Ask McBot (board copilot) and coding agents through ACP; running agents on a ChatGPT or Claude plan (decisions 1 and 4) | "Add a researcher that can search our docs" changes the board, and a Claude Code agent fixes a bug in the editor's folder |
 | **M10** ○ | Workflows (trigger, step, condition, approval) and Studio (gallery, posting after approval) | A weekly report runs itself and waits for a person's OK before it is sent |
 | **M11** ○ | Always on and launch: background gateway, launch at login, auto-update, signing (decision 2), crash reports, docs site | Agents keep their schedules with the window closed, and McBot updates itself |
-| **M12** ○ | Teams: share on your network (M12a), then the Buzz team server (M12b); roles, audit; McBot Cloud | Two people on two computers edit and run one board |
+| **M12** ◐ | Teams: share on your network (M12a), then the Buzz team server (M12b); roles, audit; McBot Cloud | Two people on two computers edit and run one board |
 | **M13** ○ | Packs and starter teams; import from other agents | A "Dev team" pack installs into a new space and runs |
 | **M14** ○ | Phones | Approve an agent's action from an iPhone |
 | **M15** ◐ | Polish: light theme, layouts, shortcuts, accessibility, languages (brand and agent icons ● done) | Each person arranges McBot their way, and it remembers |

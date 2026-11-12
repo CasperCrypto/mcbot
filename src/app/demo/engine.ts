@@ -13,7 +13,7 @@ import { exportFileName } from "../../board/files";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
@@ -652,6 +652,10 @@ export const demoEngine = {
     const runs = Object.values(state.runs).map((e) => summarizeRun(e)).filter((s): s is RunSummary => !!s && s.boardId === boardId);
     return buildCostReport(profiles, runs, models);
   }),
+  share: api((): SharingView => ({ on: false, addresses: [], port: 4318, members: [], invite: null })),
+  setShare: api((_on: boolean): SharingView => { throw new EngineError(409, "Sharing with other computers works in the desktop app. Here, open a second tab: it is live too.", {}); }),
+  newInvite: api((): SharingView => ({ on: false, addresses: [], port: 4318, members: [], invite: null })),
+  removeMember: api((_id: string): SharingView => ({ on: false, addresses: [], port: 4318, members: [], invite: null })),
   tasks: api((boardId: string): TasksView => {
     const team = teamOf(requireBoard(boardId));
     state.tasks ??= boardId === SEED_BOARD.id ? seedTasks() : [];
