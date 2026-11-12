@@ -93,6 +93,13 @@ export function renderConfig(graph: Graph, bundle: AgentBundle): string {
   }
   const toolsets = compiledToolsets(bundle);
   if (toolsets) doc.platform_toolsets = { cli: toolsets };
+  // Only what differs from Hermes' defaults (hermes_cli/config_defaults.py `browser`).
+  const b = bundle.agent.data.browser;
+  const browser: Record<string, unknown> = {};
+  if (b?.show) browser.headed = true;
+  if (b?.engine === "lightpanda") browser.engine = "lightpanda";
+  if (b?.myLogins) browser.use_real_profile = true;
+  if (Object.keys(browser).length) doc.browser = browser;
   if (bundle.image) doc.image_gen = makerEntry(bundle.image);
   if (bundle.video) doc.video_gen = makerEntry(bundle.video);
   // A chat app's token and allowed users live in the agent's .env (written by the engine, never

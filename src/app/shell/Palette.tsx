@@ -1,5 +1,5 @@
 import {
-  BookOpen, Bot, Brain, Code2, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
+  BookOpen, Bot, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
@@ -31,6 +31,7 @@ export const VIEWS: { tab: Tab; label: string; icon: ReactNode }[] = [
   { tab: "agents", label: "Agents", icon: <MessagesSquare size={15} /> },
   { tab: "tasks", label: "Tasks", icon: <ListChecks size={15} /> },
   { tab: "code", label: "Code", icon: <Code2 size={15} /> },
+  { tab: "browser", label: "Browser", icon: <Globe size={15} /> },
   { tab: "workflows", label: "Activity", icon: <Workflow size={15} /> },
   { tab: "memory", label: "Memory", icon: <Brain size={15} /> },
   { tab: "files", label: "Files", icon: <FolderOpen size={15} /> },
@@ -55,6 +56,7 @@ function useCommands(close: () => void): Command[] {
       { id: "add-local", group: "Create", label: "Local model", hint: "Ollama, LM Studio, vLLM…", icon: <HardDrive size={15} />, run: () => place(newModel(graph, "local", at("model"))) },
       { id: "add-cloud", group: "Create", label: "Cloud model", hint: "Any OpenAI-compatible API", icon: <Cloud size={15} />, run: () => place(newModel(graph, "cloud", at("model"))) },
       { id: "add-files", group: "Create", label: "Files tool", icon: <Plug size={15} />, run: () => place(newTool(graph, "filesystem", at("tool"), app.health?.workspace ?? null)) },
+      { id: "add-team", group: "Create", label: "Team…", hint: "Research & write, Support desk, Dev team…", icon: <Users size={15} />, run: () => app.setTeamsOpen(true) },
       { id: "add-tool-catalog", group: "Create", label: "Tool…", hint: "Browser, web search, Notion…", icon: <Plug size={15} />, run: () => app.setCatalogOpen(true) },
       { id: "add-mcp", group: "Create", label: "MCP server", icon: <Server size={15} />, run: () => place(newTool(graph, "stdio", at("tool"), null)) },
       { id: "add-telegram", group: "Create", label: "Telegram bot", hint: "Talk to an agent from Telegram", icon: <Send size={15} />, run: () => place(newChannel(graph, "telegram", at("channel"))) },

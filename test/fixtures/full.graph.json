@@ -35,7 +35,7 @@
       "id": "a2",
       "kind": "agent",
       "position": { "x": 0, "y": 300 },
-      "data": { "name": "writer", "skills": [], "capabilities": ["memory", "web", "file"] }
+      "data": { "name": "writer", "skills": [], "capabilities": ["memory", "web", "file", "browser"], "browser": { "show": true, "engine": "lightpanda", "myLogins": false } }
     },
     {
       "id": "m-local",

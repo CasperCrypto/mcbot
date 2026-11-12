@@ -109,7 +109,8 @@ export function NewAgentSheet() {
           </div>
         </div>
         <footer className="new-agent-foot">
-          <span className="faint grow">Tools and abilities: on the graph, any time.</span>
+          <button className="btn ghost sm" onClick={() => useApp.getState().setTeamsOpen(true)} data-testid="new-agent-team">Or start with a team</button>
+          <span className="grow" />
           <button className="btn" onClick={() => setOpen(false)}>Cancel</button>
           <button className="btn primary" disabled={!name.trim() || busy} onClick={() => void create()} data-testid="new-agent-create">Create agent</button>
         </footer>

@@ -129,3 +129,10 @@
 .catalog-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; text-align: left; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--bg-card); color: var(--text); font-size: 12.5px; transition: border-color var(--t-fast), background var(--t-fast); }
 .catalog-card:hover { border-color: var(--line-3); background: var(--bg-raised); }
 .catalog-card .faint { font-size: 11.5px; }
+.teams-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.team-card { display: grid; gap: 6px; padding: 16px; text-align: left; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--bg-card); color: var(--text); transition: border-color var(--t-fast), background var(--t-fast), transform var(--t-fast) var(--ease); }
+.team-card:hover { border-color: var(--line-3); background: var(--bg-raised); transform: translateY(-1px); }
+.team-card b { font-size: 14px; }
+.team-card .faint { font-size: 12px; line-height: 1.4; }
+.team-faces { display: flex; gap: 2px; margin-bottom: 4px; }
+.team-members { font-size: 11.5px; color: var(--text-2); }

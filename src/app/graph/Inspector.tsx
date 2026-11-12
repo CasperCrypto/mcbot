@@ -167,6 +167,29 @@ function Abilities({ data, set, forced }: { data: AgentData; set: (f: string, v:
           );
         })}
       </div>
+      {on.has("browser") && <BrowserSettings data={data} set={set} />}
+    </div>
+  );
+}
+
+/** How its browser runs: Hermes' `browser.headed`, `browser.engine`, `browser.use_real_profile`. */
+function BrowserSettings({ data, set }: { data: AgentData; set: (f: string, v: unknown) => void }) {
+  const b = { show: false, engine: "chromium" as const, myLogins: false, ...(data.browser ?? {}) };
+  const put = (patch: Partial<typeof b>) => {
+    const next = { ...b, ...patch };
+    set("browser", next.show || next.engine !== "chromium" || next.myLogins ? next : null);
+  };
+  const row = (label: string, tip: string, on: boolean, flip: () => void, id: string) => (
+    <button type="button" className="ability" aria-pressed={on} onClick={flip} data-tip={tip} data-tip-side="top" data-testid={id}>{label}</button>
+  );
+  return (
+    <div className="stack" style={{ gap: 6 }} data-testid="browser-settings">
+      <span className="section-label">Browser</span>
+      <div className="abilities">
+        {row("Show its window", "Watch it browse, live, in its own Chromium window", b.show, () => put({ show: !b.show }), "browser-show")}
+        {row("Fast engine", "Lightpanda: much faster, no screenshots. Install it first: lightpanda.io", b.engine === "lightpanda", () => put({ engine: b.engine === "lightpanda" ? "chromium" : "lightpanda" }), "browser-fast")}
+        {row("Use my logins", "Browses with a copy of your own browser's logins", b.myLogins, () => put({ myLogins: !b.myLogins }), "browser-logins")}
+      </div>
     </div>
   );
 }

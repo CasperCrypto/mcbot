@@ -11,9 +11,13 @@ providers:
 platform_toolsets:
   cli:
     - web
+    - browser
     - file
     - image_gen
     - memory
+browser:
+  headed: true
+  engine: lightpanda
 image_gen:
   provider: openrouter
 platforms:
