@@ -21,6 +21,16 @@ export function useSignals(tasks: readonly TaskView[] | null, runs: Record<strin
     void setAttention(attentionCount(tasks ?? [], Object.values(runs), drift));
   }, [tasks, runs, drift]);
 
+  // A run that starts asking before a risky action: always worth a notification.
+  const asked = useRef(new Set<string>());
+  useEffect(() => {
+    for (const r of Object.values(runs)) {
+      if (!r.approval || asked.current.has(r.approval.promptId)) continue;
+      asked.current.add(r.approval.promptId);
+      void notify(`${nameOf(r.profile)} asks before acting`, `${r.approval.description}: ${r.approval.command}`);
+    }
+  }, [runs]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     const before = seenRuns.current;
     seenRuns.current = new Map(Object.values(runs).map((r) => [r.runId, r.status]));

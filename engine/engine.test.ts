@@ -54,6 +54,14 @@ function client(): { doc: Y.Doc; provider: WebsocketProvider } {
   return { doc, provider };
 }
 
+const untilAsync = async (cond: () => Promise<boolean>, ms: number) => {
+  const end = Date.now() + ms;
+  while (!(await cond())) {
+    if (Date.now() > end) throw new Error("timed out");
+    await new Promise((r) => setTimeout(r, 500));
+  }
+};
+
 const until = async (cond: () => boolean, ms = 5000) => {
   const end = Date.now() + ms;
   while (!cond()) {
@@ -187,7 +195,7 @@ describe("engine", () => {
     const compiled = await api<CompileResponse>("/api/compile", { method: "POST", body: JSON.stringify({ boardId: "team" }) });
     expect(compiled.body.ok).toBe(true);
     const cfg = readFileSync(join(workspace, "hermes/profiles/artist/config.yaml"), "utf8");
-    expect(cfg).toContain("platform_toolsets:\n  cli:\n    - file\n    - image_gen\n    - memory\nimage_gen:\n  provider: openai\n");
+    expect(cfg).toContain("platform_toolsets:\n  cli:\n    - file\n    - image_gen\n    - memory\n  api_server:\n    - file\n    - image_gen\n    - memory\nimage_gen:\n  provider: openai\n");
     // Point the OpenAI image maker at the stub, as a line someone added with Hermes itself:
     // McBot keeps it and adds its own key block after it.
     const envFile = join(workspace, "hermes/profiles/artist/.env");
@@ -212,7 +220,7 @@ describe("engine", () => {
     expect(offered.has("terminal")).toBe(false);
     // The model's key, saved in McBot, reached the model: Hermes' gateway reads it from the profile's .env.
     expect(stub.authorizations[stub.requests.indexOf(asked[0]!)]).toBe("Bearer probe-123");
-    expect(readFileSync(envFile, "utf8")).toMatch(/^OPENAI_BASE_URL=http:.*\n\n# >>> McBot keys.*\nMCBOT_PROBE_KEY="probe-123"\nOPENAI_API_KEY="sk-stub"\n# <<< McBot keys\n$/);
+    expect(readFileSync(envFile, "utf8")).toMatch(/^OPENAI_BASE_URL=http:.*\n\n# >>> McBot keys.*\nAPI_SERVER_HOST="127.0.0.1"\nAPI_SERVER_KEY="[0-9a-f]{48}"\nAPI_SERVER_PORT="\d+"\nMCBOT_PROBE_KEY="probe-123"\nOPENAI_API_KEY="sk-stub"\n# <<< McBot keys\n$/);
     if (process.platform !== "win32") expect(statSync(envFile).mode & 0o777).toBe(0o600);
     const listing = await api<{ entries: { name: string }[] }>("/api/fs/list?root=profile:artist&path=");
     expect(listing.body.entries.map((e) => e.name)).not.toContain(".env");
@@ -255,5 +263,32 @@ describe("engine", () => {
     telegram.say(999, "what is 2+2");
     await new Promise((r) => setTimeout(r, 8000));
     expect(telegram.sent.filter((m) => m.chatId === "999" && m.text.includes("4"))).toEqual([]);
+  }, 400_000);
+
+  // Approval cards: a risky command stops the run and asks the person (Hermes' runs API,
+  // approval.request); the answer goes back to Hermes, and a denied command never runs.
+  it.skipIf(!process.env.MCBOT_HERMES_BIN && process.env.MCBOT_E2E !== "1")("asks the person before a risky command and does not run it when they deny", async () => {
+    const target = join(workspace, "hermes/profiles/triage/workspace/keep-me");
+    writeFileSync(target, "important\n");
+    const prompt = `call:terminal ${JSON.stringify({ command: `rm -rf ${target}` })}`;
+    const { body } = await api<{ runId: string }>("/api/runs", { method: "POST", body: JSON.stringify({ boardId: "team", agentNodeId: "n-agent", prompt }) });
+    let summary: RunSummary | undefined;
+    await untilAsync(async () => {
+      summary = (await api<RunSummary[]>("/api/runs?boardId=team")).body.find((r) => r.runId === body.runId);
+      return Boolean(summary?.approval) || summary?.status !== "running";
+    }, 240_000);
+    expect(summary?.approval, JSON.stringify(summary)).toMatchObject({ command: expect.stringContaining("rm -rf"), choices: expect.arrayContaining(["once", "deny"]) });
+
+    expect((await api(`/api/runs/${body.runId}/approval`, { method: "POST", body: JSON.stringify({ choice: "deny" }) })).status).toBe(200);
+    let events: RunEvent[] = [];
+    await untilAsync(async () => {
+      events = (await api<RunEvent[]>(`/api/runs/${body.runId}`)).body;
+      return events.some((e) => e.type === "run.finished");
+    }, 240_000);
+    expect(events.some((e) => e.type === "run.approval.settled")).toBe(true);
+    expect(readFileSync(target, "utf8")).toBe("important\n");
+    expect((await api<RunSummary[]>("/api/runs?boardId=team")).body.find((r) => r.runId === body.runId)?.approval).toBeNull();
+    // Nothing left to answer.
+    expect((await api(`/api/runs/${body.runId}/approval`, { method: "POST", body: JSON.stringify({ choice: "once" }) })).status).toBe(409);
   }, 400_000);
 });

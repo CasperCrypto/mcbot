@@ -10,6 +10,7 @@ import { Sidebar } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, Empty } from "../ui";
+import { ApprovalCard } from "../approvals/ApprovalCard";
 
 function shortTime(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -86,8 +87,9 @@ function AgentMessage({ run, events, name }: { run: RunSummary; events: RunEvent
           {tools.map((t) => <span key={t.seq} className={`step-chip${failedTools.has(t.tool) ? " fail" : ""}`}><Plug size={11} /><span className="mono">{t.tool}</span></span>)}
         </div>
       )}
+      <ApprovalCard run={run} />
       {run.status === "running" && !text ? (
-        <div className="bubble" style={{ padding: 0 }}><span className="typing"><i /><i /><i /></span></div>
+        run.approval ? null : <div className="bubble" style={{ padding: 0 }}><span className="typing"><i /><i /><i /></span></div>
       ) : (
         <div className="bubble" data-testid="agent-text">{text || (failed ? run.error ?? "Failed" : "")}</div>
       )}
@@ -116,13 +118,14 @@ function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
   const thread = useMemo(() => Object.values(runs).filter((r) => r.agentNodeId === agent.id).sort((a, b) => a.startedAt - b.startedAt), [runs, agent.id]);
   const running = thread.find((r) => r.status === "running");
   const textLen = thread.reduce((n, r) => n + r.text.length, 0);
+  const asking = thread.filter((r) => r.approval).length;
 
   useEffect(() => {
     for (const r of thread) if (!events[r.runId]) engine.run(r.runId).then((e) => loadEvents(r.runId, e)).catch(() => undefined);
   }, [thread.length]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
-  }, [thread.length, textLen]);
+  }, [thread.length, textLen, asking]);
 
   const send = async () => {
     const prompt = draft.trim();

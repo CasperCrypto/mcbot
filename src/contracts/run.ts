@@ -9,6 +9,10 @@
  *     (system/init, text, tool_use, tool_result, result — see docs/HERMES.md).
  * After a run the engine reads that session's row from the profile's state.db
  * and emits `run.cost`.
+ *
+ * McBot's own Hermes runs through the gateway's runs API instead (engine/hermesRuns.ts), whose
+ * events map to the same shapes, plus `run.approval` when Hermes asks the person before a risky
+ * action and `run.approval.settled` once answered (added in v1, additively).
  */
 import { z } from "zod";
 
@@ -75,6 +79,19 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   z.object({ ...base, type: z.literal("run.log"), stream: z.enum(["stderr", "stdout"]), line: z.string() }),
   z.object({
     ...base,
+    type: z.literal("run.approval"),
+    /** Hermes' prompt id and generation: what an answer must carry back. */
+    promptId: z.string(),
+    generation: z.number().int(),
+    /** What it wants to do, and Hermes' reason for asking. */
+    command: z.string(),
+    description: z.string(),
+    /** Subset of once | session | always | deny. */
+    choices: z.array(z.string()),
+  }),
+  z.object({ ...base, type: z.literal("run.approval.settled"), promptId: z.string(), choice: z.string().nullable() }),
+  z.object({
+    ...base,
     type: z.literal("run.finished"),
     status: z.enum(["succeeded", "failed", "interrupted"]),
     exitCode: z.number().int().nullable(),
@@ -127,6 +144,8 @@ export interface RunSummary {
   error: string | null;
   reportedUsd: number | null;
   estimatedUsd: number | null;
+  /** Hermes is waiting for the person to allow or deny this, right now. */
+  approval: { promptId: string; command: string; description: string; choices: string[] } | null;
 }
 
 export function summarizeRun(events: readonly RunEvent[]): RunSummary | null {
@@ -150,6 +169,7 @@ export function summarizeRun(events: readonly RunEvent[]): RunSummary | null {
     error: null,
     reportedUsd: null,
     estimatedUsd: null,
+    approval: null,
   };
   for (const e of events) {
     switch (e.type) {
@@ -167,12 +187,19 @@ export function summarizeRun(events: readonly RunEvent[]): RunSummary | null {
         if (e.isError) s.toolErrors += 1;
         break;
       case "run.finished":
+        s.approval = null;
         s.status = e.status;
         s.finishedAt = e.ts;
         s.text = e.text || s.text;
         s.tokens = e.tokens;
         s.error = e.error;
         s.sessionId = e.sessionId ?? s.sessionId;
+        break;
+      case "run.approval":
+        s.approval = { promptId: e.promptId, command: e.command, description: e.description, choices: e.choices };
+        break;
+      case "run.approval.settled":
+        if (s.approval?.promptId === e.promptId) s.approval = null;
         break;
       case "run.cost":
         s.reportedUsd = e.reportedUsd;

@@ -59,15 +59,20 @@ Change them additively; a breaking change bumps the version.
 
 ## Runtime invariants
 
-- Agents run as `HERMES_HOME=<root> hermes -p <agent> chat --query-file - --oneshot --format stream-json`,
-  cwd `<profile>/workspace`, prompt on stdin. McBot's own Hermes adds `--source mcbot`;
-  an external one gets no `--source` (upstream rejects unknown sources).
+- McBot's own Hermes runs agents through the gateway's **runs API** (`engine/hermesRuns.ts`:
+  `POST /p/<agent>/v1/runs`, SSE events), so a risky command stops and asks the person
+  (approval cards: `run.approval`, answered with `POST /api/runs/:id/approval`). The key and
+  port live in `<workspace>/gateway.json` and go into the root's and each profile's `.env`.
+  Those runs read `platform_toolsets.api_server`, so abilities compile to `cli` and `api_server`.
+- An external Hermes runs as `HERMES_HOME=<root> hermes -p <agent> chat --query-file - --oneshot --format stream-json`,
+  cwd `<profile>/workspace`, prompt on stdin, no `--source` (upstream rejects unknown
+  sources); it never asks (one-shot runs deny instead).
 - `hermes chat` auto-starts one gateway per root; it discovers MCP servers only
   at boot. After a compile changes a config.yaml, the engine stops it and
   **waits for the process to exit** before the next run — only for McBot's own
   root (`managedRoot`), never an external `~/.hermes`.
 - MCP tools are `mcp__<server>__<tool>`; calls may arrive wrapped in `tool_call`.
-- An agent's abilities compile to `platform_toolsets.cli` (unset = Hermes' default:
+- An agent's abilities compile to `platform_toolsets.cli` and `.api_server` (unset = Hermes' default:
   everything but video and the task board); a wired image/video maker compiles to
   `image_gen` / `video_gen` and turns its tool set on. Makers are Hermes' own
   provider plugins: McBot only names one and its key variable, so hard rule 4 (two
@@ -99,9 +104,10 @@ Change them additively; a breaking change bumps the version.
   `python -m pm.environments --format json` gives for that Hermes home, composed
   once per home and reused (`prepareHermes`). A home without Hermes' dependencies
   gets `setup-hermes.sh --runtime-only` (`setup-hermes.ps1 -RuntimeOnly` on Windows)
-  first. No bash needed, so Windows works the same way. Its runs carry
-  `--source mcbot`; an external Hermes gets no `--source`. A run that meets
-  "Gateway starting/draining" is retried once (a new home's gateway boots slowly).
+  first. No bash needed, so Windows works the same way. Its runs go through
+  the runs API (sessions labelled `api_server`; its CLI commands keep `--source mcbot`);
+  an external Hermes gets one-shot `hermes chat` and no `--source`. A one-shot run that
+  meets "Gateway starting/draining" is retried once (a new home's gateway boots slowly).
   Runs never set `HERMES_MANAGED` (a managed install stops creating its home's
   folders); `npm run cli` does, so `hermes update` says updates come with McBot.
   Changes inside `hermes/` are listed in `hermes/MCBOT.md`; upstream releases come

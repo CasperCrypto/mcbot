@@ -9,5 +9,6 @@ export function attentionCount(tasks: readonly TaskView[], runs: readonly RunSum
   const blocked = tasks.filter((t) => t.status === "blocked").length;
   const nobody = tasks.filter((t) => !t.assignee && t.status !== "done").length;
   const failed = Math.min(5, runs.filter((r) => r.status === "failed" && r.startedAt > now - DAY).length);
-  return (drift ? 1 : 0) + review + blocked + nobody + failed;
+  const asking = runs.filter((r) => r.approval).length;
+  return (drift ? 1 : 0) + review + blocked + nobody + failed + asking;
 }

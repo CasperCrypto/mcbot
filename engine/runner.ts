@@ -19,6 +19,7 @@ import { RunStore, newRunId } from "./runStore";
 import { StreamMapper, type ToolNodeRef } from "./streamJson";
 import { resolveInside } from "./fsutil";
 import { resolveEntries, writeProfileKeys, type EnvEntry } from "./profileEnv";
+import { HermesRuns, RunsApiMapper, isTerminal } from "./hermesRuns";
 
 export interface StartRun {
   boardId: string;
@@ -43,13 +44,18 @@ export interface RunnerOptions {
    * reads a served profile's keys (engine/profileEnv.ts).
    */
   secrets?: () => Promise<Record<string, string>>;
+  /**
+   * McBot's own Hermes runs through the gateway's runs API (engine/hermesRuns.ts), so a run can
+   * ask the person before a risky action. `env` turns the API server on (in every .env).
+   */
+  api?: { runs: HermesRuns; env: Record<string, string> };
 }
 
 /** The gateway was booting or shutting down when the client connected (hermes_cli/gateway_chat.py). */
 const GATEWAY_NOT_READY = /Gateway (starting|draining)/i;
 
 export class Runner {
-  private readonly active = new Map<string, { child: ChildProcess | null; profile: string; cancelled?: boolean }>();
+  private readonly active = new Map<string, { child: ChildProcess | null; profile: string; cancelled?: boolean; hermesRunId?: string; abort?: AbortController }>();
   private gatewayStale = false;
   private gatewayRestart: Promise<void> | null = null;
   private gatewayEnsure: Promise<unknown> = Promise.resolve();
@@ -71,6 +77,11 @@ export class Runner {
 
   cancel(runId: string): boolean {
     const run = this.active.get(runId);
+    if (run?.hermesRunId && this.opts.api) {
+      run.cancelled = true;
+      void this.opts.api.runs.stop(run.profile, run.hermesRunId);
+      return true;
+    }
     if (!run?.child) return false;
     run.cancelled = true;
     run.child.kill(process.platform === "win32" ? undefined : "SIGINT");
@@ -109,16 +120,114 @@ export class Runner {
     return next;
   }
 
+  /**
+   * Answer the question a run is waiting on (an approval card): once, session, always or deny.
+   * Only runs through the runs API can ask.
+   */
+  async answer(runId: string, choice: string): Promise<void> {
+    const run = this.active.get(runId);
+    if (!run?.hermesRunId || !this.opts.api) throw new Error("This run is not waiting for an answer");
+    const events = await this.opts.store.events(runId);
+    const settled = new Set(events.filter((e) => e.type === "run.approval.settled").map((e) => (e as { promptId: string }).promptId));
+    const ask = [...events].reverse().find((e) => e.type === "run.approval" && !settled.has(e.promptId));
+    if (!ask || ask.type !== "run.approval") throw new Error("This run is not waiting for an answer");
+    if (!ask.choices.includes(choice)) throw new Error(`Choose one of: ${ask.choices.join(", ")}`);
+    await this.opts.api.runs.answer(run.profile, run.hermesRunId, ask.promptId, ask.generation, choice);
+  }
+
+  /** Turn the gateway's API server on for this root and make sure it answers (restarting a gateway that started without it). */
+  private async ensureApi(runId: string, bin: HermesBinary): Promise<boolean> {
+    const api = this.opts.api!;
+    await writeProfileKeys(this.opts.root, api.env);
+    if (await api.runs.up()) return true;
+    if (this.opts.managedRoot && (await gatewayStatus(this.opts.root)).running) {
+      this.opts.store.emit(runId, { type: "run.log", stream: "stderr", line: "[mcbot] restarting the engine gateway with its runs API" });
+      await stopGateway(bin, this.opts.root);
+    }
+    await this.ensureGateway();
+    for (const end = Date.now() + 90_000; Date.now() < end;) {
+      if (await api.runs.up()) return true;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    return false;
+  }
+
+  /** One run through Hermes' runs API: events as they happen, questions to the person, cost at the end. */
+  private async executeApi(runId: string, req: StartRun, bin: HermesBinary): Promise<void> {
+    const { store, root } = this.opts;
+    const api = this.opts.api!;
+    const started = Date.now();
+    await this.refreshGateway(runId, bin);
+    const saved: Record<string, string> = (await this.opts.secrets?.().catch(() => ({}))) ?? {};
+    await writeProfileKeys(join(root, "profiles", req.profile), { ...resolveEntries(req.env ?? [], saved), ...api.env }).catch((err: Error) =>
+      store.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] could not write this agent's keys: ${err.message}` }));
+    const fail = (error: string): void => {
+      store.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: Date.now() - started, sessionId: null, error });
+    };
+    if (!(await this.ensureApi(runId, bin))) return fail("The engine gateway did not start its runs API");
+    const entry = this.active.get(runId);
+    let hermesRunId: string;
+    try {
+      hermesRunId = await api.runs.start(req.profile, req.prompt);
+    } catch (err) {
+      return fail((err as Error).message);
+    }
+    const abort = new AbortController();
+    if (entry) Object.assign(entry, { hermesRunId, abort });
+    if (entry?.cancelled) void api.runs.stop(req.profile, hermesRunId);
+    const mapper = new RunsApiMapper(req.toolNodes);
+    let finished = false;
+    try {
+      for await (const e of api.runs.events(req.profile, hermesRunId, abort.signal)) {
+        for (const ev of mapper.map(e, started)) {
+          if (ev.type === "run.finished") {
+            const sessionId = await api.runs.sessionOf(req.profile, hermesRunId);
+            store.emit(runId, { ...ev, sessionId });
+            finished = true;
+            if (sessionId) this.emitCost(runId, req, sessionId);
+          } else {
+            store.emit(runId, ev);
+          }
+        }
+        if (isTerminal(e)) break;
+      }
+    } catch (err) {
+      if (!finished) fail(`Lost the run's events: ${(err as Error).message}`);
+      return;
+    }
+    if (!finished) fail("The run ended without a result");
+  }
+
+  private emitCost(runId: string, req: StartRun, sessionId: string): void {
+    const { store, root } = this.opts;
+    try {
+      const row = readSession(root, req.profile, sessionId);
+      if (!row) return;
+      const priced = priceSession(row, req.models);
+      store.emit(runId, {
+        type: "run.cost", sessionId, model: row.model, provider: row.billingProvider, reportedUsd: row.estimatedCostUsd,
+        costStatus: row.costStatus, estimatedUsd: priced.source === "estimate" ? priced.usd : null,
+      });
+    } catch (err) {
+      store.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] could not read state.db for cost: ${(err as Error).message}` });
+    }
+  }
+
   async start(req: StartRun): Promise<string> {
     const { store, root } = this.opts;
     const runId = newRunId();
     const bin = await this.opts.findHermes();
-    const argv = chatArgv(req.profile, bin ?? undefined);
+    const viaApi = !!this.opts.api && bin?.kind === "bundled";
+    const argv = viaApi ? ["runs-api", "/p/" + req.profile + "/v1/runs"] : chatArgv(req.profile, bin ?? undefined);
     const cwd = resolveInside(root, `profiles/${req.profile}/workspace`);
     this.active.set(runId, { child: null, profile: req.profile });
     store.emit(runId, { type: "run.started", boardId: req.boardId, agentNodeId: req.agentNodeId, profile: req.profile, prompt: req.prompt, argv, hermesHome: root, cwd });
 
-    void this.execute(runId, req, argv, cwd, bin).finally(() => this.active.delete(runId));
+    const go = viaApi && bin
+      ? prepareHermes(bin, root, (line) => store.emit(runId, { type: "run.log", stream: "stderr", line })).then((b) => this.executeApi(runId, req, b))
+      : this.execute(runId, req, argv, cwd, bin);
+    void go.catch((err: Error) => store.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: 0, sessionId: null, error: err.message }))
+      .finally(() => this.active.delete(runId));
     return runId;
   }
 
