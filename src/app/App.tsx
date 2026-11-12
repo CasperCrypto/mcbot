@@ -9,6 +9,7 @@ import { ReportSheet } from "./shell/ReportSheet";
 import { NewAgentSheet } from "./shell/NewAgentSheet";
 import { ToolCatalog } from "./shell/ToolCatalog";
 import { ChatAppCatalog } from "./shell/ChatAppCatalog";
+import { TeamPanel } from "./shell/TeamPanel";
 import { TeamsSheet } from "./shell/TeamsSheet";
 import { ShareSheet } from "./shell/ShareSheet";
 import { Palette, VIEWS } from "./shell/Palette";
@@ -124,6 +125,7 @@ function Shell() {
       <Boundary>
         <ToolCatalog />
         <ChatAppCatalog />
+        <TeamPanel />
       </Boundary>
       <Boundary>
         <TeamsSheet />

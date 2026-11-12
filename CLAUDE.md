@@ -166,6 +166,11 @@ Change them additively; a breaking change bumps the version.
 - Sticky notes live in the board too (`notes`, optional in `mcbot.graph/v1`, keyed by id like
   everything else): on the canvas for everyone, pinned ones on Home. The compiler never reads them.
   Their paper colours (`--note-*`) are content, not UI chrome.
+- Team chat lives in the board too (`messages`, optional in `mcbot.graph/v1`, keyed by id, last
+  500 kept): the faces in the title bar open the Team panel (`src/app/shell/TeamPanel.tsx`): who is
+  here and in which view, who joined and is away, and the chat. "@agent …" runs that agent and posts
+  its answer (posted by the asker's window when the run ends). The compiler never reads messages.
+  The demo shows two simulated teammates on its own board.
 - Clients use `disableBc: true`: every edit must reach the relay, because compile
   reads the board from the relay, never from a client payload.
 - Board files: export writes the relay's copy as `mcbot.graph/v1` JSON to

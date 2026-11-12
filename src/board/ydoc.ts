@@ -6,6 +6,7 @@
  *   nodes  Y.Map  nodeId -> Y.Map { kind, position, data: Y.Map<field, json> }
  *   edges  Y.Map  edgeId -> { id, source, target, order }
  *   notes  Y.Map  noteId -> Y.Map { text, color, position, pinned, author, at }  (sticky notes)
+ *   messages Y.Map messageId -> { id, author, color, agent, text, at }  (team chat)
  *
  * Everything is keyed by id (never a Y.Array), so a relay restarted from the
  * JSON file and a window still holding the old document merge without
@@ -13,7 +14,7 @@
  * editing different fields of one node both keep their change.
  */
 import * as Y from "yjs";
-import { GRAPH_SCHEMA, type Graph, type GraphEdge, type GraphNode, type Note } from "../contracts/graph";
+import { GRAPH_SCHEMA, MESSAGES_KEPT, type Graph, type GraphEdge, type GraphNode, type Message, type Note } from "../contracts/graph";
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -23,6 +24,7 @@ export function boardMaps(doc: Y.Doc) {
     nodes: doc.getMap<Y.Map<unknown>>("nodes"),
     edges: doc.getMap<GraphEdge>("edges"),
     notes: doc.getMap<Y.Map<unknown>>("notes"),
+    messages: doc.getMap<Message>("messages"),
   };
 }
 
@@ -59,7 +61,7 @@ function noteFromY(id: string, m: Y.Map<unknown>): Note {
 
 /** Read the graph out of the doc (unvalidated: the compiler validates). Sorted by id. */
 export function graphFromDoc(doc: Y.Doc): Graph {
-  const { meta, nodes, edges, notes } = boardMaps(doc);
+  const { meta, nodes, edges, notes, messages } = boardMaps(doc);
   const byId = <T extends { id: string }>(a: T, b: T) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const graph: Graph = {
     schema: GRAPH_SCHEMA,
@@ -70,13 +72,16 @@ export function graphFromDoc(doc: Y.Doc): Graph {
   };
   // Only boards that have notes carry the field, so every other board reads exactly as before.
   if (notes.size) graph.notes = [...notes.entries()].map(([id, m]) => noteFromY(id, m)).sort(byId);
+  if (messages.size) graph.messages = [...messages.values()].map((m) => ({ ...m })).sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : 1)).slice(-MESSAGES_KEPT);
   return graph;
 }
 
 /** Replace the doc's content with `graph` in one transaction. */
 export function loadGraphIntoDoc(doc: Y.Doc, graph: Graph): void {
-  const { meta, nodes, edges, notes } = boardMaps(doc);
+  const { meta, nodes, edges, notes, messages } = boardMaps(doc);
   doc.transact(() => {
+    for (const id of [...messages.keys()]) if (!(graph.messages ?? []).some((m) => m.id === id)) messages.delete(id);
+    for (const m of graph.messages ?? []) messages.set(m.id, { ...m });
     for (const id of [...notes.keys()]) if (!(graph.notes ?? []).some((n) => n.id === id)) notes.delete(id);
     for (const n of graph.notes ?? []) notes.set(n.id, noteToY(n));
     meta.set("schema", GRAPH_SCHEMA);
@@ -143,4 +148,16 @@ export function setNoteField<K extends keyof Omit<Note, "id">>(doc: Y.Doc, id: s
 
 export function removeNote(doc: Y.Doc, id: string): void {
   boardMaps(doc).notes.delete(id);
+}
+
+/** Post to the board's team chat; the oldest messages drop off past MESSAGES_KEPT. */
+export function addMessage(doc: Y.Doc, message: Message): void {
+  const { messages } = boardMaps(doc);
+  doc.transact(() => {
+    messages.set(message.id, { ...message });
+    if (messages.size > MESSAGES_KEPT) {
+      const old = [...messages.values()].sort((a, b) => a.at - b.at).slice(0, messages.size - MESSAGES_KEPT);
+      for (const m of old) messages.delete(m.id);
+    }
+  });
 }

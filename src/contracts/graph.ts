@@ -256,6 +256,24 @@ export const NoteSchema = z.object({
 });
 export type Note = z.infer<typeof NoteSchema>;
 
+/**
+ * Team chat on a board: people and agents talking, live for everyone on it. Never compiled; added
+ * to mcbot.graph/v1 additively, like notes. A message from an agent names it (`agent`).
+ */
+export const MessageSchema = z.object({
+  id: z.string().min(1),
+  author: z.string().max(64).default(""),
+  /** The writer's colour (people) for their face; agents use their own food colour. */
+  color: z.string().max(32).default(""),
+  /** Set when an agent wrote it: its profile id. */
+  agent: z.string().max(64).default(""),
+  text: z.string().max(20_000).default(""),
+  at: z.number().int().nonnegative().default(0),
+});
+export type Message = z.infer<typeof MessageSchema>;
+/** A board keeps its last messages; older ones drop off. */
+export const MESSAGES_KEPT = 500;
+
 export const GraphSchema = z.object({
   schema: z.literal(GRAPH_SCHEMA),
   id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
@@ -264,6 +282,8 @@ export const GraphSchema = z.object({
   edges: z.array(EdgeSchema),
   /** Sticky notes (optional, never compiled). */
   notes: z.array(NoteSchema).optional(),
+  /** Team chat (optional, never compiled). */
+  messages: z.array(MessageSchema).optional(),
 });
 export type Graph = z.infer<typeof GraphSchema>;
 
