@@ -27,7 +27,7 @@ import { FolderError, Folders } from "./folders";
 import { bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, setupHome, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
 import { JOB_ID_RE, createScheduleArgv, readSchedules, scheduleActionArgv } from "./schedules";
-import { TASK_ID_RE, actionArgv, createArgv, kanbanError, readTask, readTasks, runKanban } from "./kanban";
+import { TASK_ID_RE, actionArgv, boardTenant, createArgv, kanbanError, readTask, readTasks, runKanban } from "./kanban";
 import { envEntriesFor, hasLiveChannel, resolveEntries, writeProfileKeys } from "./profileEnv";
 import { MediaError, mediaFile } from "./media";
 import { BOARD_ID_RE, BoardRelay, LooseGraph } from "./relay";
@@ -39,7 +39,7 @@ import { SetupStore, detectLocal, listModels } from "./setup";
 import { OwnershipError, readManifest, writeCompileResult } from "./writer";
 import { Sharing, guestAllowed, type SharingView } from "./sharing";
 
-export const ENGINE_VERSION = "0.2.0";
+export const ENGINE_VERSION = "0.3.0";
 
 export interface EngineConfig {
   workspace: string;
@@ -350,7 +350,8 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     // ---- tasks: Hermes' kanban, shared by the agents compiled into this root ----
     "GET /api/tasks": async (_req, url): Promise<TasksView> => {
       const team = await teamOf(await requireBoard(url.searchParams.get("boardId")));
-      return { tasks: readTasks(cfg.hermesHome, team), gateway: (await gatewayStatus(cfg.hermesHome)).running };
+      const boardId = await requireBoard(url.searchParams.get("boardId"));
+      return { tasks: readTasks(cfg.hermesHome, team, boardId), gateway: (await gatewayStatus(cfg.hermesHome)).running };
     },
     "GET /api/tasks/one": async (_req, url): Promise<TaskDetail> => {
       const team = await teamOf(await requireBoard(url.searchParams.get("boardId")));
@@ -365,7 +366,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       }), await json(req));
       const team = await teamOf(await requireBoard(body.boardId));
       if (body.assignee !== null && !team.has(body.assignee)) throw new HttpError(409, `${body.assignee} isn't a compiled agent on this board. Compile, then give it tasks.`);
-      const out = await kanban(createArgv({ title: body.title, body: body.body, assignee: body.assignee, createdBy: body.by, parents: body.parents }), body.body);
+      const out = await kanban(createArgv({ title: body.title, body: body.body, assignee: body.assignee, createdBy: body.by, parents: body.parents, tenant: boardTenant(body.boardId) }), body.body);
       const id = (JSON.parse(out) as { id?: string }).id ?? "";
       const task = readTask(cfg.hermesHome, id, team);
       if (!task) throw new HttpError(500, "Hermes did not create the task");

@@ -147,7 +147,13 @@ function PaletteBody({ close }: { close: () => void }) {
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLDivElement>(null);
 
-  const shown = useMemo(() => (asking ? [] : commands.filter((c) => matches(c, query))), [commands, query, asking]);
+  // Each group once, in the order it first appears (a command listed later still joins its group).
+  const shown = useMemo(() => {
+    if (asking) return [];
+    const hits = commands.filter((c) => matches(c, query));
+    const order = [...new Set(hits.map((c) => c.group))];
+    return order.flatMap((g) => hits.filter((c) => c.group === g));
+  }, [commands, query, asking]);
   // Block bodies on purpose: scrollIntoView returns a Promise in current Chromium,
   // and an effect that returns a non-function crashes React on cleanup.
   useEffect(() => {

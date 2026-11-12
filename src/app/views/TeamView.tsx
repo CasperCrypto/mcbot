@@ -1,4 +1,6 @@
+import { MessagesSquare } from "lucide-react";
 import { useState } from "react";
+import { TeamChat } from "../shell/TeamPanel";
 import { PEER_COLORS } from "../lib/identity";
 import { VIEWS } from "../shell/Palette";
 import { useBoard } from "../state/board";
@@ -23,7 +25,9 @@ export function TeamView() {
 
   return (
     <section className="main flush-left">
-      <div className="scroll-page page-enter">
+      <div className="team-page page-enter">
+        <div className="team-people-col">
+        <h2 className="team-page-title">People</h2>
         <div className="people" data-testid="team">
           <div className="card person">
             <PersonFace name={identity.name} color={identity.color} size={64} />
@@ -40,6 +44,11 @@ export function TeamView() {
               <span className="where">{where(p.tab, p.selection)}</span>
             </div>
           ))}
+        </div>
+        </div>
+        <div className="card team-chat-col">
+          <div className="team-page-head"><MessagesSquare size={14} className="faint" /><b>Team chat</b><span className="faint">· @agent asks an agent</span></div>
+          <TeamChat />
         </div>
       </div>
     </section>

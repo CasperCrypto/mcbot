@@ -740,14 +740,18 @@ export const demoEngine = {
   tasks: api((boardId: string): TasksView => {
     const team = teamOf(requireBoard(boardId));
     state.tasks ??= boardId === SEED_BOARD.id ? seedTasks() : [];
-    const tasks = state.tasks.filter((t) => t.status !== "archived" && (t.assignee === null || team.has(t.assignee) || (t.createdBy !== null && team.has(t.createdBy))));
+    // As the engine (engine/kanban.ts readTasks): a task made on a board stays on that board.
+    const tasks = state.tasks.filter((t) => t.status !== "archived" && ((t as { board?: string }).board
+      ? (t as { board?: string }).board === boardId
+      : boardId === SEED_BOARD.id && (t.assignee === null || team.has(t.assignee) || (t.createdBy !== null && team.has(t.createdBy)))));
     return { tasks: tasks.map((t) => taskView(t, team)).sort((a, b) => b.createdAt - a.createdAt), gateway: true };
   }),
   task: api((boardId: string, id: string): TaskDetail => taskView(findTask(id), teamOf(requireBoard(boardId)))),
   createTask: api((boardId: string, input: { title: string; body: string; assignee: string | null; by: string; parents?: string[] }): TaskView => {
     const team = teamOf(requireBoard(boardId));
     if (input.assignee !== null && !team.has(input.assignee)) throw new EngineError(409, `${input.assignee} isn't a compiled agent on this board. Compile, then give it tasks.`, {});
-    const t: TaskDetail = {
+    const t: TaskDetail & { board: string } = {
+      board: boardId,
       id: taskId(), title: input.title.trim(), body: input.body, assignee: input.assignee, agentNodeId: null, status: input.assignee ? "ready" : "todo", priority: 0,
       createdBy: input.by, createdAt: Date.now(), startedAt: null, completedAt: null, result: null, error: null, parents: input.parents ?? [], children: [], comments: 0, thread: [], attempts: [],
     };

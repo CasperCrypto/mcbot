@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import { actionArgv, createArgv, kanbanDb, kanbanError, readTask, readTasks } from "./kanban";
+import { actionArgv, boardTenant, createArgv, kanbanDb, kanbanError, readTask, readTasks } from "./kanban";
 
 /** The tables McBot reads, as Hermes creates them (hermes_cli/kanban_db.py SCHEMA_SQL, columns McBot reads). */
 const DDL = `
@@ -82,5 +82,24 @@ describe("hermes kanban argv", () => {
 
   it("reports Hermes' own error line", () => {
     expect(kanbanError({ code: 1, stdout: "", stderr: "\x1b[0;36m→\x1b[0m Checking for uv...\ncannot unblock t_1: not blocked\n" })).toBe("cannot unblock t_1: not blocked");
+  });
+});
+
+describe("tasks per board (Hermes tenant)", () => {
+  it("shows a task McBot made on one board only there, and keeps the old rule for tasks without one", () => {
+    const db = board();
+    const conn = new DatabaseSync(join(db, "kanban.db"));
+    conn.exec("ALTER TABLE tasks ADD COLUMN tenant TEXT");
+    conn.prepare("INSERT INTO tasks (id, title, status, created_at, tenant) VALUES (?, ?, 'todo', 1700000999, ?)").run("t_000000aa", "Marketing plan", "mcbot-marketing");
+    conn.close();
+    expect(readTasks(db, TEAM, "marketing").map((t) => t.id)).toContain("t_000000aa");
+    expect(readTasks(db, TEAM, "support").map((t) => t.id)).not.toContain("t_000000aa");
+    // A task with no tenant (made before, or by Hermes itself) follows the old rule.
+    expect(readTasks(db, TEAM, "support").length).toBeGreaterThan(0);
+  });
+
+  it("creates tasks in the board's tenant", () => {
+    expect(createArgv({ title: "x", body: "", assignee: null, createdBy: "Ada", tenant: boardTenant("support") })).toEqual(
+      ["kanban", "create", "--body-file", "-", "--created-by", "Ada", "--json", "--tenant", "mcbot-support", "--", "x"]);
   });
 });

@@ -69,14 +69,30 @@ function readAll(db: DatabaseSync, profiles: ReadonlyMap<string, string>, where 
 }
 
 /**
+ * Which board a task belongs to: Hermes' `tenant` namespace (`--tenant`, kanban_parser.py; the
+ * dispatcher passes it to the worker as HERMES_TENANT and subtasks inherit it, kanban_db_graph.py).
+ * McBot sets `mcbot-<boardId>` on every task it creates.
+ */
+export const boardTenant = (boardId: string) => `mcbot-${boardId}`;
+
+/**
  * The tasks this board's people and agents see: every task assigned to or created by one of its
  * agents, and every unassigned one, newest first. Archived tasks are left out.
  * `profiles` maps each agent's profile name to its node id on the board.
  */
-export function readTasks(root: string, profiles: ReadonlyMap<string, string>): TaskView[] {
-  const all = withDb(root, (db) => readAll(db, profiles, "WHERE status != 'archived'")) ?? [];
-  return all
-    .filter((t) => t.assignee === null || profiles.has(t.assignee) || (t.createdBy !== null && profiles.has(t.createdBy)))
+export function readTasks(root: string, profiles: ReadonlyMap<string, string>, boardId?: string): TaskView[] {
+  const read = withDb(root, (db) => ({
+    all: readAll(db, profiles, "WHERE status != 'archived'"),
+    tenants: new Map((db.prepare("SELECT * FROM tasks").all() as Row[]).map((r) => [String(r.id), r.tenant == null ? null : String(r.tenant)])),
+  }));
+  const mine = boardId ? boardTenant(boardId) : null;
+  return (read?.all ?? [])
+    .filter((t) => {
+      const tenant = read?.tenants.get(t.id);
+      // A task McBot made knows its board; another board's never shows here.
+      if (tenant && tenant.startsWith("mcbot-")) return tenant === mine;
+      return t.assignee === null || profiles.has(t.assignee) || (t.createdBy !== null && profiles.has(t.createdBy));
+    })
     .sort((a, b) => b.createdAt - a.createdAt || a.id.localeCompare(b.id));
 }
 
@@ -108,6 +124,8 @@ export interface NewTask {
   createdBy: string;
   /** Tasks it waits for (`--parent`, repeatable). */
   parents?: string[];
+  /** The board it belongs to (`--tenant`, `boardTenant`). */
+  tenant?: string;
 }
 
 /**
@@ -116,6 +134,7 @@ export interface NewTask {
  */
 export function createArgv(t: NewTask): string[] {
   const argv = ["kanban", "create", "--body-file", "-", "--created-by", t.createdBy, "--json"];
+  if (t.tenant) argv.push("--tenant", t.tenant);
   if (t.assignee) argv.push("--assignee", t.assignee);
   for (const p of t.parents ?? []) argv.push("--parent", p);
   return [...argv, "--", t.title];
