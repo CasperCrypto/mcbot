@@ -10,6 +10,12 @@ that a real runtime reads, this is a drawing tool. Hermes Agent is the engine
 and ships inside McBot: one download, nothing else to install. What merges into
 McBot and what is rebuilt is decided in `docs/MERGE.md`.
 
+**Hermes is the harness; the board is its live picture and editor** (decision 9 in
+docs/PLAN.md). `src/harness/read.ts` turns a Hermes setup back into a board (the inverse of
+compile, round-trip tested on the golden fixtures; what it cannot show yet is listed, never
+dropped). Moving toward two-way: compile will edit only its own keys, and changes made in Hermes
+will reach the board.
+
 ## Hard rules
 
 1. **Merge only code we may ship under MIT.** McBot is MIT. MIT, Apache-2.0 and

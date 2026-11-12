@@ -9,12 +9,15 @@ import { randomBytes } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { homedir } from "node:os";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { compile, resolveGraph, type AgentBundle } from "../src/compile";
 import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, AgentSchedules, SetupDetect, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../src/contracts/api";
 import { writeExport } from "./boardFiles";
+import { isHermesHome, readSetup } from "./harnessDisk";
+import { unshownNote, type Unshown } from "../src/harness/read";
 import { diagnosticsText, osLine, redact, tail } from "./diagnostics";
 import type { Graph, ModelNode } from "../src/contracts/graph";
 import { buildCostReport } from "./cost";
@@ -189,6 +192,23 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const id = `${slugOf(name)}-${randomBytes(2).toString("hex")}`;
       await relay.create(id, name, graph.data as Graph);
       return { id, name };
+    },
+    /**
+     * Open a Hermes setup (default: this computer's ~/.hermes) as a new board: its agents, models,
+     * abilities, skills, tools, makers and bots, drawn. What the board cannot show yet comes back in
+     * `unshown`. Host only (it reads this computer's files), never a network member.
+     */
+    "POST /api/boards/from-hermes": async (req): Promise<BoardInfo & { unshown: Unshown[] }> => {
+      const body = parse(z.object({ path: z.string().trim().max(4096).optional() }), await json(req));
+      const root = resolve(body.path ? body.path.replace(/^~(?=$|[\\/])/, homedir()) : process.env.HERMES_HOME || join(homedir(), ".hermes"));
+      if (root === resolve(cfg.hermesHome)) throw new HttpError(409, "These are McBot's own agents; they are already on your boards.");
+      if (!(await isHermesHome(root))) throw new HttpError(404, `No Hermes setup in ${root}`);
+      const name = "My Hermes";
+      const id = `${slugOf(name)}-${randomBytes(2).toString("hex")}`;
+      const { graph, unshown } = await readSetup(root, { id, name });
+      const note = unshownNote(unshown, Date.now());
+      await relay.create(id, name, note ? { ...graph, notes: [note] } : graph);
+      return { id, name, unshown };
     },
     /** "Report a problem": version, system, engine state and the log's last lines, keys hidden. */
     "GET /api/diagnostics": async (): Promise<Diagnostics> => {

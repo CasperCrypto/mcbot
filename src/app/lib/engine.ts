@@ -58,6 +58,8 @@ const http = {
   boards: () => call<BoardInfo[]>("GET", "/api/boards"),
   createBoard: (name: string) => call<BoardInfo>("POST", "/api/boards", { name }),
   exportBoard: (boardId: string) => call<BoardExport>("POST", "/api/boards/export", { boardId }),
+  /** Open a Hermes setup on this computer (default ~/.hermes) as a new board. */
+  openHermes: (path?: string) => call<BoardInfo & { unshown: { profile: string; what: string; why: string }[] }>("POST", "/api/boards/from-hermes", { path }),
   importBoard: (graph: unknown, fallbackName?: string) => call<BoardInfo>("POST", "/api/boards/import", { graph, fallbackName }),
   compile: (boardId: string) => call<CompileResponse>("POST", "/api/compile", { boardId }),
   preview: (boardId: string) => call<CompileResponse>("GET", `/api/compile?boardId=${encodeURIComponent(boardId)}`),

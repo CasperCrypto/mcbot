@@ -17,6 +17,7 @@ import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostRepo
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
+import { readHermes, unshownNote, type ProfileFiles } from "../../harness/read";
 import { RUN_EVENT_VERSION, summarizeRun, type RunEvent, type RunEventInput, type RunSummary } from "../../contracts/run";
 import { EngineError } from "../lib/engineError";
 import { ROOT, SEED_BOARD, WORKSPACE, sampleProject, seedGraph, seedMemory, seedRuns, sharedFiles } from "./seed";
@@ -800,6 +801,17 @@ export const demoEngine = {
     save();
     return b;
   }),
+  /** The demo has no ~/.hermes: the real reader runs on a sample Hermes setup instead. */
+  openHermes: api((_path?: string) => {
+    const name = "My Hermes";
+    const b = { id: `my-hermes-${Math.random().toString(16).slice(2, 6)}`, name };
+    const { graph, unshown } = readHermes(b, SAMPLE_HERMES);
+    const note = unshownNote(unshown, Date.now());
+    state.boards.push(b);
+    (state.pending ??= {})[b.id] = note ? { ...graph, notes: [note] } : graph;
+    save();
+    return { ...b, unshown };
+  }),
   setupBoard: api((name: string, graph: Graph): BoardInfo => {
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "board";
     const b = { id: `${slug}-${Math.random().toString(16).slice(2, 6)}`, name };
@@ -845,3 +857,24 @@ export function subscribeDemoEvents(onEvent: Listener, onStatus?: (connected: bo
   onStatus?.(true);
   return () => listeners.delete(onEvent);
 }
+
+/** A small ~/.hermes for the demo's "Open my Hermes setup": a lead who hands work to a coder. */
+const SAMPLE_HERMES: ProfileFiles[] = [
+  {
+    name: "lead",
+    config: "model:\n  provider: custom:mcbot-local\n  default: qwen3:8b\nproviders:\n  mcbot-local:\n    api: http://127.0.0.1:11434/v1\n    default_model: qwen3:8b\n    transport: chat_completions\nplatform_toolsets:\n  cli:\n    - web\n    - browser\n    - memory\n    - kanban\nmemory:\n  provider: holographic\n",
+    soul: "# Lead\n\nPlans the week and hands the code to the coder.\n\n## Team\n\nYou can hand work to these agents.\n\n- `coder` (Coder): writes and reviews code\n",
+    profileYaml: "display_name: Lead\ndescription: Plans the week\n",
+    skills: {},
+  },
+  {
+    name: "coder",
+    config: "model:\n  provider: custom:mcbot-local\n  default: qwen3:8b\nproviders:\n  mcbot-local:\n    api: http://127.0.0.1:11434/v1\n    default_model: qwen3:8b\n    transport: chat_completions\nmcp_servers:\n  git:\n    command: uvx\n    args:\n      - mcp-server-git\n",
+    soul: "# Coder\n\nWrites small, tested changes.\n",
+    profileYaml: "display_name: Coder\ndescription: Writes and reviews code\n",
+    skills: {
+      review: "---\nname: review\ndescription: Review a diff before it ships\nversion: 1.0.0\n---\n\nRead the whole diff, run the tests, say what breaks.\n",
+      "software-development": "",
+    },
+  },
+];

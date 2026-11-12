@@ -261,6 +261,16 @@ daily watchdog opens an issue.
 6. **People and companies both come first.** Setup asks which, and the starter teams cover both.
 7. **Teams: network sharing first** (done, M12a), then the team server for remote teams (M12b).
 8. **Name and domain:** McBot, on the cheapest available McBot domain (the owner buys it).
+9. **Hermes is the harness; the board is its live, two-way editor.** McBot exists to see, build
+   and manage AI agents and their whole Hermes setup visually. Hermes' own files (config.yaml,
+   SOUL.md, skills, schedules, chat apps, memory, plugins) are the master copy; the board draws
+   them, edits exactly the keys it changes, keeps the rest, and follows changes made in Hermes
+   (by hand, by the CLI or by agents). Layout, notes and drawings stay on the board. Steps:
+   (a) reader: a Hermes setup becomes a board (done: "Open my Hermes setup");
+   (b) careful writer: compile edits only its own keys and keeps unknown ones;
+   (c) watcher: changes in Hermes reach the open board live;
+   (d) the Library: every ability, skill, chat app, memory and plugin Hermes has, to add;
+   then Ask McBot builds through the same path.
 
 ## Launch checklist
 
