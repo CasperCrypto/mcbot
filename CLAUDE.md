@@ -14,8 +14,11 @@ McBot and what is rebuilt is decided in `docs/MERGE.md`.
 docs/PLAN.md). `src/harness/read.ts` turns a Hermes setup back into a board (the inverse of
 compile, round-trip tested on the golden fixtures; what it cannot show yet is listed, never
 dropped). The writer merges config.yaml (`src/harness/merge.ts`, `OWNED`): McBot changes only
-the keys the board shows and keeps every other key, comment and its place. Next: changes made in
-Hermes reach the open board live.
+the keys the board shows and keeps every other key, comment and its place. Changes made in
+Hermes reach the open board live (`engine/hermesSync.ts`, `src/harness/reconcile.ts`): the Code
+view saves an agent's SOUL.md, config.yaml, profile.yaml and skills (`agentEditable`), and a
+watcher follows edits by the CLI or agents. Three-way against `<workspace>/hermes-seen.json`, so
+a board edit not compiled yet stays and McBot's own compile never echoes back.
 
 ## Hard rules
 
@@ -213,8 +216,9 @@ Change them additively; a breaking change bumps the version.
 - **Local folders:** the engine reads only inside roots the user opened
   (`<workspace>/folders.json`), the shared files folder and compiled profiles,
   path-checked. The Code view's editor (Monaco, loaded on first use) writes back
-  only to opened folders, the shared files folder and an agent's `workspace/`,
-  never a compiled file or a key file, and only over the sha256 it read.
+  only to opened folders, the shared files folder, an agent's `workspace/` and its Hermes
+  settings (SOUL.md, config.yaml, profile.yaml, skills; the board follows them), never memory,
+  logs, state or a key file, and only over the sha256 it read.
 - **Terminal:** real shells in the desktop shell (`src-tauri/src/terminal.rs`,
   portable-pty), never in the engine, so the engine stays one plain executable.
   The browser has none.

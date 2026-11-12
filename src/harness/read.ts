@@ -57,6 +57,8 @@ const SHOWN_KEYS = new Set(["model", "providers", "fallback_providers", "mcp_ser
 const CAP_KEYS = new Set<string>(CAPABILITIES.map((c) => c.key));
 const TEAM_HEAD = "## Team";
 const TEAM_LINE = /^- `([a-z0-9][a-z0-9_-]{0,63})`/;
+/** The sentence compile writes under "## Team" (src/compile/soul.ts). */
+const TEAM_INTRO = "You can hand work to these agents.";
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -87,7 +89,11 @@ export function splitSoul(soul: string): { own: string; team: string[] } {
   if (at < 0) return { own: soul, team: [] };
   const tail = soul.slice(at + TEAM_HEAD.length + 4).split("\n");
   const team = tail.map((l) => TEAM_LINE.exec(l)?.[1]).filter((n): n is string => !!n);
-  return { own: soul.slice(0, at), team };
+  // Anything a person wrote after the list is theirs, not the section's: it stays (compile puts it
+  // back above the Team section, which it always writes last).
+  const after = tail.filter((l) => l.trim() && !TEAM_LINE.test(l) && !l.startsWith(TEAM_INTRO)).join("\n").trim();
+  const own = soul.slice(0, at);
+  return { own: after ? `${own}\n\n${after}` : own, team };
 }
 
 /** SKILL.md → a board skill, or null when it is not one the board can hold. */

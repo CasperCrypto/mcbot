@@ -76,7 +76,7 @@ const http = {
   openFolder: (path: string) => call<FsRoot>("POST", "/api/fs/roots", { path }),
   closeFolder: (id: string) => call<{ ok: true }>("POST", "/api/fs/roots/close", { id }),
   list: (root: string, path: string) => call<FsListing>("GET", `/api/fs/list?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
-  writeFile: (root: string, path: string, text: string, baseSha256: string | null) => call<{ path: string; bytes: number; sha256: string }>("PUT", "/api/fs/write", { root, path, text, baseSha256 }),
+  writeFile: (root: string, path: string, text: string, baseSha256: string | null) => call<{ path: string; bytes: number; sha256: string; followed?: string[] }>("PUT", "/api/fs/write", { root, path, text, baseSha256 }),
   read: (root: string, path: string) => call<FsPreview>("GET", `/api/fs/read?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
   setup: () => call<SetupState>("GET", "/api/setup"),
   setupDetect: () => call<SetupDetect>("GET", "/api/setup/detect"),
@@ -104,6 +104,22 @@ const http = {
 };
 
 export const engine: typeof http = DEMO ? demoEngine : http;
+
+/** An agent's files changed in Hermes and the board followed (engine/hermesSync.ts). */
+export interface HarnessChange { boardId: string; agent: string; changed: string[] }
+
+export function subscribeHarness(onChange: (c: HarnessChange) => void): () => void {
+  if (DEMO) return () => undefined;
+  const es = new EventSource(`${ENGINE_HTTP}/api/events${REMOTE ? `?key=${encodeURIComponent(REMOTE.key)}` : ""}`);
+  es.addEventListener("harness", (m) => {
+    try {
+      onChange(JSON.parse((m as MessageEvent<string>).data) as HarnessChange);
+    } catch {
+      /* skipped */
+    }
+  });
+  return () => es.close();
+}
 
 /** Live run events for every run, from the engine's SSE stream. Reconnects on its own. */
 export function subscribeRunEvents(onEvent: (e: RunEvent) => void, onStatus?: (connected: boolean) => void): () => void {

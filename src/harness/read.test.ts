@@ -56,6 +56,8 @@ describe("Hermes setup → board", () => {
     const soul = "# Lead\n\nRuns the desk.\n\n## Team\n\nYou can hand work to these agents.\n\n- `writer` (Writer): drafts\n- `editor`";
     expect(splitSoul(soul)).toEqual({ own: "# Lead\n\nRuns the desk.", team: ["writer", "editor"] });
     expect(splitSoul("# Solo")).toEqual({ own: "# Solo", team: [] });
+    // Text typed after the list is the person's: kept.
+    expect(splitSoul(`${soul}\n\nAlways answer in two sentences.`)).toEqual({ own: "# Lead\n\nRuns the desk.\n\nAlways answer in two sentences.", team: ["writer", "editor"] });
   });
 
   it("reads a SKILL.md the board can hold, and refuses one it cannot", () => {

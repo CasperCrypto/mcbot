@@ -4,13 +4,15 @@
  * files folder, or an agent's compiled profile. Opened folders persist in
  * <workspace>/folders.json.
  *
- * The code editor writes back (`write`) only where a person works: an opened folder, the shared
- * files folder, and an agent's `workspace/`. Never a compiled file, memory, logs or a key file,
- * and only over the exact bytes the editor read (sha256), so an agent's change is never lost.
+ * The code editor writes back (`write`) to an opened folder, the shared files folder, and in an
+ * agent's folder its Hermes settings and `workspace/` (`agentEditable`; the board follows the
+ * settings). Never memory, logs, state or a key file, and only over the exact bytes the editor
+ * read (sha256), so an agent's change is never lost.
  */
 import { createHash } from "node:crypto";
 import { readdir, stat } from "node:fs/promises";
 import { sha256Hex } from "../src/compile/text";
+import { agentEditable } from "../src/harness/live";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import type { FsEntry, FsRoot } from "../src/contracts/api";
 import { atomicWrite, readTextOrNull, resolveInside, toPosix } from "./fsutil";
@@ -32,6 +34,8 @@ function inside(root: string, rel: string): string {
     throw new FolderError(400, "path is outside the folder");
   }
 }
+
+export { agentEditable };
 
 export class Folders {
   constructor(private readonly workspace: string, private readonly hermesHome: string) {}
@@ -122,7 +126,7 @@ export class Folders {
    */
   async write(rootId: string, rootDir: string, rel: string, text: string, baseSha256: string | null): Promise<{ path: string; bytes: number; sha256: string }> {
     const posix = rel.replace(/\\/g, "/");
-    if (rootId.startsWith("profile:") && !posix.startsWith("workspace/")) throw new FolderError(403, "Only an agent's workspace folder can be edited here; its settings come from the board");
+    if (rootId.startsWith("profile:") && !agentEditable(posix)) throw new FolderError(403, "Only an agent's settings (SOUL.md, config.yaml, profile.yaml, skills) and its workspace folder are edited here");
     const abs = inside(rootDir, posix);
     if (SECRET_FILES.has(basename(abs))) throw new FolderError(403, "This file holds keys and is not edited here");
     const current = await readTextOrNull(abs);

@@ -17,6 +17,7 @@ import { compile, resolveGraph, type AgentBundle } from "../src/compile";
 import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, AgentSchedules, SetupDetect, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../src/contracts/api";
 import { writeExport } from "./boardFiles";
 import { isHermesHome, readSetup } from "./harnessDisk";
+import { HermesSync } from "./hermesSync";
 import { unshownNote, type Unshown } from "../src/harness/read";
 import { diagnosticsText, osLine, redact, tail } from "./diagnostics";
 import type { Graph, ModelNode } from "../src/contracts/graph";
@@ -117,6 +118,12 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     const frame = `data: ${JSON.stringify(e)}\n\n`;
     for (const res of sse) res.write(frame);
   });
+  // Hermes → the board, live: an agent's files changed (editor, Hermes CLI, or the agent itself).
+  const hermesSync = new HermesSync(cfg.hermesHome, join(cfg.workspace, "hermes-seen.json"), relay, (c) => {
+    const frame = `event: harness\ndata: ${JSON.stringify(c)}\n\n`;
+    for (const res of sse) res.write(frame);
+  });
+  if (cfg.managedRoot) hermesSync.start();
 
   const requireBoard = async (id: unknown): Promise<string> => {
     if (typeof id !== "string" || !BOARD_ID_RE.test(id) || !(await relay.exists(id))) throw new HttpError(404, `no board ${String(id)}`);
@@ -482,12 +489,19 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const dir = await folders.resolveRoot(url.searchParams.get("root") ?? "", manifest?.profiles ?? []);
       return folders.read(dir, url.searchParams.get("path") ?? "");
     },
-    /** The code editor's save: opened folders, the shared files folder and agents' workspace/ only. */
-    "PUT /api/fs/write": async (req) => {
+    /** The code editor's save: opened folders, shared files, an agent's settings (the board follows) and workspace/. */
+    "PUT /api/fs/write": async (req): Promise<{ path: string; bytes: number; sha256: string; followed?: string[] }> => {
       const body = parse(z.object({ root: z.string(), path: z.string().min(1).max(1000), text: z.string().max(5_000_000), baseSha256: z.string().nullable() }), await json(req));
       const manifest = await readManifest(cfg.hermesHome);
       const dir = await folders.resolveRoot(body.root, manifest?.profiles ?? []);
-      return folders.write(body.root, dir, body.path, body.text, body.baseSha256);
+      const saved = await folders.write(body.root, dir, body.path, body.text, body.baseSha256);
+      // An agent's settings: the board follows at once (the watcher would within seconds).
+      const profile = /^profile:(.+)$/.exec(body.root)?.[1];
+      if (profile && manifest && !saved.path.startsWith("workspace/") && (await relay.exists(manifest.graphId))) {
+        const change = await hermesSync.follow(manifest.graphId, profile).catch(() => null);
+        return { ...saved, followed: change?.changed ?? [] };
+      }
+      return saved;
     },
   };
 
@@ -516,6 +530,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const configChanged = report.changes.some((c) => c.path.endsWith("/config.yaml") && c.status !== "unchanged");
       if (!dryRun && configChanged) runner.markGatewayStale();
       if (!dryRun) await atomicWrite(join(cfg.workspace, "compiles", `${boardId}.json`), `${JSON.stringify({ at: Date.now(), report }, null, 2)}\n`);
+      if (!dryRun) await hermesSync.remember(report.profiles.map((p) => p.name));
       if (!dryRun) void syncAgents();
       return { ok: true, report, issues, gateway: !dryRun && configChanged && cfg.managedRoot ? "restart-pending" : "unchanged" };
     } catch (err) {
@@ -695,6 +710,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     runner,
     store,
     close: async () => {
+      hermesSync.stop();
       for (const res of sse) res.end();
       for (const c of wss.clients) c.terminate();
       await relay.flush();

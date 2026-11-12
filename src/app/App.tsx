@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo } from "react";
 import type { AgentNode } from "../contracts/graph";
 import { compileBoard, refreshDrift } from "./actions";
 import { GraphView } from "./graph/GraphView";
-import { engine, subscribeRunEvents } from "./lib/engine";
+import { engine, subscribeHarness, subscribeRunEvents } from "./lib/engine";
 import { Boundary } from "./shell/Boundary";
 import { HermesSheet } from "./shell/HermesSheet";
 import { ReportSheet } from "./shell/ReportSheet";
@@ -197,6 +197,11 @@ export function App() {
   }, [setHealth, setBoards, setBoard]);
 
   useEffect(() => subscribeRunEvents(applyEvent), [applyEvent]);
+  // Changes made in Hermes (the CLI, an agent, another editor) reach the board by themselves; say so.
+  useEffect(() => subscribeHarness((c) => {
+    const app = useApp.getState();
+    if (c.boardId === app.boardId) app.toast({ kind: "ok", text: `${c.agent} changed in Hermes: ${c.changed.join(", ")}` });
+  }), []);
 
   const ready = engineUp && boards.length > 0 && boardId && setup;
   if (ready && !setup.completed) {

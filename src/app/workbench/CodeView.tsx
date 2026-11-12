@@ -4,6 +4,7 @@ import type { FsEntry, FsRoot } from "../../contracts/api";
 import type { AgentNode } from "../../contracts/graph";
 import { runAgent } from "../actions";
 import { openBrowser } from "../lib/desktop";
+import { agentEditable } from "../../harness/live";
 import { engine } from "../lib/engine";
 import { Sidebar, SidebarGroup } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
@@ -24,7 +25,8 @@ interface Doc {
 }
 
 /** What the editor may change: compiled agent files come from the board, so only workspace/ is editable there. */
-const editable = (root: FsRoot, path: string) => root.kind !== "profile" || path.startsWith("workspace/");
+/** An agent's Hermes settings and workspace are editable; the board follows the settings (engine/folders.ts `agentEditable`). */
+const editable = (root: FsRoot, path: string) => root.kind !== "profile" || agentEditable(path);
 const sep = (p: string) => (p.includes("\\") ? "\\" : "/");
 
 function Tree({ root, path, depth, open, toggle, listings, onFile, current }: {
@@ -137,6 +139,7 @@ export default function CodeView() {
       const r = await engine.writeFile(d.root.id, d.path, text, d.sha256);
       setDocs((all) => all.map((x) => (x.key === d.key ? { ...x, saved: text, sha256: r.sha256 } : x)));
       setDirty((s) => { const n = new Set(s); n.delete(d.key); return n; });
+      if (r.followed?.length) toast({ kind: "ok", text: `Board updated: ${r.followed.join(", ")}` });
     } catch (err) {
       toast({ kind: "fail", text: (err as Error).message });
     }
@@ -225,7 +228,7 @@ export default function CodeView() {
       <section className="main code-main">
         <div className="code-tabs" role="tablist">
           {docs.map((d) => (
-            <div key={d.key} role="tab" aria-selected={d.key === active} className="code-tab" onClick={() => setActive(d.key)} data-tip={d.readOnly ? "Read only: it comes from the board" : undefined}>
+            <div key={d.key} role="tab" aria-selected={d.key === active} className="code-tab" onClick={() => setActive(d.key)} data-tip={d.readOnly ? "Read only" : undefined}>
               {d.readOnly && <FileLock size={11} />}
               <span className="ellipsis">{d.path.split("/").pop()}</span>
               {dirty.has(d.key) ? <span className="dot" /> : null}
