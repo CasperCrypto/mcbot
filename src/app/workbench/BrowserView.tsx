@@ -37,7 +37,7 @@ export default function BrowserView() {
   const area = useRef<HTMLDivElement>(null);
   const native = useMemo(() => nativePage(), []);
   // A native page draws above the window's HTML, so it steps aside while a sheet or ⌘K is open.
-  const covered = useApp((s) => s.paletteOpen || s.compileOpen || s.hermesOpen || s.reportOpen || s.newAgentOpen || s.catalogOpen || s.chatAppsOpen || s.teamsOpen || s.shareOpen);
+  const covered = useApp((s) => s.paletteOpen || s.compileOpen || s.hermesOpen || s.reportOpen || s.newAgentOpen || s.catalogOpen || s.chatAppsOpen || s.teamOpen || s.teamsOpen || s.shareOpen);
   const url = at >= 0 ? history[at]! : null;
   const box = (): PageBox | null => {
     const r = area.current?.getBoundingClientRect();

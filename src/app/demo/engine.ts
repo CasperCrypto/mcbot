@@ -120,6 +120,50 @@ export interface DemoLink {
   destroy(): void;
 }
 
+/**
+ * Two simulated teammates on the demo's own board, so the team features show without a second
+ * computer: Sam and Lee are here (cursors on the board), and Sam answers your first message.
+ * A second tab on the same board is real presence, as before.
+ */
+const TEAMMATES = [
+  { id: 900_001, name: "Sam", color: "#30d158", tab: "graph", home: { x: 380, y: 120 } },
+  { id: 900_002, name: "Lee", color: "#bf5af2", tab: "tasks", home: { x: 60, y: 420 } },
+];
+function simulateTeammates(doc: Y.Doc, awareness: Awareness): () => void {
+  let step = 0;
+  const beat = () => {
+    step++;
+    for (const t of TEAMMATES) {
+      const wobble = { x: t.home.x + Math.round(Math.sin(step / 3 + t.id) * 60), y: t.home.y + Math.round(Math.cos(step / 4 + t.id) * 40) };
+      awareness.states.set(t.id, { user: { name: t.name, color: t.color }, tab: t.tab, cursor: t.tab === "graph" ? wobble : null, selection: null });
+      awareness.meta.set(t.id, { clock: step, lastUpdated: Date.now() });
+    }
+    awareness.emit("change", [{ added: step === 1 ? TEAMMATES.map((t) => t.id) : [], updated: step === 1 ? [] : TEAMMATES.map((t) => t.id), removed: [] }, "local"]);
+  };
+  beat();
+  const timer = setInterval(beat, 1500);
+  // Sam answers the first message you send.
+  const messages = doc.getMap<{ author: string; agent: string; at: number }>("messages");
+  // A demo board saved before team chat existed gets the opening conversation too.
+  if (messages.size === 0) doc.transact(() => { for (const m of seedGraph.messages ?? []) messages.set(m.id, { ...m }); });
+  let answered = false;
+  const onMessage = (e: Y.YMapEvent<{ author: string; agent: string; at: number }>) => {
+    if (answered) return;
+    for (const key of e.keysChanged) {
+      const m = messages.get(key);
+      if (!m || m.agent || TEAMMATES.some((t) => t.name === m.author)) continue;
+      answered = true;
+      setTimeout(() => messages.set(`msg-sam-${Date.now()}`, { id: `msg-sam-${Date.now()}`, author: "Sam", color: "#30d158", agent: "", text: "On it. Ping @triage if a ticket needs routing.", at: Date.now() } as never), 1600);
+    }
+  };
+  messages.observe(onMessage);
+  return () => {
+    clearInterval(timer);
+    messages.unobserve(onMessage);
+    removeAwarenessStates(awareness, TEAMMATES.map((t) => t.id), "local");
+  };
+}
+
 export function connectDemoBoard(boardId: string, doc: Y.Doc): DemoLink {
   fillDoc(doc, boardId);
   docs.set(boardId, doc);
@@ -154,12 +198,14 @@ export function connectDemoBoard(boardId: string, doc: Y.Doc): DemoLink {
     };
     channel.postMessage({ t: "hello", sv: Y.encodeStateVector(doc) });
   }
+  const stopTeam = boardId === SEED_BOARD.id ? simulateTeammates(doc, awareness) : () => undefined;
   return {
     awareness,
     synced: true,
     on: () => undefined,
     off: () => undefined,
     destroy() {
+      stopTeam();
       removeAwarenessStates(awareness, [doc.clientID], "destroy");
       doc.off("update", onUpdate);
       awareness.off("update", onAwareness);
@@ -687,7 +733,7 @@ export const demoEngine = {
     const runs = Object.values(state.runs).map((e) => summarizeRun(e)).filter((s): s is RunSummary => !!s && s.boardId === boardId);
     return buildCostReport(profiles, runs, models);
   }),
-  share: api((): SharingView => ({ on: false, addresses: [], port: 4318, members: [], invite: null })),
+  share: api((): SharingView => ({ on: false, addresses: [], port: 4318, members: [{ id: "m-sam", name: "Sam", joinedAt: Date.now() - 6 * 86_400_000, lastSeen: Date.now() - 60_000 }, { id: "m-lee", name: "Lee", joinedAt: Date.now() - 2 * 86_400_000, lastSeen: Date.now() - 3_600_000 }], invite: null })),
   setShare: api((_on: boolean): SharingView => { throw new EngineError(409, "Sharing with other computers works in the desktop app. Here, open a second tab: it is live too.", {}); }),
   newInvite: api((): SharingView => ({ on: false, addresses: [], port: 4318, members: [], invite: null })),
   removeMember: api((_id: string): SharingView => ({ on: false, addresses: [], port: 4318, members: [], invite: null })),

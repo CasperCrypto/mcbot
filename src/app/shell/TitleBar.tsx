@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Download, FolderOpen, Hammer, LoaderCircle, Plus, Search, Upload, Users } from "lucide-react";
+import { Check, ChevronDown, Download, FolderOpen, Hammer, MessagesSquare, LoaderCircle, Plus, Search, Upload, Users } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { resolveGraph } from "../../compile";
 import { compileBoard, exportBoardFile, importBoardFile, openHermesSetup } from "../actions";
@@ -8,6 +8,7 @@ import { useApp } from "../state/store";
 import { Logo } from "../faces/FoodFace";
 import { Kbd, PersonFace } from "../ui";
 import { Island } from "./Island";
+import { unreadCount } from "./TeamPanel";
 
 /** The McBot logo: the gray glass burger. */
 export function BrandMark({ size = 22 }: { size?: number }) {
@@ -58,6 +59,8 @@ export function TitleBar() {
   const setPalette = useApp((s) => s.setPalette);
   const errors = useMemo(() => (graph.nodes.length ? resolveGraph(graph).issues.filter((i) => i.level === "error").length : 0), [graph]);
   const people = [{ clientId: -1, name: identity.name, color: identity.color }, ...peers];
+  const teamOpen = useApp((s) => s.teamOpen);
+  const unread = teamOpen ? 0 : unreadCount(boardId, graph.messages, identity.name);
 
   return (
     <header className="titlebar" data-tauri-drag-region>
@@ -66,13 +69,15 @@ export function TitleBar() {
       {DEMO && <span className="chip warn" data-tip="Browser demo: compile is real, runs are simulated" data-tip-side="bottom" data-testid="demo-chip">Demo</span>}
       <div className="spacer" />
       <Island />
-      <div className="presence" data-testid="presence">
+      <button className="presence" data-testid="presence" onClick={() => useApp.getState().setTeamOpen(!useApp.getState().teamOpen)}
+        data-tip={`${people.length === 1 ? "Only you here" : `${people.length} here`} · team chat`} data-tip-side="bottom">
         {people.slice(0, 5).map((p) => (
-          <span key={p.clientId} data-tip={p.clientId === -1 ? `${p.name} (you)` : p.name} data-tip-side="bottom">
-            <PersonFace name={p.name} color={p.color} size={24} />
-          </span>
+          <span key={p.clientId} className="presence-face"><PersonFace name={p.name} color={p.color} size={24} /></span>
         ))}
-      </div>
+        {people.length > 5 && <span className="chip">+{people.length - 5}</span>}
+        <MessagesSquare size={14} className="faint" />
+        {unread > 0 && <span className="unread" data-testid="team-unread">{unread}</span>}
+      </button>
       <button className={`btn sm share-btn${REMOTE ? " remote" : ""}`} onClick={() => useApp.getState().setShareOpen(true)} data-testid="share-open"
         data-tip={REMOTE ? `On ${REMOTE.label}'s boards` : "Share on your network"} data-tip-side="bottom">
         <Users size={13} /> {REMOTE ? REMOTE.label : "Share"}

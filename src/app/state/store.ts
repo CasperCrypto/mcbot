@@ -43,6 +43,7 @@ interface State {
   teamsOpen: boolean;
   /** Share on your network / join. */
   shareOpen: boolean;
+  teamOpen: boolean;
   /** A sticky note this window just made: it opens ready to type. */
   freshNote: string | null;
   /** The agent whose thread is open in Agents. */
@@ -61,6 +62,7 @@ interface State {
   setChatAppsOpen(open: boolean): void;
   setTeamsOpen(open: boolean): void;
   setShareOpen(open: boolean): void;
+  setTeamOpen(open: boolean): void;
   setFreshNote(id: string | null): void;
   openChat(agentNodeId: string | null): void;
   showTask(id: string | null, tab?: boolean): void;
@@ -121,7 +123,9 @@ export const useApp = create<State>((set, get) => ({
   chatAppsOpen: false,
   teamsOpen: false,
   shareOpen: false,
+  teamOpen: false,
   setShareOpen: (shareOpen) => set({ shareOpen, paletteOpen: false }),
+  setTeamOpen: (teamOpen) => set({ teamOpen, paletteOpen: false }),
   setTeamsOpen: (teamsOpen) => set({ teamsOpen, paletteOpen: false, newAgentOpen: false }),
   freshNote: null,
   setFreshNote: (freshNote) => set({ freshNote }),

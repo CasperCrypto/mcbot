@@ -65,6 +65,11 @@ export const seedGraph: Graph = {
     { id: "e-research-docs", source: "agent-research", target: "tool-docs", order: 0 },
     { id: "e-triage-research", source: "agent-triage", target: "agent-research", order: 0 },
   ],
+  messages: [
+    { id: "msg-seed-1", author: "Sam", color: "#30d158", agent: "", text: "Morning! Billing tickets doubled overnight. Can we have triage route them straight to me?", at: Date.UTC(2026, 10, 12, 8, 2) },
+    { id: "msg-seed-2", author: "Lee", color: "#bf5af2", agent: "", text: "@triage how many billing tickets came in since yesterday?", at: Date.UTC(2026, 10, 12, 8, 4) },
+    { id: "msg-seed-3", author: "Triage desk", color: "", agent: "triage", text: "7 billing tickets since yesterday 6 pm. 5 are double charges (4471 and 4 more), 2 are refund requests. All routed to Sam.", at: Date.UTC(2026, 10, 12, 8, 4, 40) },
+  ],
 };
 
 export const seedMemory: Record<string, { memory: string[]; user: string[] }> = {

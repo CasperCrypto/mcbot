@@ -143,3 +143,27 @@
 .share-invite { display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 14px; border-radius: var(--r-md); background: var(--bg-input); border: 1px solid var(--line-2); font-size: 14px; letter-spacing: 0.02em; user-select: text; }
 .share-btn { gap: 6px; }
 .share-btn.remote { border-color: var(--accent-line); color: var(--accent-text); }
+
+/* ---------- presence button and team panel ---------- */
+button.presence { position: relative; gap: 6px; padding: 2px 8px 2px 4px; border-radius: var(--r-pill); border: 1px solid transparent; background: none; color: inherit; cursor: pointer; }
+button.presence:hover { background: var(--bg-hover); border-color: var(--line); }
+.presence .presence-face + .presence-face { margin-left: -6px; }
+.presence .unread { position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: var(--r-pill); background: var(--accent); color: #fff; font-size: 10px; font-weight: 600; display: grid; place-items: center; }
+.team-panel { position: fixed; top: calc(var(--titlebar-h) + 8px); right: 8px; bottom: 8px; width: 360px; max-width: calc(100vw - 16px); z-index: 40; display: flex; flex-direction: column; background: var(--bg-panel); border: 1px solid var(--line-2); border-radius: var(--r-lg); box-shadow: var(--shadow-3); animation: pop-in var(--t) var(--ease) both; }
+.team-head { display: flex; align-items: center; gap: 8px; padding: 10px; border-bottom: 1px solid var(--line); }
+.team-head .seg { display: flex; gap: 2px; padding: 2px; border-radius: var(--r-md); background: var(--bg-input); }
+.team-head .seg button { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border: 0; border-radius: var(--r-sm); background: none; color: var(--text-2); font: inherit; font-size: 12.5px; cursor: pointer; }
+.team-head .seg button[aria-pressed="true"] { background: var(--bg-raised); color: var(--text); }
+.team-scroll { flex: 1; min-height: 0; overflow: auto; padding: 12px; display: grid; align-content: start; gap: 12px; }
+.team-empty { text-align: center; padding: 24px 8px; font-size: 12.5px; }
+.team-msg { display: flex; gap: 8px; align-items: flex-start; }
+.team-meta { display: flex; gap: 6px; align-items: baseline; font-size: 12px; }
+.team-text { white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.45; padding: 7px 10px; margin-top: 3px; border-radius: var(--r-md); background: var(--bg-card); border: 1px solid var(--line); }
+.team-msg.mine .team-text { background: var(--accent-soft); border-color: var(--accent-line); }
+.team-msg.agent .team-text { background: var(--bg-raised); }
+.team-compose { display: flex; gap: 8px; align-items: flex-end; padding: 10px; border-top: 1px solid var(--line); }
+.team-compose textarea { flex: 1; resize: none; min-height: 34px; max-height: 120px; padding: 8px 10px; border-radius: var(--r-md); border: 1px solid var(--line-2); background: var(--bg-input); color: var(--text); font: inherit; font-size: 13px; }
+.team-person { display: flex; align-items: center; gap: 10px; }
+.team-person .grow { display: grid; gap: 1px; font-size: 13px; }
+.team-person .faint { font-size: 11.5px; }
+.online-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
