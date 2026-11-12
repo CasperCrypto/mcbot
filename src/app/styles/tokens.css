@@ -115,6 +115,9 @@
   --t-fast: 140ms;
   --t: 220ms;
   --t-slow: 380ms;
+  /* the island's morph: a soft spring, like the iPhone's */
+  --ease-island: cubic-bezier(0.32, 1.28, 0.42, 1);
+  --t-island: 520ms;
 
   /* layout */
   --titlebar-h: 46px;

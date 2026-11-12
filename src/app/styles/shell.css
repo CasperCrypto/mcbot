@@ -4,7 +4,9 @@
 .frame { display: flex; min-width: 0; min-height: 0; }
 
 /* ---------- title bar ---------- */
-.titlebar { position: relative; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 14px; z-index: 30; }
+.titlebar { position: relative; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 14px; z-index: 30; }
+/* One height for every control up here, so the bar reads as one line. */
+.titlebar .btn, .titlebar .btn.sm { height: 30px; font-size: 12.5px; }
 [data-shell="mac"] .titlebar { padding-left: 84px; }
 [data-shell="mac"] .titlebar { -webkit-app-region: drag; }
 [data-shell="mac"] .titlebar button, [data-shell="mac"] .titlebar .island, [data-shell="mac"] .titlebar .presence { -webkit-app-region: no-drag; }
@@ -22,19 +24,57 @@
 .presence .face { border-radius: 50%; box-shadow: 0 0 0 2px var(--bg-chrome); background: var(--bg-raised); }
 
 /* ---------- dynamic island ---------- */
-.island-slot { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 40; }
+.island-slot { position: absolute; left: 50%; top: 7px; translate: -50% 0; z-index: 60; }
 .island {
-  display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 14px 0 6px; border-radius: var(--r-pill);
-  background: #050506; border: 1px solid rgba(255, 255, 255, 0.08); color: var(--text); font-size: 12.5px; font-weight: 500;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); white-space: nowrap; animation: island-in var(--t-slow) var(--ease-spring) both;
+  position: relative; overflow: hidden; background: #000; color: #f5f5f7; border-radius: 22px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 10px 34px rgba(0, 0, 0, 0.55);
+  transition: width var(--t-island) var(--ease-island), height var(--t-island) var(--ease-island), border-radius var(--t-island) var(--ease-island), box-shadow var(--t) var(--ease);
+  cursor: pointer; outline: none;
 }
-.island.text-only { padding-left: 14px; }
-.island .time { font-variant-numeric: tabular-nums; color: #ffb35c; font-weight: 600; }
+.island:focus-visible { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07), var(--focus); }
+.island:not(.open):hover { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 10px 34px rgba(0, 0, 0, 0.6); }
+.island.open { border-radius: 26px; cursor: default; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.09), var(--shadow-3); }
+.island-inner { position: absolute; top: 0; left: 0; width: max-content; animation: island-content var(--t-slow) var(--ease) both; }
+@keyframes island-content { from { opacity: 0; filter: blur(6px); transform: scale(0.96); } to { opacity: 1; filter: none; transform: none; } }
+.island-bar { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 6px; font-size: 12.5px; white-space: nowrap; }
+.island-bar.rest { width: 84px; padding: 0; justify-content: center; }
+.island-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-4); }
+.island-dot.ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(48, 209, 88, 0.16); }
+.island-dot.warn { background: var(--warn); margin-left: 6px; animation: island-pulse 1.4s ease-out infinite; }
+@keyframes island-pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 214, 10, 0.55); } 100% { box-shadow: 0 0 0 7px rgba(255, 214, 10, 0); } }
+.island.mode-toast .island-bar, .island.mode-compile .island-bar { padding-left: 14px; }
+.island .time { font-variant-numeric: tabular-nums; color: #ffb35c; font-weight: 600; margin-left: 2px; }
 .island .ok { color: var(--ok); }
 .island .bad { color: var(--fail); }
-.island button { border: 0; background: rgba(255, 255, 255, 0.1); color: var(--text); border-radius: var(--r-pill); height: 22px; padding: 0 9px; font-size: 11.5px; font-weight: 600; }
-.island button:hover { background: rgba(255, 255, 255, 0.18); }
-@keyframes island-in { from { opacity: 0; transform: scale(0.6, 0.5); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.island .faint { color: rgba(245, 245, 247, 0.55); }
+.island .pill { border: 0; background: rgba(255, 255, 255, 0.12); color: #f5f5f7; border-radius: var(--r-pill); height: 24px; padding: 0 11px; font-size: 12px; font-weight: 600; transition: background var(--t-fast), transform var(--t-fast) var(--ease); }
+.island .pill:hover { background: rgba(255, 255, 255, 0.2); }
+.island .pill:active { transform: scale(0.95); }
+.island .pill.primary { background: var(--accent); }
+.island .pill.primary:hover { background: #2b95ff; }
+.island .pill.danger { color: #ff6961; }
+.island-panel { width: 400px; padding: 14px; display: grid; gap: 10px; white-space: normal; }
+.island-sec { display: grid; gap: 8px; padding: 12px; border-radius: 18px; background: rgba(255, 255, 255, 0.06); border: 0; color: inherit; text-align: left; font: inherit; }
+.island-sec.ask { background: rgba(255, 214, 10, 0.1); }
+.island-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(245, 245, 247, 0.5); }
+.island-sub { font-size: 12.5px; }
+.island-line { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; }
+.island-cmd { display: block; padding: 8px 10px; border-radius: 10px; background: rgba(0, 0, 0, 0.45); font-size: 12px; white-space: pre-wrap; word-break: break-all; max-height: 90px; overflow: auto; }
+.island-actions { display: flex; gap: 6px; }
+.island-run { display: flex; align-items: center; gap: 8px; }
+.island-link { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; border: 0; background: none; color: inherit; font: inherit; text-align: left; padding: 0; cursor: pointer; min-width: 0; }
+.island-run .island-link { font-size: 13px; }
+.island-run .icon-btn { color: rgba(245, 245, 247, 0.6); }
+.island-run .icon-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.island-msg { min-width: 0; overflow: hidden; }
+.island .nowrap { white-space: nowrap; flex: none; }
+button.island-sec { cursor: pointer; transition: background var(--t-fast); }
+button.island-sec:hover { background: rgba(255, 255, 255, 0.09); }
+.island-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.island-quick button { display: grid; justify-items: center; gap: 5px; padding: 10px 4px 8px; border: 0; border-radius: 16px; background: rgba(255, 255, 255, 0.06); color: #f5f5f7; font: inherit; font-size: 11.5px; cursor: pointer; transition: background var(--t-fast), transform var(--t-fast) var(--ease); }
+.island-quick button:hover { background: rgba(255, 255, 255, 0.12); }
+.island-quick button:active { transform: scale(0.95); }
+.warn-text { color: var(--warn); }
 
 /* ---------- page rail ---------- */
 .rail { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 12px; }
@@ -60,7 +100,7 @@
 .sidebar-group .icon-btn { margin-left: auto; }
 
 /* ---------- main panel ---------- */
-.main { position: relative; flex: 1; min-width: 0; min-height: 0; margin: 0 8px 8px 0; border-radius: 14px; border: 1px solid var(--line); background: var(--bg-main); overflow: hidden; box-shadow: var(--shadow-1); }
+.main { animation: page-in var(--t-slow) var(--ease) both; position: relative; flex: 1; min-width: 0; min-height: 0; margin: 0 8px 8px 0; border-radius: 14px; border: 1px solid var(--line); background: var(--bg-main); overflow: hidden; box-shadow: var(--shadow-1); }
 .main.flush-left { margin-left: 8px; }
 .view { position: absolute; inset: 0; }
 .scroll-page { position: absolute; inset: 0; overflow: auto; padding: 28px 32px 48px; user-select: text; }
@@ -145,7 +185,7 @@
 .share-btn.remote { border-color: var(--accent-line); color: var(--accent-text); }
 
 /* ---------- presence button and team panel ---------- */
-button.presence { position: relative; gap: 6px; padding: 2px 8px 2px 4px; border-radius: var(--r-pill); border: 1px solid transparent; background: none; color: inherit; cursor: pointer; }
+button.presence { position: relative; height: 30px; gap: 6px; padding: 0 9px 0 4px; border-radius: var(--r-pill); border: 1px solid var(--line); background: rgba(255, 255, 255, 0.035); color: inherit; cursor: pointer; transition: background var(--t-fast), border-color var(--t-fast); }
 button.presence:hover { background: var(--bg-hover); border-color: var(--line); }
 .presence .presence-face + .presence-face { margin-left: -6px; }
 .presence .unread { position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: var(--r-pill); background: var(--accent); color: #fff; font-size: 10px; font-weight: 600; display: grid; place-items: center; }

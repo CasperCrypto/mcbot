@@ -211,6 +211,10 @@ Change them additively; a breaking change bumps the version.
 - **Effects use block bodies.** `useEffect(() => { … })` — never a concise arrow:
   `scrollIntoView` returns a Promise in current Chromium, and an effect that
   returns a non-function crashes React on cleanup.
+- **Dynamic island** (`src/app/shell/Island.tsx`): always in the middle of the title bar. At rest a
+  slim pill; it grows (spring, `--ease-island`) into the most important thing now: an approval
+  (answer inline), agents at work, a compile, a new team message, a notice. Click: everything at
+  once plus quick actions. One height (30px) for every title-bar control.
 - Views live behind an error boundary; a broken view must not blank the window.
 - **Links out of the app** go through `openExternal` (`src/app/lib/open.ts`): the
   Tauri opener plugin, https only. A plain `target="_blank"` link does nothing
