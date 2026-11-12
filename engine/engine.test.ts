@@ -241,7 +241,7 @@ describe("engine", () => {
     telegram = await startStubTelegram();
     const a = client();
     await until(() => a.provider.synced);
-    addNode(a.doc, { id: "n-desk", kind: "channel", position: { x: 300, y: 0 }, data: { name: "desk", label: "Desk bot", platform: "telegram", tokenEnv: "MCBOT_TELEGRAM_DESK_TOKEN", allowedUsers: ["111"], apiBase: telegram.url } });
+    addNode(a.doc, { id: "n-desk", kind: "channel", position: { x: 300, y: 0 }, data: { name: "desk", label: "Desk bot", platform: "telegram", tokenEnv: "MCBOT_TELEGRAM_DESK_TOKEN", settings: {}, allowedUsers: ["111"], apiBase: telegram.url } });
     addEdge(a.doc, { id: "e-desk", source: "n-agent", target: "n-desk", order: 0 });
     await until(() => graphFromDoc(a.doc).nodes.some((n) => n.id === "n-desk"));
     await engine.relay.flush();

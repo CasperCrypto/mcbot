@@ -49,6 +49,37 @@ describe("envEntriesFor", () => {
   });
 });
 
+describe("every chat app Hermes ships", () => {
+  const agent = { id: "a", kind: "agent", position: { x: 0, y: 0 }, data: { name: "desk" } };
+  const model = { id: "m", kind: "model", position: { x: 0, y: 0 }, data: { name: "local", endpoint: "local", baseUrl: "http://127.0.0.1:11434/v1", model: "qwen3:8b" } };
+  const board = (chat: Record<string, unknown>) => resolveGraph({
+    schema: "mcbot.graph/v1", id: "b", name: "b",
+    nodes: [agent, model, { id: "c", kind: "channel", position: { x: 0, y: 0 }, data: { name: "team-chat", ...chat } }],
+    edges: [{ id: "e1", source: "a", target: "m" }, { id: "e2", source: "a", target: "c" }],
+  }).bundles[0]!;
+
+  it("writes Slack's two tokens under its own variables, saved under the bot's names, with who may message it", () => {
+    const slack = board({ platform: "slack", allowedUsers: ["U012AB3CD"] });
+    const saved = { MCBOT_TEAM_CHAT_SLACK_BOT_TOKEN: "xoxb-1", MCBOT_TEAM_CHAT_SLACK_APP_TOKEN: "xapp-1" };
+    expect(resolveEntries(envEntriesFor(slack), saved)).toEqual({ SLACK_BOT_TOKEN: "xoxb-1", SLACK_APP_TOKEN: "xapp-1", SLACK_ALLOWED_USERS: "U012AB3CD" });
+    expect(hasLiveChannel(slack, { MCBOT_TEAM_CHAT_SLACK_BOT_TOKEN: "xoxb-1" })).toBe(false);
+    expect(hasLiveChannel(slack, saved)).toBe(true);
+  });
+
+  it("writes an app's plain settings from the board (IRC has no secret at all)", () => {
+    const irc = board({ platform: "irc", settings: { IRC_SERVER: "irc.libera.chat", IRC_CHANNEL: "#ops", IRC_NICKNAME: "mcbot" }, allowedUsers: ["ada"] });
+    expect(resolveEntries(envEntriesFor(irc), {})).toEqual({ IRC_SERVER: "irc.libera.chat", IRC_CHANNEL: "#ops", IRC_NICKNAME: "mcbot", IRC_ALLOWED_USERS: "ada" });
+    expect(hasLiveChannel(irc, {})).toBe(true);
+    expect(hasLiveChannel(board({ platform: "irc", settings: { IRC_SERVER: "irc.libera.chat" } }), {})).toBe(false);
+  });
+
+  it("keeps a setting out until its app's secret is saved", () => {
+    const matrix = board({ platform: "matrix", settings: { MATRIX_HOMESERVER: "https://matrix.org" } });
+    expect(resolveEntries(envEntriesFor(matrix), {})).toEqual({});
+    expect(resolveEntries(envEntriesFor(matrix), { MCBOT_TEAM_CHAT_MATRIX_ACCESS_TOKEN: "t" })).toEqual({ MATRIX_ACCESS_TOKEN: "t", MATRIX_HOMESERVER: "https://matrix.org" });
+  });
+});
+
 describe("writeProfileKeys", () => {
   it("writes an owner-only .env, and the Files view neither lists nor shows it", async () => {
     const dir = mkdtempSync(join(tmpdir(), "mcbot-keys-"));

@@ -178,3 +178,12 @@ command ran, the run completed. McBot's own Hermes now runs every agent this way
 - **Windows and macOS.** Built and run on Linux only (`cargo check`, a debug
   Tauri build under Xvfb). The Hermes binary lookup handles `.cmd` shims and
   `PATHEXT`, untested on Windows.
+
+## Chat apps (every platform plugin)
+
+| Fact | Source |
+|---|---|
+| Each gateway platform is a plugin with `plugin.yaml`: `label`, `requires_env` (`name`, `prompt`, `url`, `password: true` for secrets) and `optional_env` (including `<P>_ALLOWED_USERS`). McBot's list is generated from these files, not typed by hand | `hermes/plugins/platforms/*/plugin.yaml`; `scripts/hermes-platforms.ts` |
+| A served profile's platform credentials are read from that profile's `.env` (as Telegram's) | `plugins/platforms/<p>/gateway_env.py`; `agent/secret_scope.py:230-247` |
+| `a2a` declares no required variable (configured elsewhere) and is left out; `yuanbao` has no `plugin.yaml` | `hermes/plugins/platforms/a2a/plugin.yaml` |
+| Only Telegram is verified end to end (stub Bot API, `engine/engine.test.ts`); other apps are written exactly as their plugin declares and not run in tests | — |

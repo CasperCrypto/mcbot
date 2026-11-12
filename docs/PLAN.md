@@ -269,7 +269,7 @@ daily watchdog opens an issue.
    (a) reader: a Hermes setup becomes a board (done: "Open my Hermes setup");
    (b) careful writer: compile edits only its own keys and keeps unknown ones (done);
    (c) watcher: changes in Hermes reach the open board live, and agent files are editable in Code (done);
-   (d) the Library: every ability, skill, chat app, memory and plugin Hermes has, to add;
+   (d) the Library: every ability, skill, chat app, memory and plugin Hermes has, to add (chat apps done: all 26);
    then Ask McBot builds through the same path.
 
 ## Launch checklist

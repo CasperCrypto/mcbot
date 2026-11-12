@@ -177,28 +177,37 @@ export const MediaDataSchema = z.object({
 export type MediaData = z.infer<typeof MediaDataSchema>;
 
 /**
- * Chat apps an agent answers in, through Hermes' gateway. Each block is one bot
- * that belongs to one agent: its token and allowed users go into that agent's
- * `.env` (the gateway reads a served profile's platform credentials there), so
- * the board carries only the token's variable name. Names verified in
- * hermes/plugins/platforms/<platform>/ (plugin.yaml, gateway_env.py).
+ * Chat apps an agent answers in, through Hermes' gateway: every platform plugin Hermes ships,
+ * generated from its plugin.yaml (src/contracts/platforms.generated.ts). Each block is one bot that
+ * belongs to one agent. Its secrets (tokens, passwords) are saved in McBot under names of their own
+ * (`channelKeyName`) and its plain settings (ids, addresses) sit on the board; both, and who may
+ * message it, go into that agent's `.env` under the variables Hermes reads.
  */
-export const CHANNEL_PLATFORMS = {
-  telegram: { label: "Telegram", tokenEnv: "TELEGRAM_BOT_TOKEN", allowedUsersEnv: "TELEGRAM_ALLOWED_USERS" },
-} as const;
-export type ChannelPlatform = keyof typeof CHANNEL_PLATFORMS;
+export { PLATFORMS, type Platform, type PlatformField, type PlatformId } from "./platforms.generated";
+import { PLATFORMS, type PlatformId } from "./platforms.generated";
+/** Kept for boards and code from before every platform was listed. */
+export const CHANNEL_PLATFORMS = PLATFORMS;
+export type ChannelPlatform = PlatformId;
 
 export const ChannelDataSchema = z.object({
   name: slug,
   label: z.string().default(""),
-  platform: z.enum(["telegram"]),
-  /** McBot's name for the saved bot token; written to the agent's .env as the platform's token variable. */
+  platform: z.enum(Object.keys(PLATFORMS) as [PlatformId, ...PlatformId[]]),
+  /** Telegram boards from before: McBot's name for the saved bot token. Others use `channelKeyName`. */
   tokenEnv: z.union([z.literal(""), z.string().regex(ENV_NAME_RE, "env var name")]).default(""),
-  /** Who may talk to the bot: Telegram numeric user ids. Empty = nobody (Hermes refuses unknown senders). */
-  allowedUsers: z.array(z.string().regex(/^\d{1,20}$/, "a numeric Telegram user id")).default([]),
-  /** Optional own Bot API server (`platforms.telegram.extra.base_url`); empty = api.telegram.org. */
+  /** Plain (non-secret) settings the platform requires, by Hermes' variable name. */
+  settings: z.record(z.string().regex(ENV_NAME_RE), z.string().max(2000)).default({}),
+  /** Who may talk to the bot, in the platform's own ids. Empty = nobody (Hermes refuses unknown senders). */
+  allowedUsers: z.array(z.string().trim().min(1).max(200).regex(/^[^,\n]+$/, "one id, no commas")).default([]),
+  /** Telegram only: an own Bot API server (`platforms.telegram.extra.base_url`); empty = api.telegram.org. */
   apiBase: z.union([z.literal(""), z.string().url().refine((u) => /^https?:\/\//.test(u), "http(s) URL")]).default(""),
 });
+/** The name a chat app's secret is saved under in McBot (never the value). */
+export function channelKeyName(c: { name: string; platform: PlatformId; tokenEnv: string }, env: string): string {
+  const first = PLATFORMS[c.platform].required.find((f) => f.secret)?.env;
+  if (env === first && c.tokenEnv) return c.tokenEnv;
+  return `MCBOT_${c.name.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_${env}`;
+}
 export type ChannelData = z.infer<typeof ChannelDataSchema>;
 
 const nodeBase = { id: z.string().min(1), position: PositionSchema };

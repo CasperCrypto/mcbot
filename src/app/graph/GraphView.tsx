@@ -289,7 +289,7 @@ function Canvas() {
             <div className="dock-sep" />
             <DockItem tile="media" icon={<Image size={19} />} label="Image maker" testId="add-maker-image" onClick={() => add("media", (p) => newMaker(graph, "image", p))} />
             <DockItem tile="media" icon={<Clapperboard size={19} />} label="Video maker" testId="add-maker-video" onClick={() => add("media", (p) => newMaker(graph, "video", p))} />
-            <DockItem tile="channel" icon={<Send size={18} />} label="Telegram" testId="add-telegram" onClick={() => add("channel", (p) => newChannel(graph, "telegram", p))} />
+            <DockItem tile="channel" icon={<Send size={18} />} label="Chat app" testId="add-chat-app" onClick={() => useApp.getState().setChatAppsOpen(true)} />
             <div className="dock-sep" />
             <DockItem tile="note" icon={<NoteIcon size={19} />} label="Sticky note" testId="add-note" onClick={() => {
               const at = center();

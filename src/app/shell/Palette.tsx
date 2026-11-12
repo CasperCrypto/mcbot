@@ -61,6 +61,7 @@ function useCommands(close: () => void): Command[] {
       { id: "add-tool-catalog", group: "Create", label: "Tool…", hint: "Browser, web search, Notion…", icon: <Plug size={15} />, run: () => app.setCatalogOpen(true) },
       { id: "add-mcp", group: "Create", label: "MCP server", icon: <Server size={15} />, run: () => place(newTool(graph, "stdio", at("tool"), null)) },
       { id: "add-telegram", group: "Create", label: "Telegram bot", hint: "Talk to an agent from Telegram", icon: <Send size={15} />, run: () => place(newChannel(graph, "telegram", at("channel"))) },
+      { id: "add-chat-app", group: "Create", label: "Chat app…", hint: "Slack, Discord, WhatsApp, Teams, email and more", icon: <MessagesSquare size={15} />, run: () => useApp.getState().setChatAppsOpen(true) },
       {
         id: "add-vault", group: "Create", label: "Obsidian vault…", hint: "Agents read and write your notes", icon: <BookOpen size={15} />,
         ask: {

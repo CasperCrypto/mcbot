@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { removeNodes, setNodeField, updateEdge } from "../../board/ydoc";
 import type { Issue } from "../../compile";
 import {
-  AgentDataSchema, CAPABILITIES, ChannelDataSchema, DEFAULT_CAPABILITIES, MEDIA_PROVIDERS, MediaDataSchema, ModelDataSchema, ToolDataSchema,
+  AgentDataSchema, CAPABILITIES, ChannelDataSchema, PLATFORMS, channelKeyName, type Platform, DEFAULT_CAPABILITIES, MEDIA_PROVIDERS, MediaDataSchema, ModelDataSchema, ToolDataSchema,
   type AgentData, type Capability, type ChannelData, type GraphNode, type MediaData, type ModelData, type Skill, type ToolData,
 } from "../../contracts/graph";
 import { runAgent } from "../actions";
@@ -200,15 +200,23 @@ function BrowserSettings({ data, set }: { data: AgentData; set: (f: string, v: u
  */
 function ChannelFields({ data, set }: { data: ChannelData; set: (f: string, v: unknown) => void }) {
   const errors = fieldErrors(ChannelDataSchema, data);
+  const p: Platform = PLATFORMS[data.platform];
   const [ids, setIds] = useState(data.allowedUsers.join(", "));
   const userError = Object.entries(errors).find(([k]) => k.startsWith("allowedUsers"))?.[1];
+  const telegram = data.platform === "telegram";
   return (
     <>
-      <KeyField name={data.tokenEnv} label="Bot token" placeholder="From @BotFather" />
-      <Field label="Allowed users" value={ids} mono placeholder="Your Telegram user id" testId="channel-users"
-        error={userError ? "Numbers only, like 123456789" : null}
-        onChange={(v) => { setIds(v); set("allowedUsers", v.split(/[\s,]+/).map((x) => x.trim()).filter(Boolean)); }} />
-      <Field label="Bot API server" value={data.apiBase} onChange={(v) => set("apiBase", v.trim())} mono placeholder="api.telegram.org" error={errors.apiBase} />
+      {/* Secrets are saved in McBot under the bot's own names; plain settings sit on the board. */}
+      {p.required.map((f) => f.secret
+        ? <KeyField key={f.env} name={channelKeyName(data, f.env)} label={f.prompt} placeholder={f.url ? `From ${f.url.replace(/^https?:\/\//, "")}` : "Paste it here"} />
+        : <Field key={f.env} label={f.prompt} value={data.settings[f.env] ?? ""} mono testId={`channel-${f.env}`}
+            onChange={(v) => set("settings", { ...data.settings, [f.env]: v })} />)}
+      {p.allowedUsersEnv && (
+        <Field label="Allowed users" value={ids} mono placeholder={`Your ${p.label} user id`} testId="channel-users"
+          error={userError ? "One id each, separated by commas" : telegram && data.allowedUsers.some((u) => !/^\d+$/.test(u)) ? "Numbers only, like 123456789" : null}
+          onChange={(v) => { setIds(v); set("allowedUsers", v.split(/[\s,]+/).map((x) => x.trim()).filter(Boolean)); }} />
+      )}
+      {telegram && <Field label="Bot API server" value={data.apiBase} onChange={(v) => set("apiBase", v.trim())} mono placeholder="api.telegram.org" error={errors.apiBase} />}
       <Field label="ID" value={data.name} onChange={(v) => set("name", v)} mono error={errors.name} />
     </>
   );

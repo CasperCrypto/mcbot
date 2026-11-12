@@ -137,7 +137,7 @@ export const ChannelNodeView = memo(function ChannelNodeView({ data }: NodeProps
       <div className="tile channel"><Send size={15} /></div>
       <div className="grow">
         <div className="label ellipsis">{c.label || CHANNEL_PLATFORMS[c.platform].label}</div>
-        <div className="sub ellipsis">{n ? `${n} allowed` : "nobody allowed yet"}</div>
+        <div className="sub ellipsis">{CHANNEL_PLATFORMS[c.platform].allowedUsersEnv ? (n ? `${n} allowed` : "nobody allowed yet") : CHANNEL_PLATFORMS[c.platform].label}</div>
       </div>
     </div>
   );
