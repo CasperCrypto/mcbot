@@ -48,8 +48,8 @@
     },
     {
       "path": "profiles/writer/config.yaml",
-      "sha256": "7fa1d86ada1a466248dfa70e864cde69d8ccaa3fea408e92710f666579a1803f",
-      "bytes": 495
+      "sha256": "dc4596669e6e7a3ee36798b83873241037e2110c2db899e96def834c41c12b53",
+      "bytes": 554
     }
   ]
 }

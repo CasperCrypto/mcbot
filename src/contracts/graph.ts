@@ -97,6 +97,15 @@ export const AgentDataSchema = z.object({
   skills: z.array(SkillSchema).default([]),
   /** Tool sets this agent may use; null = Hermes' default (DEFAULT_CAPABILITIES). */
   capabilities: z.array(CapabilitySchema).nullable().default(null),
+  /** How its browser runs (Hermes' `browser:` settings); null = Hermes' defaults. */
+  browser: z.object({
+    /** A visible window you can watch (`browser.headed`). */
+    show: z.boolean().default(false),
+    /** "lightpanda": the fast engine, installed by the person (`browser.engine`). */
+    engine: z.enum(["chromium", "lightpanda"]).default("chromium"),
+    /** Browse with the person's own logins (`browser.use_real_profile`). */
+    myLogins: z.boolean().default(false),
+  }).nullish(),
 });
 export type AgentData = z.infer<typeof AgentDataSchema>;
 
