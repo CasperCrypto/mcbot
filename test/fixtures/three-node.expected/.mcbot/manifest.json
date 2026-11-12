@@ -17,8 +17,8 @@
     },
     {
       "path": "profiles/triage/config.yaml",
-      "sha256": "64d96b2d366f4cd7c91267db03f59bc0af27a58a71419e7adc3c01cdba13cec0",
-      "bytes": 472
+      "sha256": "f719cf791c048cc8c7145b484c3637ef21ad7ee11e3cc7cc57bbcef54b8c254f",
+      "bytes": 493
     },
     {
       "path": "profiles/triage/profile.yaml",

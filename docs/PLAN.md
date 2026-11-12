@@ -267,7 +267,7 @@ daily watchdog opens an issue.
    them, edits exactly the keys it changes, keeps the rest, and follows changes made in Hermes
    (by hand, by the CLI or by agents). Layout, notes and drawings stay on the board. Steps:
    (a) reader: a Hermes setup becomes a board (done: "Open my Hermes setup");
-   (b) careful writer: compile edits only its own keys and keeps unknown ones;
+   (b) careful writer: compile edits only its own keys and keeps unknown ones (done);
    (c) watcher: changes in Hermes reach the open board live;
    (d) the Library: every ability, skill, chat app, memory and plugin Hermes has, to add;
    then Ask McBot builds through the same path.

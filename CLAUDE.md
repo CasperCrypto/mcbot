@@ -13,8 +13,9 @@ McBot and what is rebuilt is decided in `docs/MERGE.md`.
 **Hermes is the harness; the board is its live picture and editor** (decision 9 in
 docs/PLAN.md). `src/harness/read.ts` turns a Hermes setup back into a board (the inverse of
 compile, round-trip tested on the golden fixtures; what it cannot show yet is listed, never
-dropped). Moving toward two-way: compile will edit only its own keys, and changes made in Hermes
-will reach the board.
+dropped). The writer merges config.yaml (`src/harness/merge.ts`, `OWNED`): McBot changes only
+the keys the board shows and keeps every other key, comment and its place. Next: changes made in
+Hermes reach the open board live.
 
 ## Hard rules
 
@@ -59,7 +60,9 @@ Change them additively; a breaking change bumps the version.
 - No `_config_version` in compiled config.yaml.
 - Provider keys are `mcbot-<name>`, referenced as `custom:mcbot-<name>`.
 - The writer owns exactly the files in `<root>/.mcbot/manifest.json`: it deletes
-  nothing else, and refuses to write into a profile dir it did not create.
+  nothing else, and refuses to write into a profile dir it did not create. Inside
+  config.yaml it owns only the keys in `OWNED` (`src/harness/merge.ts`); when compile
+  writes a new key, add it there too (a test fails otherwise).
   Hermes writes `state.db`, `sessions/`, `memories/`, logs and seeded skills into
   the same dirs.
 

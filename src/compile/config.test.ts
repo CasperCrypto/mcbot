@@ -13,7 +13,7 @@ describe("renderConfig", () => {
     expect(renderConfig(graph, bundles[0]!)).toBe(
       [
         '# Compiled by McBot from board "Acme support desk" (acme-support), agent node n-agent.',
-        "# Recompiling overwrites this file: change the board, not this file.",
+        "# McBot changes only the keys its board shows; other keys stay as you or Hermes set them.",
         "model:",
         "  provider: custom:mcbot-local",
         "  default: qwen3:8b",

@@ -38,6 +38,22 @@ describe("writeCompileResult", () => {
     expect(cfg.diff).toContain("-  default: qwen3:8b\n+  default: qwen3:14b\n");
   });
 
+  it("keeps what Hermes, the CLI or an agent added to config.yaml, and then reports no change", async () => {
+    await writeCompileResult(compile(fixture()), root);
+    const file = join(root, "profiles/triage/config.yaml");
+    // e.g. `hermes config set memory.provider holographic`, or an agent choosing a memory provider.
+    writeFileSync(file, `${readFileSync(file, "utf8")}# added outside McBot\nmemory:\n  provider: holographic\n`);
+    const g = fixture();
+    g.nodes[1].data.model = "qwen3:14b";
+    const report = await writeCompileResult(compile(g), root);
+    const text = readFileSync(file, "utf8");
+    expect(text).toContain("default: qwen3:14b");
+    expect(text).toContain("# added outside McBot\nmemory:\n  provider: holographic\n");
+    expect(report.changes.find((c) => c.path === "profiles/triage/config.yaml")!.diff).not.toContain("-memory");
+    const again = await writeCompileResult(compile(g), root, { dryRun: true });
+    expect(again.changes.filter((c) => c.status !== "unchanged")).toEqual([]);
+  });
+
   it("deletes only files its previous manifest lists, never Hermes runtime state", async () => {
     const g = fixture();
     g.nodes[0].data.skills = [{ name: "triage-rules", description: "Route tickets by product area." }];

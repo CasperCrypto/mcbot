@@ -17,6 +17,7 @@ import {
   type Manifest,
 } from "../src/contracts/compile";
 import { sha256Hex, utf8Bytes } from "../src/compile/text";
+import { mergeConfig } from "../src/harness/merge";
 import { atomicWrite, readTextOrNull, resolveInside } from "./fsutil";
 
 export class OwnershipError extends Error {
@@ -64,8 +65,15 @@ export async function writeCompileResult(result: CompileResult, root: string, op
   const changes: FileChange[] = [];
   const next = new Set(result.files.map((f) => f.path));
 
-  for (const f of result.files) {
+  // config.yaml is merged into the one on disk: McBot changes only the keys the board shows and
+  // keeps everything Hermes, the CLI or an agent added (src/harness/merge.ts).
+  const files = result.files.map((f) => ({ ...f }));
+  for (const f of files) {
     const before = await readTextOrNull(resolveInside(root, f.path));
+    if (f.role === "config") {
+      const merged = mergeConfig(before, f.content);
+      if (merged !== f.content) Object.assign(f, { content: merged, sha256: sha256Hex(merged), bytes: utf8Bytes(merged).length });
+    }
     const prevSha = before === null ? null : sha256Hex(before);
     changes.push({
       path: f.path,
@@ -100,7 +108,7 @@ export async function writeCompileResult(result: CompileResult, root: string, op
     for (const d of result.dirs) await mkdir(resolveInside(root, d), { recursive: true });
     for (const c of changes) if (c.status === "removed") await rm(resolveInside(root, c.path), { force: true });
     // Manifest last: if anything above fails, the old manifest still describes the disk.
-    const ordered = [...result.files].sort((a, b) => Number(a.path === MANIFEST_PATH) - Number(b.path === MANIFEST_PATH));
+    const ordered = [...files].sort((a, b) => Number(a.path === MANIFEST_PATH) - Number(b.path === MANIFEST_PATH));
     for (const f of ordered) {
       const change = changes.find((c) => c.path === f.path);
       if (change?.status !== "unchanged") await atomicWrite(resolveInside(root, f.path), f.content);

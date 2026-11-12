@@ -18,8 +18,8 @@
     },
     {
       "path": "profiles/researcher/config.yaml",
-      "sha256": "09ed08e69c581304760362233d20fc15c9f80d75d1ec3e7d71f35366d1392b3c",
-      "bytes": 1446
+      "sha256": "08737d79a3fcc98c231b0d5c390e4eabef55119a2f0f25cfc8bd3f4eb79b8c4f",
+      "bytes": 1467
     },
     {
       "path": "profiles/researcher/profile.yaml",
@@ -48,8 +48,8 @@
     },
     {
       "path": "profiles/writer/config.yaml",
-      "sha256": "c1e4c0ce4a03427f15796e9204a48fcf1c4186c3121ac4fe5e1cdbfda3779782",
-      "bytes": 632
+      "sha256": "8b1ee9a94b3df6da3bcc111e605b76f1c4a04dc66af330ac6a4b5f2ed2274976",
+      "bytes": 653
     }
   ]
 }
