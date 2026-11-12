@@ -132,7 +132,10 @@ Change them additively; a breaking change bumps the version.
 - Unsigned on purpose (free and open source): macOS ad-hoc (`signingIdentity: "-"`),
   Windows unsigned. `.github/workflows/release.yml` builds draft releases from
   `v*` tags for macOS (arm64, x64), Windows and Linux; the website explains the
-  one-time "Open Anyway" / "Run anyway".
+  one-time "Open Anyway" / "Run anyway". On a Mac with no Developer ID, the free way
+  without a prompt is `site/install.sh` (`curl … | sh`): curl sets no quarantine flag,
+  so Gatekeeper never asks; it installs the newest release's DMG into /Applications
+  (an AppImage into ~/.local/bin on Linux) and talks only to github.com.
 
 ## Shared board
 

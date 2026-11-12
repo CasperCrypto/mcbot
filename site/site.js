@@ -270,3 +270,17 @@
     });
   }
 })();
+
+// Copy the install command.
+for (const b of document.querySelectorAll("[data-copy]")) {
+  b.addEventListener("click", async () => {
+    const text = b.parentElement?.querySelector("code")?.textContent ?? "";
+    try {
+      await navigator.clipboard.writeText(text);
+      b.textContent = "Copied";
+      setTimeout(() => (b.textContent = "Copy"), 1500);
+    } catch {
+      /* select it by hand */
+    }
+  });
+}
