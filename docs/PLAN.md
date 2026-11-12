@@ -230,10 +230,10 @@ whether setup works.
 | | Scope | Done when |
 |---|---|---|
 | **M5** ● | Setup assistant, key vault, local model detection, Hermes inside the app, unsigned installers | Someone downloads McBot, answers five questions and talks to a working agent within three minutes, without a terminal |
-| **M6** ◐ | Connections: abilities ●, image and video makers ●, Obsidian ●, keys through each profile's `.env` ●, Telegram ●; keychain ○, app catalog with sign-in ○, skill catalog ○, WhatsApp, Slack, Discord, email ○, chat-app conversations in McBot ○, context meter ○ | Connecting Gmail or Slack takes one screen, and an agent uses it |
-| **M7** ◐ | Command center and team work: Home (inbox, live, today, ask bar) ●, notifications and the menu bar icon ●; Tasks view on Hermes kanban ●; hand-off edges ●; schedules ●; queue ○; delegation in the run graph ○; approval cards ○; spaces ○ | A lead agent splits a goal into tasks for three agents, a person approves the result from the inbox, and a scheduled job runs while they watch Home |
+| **M6** ◐ | Connections: abilities ●, image and video makers ●, Obsidian ●, keys through each profile's `.env` ●, Telegram ●; keychain ○, app catalog with sign-in ○, skill catalog as a static JSON index with pinned-commit installs and a confirm step (idea: DeepSeek Harness plugin indexes) ○, WhatsApp, Slack, Discord, email ○, chat-app conversations in McBot ○, context meter ○ | Connecting Gmail or Slack takes one screen, and an agent uses it |
+| **M7** ◐ | Command center and team work: Home (inbox, live, today, ask bar) ●, notifications and the menu bar icon ●; Tasks view on Hermes kanban ●; hand-off edges ●; schedules ●; queue ○; delegation in the run graph ○; approval cards ○; a Goal on the lead agent with optional auto-continue ○; spaces ○ | A lead agent splits a goal into tasks for three agents, a person approves the result from the inbox, and a scheduled job runs while they watch Home |
 | **M8** ◐ | Workbench: terminal panel ●, code editor ● (agent diffs ○), browser: preview window ●, watch the agent's browser and take over ○, resizable panes ○ | An agent builds a small web page in a folder; you read its diff in the editor, run it in the terminal and see it in the browser pane, without leaving McBot |
-| **M9** ○ | Ask McBot (board copilot) and coding agents through ACP; running agents on a ChatGPT or Claude plan (decisions 1 and 4) | "Add a researcher that can search our docs" changes the board, and a Claude Code agent fixes a bug in the editor's folder |
+| **M9** ○ | Ask McBot (board copilot) as a Builder: it writes Hermes skills, agents and schedules (only files McBot already knows), shown as a reviewable board diff the person accepts, with Undo and Restore, one proposal at a time (idea: DeepSeek Harness Creator mode); an optional reviewer agent in front of risky approvals; coding agents through ACP; running agents on a ChatGPT or Claude plan (decisions 1 and 4) | "Add a researcher that can search our docs" changes the board, and a Claude Code agent fixes a bug in the editor's folder |
 | **M10** ○ | Workflows (trigger, step, condition, approval) and Studio (gallery, posting after approval) | A weekly report runs itself and waits for a person's OK before it is sent |
 | **M11** ○ | Always on and launch: background gateway, launch at login, auto-update, signing (decision 2), crash reports, docs site | Agents keep their schedules with the window closed, and McBot updates itself |
 | **M12** ◐ | Teams: share on your network (M12a), then the Buzz team server (M12b); roles, audit; McBot Cloud | Two people on two computers edit and run one board |
@@ -271,6 +271,13 @@ daily watchdog opens an issue.
    (c) watcher: changes in Hermes reach the open board live, and agent files are editable in Code (done);
    (d) the Library: every ability, skill, chat app, memory and plugin Hermes has, to add (chat apps done: all 26);
    then Ask McBot builds through the same path.
+
+## Ideas taken from DeepSeek Harness (MIT, 2026-11-12)
+
+Ideas only, no code: it is a Cordis/TypeScript runtime, McBot's engine is Hermes. Taken: the
+Builder with propose-then-confirm cards and Undo/Restore (M9), a static plugin index (M6), a
+per-agent Goal (M7), a reviewer before risky actions (M9). Skipped: plan mode, team board
+(Hermes kanban covers it), forge, terminal, computer use, their UI.
 
 ## Launch checklist
 
