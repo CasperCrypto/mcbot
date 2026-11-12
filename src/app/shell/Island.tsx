@@ -81,6 +81,15 @@ export function Island() {
     };
   }, [open]);
 
+  // Opens when the pointer rests on it, closes shortly after it leaves (a short grace, so moving
+  // into the panel never closes it). Click and keyboard still open it too.
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hover = (inside: boolean) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setOpen(inside), inside ? 120 : 280);
+  };
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
   const answer = (r: RunSummary, choice: string) => void engine.answerRun(r.runId, choice).catch((err: unknown) => useApp.getState().toast({ kind: "fail", text: String((err as Error).message ?? err) }));
   const go = (fn: () => void) => () => { setOpen(false); fn(); };
 
@@ -177,8 +186,10 @@ export function Island() {
         className={`island${open ? " open" : ""} mode-${mode}`}
         style={size ? { width: size.w, height: size.h } : undefined}
         role="button" tabIndex={0} aria-expanded={open} aria-label="McBot status"
-        data-tip={!open && mode === "rest" ? "Status · click for more" : undefined} data-tip-side="bottom"
+        
         onClick={() => { if (!open) setOpen(true); }}
+        onMouseEnter={() => hover(true)}
+        onMouseLeave={() => hover(false)}
         onKeyDown={(e) => { if (!open && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setOpen(true); } }}
         data-testid="island"
       >

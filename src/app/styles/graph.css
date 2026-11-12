@@ -162,3 +162,31 @@
 .ability:disabled { cursor: default; opacity: 0.8; }
 .ability:focus-visible { outline: none; box-shadow: var(--focus); }
 .tile.note { background: var(--note-yellow); color: var(--note-ink); }
+
+/* Drawing a connection from a model, tool, maker or chat app: only agents can take it. */
+.canvas[data-connecting]:not([data-connecting="agent"]) .react-flow__node:not(.react-flow__node-agent):not(.connectingfrom) { opacity: 0.32; transition: opacity var(--t) var(--ease); }
+.canvas .react-flow__node { transition: opacity var(--t) var(--ease); }
+
+/* Board | Hermes switch, floating at the top of the canvas */
+.seg-float { position: absolute; top: 12px; left: 50%; translate: -50% 0; z-index: 8; display: flex; gap: 2px; padding: 3px; border-radius: var(--r-pill); background: var(--bg-glass); backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%); border: var(--hairline, 1px) solid var(--line-2); box-shadow: var(--shadow-2); }
+.seg-float button { height: 26px; padding: 0 14px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--text-3); font-size: 12.5px; font-weight: 600; transition: background var(--t) var(--ease), color var(--t-fast); }
+.seg-float button:hover { color: var(--text); }
+.seg-float button[aria-selected="true"] { background: var(--bg-active); color: var(--text); box-shadow: var(--highlight), var(--shadow-1); }
+.hermes-view { position: absolute; inset: 0; }
+/* the harness boxes */
+.hx { display: grid; gap: 8px; width: 250px; }
+.hx-head { display: flex; align-items: center; gap: 10px; }
+.hx-head .grow { display: grid; gap: 1px; font-size: 12.5px; }
+.hx-head .faint { font-size: 11px; }
+.hx-icon { width: 26px; height: 26px; flex: none; display: grid; place-items: center; border-radius: 8px; background: var(--bg-active); color: var(--text-2); }
+.hx[data-tone="gateway"] .hx-icon { background: var(--accent-soft); color: var(--accent-text); }
+.hx[data-tone="model"] .hx-icon { background: rgba(255, 159, 10, 0.16); color: var(--k-model); }
+.hx[data-tone="tool"] .hx-icon { background: rgba(48, 176, 199, 0.16); color: var(--k-tool); }
+.hx[data-tone="media"] .hx-icon { background: rgba(255, 55, 95, 0.16); color: var(--k-media); }
+.hx[data-tone="channel"] .hx-icon { background: rgba(48, 209, 88, 0.16); color: var(--k-channel); }
+.hx[data-tone="warn"] .hx-icon { background: var(--warn-soft); color: var(--warn); }
+.hx-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.hx-chip { font-size: 10.5px; padding: 2px 7px; border-radius: var(--r-pill); background: rgba(255, 255, 255, 0.06); color: var(--text-2); }
+.hx-note { font-size: 10.5px; }
+.hx.agent { width: 220px; }
+.hx-chip.more { background: transparent; color: var(--text-3); }

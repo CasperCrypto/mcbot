@@ -26,6 +26,7 @@ import { latestRunByAgent, toolActivity, useApp } from "../state/store";
 import { AgentFace } from "../ui";
 import { CompileSheet } from "./CompileSheet";
 import { Cursors } from "./Cursors";
+import { HermesView } from "./HermesView";
 import { newChannel, newId, newMaker, newModel, newTool } from "./defaults";
 import { Inspector } from "./Inspector";
 import { MakerIcon, makerService, nodeTypes, type FlowNode } from "./nodes";
@@ -235,6 +236,25 @@ function Canvas() {
     addEdge(doc, { id: newId("edge"), source: agentId, target: agentId === c.source ? c.target : c.source, order });
   }, [doc, graph, isValidConnection, kindOf]);
 
+  // While a connection is being drawn, blocks it cannot reach dim; dropping on one says why.
+  const [connecting, setConnecting] = useState<string | null>(null);
+  const [connectFrom, setConnectFrom] = useState<string | null>(null);
+  const onConnectStart = useCallback((_: unknown, p: { nodeId: string | null }) => { setConnecting(kindOf(p.nodeId) ?? null); setConnectFrom(p.nodeId); }, [kindOf]);
+  const onConnectEnd = useCallback((_: unknown, state: { isValid: boolean | null; fromNode: { id: string } | null; toNode: { id: string } | null }) => {
+    setConnecting(null);
+    setConnectFrom(null);
+    const from = kindOf(state.fromNode?.id ?? null);
+    const to = kindOf(state.toNode?.id ?? null);
+    if (!from || !to || state.isValid || state.fromNode?.id === state.toNode?.id) return;
+    const word = (k: string) => (k === "media" ? "a maker" : k === "channel" ? "a chat app" : k === "tool" ? "a tool" : k === "model" ? "a model" : "an agent");
+    useApp.getState().toast({
+      kind: "fail",
+      text: from !== "agent" && to !== "agent"
+        ? `${word(from)[0]!.toUpperCase()}${word(from).slice(1)} can't connect to ${word(to)}: in Hermes both belong to an agent. Wire each to the agent; it uses them together.`
+        : "Already connected.",
+    });
+  }, [kindOf]);
+
   const center = () => {
     const r = wrap.current?.getBoundingClientRect();
     return flow.screenToFlowPosition({ x: (r?.left ?? 0) + (r?.width ?? 800) / 2, y: (r?.top ?? 0) + (r?.height ?? 600) / 2 });
@@ -248,10 +268,11 @@ function Canvas() {
   const selected = graph.nodes.find((n) => n.id === selectedNodeId) ?? null;
 
   return (
-    <div className="canvas" ref={wrap}
+    <div className="canvas" ref={wrap} data-connecting={connecting ?? undefined}
       onMouseMove={(e) => setCursor(flow.screenToFlowPosition({ x: e.clientX, y: e.clientY }))}
       onMouseLeave={() => setCursor(null)}>
 
+      {connectFrom && <style>{`.canvas .react-flow__node[data-id="${CSS.escape(connectFrom)}"] { opacity: 1 !important; }`}</style>}
       {graph.nodes.length === 0 && <Welcome onStart={() => useApp.getState().setNewAgentOpen(true)} />}
 
       <ReactFlow
@@ -261,6 +282,8 @@ function Canvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd as never}
         isValidConnection={isValidConnection}
         connectionMode={ConnectionMode.Loose}
         onPaneClick={() => select(null)}
@@ -309,12 +332,18 @@ function Canvas() {
 }
 
 export function GraphView() {
+  // Board: the parts you edit. Hermes: the whole harness behind them, read-only.
+  const [mode, setMode] = useState<"board" | "hermes">("board");
   return (
     <ReactFlowProvider>
       <HarnessSidebar />
       <section className="main">
         <div className="view page-enter">
-          <Canvas />
+          <div className="seg-float" role="tablist" aria-label="View">
+            <button role="tab" aria-selected={mode === "board"} onClick={() => setMode("board")} data-testid="mode-board">Board</button>
+            <button role="tab" aria-selected={mode === "hermes"} onClick={() => setMode("hermes")} data-testid="mode-hermes">Hermes</button>
+          </div>
+          {mode === "board" ? <Canvas /> : <HermesView />}
         </div>
       </section>
     </ReactFlowProvider>

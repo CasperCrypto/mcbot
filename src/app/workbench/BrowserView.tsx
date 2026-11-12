@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode } from "../../contracts/graph";
 import { runAgent } from "../actions";
 import { nativePage, openBrowser, page, type PageBox } from "../lib/desktop";
+import { DEMO } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, Empty } from "../ui";
@@ -125,6 +126,18 @@ export default function BrowserView() {
       <div className="browser-page">
         {url && native ? (
           <div ref={area} className="browser-native" data-testid="browser-native" />
+        ) : url && DEMO && !/^https?:\/\/(localhost|127\.0\.0\.1)/.test(url) ? (
+          // A web page cannot show most sites inside itself (they forbid it). The desktop app has a
+          // real browser here; the demo says so instead of showing a blank page.
+          <div className="browser-demo" data-testid="browser-demo">
+            <Globe size={28} className="faint" />
+            <b>{new URL(url).host}</b>
+            <span className="faint">Websites can't open inside a web page, so the online demo can't show this site. In the McBot app it opens right here.</span>
+            <div className="row" style={{ justifyContent: "center" }}>
+              <button className="btn light" onClick={() => void openBrowser(url)}><ExternalLink size={14} /> Open in a new tab</button>
+              {agents.length > 0 && <span className="faint">or ask an agent about it below</span>}
+            </div>
+          </div>
         ) : url ? (
           <iframe key={`${url}#${reload}`} ref={frame} src={url} title="Page" sandbox="allow-scripts allow-forms allow-popups allow-same-origin allow-downloads" referrerPolicy="no-referrer" data-testid="browser-frame" />
         ) : (
@@ -134,7 +147,7 @@ export default function BrowserView() {
             </div>
           } />
         )}
-        {url && !native && <div className="browser-hint faint">Blank page? This site blocks being shown inside apps. <button className="btn sm ghost" onClick={() => void openBrowser(url)}>Open in a window</button></div>}
+        {url && !native && !DEMO && <div className="browser-hint faint">Blank page? This site blocks being shown inside apps. <button className="btn sm ghost" onClick={() => void openBrowser(url)}>Open in a window</button></div>}
       </div>
       {url && agents.length > 0 && (
         <div className="code-ask browser-ask">
