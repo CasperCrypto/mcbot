@@ -1,9 +1,9 @@
-import { ArrowUp, Check, CircleAlert, CircleDashed, Clock, Hammer, ListChecks, Pause, Play, Plus, RotateCcw, Square, Trash2, X } from "lucide-react";
+import { ArrowUp, Check, CircleDashed, Clock, Hammer, ListChecks, Pause, Play, Plus, RotateCcw, Square, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AgentSchedules, CostReport, TaskView } from "../../contracts/api";
 import type { AgentNode } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
-import { compileBoard, runAgent } from "../actions";
+import { compileBoard, openHermesSetup, runAgent } from "../actions";
 import { engine } from "../lib/engine";
 import { ago, usd } from "../lib/format";
 import { useBoard } from "../state/board";
@@ -280,7 +280,18 @@ export function HomeView() {
     <section className="main flush-left">
       <div className="scroll-page home" data-testid="home">
         <div className="home-inner">
-          <Ask agents={agents} />
+          {agents.length === 0 ? (
+            // An empty board: the first thing to do is the only thing shown big.
+            <section className="card home-start" data-testid="home-start">
+              <h2>Start this board</h2>
+              <span className="faint">Pick a ready team, make one agent, or bring the agents you already run in Hermes.</span>
+              <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+                <button className="btn primary" onClick={() => app.setTeamsOpen(true)}>Start with a team</button>
+                <button className="btn" onClick={() => app.setNewAgentOpen(true)}><Plus size={13} /> New agent</button>
+                <button className="btn ghost" onClick={() => void openHermesSetup()}>Open my Hermes setup</button>
+              </div>
+            </section>
+          ) : <Ask agents={agents} />}
           <Notes />
 
           <div className="home-grid">
@@ -367,11 +378,6 @@ export function HomeView() {
 
               <Schedules agents={agents} />
 
-              {agents.length === 0 && (
-                <section className="card home-card">
-                  <div className="home-empty"><CircleAlert size={14} /> No agents yet <button className="btn sm primary" onClick={() => app.setTeamsOpen(true)}>Start with a team</button><button className="btn sm" onClick={() => app.setNewAgentOpen(true)}><Plus size={12} /> New agent</button></div>
-                </section>
-              )}
             </div>
           </div>
         </div>

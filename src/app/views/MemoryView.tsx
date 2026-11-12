@@ -122,7 +122,7 @@ export function MemoryView() {
             <AgentFace seed={a.profile} size={30} />
             <span className="grow" style={{ display: "grid" }}>
               <span className="title ellipsis">{a.displayName}</span>
-              <span className="sub">{a.compiled ? `${a.memory.entries.length + a.user.entries.length} memories` : "not compiled"}</span>
+              <span className="sub">{a.compiled ? (() => { const n = a.memory.entries.length + a.user.entries.length; return n === 0 ? "Nothing yet" : n === 1 ? "1 memory" : `${n} memories`; })() : "Not compiled"}</span>
             </span>
             {a.busy && <span className="dot run" />}
           </button>

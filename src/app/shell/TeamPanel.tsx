@@ -52,37 +52,24 @@ export function unreadCount(boardId: string, messages: readonly Message[] | unde
   return (messages ?? []).filter((m) => m.at > seen && m.author !== me).length;
 }
 
-export function TeamPanel() {
-  const open = useApp((s) => s.teamOpen);
-  const setOpen = useApp((s) => s.setTeamOpen);
+/** The board's chat: people and agents; "@agent …" asks one. Used by the Team panel and the Team view. */
+export function TeamChat() {
   const identity = useApp((s) => s.identity);
   const runs = useApp((s) => s.runs);
-  const { boardId, doc, graph, peers } = useBoard();
-  const [tab, setTab] = useState<"chat" | "people">("chat");
+  const { boardId, doc, graph } = useBoard();
   const [draft, setDraft] = useState("");
-  const [share, setShare] = useState<SharingView | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const agents = useMemo(() => graph.nodes.filter((n): n is AgentNode => n.kind === "agent"), [graph]);
   const messages = graph.messages ?? [];
   const asking = Object.values(runs).filter((r) => r.status === "running" && r.prompt.startsWith("[team chat]")).length;
-
   useEffect(() => {
-    if (!open) return;
-    if (!REMOTE) engine.share().then(setShare).catch(() => setShare(null));
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, setOpen]);
-  useEffect(() => {
-    if (!open || tab !== "chat") return;
     try {
       localStorage.setItem(SEEN_KEY(boardId), String(Date.now()));
     } catch {
       /* fine */
     }
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
-  }, [open, tab, messages.length, boardId]);
-  if (!open) return null;
+  }, [messages.length, boardId]);
 
   const post = (m: Message) => addMessage(doc, m);
   const send = async () => {
@@ -96,23 +83,7 @@ export function TeamPanel() {
       if (runId) postAnswerWhenDone(post, runId, mention.agent);
     }
   };
-
-  const here = [{ clientId: -1, name: identity.name, color: identity.color, tab: useApp.getState().tab as string | null, me: true }, ...peers.map((p) => ({ ...p, me: false }))];
-  // Teammates who joined from other computers; the ones here now are listed above already.
-  const members = (share?.members ?? []).filter((m) => !here.some((h) => h.name === m.name));
-
   return (
-    <aside className="team-panel" role="dialog" aria-label="Team" data-testid="team-panel">
-      <header className="team-head">
-        <div className="seg">
-          <button aria-pressed={tab === "chat"} onClick={() => setTab("chat")} data-testid="team-tab-chat"><MessagesSquare size={13} /> Chat</button>
-          <button aria-pressed={tab === "people"} onClick={() => setTab("people")} data-testid="team-tab-people"><Users size={13} /> People <span className="chip">{here.length}</span></button>
-        </div>
-        <span className="grow" />
-        <button className="icon-btn sm" aria-label="Close" onClick={() => setOpen(false)}><X size={14} /></button>
-      </header>
-
-      {tab === "chat" ? (
         <>
           <div className="team-scroll" ref={scroller} data-testid="team-chat">
             {messages.length === 0 && <div className="faint team-empty">Say hi. Type @{agents[0]?.data.name ?? "agent"} to ask an agent.</div>}
@@ -134,6 +105,45 @@ export function TeamPanel() {
             <button className="send" aria-label="Send" disabled={!draft.trim()} onClick={() => void send()} data-testid="team-send"><ArrowUp size={15} /></button>
           </div>
         </>
+  );
+}
+
+export function TeamPanel() {
+  const open = useApp((s) => s.teamOpen);
+  const setOpen = useApp((s) => s.setTeamOpen);
+  const identity = useApp((s) => s.identity);
+  const runs = useApp((s) => s.runs);
+  const { boardId, doc, graph, peers } = useBoard();
+  const [tab, setTab] = useState<"chat" | "people">("chat");
+  const [share, setShare] = useState<SharingView | null>(null);
+  const agents = useMemo(() => graph.nodes.filter((n): n is AgentNode => n.kind === "agent"), [graph]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!REMOTE) engine.share().then(setShare).catch(() => setShare(null));
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, setOpen]);
+  if (!open) return null;
+
+  const here = [{ clientId: -1, name: identity.name, color: identity.color, tab: useApp.getState().tab as string | null, me: true }, ...peers.map((p) => ({ ...p, me: false }))];
+  // Teammates who joined from other computers; the ones here now are listed above already.
+  const members = (share?.members ?? []).filter((m) => !here.some((h) => h.name === m.name));
+
+  return (
+    <aside className="team-panel" role="dialog" aria-label="Team" data-testid="team-panel">
+      <header className="team-head">
+        <div className="seg">
+          <button aria-pressed={tab === "chat"} onClick={() => setTab("chat")} data-testid="team-tab-chat"><MessagesSquare size={13} /> Chat</button>
+          <button aria-pressed={tab === "people"} onClick={() => setTab("people")} data-testid="team-tab-people"><Users size={13} /> People <span className="chip">{here.length}</span></button>
+        </div>
+        <span className="grow" />
+        <button className="icon-btn sm" aria-label="Close" onClick={() => setOpen(false)}><X size={14} /></button>
+      </header>
+
+      {tab === "chat" ? (
+        <TeamChat />
       ) : (
         <div className="team-scroll" data-testid="team-people">
           <span className="section-label">Here now</span>

@@ -223,3 +223,14 @@
 .approval-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .approval.compact { padding: 10px; }
 .home-ask-row { padding: 6px 8px 10px; }
+
+/* ---------- Team view: people and the board's chat side by side ---------- */
+.team-page { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 420px); gap: 16px; padding: 24px; }
+.team-people-col { overflow: auto; min-width: 0; }
+.team-page-title { margin: 0 0 14px; font-size: var(--fs-title3, 17px); font-weight: 650; }
+.team-people-col .people { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.team-chat-col { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.team-page-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
+@media (max-width: 900px) { .team-page { grid-template-columns: 1fr; } }
+.home-start { display: grid; gap: 10px; padding: 22px 24px; }
+.home-start h2 { margin: 0; font-size: var(--fs-title2, 20px); font-weight: 700; letter-spacing: -0.02em; }

@@ -187,3 +187,12 @@ command ran, the run completed. McBot's own Hermes now runs every agent this way
 | A served profile's platform credentials are read from that profile's `.env` (as Telegram's) | `plugins/platforms/<p>/gateway_env.py`; `agent/secret_scope.py:230-247` |
 | `a2a` declares no required variable (configured elsewhere) and is left out; `yuanbao` has no `plugin.yaml` | `hermes/plugins/platforms/a2a/plugin.yaml` |
 | Only Telegram is verified end to end (stub Bot API, `engine/engine.test.ts`); other apps are written exactly as their plugin declares and not run in tests | — |
+
+## Tasks belong to a board (kanban tenant)
+
+| Fact | Source |
+|---|---|
+| `hermes kanban create --tenant <ns>` sets the task's `tenant` ("Tenant namespace"); the column is indexed | `hermes_cli/kanban_parser.py:84,177`; `hermes_cli/kanban_db.py:797`; `kanban_db_connect.py:951` |
+| A child task inherits its parent's tenant unless one is given | `hermes_cli/kanban_db_graph.py:27-48` (`initial_task_state`) |
+| The dispatcher gives the worker `HERMES_TENANT`, and `kanban_create` from inside a task defaults to it | `kanban_db_dispatch.py:2809-2810`; `tools/kanban_tools.py:1135` |
+| McBot creates every task with `--tenant mcbot-<boardId>` and shows a board only its own; tasks with no tenant keep the old rule (this board's agents, or unassigned) | `engine/kanban.ts` (`boardTenant`, `readTasks`) |
