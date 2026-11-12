@@ -52,6 +52,26 @@ platform_toolsets:
     - kanban
     - computer_use
     - connections
+  api_server:
+    - web
+    - browser
+    - file
+    - terminal
+    - code_execution
+    - vision
+    - image_gen
+    - video_gen
+    - tts
+    - memory
+    - session_search
+    - skills
+    - todo
+    - clarify
+    - delegation
+    - cronjob
+    - kanban
+    - computer_use
+    - connections
 video_gen:
   provider: fal
   model: kling-video

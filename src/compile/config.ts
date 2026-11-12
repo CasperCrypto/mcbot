@@ -92,7 +92,10 @@ export function renderConfig(graph: Graph, bundle: AgentBundle): string {
     doc.mcp_servers = Object.fromEntries(bundle.tools.map((t: ToolNode) => [t.data.name, mcpServerEntry(t.data)]));
   }
   const toolsets = compiledToolsets(bundle);
-  if (toolsets) doc.platform_toolsets = { cli: toolsets };
+  // McBot's own Hermes runs agents through the gateway's runs API, which reads the api_server
+  // surface (gateway/platforms/api_server.py `_get_platform_tools(config, "api_server")`); an
+  // external Hermes runs them as `hermes chat` (cli). Chosen abilities apply to both.
+  if (toolsets) doc.platform_toolsets = { cli: toolsets, api_server: [...toolsets] };
   // Only what differs from Hermes' defaults (hermes_cli/config_defaults.py `browser`).
   const b = bundle.agent.data.browser;
   const browser: Record<string, unknown> = {};

@@ -88,7 +88,7 @@ describe("abilities and makers", () => {
     expect(renderConfig(graph, bundles[0]!)).not.toContain("platform_toolsets");
   });
 
-  it("pins chosen abilities to the cli surface, in catalog order, byte for byte", () => {
+  it("pins chosen abilities to the cli and api_server surfaces, in catalog order, byte for byte", () => {
     const { graph, bundles } = board({ capabilities: ["memory", "web", "file"] }, [{ id: "img", media: "image", provider: "openai", model: "gpt-image-2" }]);
     expect(tail(renderConfig(graph, bundles[0]!))).toBe(
       [
@@ -101,6 +101,11 @@ describe("abilities and makers", () => {
         "      - ${workspaceFolder}",
         "platform_toolsets:",
         "  cli:",
+        "    - web",
+        "    - file",
+        "    - image_gen",
+        "    - memory",
+        "  api_server:",
         "    - web",
         "    - file",
         "    - image_gen",

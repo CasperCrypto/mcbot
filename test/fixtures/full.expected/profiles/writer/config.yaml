@@ -15,6 +15,12 @@ platform_toolsets:
     - file
     - image_gen
     - memory
+  api_server:
+    - web
+    - browser
+    - file
+    - image_gen
+    - memory
 browser:
   headed: true
   engine: lightpanda

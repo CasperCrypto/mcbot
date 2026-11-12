@@ -28,6 +28,7 @@ import { envEntriesFor, hasLiveChannel, resolveEntries, writeProfileKeys } from 
 import { MediaError, mediaFile } from "./media";
 import { BOARD_ID_RE, BoardRelay, LooseGraph } from "./relay";
 import { Runner } from "./runner";
+import { HermesRuns, apiEnv, gatewayApi } from "./hermesRuns";
 import { RunStore } from "./runStore";
 import { SecretError, Secrets } from "./secrets";
 import { SetupStore, detectLocal, listModels } from "./setup";
@@ -98,7 +99,13 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   const secrets = new Secrets(join(cfg.workspace, "secrets.json"));
   let setupJob: HermesInfo["setup"] = { state: "idle", lines: [] };
   const setup = new SetupStore(join(cfg.workspace, "setup.json"));
-  const runner = new Runner({ store, root: cfg.hermesHome, managedRoot: cfg.managedRoot, findHermes: () => findHermes(), secrets: () => secrets.env() });
+  // McBot's own Hermes runs through the gateway's runs API, so runs can ask before risky actions.
+  // An external Hermes (MCBOT_HERMES_BIN) keeps one-shot runs: it is not ours to reconfigure.
+  const gateway = cfg.managedRoot ? await gatewayApi(join(cfg.workspace, "gateway.json")) : null;
+  const runner = new Runner({
+    store, root: cfg.hermesHome, managedRoot: cfg.managedRoot, findHermes: () => findHermes(), secrets: () => secrets.env(),
+    api: gateway ? { runs: new HermesRuns(gateway), env: apiEnv(gateway) } : undefined,
+  });
   const folders = new Folders(cfg.workspace, cfg.hermesHome);
   const sharing = new Sharing(join(cfg.workspace, "sharing.json"), cfg.sharePort ?? 4318);
   const allowed = new Set(cfg.allowedOrigins);
@@ -149,7 +156,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     let live = false;
     for (const b of bundles) {
       if (!manifest.profiles.includes(b.agent.data.name)) continue;
-      await writeProfileKeys(join(cfg.hermesHome, "profiles", b.agent.data.name), resolveEntries(envEntriesFor(b), saved));
+      await writeProfileKeys(join(cfg.hermesHome, "profiles", b.agent.data.name), { ...resolveEntries(envEntriesFor(b), saved), ...(gateway ? apiEnv(gateway) : {}) });
       live ||= hasLiveChannel(b, saved);
       // A schedule fires only while a gateway serves its agent (cron/jobs.py, per-profile stores).
       live ||= (await readSchedules(cfg.hermesHome, b.agent.data.name)).some((j) => j.enabled);
@@ -576,11 +583,21 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       }
       return;
     }
-    const runMatch = /^\/api\/runs\/(run_[a-z0-9]+_[a-f0-9]+)(\/cancel)?$/.exec(url.pathname);
+    const runMatch = /^\/api\/runs\/(run_[a-z0-9]+_[a-f0-9]+)(\/cancel|\/approval)?$/.exec(url.pathname);
     try {
       let body: unknown;
       if (runMatch && req.method === "GET" && !runMatch[2]) body = await store.events(runMatch[1]!);
-      else if (runMatch && req.method === "POST" && runMatch[2]) body = { cancelled: runner.cancel(runMatch[1]!) };
+      else if (runMatch && req.method === "POST" && runMatch[2] === "/cancel") body = { cancelled: runner.cancel(runMatch[1]!) };
+      else if (runMatch && req.method === "POST" && runMatch[2] === "/approval") {
+        // An approval card's answer: once, session, always or deny.
+        const { choice } = parse(z.object({ choice: z.enum(["once", "session", "always", "deny"]) }), await json(req));
+        try {
+          await runner.answer(runMatch[1]!, choice);
+        } catch (err) {
+          throw new HttpError(409, (err as Error).message);
+        }
+        body = { answered: choice };
+      }
       else {
         const handler = routes[`${req.method} ${url.pathname}`];
         if (!handler) throw new HttpError(404, `no route ${req.method} ${url.pathname}`);

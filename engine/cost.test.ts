@@ -15,7 +15,7 @@ const session = (over: Partial<SessionRow>): SessionRow => ({
 });
 const run = (over: Partial<RunSummary>): RunSummary => ({
   runId: "r", boardId: "b", agentNodeId: "a", profile: "triage", prompt: "", status: "succeeded", startedAt: 0, finishedAt: 2000,
-  sessionId: null, model: null, text: "", tokens: null, toolCalls: 0, toolErrors: 0, error: null, reportedUsd: null, estimatedUsd: null, ...over,
+  sessionId: null, model: null, text: "", tokens: null, toolCalls: 0, toolErrors: 0, error: null, reportedUsd: null, estimatedUsd: null, approval: null, ...over,
 });
 
 const local = model("local", "local", "http://127.0.0.1:1/v1", "m", { inputPerMTok: 1, outputPerMTok: 2 });

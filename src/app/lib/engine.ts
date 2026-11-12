@@ -64,6 +64,7 @@ const http = {
   runs: (boardId: string) => call<RunSummary[]>("GET", `/api/runs?boardId=${encodeURIComponent(boardId)}`),
   run: (runId: string) => call<RunEvent[]>("GET", `/api/runs/${runId}`),
   startRun: (boardId: string, agentNodeId: string, prompt: string) => call<{ runId: string }>("POST", "/api/runs", { boardId, agentNodeId, prompt }),
+  answerRun: (runId: string, choice: string) => call<{ answered: string }>("POST", `/api/runs/${runId}/approval`, { choice }),
   cancelRun: (runId: string) => call<{ cancelled: boolean }>("POST", `/api/runs/${runId}/cancel`, {}),
   memory: (boardId: string) => call<AgentMemoryView[]>("GET", `/api/memory?boardId=${encodeURIComponent(boardId)}`),
   saveMemory: (profile: string, target: "memory" | "user", entries: string[], baseSha256: string | null) =>

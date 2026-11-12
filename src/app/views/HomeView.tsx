@@ -14,6 +14,7 @@ import { addNote } from "../../board/ydoc";
 import { newId } from "../graph/defaults";
 import { StickyNote } from "../notes/StickyNote";
 import { useTasks } from "./TasksView";
+import { ApprovalCard } from "../approvals/ApprovalCard";
 
 const DAY = 86_400_000;
 
@@ -284,8 +285,18 @@ export function HomeView() {
           <div className="home-grid">
             <div className="stack" style={{ gap: 14 }}>
               <section className="card home-card" data-testid="home-inbox">
-                <div className="home-card-head"><h2>Needs you</h2>{inbox.length > 0 && <span className="chip warn num">{inbox.length}</span>}</div>
-                {inbox.length === 0 ? <div className="home-empty"><Check size={14} /> Nothing waiting on you</div> : inbox.map((i) => (
+                <div className="home-card-head"><h2>Needs you</h2>{inbox.length + list.filter((r) => r.approval).length > 0 && <span className="chip warn num">{inbox.length + list.filter((r) => r.approval).length}</span>}</div>
+                {list.filter((r) => r.approval).map((r) => (
+                  <div key={`ask-${r.runId}`} className="home-ask-row" data-testid="home-approval">
+                    <div className="row" style={{ gap: 8, padding: "2px 2px 6px" }}>
+                      <AgentFace seed={r.profile} size={22} status="running" />
+                      <span className="title ellipsis grow">{nameOf(r.profile)} asks before acting</span>
+                      <button className="btn sm ghost" onClick={() => app.openChat(r.agentNodeId)}>Open chat</button>
+                    </div>
+                    <ApprovalCard run={r} compact />
+                  </div>
+                ))}
+                {inbox.length === 0 && !list.some((r) => r.approval) ? <div className="home-empty"><Check size={14} /> Nothing waiting on you</div> : inbox.map((i) => (
                   <div key={i.key} className="home-row" data-tone={i.tone}>
                     <button className="home-row-main" onClick={i.open}>
                       {i.face}

@@ -149,6 +149,7 @@ const GUEST_ROUTES = new Set([
 ]);
 
 export function guestAllowed(method: string, path: string): boolean {
-  if (/^\/api\/runs\/run_[a-z0-9]+_[a-f0-9]+(\/cancel)?$/.test(path)) return method === "GET" || method === "POST";
+  // A member may stop a run and answer its approval card, as the host can.
+  if (/^\/api\/runs\/run_[a-z0-9]+_[a-f0-9]+(\/cancel|\/approval)?$/.test(path)) return method === "GET" || method === "POST";
   return GUEST_ROUTES.has(`${method} ${path}`);
 }

@@ -219,6 +219,8 @@ const secretNames = new Set<string>();
 type Listener = (e: RunEvent) => void;
 const listeners = new Set<Listener>();
 const cancelled = new Set<string>();
+/** Runs waiting on an approval card, by run id. */
+const answers = new Map<string, (choice: string) => void>();
 const busy = new Map<string, number>();
 
 interface Step {
@@ -341,8 +343,24 @@ async function play(boardId: string, bundle: AgentBundle, prompt: string, opts: 
     if (await wait(450)) return finish("interrupted", "");
     const sessionId = sessionIdAt(start);
     emit({ type: "run.session", sessionId, model: model.data.model });
-    const { steps, text } = script(prompt, bundle);
+    let { steps, text } = script(prompt, bundle);
     if (await wait(650)) return finish("interrupted", "");
+    // A risky command asks first, as Hermes does: the approval card, answered in the page.
+    const risky = live ? /\b(rm -rf|delete|drop table|sudo|wipe)\b/i.exec(prompt) : null;
+    if (risky) {
+      const command = prompt.match(/`([^`]+)`/)?.[1] ?? prompt.slice(0, 120);
+      const promptId = `p${runId.slice(-8)}`;
+      emit({ type: "run.approval", promptId, generation: 1, command, description: `asks before: ${risky[1]}`, choices: ["once", "session", "always", "deny"] });
+      const choice = await new Promise<string>((resolve) => answers.set(runId, resolve));
+      emit({ type: "run.approval.settled", promptId, choice });
+      if (choice === "deny") {
+        steps = [];
+        text = "You said no, so I left it alone. Tell me another way to do it if you like.";
+      } else {
+        steps = [{ tool: "terminal", input: { command }, output: JSON.stringify({ output: "", exit_code: 0 }), toolNodeId: null }];
+        text = `Done: ${command} (simulated in this browser).`;
+      }
+    }
     for (const s of steps) {
       emit({ type: "run.tool.started", tool: s.tool, input: s.input, toolNodeId: s.toolNodeId });
       const ms = 220 + (s.output.length % 400);
@@ -620,6 +638,13 @@ export const demoEngine = {
     const stale = drift.report.changes.filter((c) => c.path.startsWith(dir) && c.status !== "unchanged");
     if (stale.length) throw new EngineError(409, `The board changed since ${bundle.agent.data.name} was last compiled. Compile, then run.`, { stale: stale.map((c) => c.path) });
     return { runId: await play(boardId, bundle, prompt) };
+  }),
+  answerRun: api((runId: string, choice: string) => {
+    const resolve = answers.get(runId);
+    if (!resolve) throw new EngineError(409, "This run is not waiting for an answer", {});
+    answers.delete(runId);
+    resolve(choice);
+    return { answered: choice };
   }),
   cancelRun: api((runId: string) => {
     const events = state.runs[runId];
