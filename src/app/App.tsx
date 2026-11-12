@@ -31,12 +31,18 @@ function CodeTab() {
   return <Suspense fallback={<section className="main flush-left" />}><CodeView /></Suspense>;
 }
 
+const BrowserView = lazy(() => import("./workbench/BrowserView"));
+function BrowserTab() {
+  return <Suspense fallback={<section className="main flush-left" />}><BrowserView /></Suspense>;
+}
+
 const VIEW_COMPONENTS = {
   home: HomeView,
   graph: GraphView,
   agents: AgentsView,
   tasks: TasksView,
   code: CodeTab,
+  browser: BrowserTab,
   workflows: RunsView,
   memory: MemoryView,
   files: FilesView,

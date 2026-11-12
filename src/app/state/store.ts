@@ -3,7 +3,7 @@ import type { BoardInfo, CompileResponse, Health, SetupState } from "../../contr
 import { summarizeRun, type RunEvent, type RunSummary } from "../../contracts/run";
 import { loadIdentity, saveIdentity, type Identity } from "../lib/identity";
 
-export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "workflows" | "memory" | "files" | "cost" | "team";
+export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "files" | "cost" | "team";
 
 export interface Toast {
   id: number;
