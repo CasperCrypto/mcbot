@@ -7,11 +7,6 @@
   ],
   "files": [
     {
-      "path": "profiles/researcher/.no-bundled-skills",
-      "sha256": "4b119d35f8b55961ffc94e5670b8c91216dfdb2788e46df63405f25bd7e4ff44",
-      "bytes": 168
-    },
-    {
       "path": "profiles/researcher/SOUL.md",
       "sha256": "e8c985c9c15a5b3aaa8fcc75ac0dcbac9fb3267e1d4fa5cd8ba9bbae3aa78060",
       "bytes": 279
@@ -35,11 +30,6 @@
       "path": "profiles/researcher/skills/web-brief/SKILL.md",
       "sha256": "a8017187f6e3f1f498ef5047cbbfbf0b768e358b1a8eed6d537e07af0dc04a60",
       "bytes": 283
-    },
-    {
-      "path": "profiles/writer/.no-bundled-skills",
-      "sha256": "4b119d35f8b55961ffc94e5670b8c91216dfdb2788e46df63405f25bd7e4ff44",
-      "bytes": 168
     },
     {
       "path": "profiles/writer/SOUL.md",

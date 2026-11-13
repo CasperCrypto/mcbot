@@ -73,6 +73,12 @@ export const CAPABILITIES = [
   { key: "kanban", label: "Task board" },
   { key: "computer_use", label: "Use the computer" },
   { key: "connections", label: "Connections" },
+  // Hermes' other tool sets that work on McBot's surfaces (cli, api_server): off by default there
+  // (tools_config.py _DEFAULT_OFF_TOOLSETS), or, for context_engine, live only while a context
+  // engine plugin is active. discord/discord_admin are left out: Hermes drops them outside Discord.
+  { key: "video", label: "Watch videos" },
+  { key: "x_search", label: "Search X" },
+  { key: "context_engine", label: "Context engine" },
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number]["key"];
 export const CapabilitySchema = z.enum(CAPABILITIES.map((c) => c.key) as [Capability, ...Capability[]]);
@@ -102,6 +108,11 @@ export const AgentDataSchema = z.object({
    * budget bar in Cost and the alert in Home. null/unset = no limit.
    */
   dailyBudgetUsd: z.number().positive().max(1_000_000).nullish(),
+  /**
+   * Hermes' bundled skills (44: notes, email, research, creative, …) seeded into the profile.
+   * Unset/true = on; false = only Hermes' essential skill (compile writes `.no-bundled-skills`).
+   */
+  builtinSkills: z.boolean().nullish(),
   /** How its browser runs (Hermes' `browser:` settings); null = Hermes' defaults. */
   browser: z.object({
     /** A visible window you can watch (`browser.headed`). */
@@ -142,6 +153,10 @@ export const ToolDataSchema = z.object({
   env: z.record(z.string().regex(ENV_NAME_RE), z.string()).default({}),
   url: z.string().default(""),
   headers: z.record(z.string().min(1), z.string()).default({}),
+  /** A remote server that signs in with OAuth through Hermes (`mcp_servers.<name>.auth: oauth`). */
+  auth: z.literal("oauth").optional(),
+  /** A pre-registered OAuth client a connector pins (`mcp_servers.<name>.oauth`). */
+  oauth: z.record(z.string().min(1), z.union([z.string(), z.number()])).optional(),
 });
 export type ToolData = z.infer<typeof ToolDataSchema>;
 

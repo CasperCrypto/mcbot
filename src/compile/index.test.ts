@@ -44,6 +44,17 @@ describe("compile — layout", () => {
     for (const d of PROFILE_DIRS) expect(r.dirs).toContain(`profiles/triage/${d}`);
   });
 
+  it("leaves Hermes' bundled skills on, and writes the opt-out marker only when the board turns them off", () => {
+    expect(compile(g).files.some((f) => f.path.endsWith(".no-bundled-skills"))).toBe(false);
+    const off = structuredClone(g);
+    off.nodes.find((n: { kind: string }) => n.kind === "agent").data.builtinSkills = false;
+    const marker = compile(off).files.find((f) => f.path === "profiles/triage/.no-bundled-skills");
+    expect(marker?.content).toBe(
+      "Compiled by McBot: Hermes' bundled skills are turned off for this agent on the board.\n" +
+      "Hermes still seeds its essential skills. Turn bundled skills on in McBot to get them all.\n",
+    );
+  });
+
   it("lists every other file in the manifest with its hash", () => {
     const r = compile(g);
     const manifest = JSON.parse(r.files.find((f) => f.role === "manifest")!.content);

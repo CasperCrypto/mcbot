@@ -26,7 +26,7 @@ a real run behind it. If Hermes changes, re-verify here first.
 | Dirs `hermes profile create` bootstraps: `memories sessions skills skins logs plans workspace cron home` | `hermes_cli/profiles.py:43` (`_PROFILE_DIRS`) |
 | `SOUL.md` sits at the profile root, injected verbatim as system-prompt slot #1 | `website/docs/user-guide/which-file-does-what.md`; `hermes_cli/profiles_initialization.py:36-48` |
 | `profile.yaml` keys `description`, `display_name` | `hermes_cli/profiles.py:874-893` (`read_profile_meta`) |
-| `.no-bundled-skills` marker: existence only; Hermes still seeds essential skills | `hermes_cli/profiles.py:102`, `tools/skills_sync.py:400` |
+| `.no-bundled-skills` marker: existence only; Hermes still seeds essential skills. Compiled only when the board turns built-in skills off (`builtinSkills: false`) | `hermes_cli/profiles.py:102`, `tools/skills_sync.py:400` |
 
 ## config.yaml
 
@@ -57,6 +57,12 @@ provider id (`openrouter`, `anthropic`, …). API keys are never written: only t
 env var name (`key_env`).
 
 ## Skills
+
+| Fact | Source |
+|---|---|
+| Bundled skills (44) are seeded into a home's `skills/<category>/` and recorded in `skills/.bundled_manifest`; a gateway seeds only its own home | `tools/skills_sync.py:38,72,402` |
+| `hermes -p <agent> skills opt-in --sync` removes the opt-out marker and seeds now ("Re-seeded N bundled skill(s)"). McBot runs it once per compiled profile without a `.bundled_manifest`, after a compile (`engine/skills.ts`) | `hermes_cli/subcommands/skills.py:129-133`; `hermes_cli/skills_hub.py:1257` |
+| `hermes -p <agent> skills install official/<category>/<name> --yes` installs one of `optional-skills/` (141) into `skills/<category>/<name>/` after Hermes' scan | `hermes_cli/subcommands/skills.py:54-63`; `--yes` from `hermes_cli/subcommands/_shared.py:19`; verified on Hermes' runtime |
 
 `<profile>/skills/<name>/SKILL.md`, frontmatter `name, description, version,
 author, license, platforms, metadata.hermes.tags` (`skills/AGENTS.md`).
@@ -196,3 +202,12 @@ command ran, the run completed. McBot's own Hermes now runs every agent this way
 | A child task inherits its parent's tenant unless one is given | `hermes_cli/kanban_db_graph.py:27-48` (`initial_task_state`) |
 | The dispatcher gives the worker `HERMES_TENANT`, and `kanban_create` from inside a task defaults to it | `kanban_db_dispatch.py:2809-2810`; `tools/kanban_tools.py:1135` |
 | McBot creates every task with `--tenant mcbot-<boardId>` and shows a board only its own; tasks with no tenant keep the old rule (this board's agents, or unassigned) | `engine/kanban.ts` (`boardTenant`, `readTasks`) |
+
+## Tool sets McBot added, and Hermes' connector catalog
+
+| Fact | Source |
+|---|---|
+| Tool set keys `video` (video_analyze), `x_search`, `context_engine` exist and work on `cli`/`api_server`; `video` and `x_search` are off by default (`_DEFAULT_OFF_TOOLSETS`); `discord`/`discord_admin` are dropped outside Discord, so McBot does not offer them | `hermes_cli/tools_config.py:69-95,111` |
+| Hermes' vetted MCP catalog: `optional-mcps/<name>/manifest.yaml` (`transport.type: http`, `url`, `auth.type: oauth\|none\|api_key`, optional `auth.oauth`). McBot generates its Connectors from the http + oauth/none entries (`npm run engine:connectors`) | `hermes_cli/mcp_catalog.py:43,198-213` |
+| An OAuth connector compiles to `mcp_servers.<name>: {url, auth: oauth, oauth: {…}}`, as Hermes' own catalog writes it; the MCP client reads `auth` case-insensitively | `hermes_cli/mcp_catalog.py:549-554`; `tools/mcp_tool_server_run.py:263` |
+| `hermes -p <agent> mcp login <name> --flow browser` signs in to an OAuth server (opens the system browser, waits for the callback); the tokens are read when the gateway next connects its MCP servers | `hermes_cli/subcommands/mcp.py:47-52`; `hermes_cli/mcp_config.py:972` |

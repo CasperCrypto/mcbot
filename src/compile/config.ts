@@ -26,7 +26,7 @@ export function mcpToolPrefix(toolName: string): string {
   return `mcp__${toolName.replace(/[^A-Za-z0-9_]/g, "_")}__`;
 }
 
-function sortedRecord(r: Readonly<Record<string, string>>): Record<string, string> {
+function sortedRecord<T>(r: Readonly<Record<string, T>>): Record<string, T> {
   return Object.fromEntries(Object.keys(r).sort().map((k) => [k, r[k]!]));
 }
 
@@ -44,6 +44,9 @@ export function mcpServerEntry(tool: ToolData): Record<string, unknown> {
   if (tool.transport === "http") {
     const entry: Record<string, unknown> = { url: tool.url };
     if (Object.keys(tool.headers).length) entry.headers = sortedRecord(tool.headers);
+    // Hermes' own catalog writes these for OAuth connectors (hermes_cli/mcp_catalog.py:552).
+    if (tool.auth === "oauth") entry.auth = "oauth";
+    if (tool.auth === "oauth" && tool.oauth && Object.keys(tool.oauth).length) entry.oauth = sortedRecord(tool.oauth);
     return entry;
   }
   const entry: Record<string, unknown> = { command: tool.command };

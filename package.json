@@ -1,7 +1,7 @@
 {
   "name": "mcbot",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Draw a harness of AI agents as a graph; compile it into a real, runnable Hermes Agent setup.",
   "license": "MIT",
   "type": "module",
@@ -26,7 +26,8 @@
     "engine:patches": "tsx scripts/hermes-patches.ts",
     "site:foods": "tsx scripts/site-foods.ts",
     "engine:platforms": "tsx scripts/hermes-platforms.ts",
-    "mcbot": "tsx scripts/mcbot.ts"
+    "mcbot": "tsx scripts/mcbot.ts",
+    "engine:connectors": "tsx scripts/hermes-connectors.ts"
   },
   "dependencies": {
     "@blobatar/react": "2.7.0",

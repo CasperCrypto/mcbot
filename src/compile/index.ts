@@ -30,8 +30,8 @@ export const PROFILE_DIRS = ["memories", "sessions", "skills", "skins", "logs", 
 export const NO_BUNDLED_SKILLS_MARKER = ".no-bundled-skills";
 
 const MARKER_TEXT =
-  "Compiled by McBot: this profile's skills come from the board.\n" +
-  "Hermes still seeds its essential skills. Delete this file to let `hermes update` seed all bundled skills.\n";
+  "Compiled by McBot: Hermes' bundled skills are turned off for this agent on the board.\n" +
+  "Hermes still seeds its essential skills. Turn bundled skills on in McBot to get them all.\n";
 
 export class CompileError extends Error {
   constructor(readonly issues: Issue[]) {
@@ -69,7 +69,9 @@ export function compile(graphInput: unknown): CompileResult {
     files.push(file(`${dir}/config.yaml`, renderConfig(graph, bundle), "config", agent.id));
     const meta = renderProfileMeta(agent.data);
     if (meta !== null) files.push(file(`${dir}/profile.yaml`, meta, "profile-meta", agent.id));
-    files.push(file(`${dir}/${NO_BUNDLED_SKILLS_MARKER}`, MARKER_TEXT, "marker", agent.id));
+    // Hermes' bundled skills are on unless the board turns them off (the engine seeds them after a
+    // compile with `hermes -p <agent> skills opt-in --sync`, engine/skills.ts).
+    if (agent.data.builtinSkills === false) files.push(file(`${dir}/${NO_BUNDLED_SKILLS_MARKER}`, MARKER_TEXT, "marker", agent.id));
     for (const skill of agent.data.skills) {
       dirs.add(`${dir}/skills/${skill.name}`);
       files.push(file(`${dir}/skills/${skill.name}/SKILL.md`, renderSkill(skill), "skill", agent.id));

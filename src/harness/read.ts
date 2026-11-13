@@ -225,8 +225,10 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
         unshown.push({ profile: p.name, what: `mcp_servers.${name}`, why: "a server name the board cannot hold" });
         continue;
       }
+      const oauth = str(s.auth).toLowerCase() === "oauth";
       const data: ToolData = s.url
-        ? { name, label: "", transport: "http", command: "", args: [], env: {}, url: str(s.url), headers: strMap(s.headers) }
+        ? { name, label: "", transport: "http", command: "", args: [], env: {}, url: str(s.url), headers: strMap(s.headers),
+          ...(oauth ? { auth: "oauth" as const } : {}), ...(oauth && isObj(s.oauth) ? { oauth: Object.fromEntries(Object.entries(s.oauth).filter((e): e is [string, string | number] => typeof e[1] === "string" || typeof e[1] === "number")) } : {}) }
         : { name, label: "", transport: "stdio", command: str(s.command), args: strs(s.args), env: strMap(s.env), url: "", headers: {} };
       const id = shared(`tool ${JSON.stringify(data)}`, () => ({ id: `n-tool-${name}${byKeyCount("tool", name)}`, kind: "tool", position: { x: SIDE_X, y: sideY++ * 120 }, data }));
       edge(agentId, id);

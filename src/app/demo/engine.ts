@@ -13,7 +13,7 @@ import { exportFileName } from "../../board/files";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { LibrarySkill, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
@@ -647,6 +647,9 @@ const api = <A extends unknown[], R>(f: (...a: A) => R | Promise<R>) => async (.
   return await f(...a);
 };
 
+const DEMO_LIBRARY: LibrarySkill[] = [{"id":"official/creative/concept-diagrams","name":"concept-diagrams","category":"creative","description":"Generate flat, minimal educational SVG visuals as HTML.","tags":["diagrams","svg","visualization"]},{"id":"official/creative/creative-ideation","name":"creative-ideation","category":"creative","description":"Generate ideas via named methods from creative practice.","tags":["Creative","Ideation","Brainstorming"]},{"id":"official/creative/meme-generation","name":"meme-generation","category":"creative","description":"Create meme PNGs from templates with Pillow text overlay.","tags":["creative","memes","images"]},{"id":"official/creative/social-media-content-calendar","name":"social-media-content-calendar","category":"creative","description":"Plan multi-platform social campaigns: briefs to posting.","tags":["Social-Media","Content-Calendar","Publishing"]},{"id":"official/productivity/decision-questionnaire","name":"decision-questionnaire","category":"productivity","description":"Turn an unanswerable decision into a questionnaire doc.","tags":["decision","async"]},{"id":"official/productivity/live-dashboard","name":"live-dashboard","category":"productivity","description":"Build self-updating dashboards from live sources.","tags":["dashboards","reporting"]}];
+const demoInstalled: Record<string, Set<string>> = {};
+
 export const demoEngine = {
   health: api((): Health => ({ ok: true, version: "0.2.0", workspace: WORKSPACE, hermesHome: ROOT, managedRoot: true, hermes: { found: true, path: "simulated in this browser", kind: "bundled" } })),
   hermes: api((): HermesInfo => demoHermes()),
@@ -792,6 +795,14 @@ export const demoEngine = {
     if (t.status === "ready") void dispatch(t, boardId);
     return taskView(t, team);
   }),
+  // Hermes' skill library: a few of its official skills; installs are simulated in this browser.
+  skills: api((profile?: string): SkillsView => ({ library: DEMO_LIBRARY, installed: profile ? [...(demoInstalled[profile] ?? [])] : [], seeded: !!profile })),
+  installSkill: api((profile: string, id: string): { installed: string[] } => {
+    const set = (demoInstalled[profile] ??= new Set());
+    set.add(id.split("/").pop()!);
+    return { installed: [...set].sort() };
+  }),
+  signIn: api((_profile: string, _name: string): { started: boolean } => ({ started: true })),
   schedules: api((boardId: string): AgentSchedules[] => [...teamOf(requireBoard(boardId))].map(([profile, agentNodeId]) => ({ agentNodeId, profile, schedules: demoSchedules()[profile] ?? [] }))),
   createSchedule: api((boardId: string, input: { profile: string; when: string; prompt: string; name: string }): AgentSchedules => {
     schedulesOf(requireBoard(boardId), input.profile);

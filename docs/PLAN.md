@@ -315,6 +315,23 @@ budgets, memory as an editable graph, local models first with one download (Copi
 Docker and a licence; nightly's runs vendor CLIs with full access and no approvals), approvals by
 default, and boards shared live on the network with no account.
 
+## Ideas from Orca (stablyai/orca, MIT, 2026-11-13)
+
+An IDE for running many coding agents side by side (Electron; Claude Code, Codex, OpenCode and
+others, each in its own git worktree). MIT, so code could come in with its LICENSE, but it is an
+editor around coding CLIs; McBot is a harness for any work. Ideas to rebuild, in plan order:
+- **Point at the page** (M8 browser): click an element in the Browser view and send its HTML,
+  styles and selector to an agent's chat as context.
+- **Comment on a diff line** (M8 Code view): annotate lines of a compiled file or an agent's change
+  and send the notes to the agent in one message.
+- **Coordinator and workers** (M10): one agent splits work into Hermes kanban tasks for the others
+  and reviews them (Hermes delegation and kanban already run this; the board should draw it).
+- **Parallel copies** (M10): run the same agent on N variants of a task in separate workspaces and
+  compare the results side by side.
+- **Chat ↔ terminal hand-off** (M8): open an agent's run in the Terminal pane and back.
+- **Phone notifications with reply** (M14) and **split panes** (M15).
+Not taken: git commit and PR drafting (git beyond status and diffs is out of scope), its look.
+
 ## Launch checklist
 
 | | Item | Who |

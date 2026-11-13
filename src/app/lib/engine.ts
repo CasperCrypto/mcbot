@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
@@ -103,6 +103,9 @@ const http = {
   schedules: (boardId: string) => call<AgentSchedules[]>("GET", `/api/schedules?boardId=${encodeURIComponent(boardId)}`),
   createSchedule: (boardId: string, s: { profile: string; when: string; prompt: string; name: string }) => call<AgentSchedules>("POST", "/api/schedules", { boardId, ...s }),
   actOnSchedule: (boardId: string, profile: string, id: string, action: "pause" | "resume" | "run" | "remove") => call<AgentSchedules>("POST", "/api/schedules/act", { boardId, profile, id, action }),
+  skills: (profile?: string) => call<SkillsView>("GET", `/api/skills${profile ? `?profile=${encodeURIComponent(profile)}` : ""}`),
+  installSkill: (profile: string, id: string) => call<{ installed: string[] }>("POST", "/api/skills/install", { profile, id }),
+  signIn: (profile: string, name: string) => call<{ started: boolean }>("POST", "/api/connectors/login", { profile, name }),
   actOnTask: (boardId: string, id: string, by: string, a: TaskAction) => call<TaskDetail>("POST", "/api/tasks/act", { boardId, id, by, ...a }),
 };
 

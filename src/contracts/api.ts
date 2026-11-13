@@ -282,6 +282,24 @@ export interface TaskDetail extends TaskView {
   attempts: TaskAttempt[];
 }
 
+/** One of Hermes' official optional skills (hermes/optional-skills), installable per agent. */
+export interface LibrarySkill {
+  /** What `hermes skills install` takes: `official/<category>/<name>`. */
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  tags: string[];
+}
+
+/** GET /api/skills: the library, and for one agent what Hermes keeps in its category folders. */
+export interface SkillsView {
+  library: LibrarySkill[];
+  installed: string[];
+  /** Hermes' bundled skills are seeded into this agent. */
+  seeded: boolean;
+}
+
 export interface TasksView {
   tasks: TaskView[];
   /** Tasks only start while the gateway runs: its dispatcher hands ready tasks to their agents. */

@@ -6,7 +6,7 @@
  * not be able to compile or launch agents (cross-site request / DNS rebinding).
  */
 import { randomBytes } from "node:crypto";
-import { createReadStream } from "node:fs";
+import { createReadStream, existsSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join, resolve } from "node:path";
@@ -20,13 +20,14 @@ import { isHermesHome, readSetup } from "./harnessDisk";
 import { HermesSync } from "./hermesSync";
 import { unshownNote, type Unshown } from "../src/harness/read";
 import { diagnosticsText, osLine, redact, tail } from "./diagnostics";
-import type { Graph, ModelNode } from "../src/contracts/graph";
+import { PROFILE_NAME_RE as PROFILE_RE, type Graph, type ModelNode } from "../src/contracts/graph";
 import { buildCostReport } from "./cost";
 import { atomicWrite } from "./fsutil";
 import { FolderError, Folders, browseFolders } from "./folders";
 import { bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, setupHome, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
 import { JOB_ID_RE, createScheduleArgv, readSchedules, scheduleActionArgv } from "./schedules";
+import { SEED_ARGV, SKILL_ID_RE, bundledSeeded, installArgv, installedSkills, listLibrary } from "./skills";
 import { TASK_ID_RE, actionArgv, boardTenant, createArgv, kanbanError, readTask, readTasks, runKanban } from "./kanban";
 import { envEntriesFor, hasLiveChannel, resolveEntries, writeProfileKeys } from "./profileEnv";
 import { MediaError, mediaFile } from "./media";
@@ -40,7 +41,7 @@ import { OwnershipError, readManifest, writeCompileResult } from "./writer";
 import { Sharing, guestAllowed, joinPage, type SharingView } from "./sharing";
 import { frameable } from "./web";
 
-export const ENGINE_VERSION = "0.4.1";
+export const ENGINE_VERSION = "0.4.2";
 
 export interface EngineConfig {
   workspace: string;
@@ -338,6 +339,39 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       return { runId };
     },
 
+    // ---- skills and connectors: Hermes' own library, per agent (this computer only) ----
+    "GET /api/skills": async (_req, url) => {
+      const src = bundledSource();
+      const profile = url.searchParams.get("profile");
+      const dir = profile && PROFILE_RE.test(profile) ? join(cfg.hermesHome, "profiles", profile) : null;
+      return {
+        library: src ? listLibrary(src.dir) : [],
+        installed: dir ? installedSkills(dir) : [],
+        seeded: dir ? bundledSeeded(dir) : false,
+      };
+    },
+    "POST /api/skills/install": async (req) => {
+      const body = parse(z.object({ profile: z.string().regex(PROFILE_RE), id: z.string().regex(SKILL_ID_RE) }), await json(req));
+      if (!existsSync(join(cfg.hermesHome, "profiles", body.profile))) throw new HttpError(409, `Compile ${body.profile} first`);
+      await hermesCli(["-p", body.profile, ...installArgv(body.id)]);
+      if (cfg.managedRoot) runner.markGatewayStale();
+      return { installed: installedSkills(join(cfg.hermesHome, "profiles", body.profile)) };
+    },
+    "POST /api/connectors/login": async (req) => {
+      // Hermes opens the system browser and waits for the sign-in to come back (mcp_config.py
+      // cmd_mcp_login); the tokens it saves are read when the gateway next starts its MCP servers.
+      const body = parse(z.object({ profile: z.string().regex(PROFILE_RE), name: z.string().regex(/^[A-Za-z0-9_.-]{1,64}$/) }), await json(req));
+      if (!existsSync(join(cfg.hermesHome, "profiles", body.profile))) throw new HttpError(409, `Compile ${body.profile} first`);
+      const found = await findHermes();
+      if (!found) throw new HttpError(503, "The engine is not set up yet");
+      const bin = await prepareHermes(found, cfg.hermesHome);
+      void runKanban(bin, cfg.hermesHome, ["-p", body.profile, "mcp", "login", body.name, "--flow", "browser"], "", 10 * 60_000).then((r) => {
+        console.log(`[engine] ${body.profile}: sign-in to ${body.name} ${r.code === 0 ? "done" : `failed: ${kanbanError(r)}`}`);
+        if (r.code === 0 && cfg.managedRoot) runner.markGatewayStale();
+      });
+      return { started: true };
+    },
+
     // ---- share on your network (this computer only: members never reach these) ----
     "GET /api/share": async (): Promise<SharingView> => sharing.view(),
     "POST /api/share": async (req): Promise<SharingView> => {
@@ -538,6 +572,24 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     };
   }
 
+  /**
+   * Hermes' gateway seeds bundled skills only into its own home, so each compiled profile gets
+   * them here, once (`skills opt-in --sync`), unless its board turned them off. Serialized.
+   */
+  let seeding: Promise<void> = Promise.resolve();
+  const seedSkills = (graph: unknown, names: string[]) => (seeding = seeding.then(async () => {
+    const off = new Set(resolveGraph(graph as Graph).bundles.filter((b) => b.agent.data.builtinSkills === false).map((b) => b.agent.data.name));
+    const todo = names.filter((n) => !off.has(n) && !bundledSeeded(join(cfg.hermesHome, "profiles", n)));
+    if (!todo.length) return;
+    const found = await findHermes();
+    if (!found) return;
+    const bin = await prepareHermes(found, cfg.hermesHome);
+    for (const name of todo) {
+      const r = await runKanban(bin, cfg.hermesHome, ["-p", name, ...SEED_ARGV], "", 5 * 60_000);
+      console.log(`[engine] ${name}: bundled skills ${r.code === 0 ? "seeded" : `not seeded: ${kanbanError(r)}`}`);
+    }
+  }).catch(() => undefined));
+
   async function compileBoard(boardId: string, dryRun: boolean): Promise<CompileResponse> {
     const graph = await relay.graph(boardId);
     const { issues } = resolveGraph(graph);
@@ -549,6 +601,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       if (!dryRun) await atomicWrite(join(cfg.workspace, "compiles", `${boardId}.json`), `${JSON.stringify({ at: Date.now(), report }, null, 2)}\n`);
       if (!dryRun) await hermesSync.remember(report.profiles.map((p) => p.name));
       if (!dryRun) void syncAgents();
+      if (!dryRun) void seedSkills(graph, report.profiles.map((p) => p.name));
       return { ok: true, report, issues, gateway: !dryRun && configChanged && cfg.managedRoot ? "restart-pending" : "unchanged" };
     } catch (err) {
       if (err instanceof OwnershipError) return { ok: false, issues, error: err.message };
