@@ -102,6 +102,8 @@ Change them additively; a breaking change bumps the version.
 - Run is refused (409) if the agent's files on disk differ from the board — compile first.
 - Memory edits: Hermes' `§` format byte for byte, refused while the profile is
   running, and only against the sha256 the editor read.
+- An agent's `dailyBudgetUsd` is McBot-side only (never compiled, no Hermes key): `buildCostReport` compares
+  today's (UTC) spend with it; Cost shows the bar and Home's "Needs you" warns at 80% and 100%. It does not stop runs yet.
 - Cost comes from each profile's `state.db`; Hermes-priced vs McBot-estimated is
   always labelled. Hermes reports no GPU time — do not fabricate it.
 - API keys typed into McBot live in `<workspace>/secrets.json` (owner-only); boards

@@ -52,3 +52,22 @@ describe("buildCostReport", () => {
     expect(report.sessions.find((s) => s.id === "s2")).toMatchObject({ runId: "r2", runStatus: "failed" });
   });
 });
+
+describe("daily budgets", () => {
+  const now = Date.UTC(2026, 10, 13, 12) ;
+  const startedToday = now / 1000 - 3600;
+  const withSpend = (usd: number, budget: number | null, startedAt = startedToday) => buildCostReport(
+    [{ profile: "triage", agentNodeId: "a", dailyBudgetUsd: budget, sessions: [session({ id: "s1", inputTokens: usd * 1_000_000, startedAt })] }], [], [local], now,
+  ).budgets;
+  it("lists only agents with a budget", () => expect(withSpend(1, null)).toEqual([]));
+  it("is ok below 80%, warn from 80%, over from 100%", () => {
+    expect(withSpend(1, 10)[0]).toMatchObject({ state: "ok", spentTodayUsd: 1, limitUsd: 10 });
+    expect(withSpend(8, 10)[0]!.state).toBe("warn");
+    expect(withSpend(10, 10)[0]!.state).toBe("over");
+  });
+  it("counts only today (UTC)", () => expect(withSpend(50, 10, startedToday - 86400 * 2)[0]).toMatchObject({ spentTodayUsd: 0, state: "ok" }));
+  it("says when a session had no price", () => {
+    const b = buildCostReport([{ profile: "p", agentNodeId: null, dailyBudgetUsd: 5, sessions: [session({ billingBaseUrl: "https://nowhere/v1", startedAt: startedToday })] }], [], [], now).budgets;
+    expect(b[0]!.unpriced).toBe(true);
+  });
+});

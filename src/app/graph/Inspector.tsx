@@ -130,8 +130,23 @@ function AgentSetup({ node, set }: { node: Extract<GraphNode, { kind: "agent" }>
           </div>
         </div>
       )}
+      <Budget data={a} set={set} />
       <Abilities data={a} set={set} forced={new Set(makers.map((m): Capability => (m.other.data.media === "video" ? "video_gen" : "image_gen")))} />
     </>
+  );
+}
+
+/** A daily spend limit. McBot-side only: it is never written to Hermes' files. */
+function Budget({ data, set }: { data: AgentData; set: (f: string, v: unknown) => void }) {
+  return (
+    <div className="stack" style={{ gap: 6 }} data-testid="budget">
+      <span className="section-label">Daily budget</span>
+      <label className="row" style={{ gap: 6 }} data-tip="Alerts you in Home at 80% and 100% of this day's spend (UTC). Never compiled." data-tip-side="top">
+        <span className="faint">$</span>
+        <input className="input mono" type="number" min={0} step={0.5} placeholder="No limit" data-testid="budget-input"
+          value={data.dailyBudgetUsd ?? ""} onChange={(e) => { const n = parseFloat(e.target.value); set("dailyBudgetUsd", Number.isFinite(n) && n > 0 ? n : null); }} />
+      </label>
+    </div>
   );
 }
 

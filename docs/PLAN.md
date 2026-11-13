@@ -276,7 +276,11 @@ daily watchdog opens an issue.
 
 Ideas only, no code: it is a Cordis/TypeScript runtime, McBot's engine is Hermes. Taken: the
 Builder with propose-then-confirm cards and Undo/Restore (M9), a static plugin index (M6), a
-per-agent Goal (M7), a reviewer before risky actions (M9). Skipped: plan mode, team board
+per-agent Goal (M7), a reviewer before risky actions (M9). Also added from the audit: session
+search in ⌘K (M7), thumbs up/down on an answer stored with the run (M7), run replay with a
+scrubber (M8), a guard node on an edge that blocks or rewrites a tool call (M10), headless
+`mcbot run <board>` for CI and scripts (M11), voice input in the ask bar (M15), starter teams
+with a "try in the demo" button (M13, moved up). Skipped: plan mode, team board
 (Hermes kanban covers it), forge, terminal, computer use, their UI.
 
 ## Launch checklist
@@ -287,7 +291,7 @@ per-agent Goal (M7), a reviewer before risky actions (M9). Skipped: plan mode, t
 | ○ | A real model end to end (Ollama, one cloud model) | owner's key, through a secure form |
 | ○ | Approval cards: answer Hermes' "may I?" from McBot | Claude |
 | ○ | Always on: background engine, launch at login | Claude |
-| ○ | Budgets per agent, with alerts | Claude |
+| ◐ | Budgets per agent: daily limit and alerts in Cost and Home ●; stopping runs at the limit ○ | Claude |
 | ○ | Auto-update (signed update manifest) | owner makes the key, Claude wires it |
 | ○ | Windows: SignPath Foundation signing in release.yml; Microsoft Store listing | owner applies and registers, Claude wires it |
 | ○ | Linux: Flathub | Claude prepares, owner submits |

@@ -452,7 +452,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const manifest = await readManifest(cfg.hermesHome);
       const profiles = bundles
         .filter((b) => manifest?.profiles.includes(b.agent.data.name))
-        .map((b) => ({ profile: b.agent.data.name, agentNodeId: b.agent.id, sessions: readSessions(cfg.hermesHome, b.agent.data.name) }));
+        .map((b) => ({ profile: b.agent.data.name, agentNodeId: b.agent.id, sessions: readSessions(cfg.hermesHome, b.agent.data.name), dailyBudgetUsd: b.agent.data.dailyBudgetUsd ?? null }));
       return buildCostReport(profiles, await store.list(boardId), modelsOf(bundles));
     },
 

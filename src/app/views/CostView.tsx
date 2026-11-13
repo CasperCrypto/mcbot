@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { CostReport, CostRow, CostSource } from "../../contracts/api";
+import type { BudgetStatus, CostReport, CostRow, CostSource } from "../../contracts/api";
 import { ago, tokens, usd } from "../lib/format";
 import { engine } from "../lib/engine";
 import { useBoard } from "../state/board";
@@ -47,6 +47,31 @@ function Daily({ rows }: { rows: CostRow[] }) {
   );
 }
 
+/** Spend today against each agent's daily budget. */
+function Budgets({ rows }: { rows: BudgetStatus[] }) {
+  return (
+    <div className="card table-card" style={{ marginBottom: 14 }} data-testid="cost-budgets">
+      <h3>Budgets today</h3>
+      <table className="table">
+        <tbody>
+          {rows.map((b) => (
+            <tr key={b.profile}>
+              <td><span className="row"><AgentFace seed={b.profile} size={22} />{b.profile}</span></td>
+              <td style={{ width: "40%" }}>
+                <div role="progressbar" aria-valuemin={0} aria-valuemax={b.limitUsd} aria-valuenow={Math.min(b.spentTodayUsd, b.limitUsd)} style={{ height: 6, borderRadius: 3, background: "var(--bg-3, rgba(255,255,255,.08))" }}>
+                  <i style={{ display: "block", height: "100%", borderRadius: 3, width: `${Math.min(100, (b.spentTodayUsd / b.limitUsd) * 100)}%`, background: b.state === "over" ? "var(--fail)" : b.state === "warn" ? "var(--warn)" : "var(--ok)" }} />
+                </div>
+              </td>
+              <td className="right num">{usd(b.spentTodayUsd)} / {usd(b.limitUsd)}</td>
+              <td className="right"><span className={`chip ${b.state === "over" ? "fail" : b.state === "warn" ? "warn" : "ok"}`}>{b.state === "over" ? "over" : b.state === "warn" ? "close" : "ok"}</span>{b.unpriced && <span className="chip" data-tip="Some sessions today have no price, so the real spend may be higher" data-tip-side="top">unpriced</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function Rollup({ title, rows, face }: { title: string; rows: CostRow[]; face?: boolean }) {
   return (
     <div className="card table-card">
@@ -90,6 +115,7 @@ export function CostView() {
             <div className="card kpi"><small>Per successful run</small><b>{report.costPerSuccessfulRun === null ? "—" : usd(report.costPerSuccessfulRun)}</b><span>{report.totals.successfulRuns} of {report.totals.runs} succeeded</span></div>
             <div className="card kpi"><small>Local compute</small><b>{report.localInferenceSeconds.toFixed(1)}s</b><span data-tip="Wall-clock time of runs on local models. GPU time is not reported." data-tip-side="top">wall-clock</span></div>
           </div>
+          {report.budgets.length > 0 && <Budgets rows={report.budgets} />}
           <Daily rows={report.byDay} />
           <div className="two-col">
             <Rollup title="By agent" rows={report.byAgent} face />

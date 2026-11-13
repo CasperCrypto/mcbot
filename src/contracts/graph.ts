@@ -97,6 +97,11 @@ export const AgentDataSchema = z.object({
   skills: z.array(SkillSchema).default([]),
   /** Tool sets this agent may use; null = Hermes' default (DEFAULT_CAPABILITIES). */
   capabilities: z.array(CapabilitySchema).nullable().default(null),
+  /**
+   * Daily spend limit in USD (UTC day). McBot-side only: never compiled into Hermes, it drives the
+   * budget bar in Cost and the alert in Home. null/unset = no limit.
+   */
+  dailyBudgetUsd: z.number().positive().max(1_000_000).nullish(),
   /** How its browser runs (Hermes' `browser:` settings); null = Hermes' defaults. */
   browser: z.object({
     /** A visible window you can watch (`browser.headed`). */

@@ -5,7 +5,7 @@
  * records cost_status "unknown", and McBot falls back to the model node's
  * pricing, labelled as an estimate.
  */
-import type { CostReport, CostRow, CostSession, CostSource } from "../src/contracts/api";
+import type { BudgetStatus, CostReport, CostRow, CostSession, CostSource } from "../src/contracts/api";
 import type { ModelNode } from "../src/contracts/graph";
 import type { RunSummary } from "../src/contracts/run";
 import type { SessionRow } from "./hermesData";
@@ -14,6 +14,8 @@ export interface ProfileSessions {
   profile: string;
   agentNodeId: string | null;
   sessions: SessionRow[];
+  /** The agent's daily budget in USD, when it has one. */
+  dailyBudgetUsd?: number | null;
 }
 
 const norm = (u: string | null) => (u ?? "").trim().replace(/\/+$/, "").toLowerCase();
@@ -51,7 +53,7 @@ function rollup(sessions: readonly CostSession[], keyOf: (s: CostSession) => str
 
 const day = (epochSeconds: number) => new Date(epochSeconds * 1000).toISOString().slice(0, 10);
 
-export function buildCostReport(profiles: readonly ProfileSessions[], runs: readonly RunSummary[], models: readonly ModelNode[]): CostReport {
+export function buildCostReport(profiles: readonly ProfileSessions[], runs: readonly RunSummary[], models: readonly ModelNode[], nowMs: number = Date.now()): CostReport {
   const runBySession = new Map(runs.filter((r) => r.sessionId).map((r) => [r.sessionId!, r]));
   const localUrls = new Set(models.filter((m) => m.data.endpoint === "local").map((m) => norm(m.data.baseUrl)));
 
@@ -86,6 +88,18 @@ export function buildCostReport(profiles: readonly ProfileSessions[], runs: read
     return s && localUrls.has(norm(s.baseUrl)) && r.finishedAt ? sum + (r.finishedAt - r.startedAt) / 1000 : sum;
   }, 0);
 
+  const today = day(nowMs / 1000);
+  const budgets: BudgetStatus[] = profiles.flatMap((p): BudgetStatus[] => {
+    if (!p.dailyBudgetUsd || p.dailyBudgetUsd <= 0) return [];
+    const mine = sessions.filter((s) => s.profile === p.profile && day(s.startedAt) === today);
+    const spent = mine.reduce((n, s) => n + s.usd, 0);
+    const ratio = spent / p.dailyBudgetUsd;
+    return [{
+      profile: p.profile, agentNodeId: p.agentNodeId, limitUsd: p.dailyBudgetUsd, spentTodayUsd: spent,
+      state: ratio >= 1 ? "over" : ratio >= 0.8 ? "warn" : "ok", unpriced: mine.some((s) => s.source === "none"),
+    }];
+  }).sort((a, b) => b.spentTodayUsd / b.limitUsd - a.spentTodayUsd / a.limitUsd || (a.profile < b.profile ? -1 : 1));
+
   return {
     totals: {
       sessions: sessions.length,
@@ -97,6 +111,7 @@ export function buildCostReport(profiles: readonly ProfileSessions[], runs: read
     },
     costPerSuccessfulRun: successful.length ? runSpend / successful.length : null,
     localInferenceSeconds: Math.round(localInferenceSeconds * 10) / 10,
+    budgets,
     byAgent: rollup(sessions, (s) => s.profile, (s) => s.profile),
     byModel: rollup(sessions, (s) => `${s.model ?? "?"}@${norm(s.baseUrl)}`, (s) => s.model ?? "unknown model"),
     byDay: rollup(sessions, (s) => day(s.startedAt), (s) => day(s.startedAt)).sort((a, b) => (a.key < b.key ? 1 : -1)),
