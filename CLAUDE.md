@@ -100,6 +100,13 @@ Change them additively; a breaking change bumps the version.
   `hermes gateway ensure` while any compiled agent has a bot with everything filled in.
   No allowed users = nobody can message it (Hermes refuses unknown senders).
 - Run is refused (409) if the agent's files on disk differ from the board — compile first.
+- One run at a time per agent from the UI: a message sent while the agent works (or while its run
+  is starting, `starting` in the store, set by `runAgent`) joins that agent's queue and is sent
+  when it is free (`queue`, dispatched in App.tsx). A message that cannot start goes back first
+  and the queue waits for the person. `scripts/mcbot.ts` (`npm run mcbot`) drives the same
+  loopback API from a terminal; runs it starts show live in every window.
+- The tool catalog (`src/app/graph/catalog.ts`) also has hosted MCP servers that need no key
+  (Exa, Parallel: `transport: http`, `url` only), so agents can search the web from minute one.
 - Memory edits: Hermes' `§` format byte for byte, refused while the profile is
   running, and only against the sha256 the editor read.
 - An agent's `dailyBudgetUsd` is McBot-side only (never compiled, no Hermes key): `buildCostReport` compares
@@ -300,6 +307,7 @@ npm run engine:setup   prepare McBot's own Hermes (once, and after a Hermes upda
 npm run cli -- …    McBot's Hermes in a terminal, on McBot's agents (HERMES_HOME=~/McBot/hermes)
 npm run site:foods the website's food bots and the logo files, from src/app/faces/
 npm run engine:sync -- <hermes-agent checkout> [ref]   merge an upstream Hermes release into hermes/
+npm run mcbot -- agents | run <agent> "<prompt>" [--wait] [--json] [--board <id>]   script the running McBot
 npx tauri build    the installer for this computer (engine + Hermes inside; unsigned)
 MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
 ```

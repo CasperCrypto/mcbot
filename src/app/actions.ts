@@ -38,11 +38,15 @@ export async function refreshDrift(boardId: string): Promise<void> {
 
 export async function runAgent(boardId: string, agentNodeId: string, prompt: string): Promise<string | null> {
   const app = useApp.getState();
+  // Until the run's first event arrives, the agent counts as busy (the chat's queue waits for it).
+  app.setStarting(agentNodeId, true);
   try {
     const { runId } = await engine.startRun(boardId, agentNodeId, prompt);
     app.selectRun(runId);
+    setTimeout(() => useApp.getState().setStarting(agentNodeId, false), 800);
     return runId;
   } catch (err) {
+    app.setStarting(agentNodeId, false);
     if (err instanceof EngineError && err.status === 409 && err.body.stale) {
       app.toast({
         kind: "fail",

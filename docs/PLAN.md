@@ -283,6 +283,38 @@ scrubber (M8), a guard node on an edge that blocks or rewrites a tool call (M10)
 with a "try in the demo" button (M13, moved up). Skipped: plan mode, team board
 (Hermes kanban covers it), forge, terminal, computer use, their UI.
 
+## Ideas from the two OpenBots (2026-11-13)
+
+**CopilotKit/OpenBot (MIT)**: an enterprise workspace for "Bots" (Tauri desktop + Docker backend,
+Postgres, Kubernetes, AG-UI for outside agents, MCP for tools, a separately licensed CopilotKit
+Intelligence for memory and learning). Code may come in with its LICENSE kept, but little fits:
+its stack (Postgres, Docker, Kubernetes, sign-in) is what McBot's stack rules exclude. Taken:
+keyless hosted web search (Exa, Parallel) from its app catalogue, now in the tool catalog (done).
+Ideas for later: a routine as one sentence in four parts, What / Starts / Does (act or only tell
+you) / Until (stop, or an outcome = a goal), on top of Hermes schedules (M7/M10); "kinds of
+action" that always ask — delete, send, share, post, pay, change a password — as approval presets
+over Hermes' approvals (M9); a skill proposed from a conversation the person liked (M9 Builder);
+skills that name a role (`@research/search`) instead of one provider's tool (M6 catalog); a
+standing role sent with every run, so a Bot's job survives a new chat (Hermes SOUL.md does this
+already); "watch the Bot's browser, take over" (M8, planned).
+
+**nightly-labs/openbot (PolyForm Noncommercial)**: features only, never its code (hard rule 1). A
+local-first Electron workspace that runs coding CLIs (Codex, Claude Code, Gemini, Copilot, Hermes
+and more) as agents over ACP. Taken now, rebuilt: a per-agent FIFO message queue in chat (done, M7),
+search of past conversations in ⌘K (done, M7), and a CLI for scripts on the local API
+(`npm run mcbot -- run <agent> … --wait`, done, ahead of M11). Ideas for later: branch a
+conversation from a message (M7; needs a Hermes session fork or a transcript hand-off), a context
+meter with compaction warning (M6, planned), webhook routines with a signed URL per routine (M10),
+reactions and file transfer between agents (M7), theme palette files a script can write (M15),
+prompt-driven agent creation with a review step (M9 Builder), an `mcbot://` link that opens an
+invite in the app (M12).
+
+Where McBot is already ahead of both: the board compiles into a real Hermes setup on disk and reads
+it back (neither has a harness you can see and edit as a graph), cost per agent and model with
+budgets, memory as an editable graph, local models first with one download (CopilotKit's needs
+Docker and a licence; nightly's runs vendor CLIs with full access and no approvals), approvals by
+default, and boards shared live on the network with no account.
+
 ## Launch checklist
 
 | | Item | Who |

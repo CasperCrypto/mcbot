@@ -259,3 +259,17 @@ input.input::placeholder { color: var(--text-4); }
 }
 /* Setup choices: title and line stay at the top whatever wraps. */
 .choice { align-content: start; }
+.palette-row .label { flex: none; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette-row .hint { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- the chat's queue: messages waiting for a busy agent ---------- */
+.queue {
+  max-width: 820px; margin: 0 auto 8px; padding: 6px; display: grid; gap: 2px; border-radius: 18px;
+  background: var(--mat-regular); backdrop-filter: var(--mat-blur-strong); -webkit-backdrop-filter: var(--mat-blur-strong);
+  box-shadow: var(--shadow-2), var(--mat-edge); animation: sheet-in var(--t-spring) var(--spring-bouncy) both;
+}
+.queue-item { display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 6px 0 8px; border-radius: 12px; font-size: 13px; color: var(--text-2); animation: row-in var(--t) var(--ease) both; }
+.queue-item:hover { background: var(--mat-hover); }
+.queue-n { width: 18px; height: 18px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 10.5px; font-weight: 650; background: rgba(255, 255, 255, 0.1); color: var(--text-2); }
+.queue-paused { display: flex; align-items: center; gap: 8px; padding: 4px 6px 2px 8px; font-size: 12px; color: var(--warn); }
+.composer .send + .send { margin-left: -2px; }

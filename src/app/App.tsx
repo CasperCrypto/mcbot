@@ -1,7 +1,7 @@
 import { LoaderCircle } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo } from "react";
 import type { AgentNode } from "../contracts/graph";
-import { compileBoard, refreshDrift } from "./actions";
+import { compileBoard, refreshDrift, runAgent } from "./actions";
 import { GraphView } from "./graph/GraphView";
 import { engine, subscribeHarness, subscribeRunEvents } from "./lib/engine";
 import { Boundary } from "./shell/Boundary";
@@ -73,6 +73,24 @@ function BoardEffects() {
   useEffect(() => {
     engine.runs(boardId).then(loadRuns).catch(() => undefined);
   }, [boardId, loadRuns]);
+
+  // The queue: an agent that is free takes its next queued message. One at a time per agent
+  // (`starting` covers a run that was asked for but has not reported yet); a message that cannot
+  // start goes back first and the queue waits (the chat says so).
+  const queue = useApp((s) => s.queue);
+  const starting = useApp((s) => s.starting);
+  useEffect(() => {
+    const app = useApp.getState();
+    for (const [agentId, q] of Object.entries(queue)) {
+      if (q.paused || q.items.length === 0 || starting[agentId]) continue;
+      if (Object.values(runs).some((r) => r.agentNodeId === agentId && r.status === "running")) continue;
+      const text = app.takeQueued(agentId);
+      if (!text) continue;
+      void runAgent(boardId, agentId, text).then((id) => {
+        if (!id) useApp.getState().pauseQueue(agentId, text);
+      });
+    }
+  }, [queue, runs, boardId, starting]);
 
   // How many files on disk differ from the board right now (debounced dry-run compile).
   useEffect(() => {
