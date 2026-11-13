@@ -115,12 +115,25 @@ export interface CostSession {
   runStatus: string | null;
 }
 
+/** One agent's spend today (UTC) against its daily budget. Only agents with a budget are listed. */
+export interface BudgetStatus {
+  profile: string;
+  agentNodeId: string | null;
+  limitUsd: number;
+  spentTodayUsd: number;
+  /** ok < 80%, warn from 80%, over from 100% of the limit. */
+  state: "ok" | "warn" | "over";
+  /** Some of today's sessions had no price, so the spend shown may be too low. */
+  unpriced: boolean;
+}
+
 export interface CostReport {
   totals: { sessions: number; inputTokens: number; outputTokens: number; usd: number; runs: number; successfulRuns: number };
   /** Spend of McBot-launched runs ÷ successful ones; null when none succeeded. */
   costPerSuccessfulRun: number | null;
   /** Wall-clock seconds of McBot runs on local endpoints. Hermes does not report GPU time. */
   localInferenceSeconds: number;
+  budgets: BudgetStatus[];
   byAgent: CostRow[];
   byModel: CostRow[];
   byDay: CostRow[];

@@ -248,6 +248,11 @@ export function HomeView() {
       key: "compile", at: Date.now(), face: <span className="tile sm agent"><Hammer size={14} /></span>, title: `${drift} file${drift > 1 ? "s" : ""} differ from the board`, sub: "Agents run what was last compiled", tone: "warn" as const,
       action: { label: "Compile", icon: <Hammer size={12} />, run: () => void compileBoard(boardId) }, open: () => app.setTab("graph"),
     }] : []),
+    ...(cost?.budgets ?? []).filter((b) => b.state !== "ok").map((b): Item => ({
+      key: `budget-${b.profile}`, at: Date.now(), face: <AgentFace seed={b.profile} size={30} status={b.state === "over" ? "failed" : undefined} />,
+      title: `${nameOf(b.profile)} ${b.state === "over" ? "is over" : "is close to"} its daily budget`, sub: `${usd(b.spentTodayUsd)} of ${usd(b.limitUsd)} today`, tone: b.state === "over" ? "fail" : "warn",
+      action: { label: "Cost", icon: <Clock size={12} />, run: () => app.setTab("cost") }, open: () => app.setTab("cost"),
+    })),
     ...(tasks ?? []).filter((t) => t.status === "review").map((t): Item => ({
       key: t.id, at: t.startedAt ?? t.createdAt, face: <AgentFace seed={t.assignee ?? "task"} size={30} />, title: t.title, sub: `${nameOf(t.assignee)} asks for a review`, tone: "warn",
       action: { label: "Approve", icon: <Check size={12} />, run: () => void act(t, "complete") }, open: () => app.showTask(t.id),

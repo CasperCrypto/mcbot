@@ -291,7 +291,7 @@ with a "try in the demo" button (M13, moved up). Skipped: plan mode, team board
 | ○ | A real model end to end (Ollama, one cloud model) | owner's key, through a secure form |
 | ○ | Approval cards: answer Hermes' "may I?" from McBot | Claude |
 | ○ | Always on: background engine, launch at login | Claude |
-| ○ | Budgets per agent, with alerts | Claude |
+| ◐ | Budgets per agent: daily limit and alerts in Cost and Home ●; stopping runs at the limit ○ | Claude |
 | ○ | Auto-update (signed update manifest) | owner makes the key, Claude wires it |
 | ○ | Windows: SignPath Foundation signing in release.yml; Microsoft Store listing | owner applies and registers, Claude wires it |
 | ○ | Linux: Flathub | Claude prepares, owner submits |
