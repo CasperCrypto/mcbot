@@ -1,9 +1,9 @@
 /** Add a ready-made tool: one click, wired to the agent you have selected (or your only agent). */
-import { KeyRound, Plug, Search, Server, X } from "lucide-react";
+import { KeyRound, LogIn, Plug, Search, Server, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
 import type { AgentNode } from "../../contracts/graph";
-import { CATALOG, catalogNode, type CatalogTool } from "../graph/catalog";
+import { CATALOG, CONNECTOR_TOOLS, catalogNode, type CatalogTool } from "../graph/catalog";
 import { newId, newTool } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { useBoard } from "../state/board";
@@ -42,7 +42,7 @@ export function ToolCatalog() {
   };
   const add = (t: CatalogTool) => place((p) => catalogNode(t, taken, p));
   const words = q.trim().toLowerCase();
-  const list = CATALOG.filter((t) => !words || `${t.label} ${t.does} ${t.group}`.toLowerCase().includes(words));
+  const list = [...CATALOG, ...CONNECTOR_TOOLS].filter((t) => !words || `${t.label} ${t.does} ${t.group}`.toLowerCase().includes(words));
   const groups = [...new Set(list.map((t) => t.group))];
 
   return (
@@ -70,6 +70,7 @@ export function ToolCatalog() {
                       <b>{t.label}</b>
                       <span className="faint">{t.does}</span>
                     </span>
+                    {t.oauth && <span className="faint" data-tip="Sign in with your account after adding it"><LogIn size={13} /></span>}
                     {t.key && <span className="faint" data-tip={`${t.key.optional ? "Optional key" : "Needs a key"} from ${t.key.where}`}><KeyRound size={13} /></span>}
                   </button>
                 ))}

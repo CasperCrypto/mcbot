@@ -8,6 +8,7 @@
  * for every agent from the first minute. Their addresses come from CopilotKit OpenBot's app
  * catalogue (MIT, server/src/plugins/catalogue.ts), where they ship keyless.
  */
+import { CONNECTORS } from "../../contracts/connectors.generated";
 import type { GraphNode } from "../../contracts/graph";
 import { newId } from "./defaults";
 
@@ -16,7 +17,7 @@ export interface CatalogTool {
   label: string;
   /** One line: what an agent can do with it. */
   does: string;
-  group: "Web" | "Work apps" | "Thinking" | "Your computer";
+  group: "Web" | "Work apps" | "Thinking" | "Your computer" | "Connectors";
   /** The tool node's name (its `mcp_servers:` key; tools appear as mcp__<name>__*). */
   name: string;
   /** npx arguments for a local server; empty for a remote one. */
@@ -25,6 +26,8 @@ export interface CatalogTool {
   url?: string;
   /** The key it needs, by the variable the server reads (from its README). */
   key?: { env: string; where: string; optional?: boolean };
+  /** Signs in through Hermes (`hermes mcp login <name>`) instead of a key. */
+  oauth?: Record<string, string | number> | true;
 }
 
 export const CATALOG: readonly CatalogTool[] = [
@@ -40,13 +43,25 @@ export const CATALOG: readonly CatalogTool[] = [
   { id: "thinking", label: "Step-by-step thinking", does: "Plans hard problems one step at a time", group: "Thinking", name: "thinking", args: ["-y", "@modelcontextprotocol/server-sequential-thinking"] },
 ];
 
+const ACRONYMS = new Set(["aws", "ai", "api", "crm", "hr", "mcp", "ui"]);
+const titled = (name: string) => name.split(/[-_]/).map((w) => (ACRONYMS.has(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");
+
+/**
+ * Hermes' own vetted connectors (hermes/optional-mcps, generated): hosted MCP servers, most of them
+ * signed in to with the service's own login (OAuth, through Hermes), none needing a key in McBot.
+ */
+export const CONNECTOR_TOOLS: readonly CatalogTool[] = CONNECTORS.map((c) => ({
+  id: `connector-${c.name}`, label: titled(c.name), does: c.does, group: "Connectors", name: c.name, args: [], url: c.url,
+  ...(c.auth === "oauth" ? { oauth: c.oauth ?? true } : {}),
+}));
+
 export function catalogNode(t: CatalogTool, taken: ReadonlySet<string>, position: { x: number; y: number }): GraphNode {
   let name = t.name;
   for (let i = 2; taken.has(name); i++) name = `${t.name}-${i}`;
   return {
     id: newId("tool"), kind: "tool", position,
     data: t.url
-      ? { name, label: t.label, transport: "http", command: "", args: [], env: {}, url: t.url, headers: {} }
+      ? { name, label: t.label, transport: "http", command: "", args: [], env: {}, url: t.url, headers: {}, ...(t.oauth ? { auth: "oauth" as const, ...(t.oauth === true ? {} : { oauth: { ...t.oauth } }) } : {}) }
       : { name, label: t.label, transport: "stdio", command: "npx", args: [...t.args], env: t.key ? { [t.key.env]: `\${env:${t.key.env}}` } : {}, url: "", headers: {} },
   };
 }

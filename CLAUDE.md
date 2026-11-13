@@ -85,7 +85,7 @@ Change them additively; a breaking change bumps the version.
   root (`managedRoot`), never an external `~/.hermes`.
 - MCP tools are `mcp__<server>__<tool>`; calls may arrive wrapped in `tool_call`.
 - An agent's abilities compile to `platform_toolsets.cli` and `.api_server` (unset = Hermes' default:
-  everything but video and the task board); a wired image/video maker compiles to
+  everything but video, X search and the task board; the Inspector can turn all on); a wired image/video maker compiles to
   `image_gen` / `video_gen` and turns its tool set on. Makers are Hermes' own
   provider plugins: McBot only names one and its key variable, so hard rule 4 (two
   chat-model providers, no vendor SDKs in McBot) still holds.
@@ -106,7 +106,17 @@ Change them additively; a breaking change bumps the version.
   and the queue waits for the person. `scripts/mcbot.ts` (`npm run mcbot`) drives the same
   loopback API from a terminal; runs it starts show live in every window.
 - The tool catalog (`src/app/graph/catalog.ts`) also has hosted MCP servers that need no key
-  (Exa, Parallel: `transport: http`, `url` only), so agents can search the web from minute one.
+  (Exa, Parallel: `transport: http`, `url` only), so agents can search the web from minute one,
+  and Hermes' own vetted connectors (`hermes/optional-mcps`, generated: `npm run engine:connectors`
+  → `src/contracts/connectors.generated.ts`; `npm test` fails while it is stale). An OAuth one
+  compiles to `auth: oauth` (+ its pinned `oauth` block) and signs in with `hermes -p <agent> mcp
+  login <name>` (`POST /api/connectors/login`, host only).
+- Hermes' skills: its 44 bundled skills are on for every agent (`builtinSkills`; `false` compiles
+  `.no-bundled-skills`). Its gateway seeds only its own home, so after a compile the engine runs
+  `hermes -p <agent> skills opt-in --sync` once per profile without `skills/.bundled_manifest`
+  (`engine/skills.ts`). The official library (`hermes/optional-skills`) installs per agent with
+  `hermes -p <agent> skills install official/<path> --yes` (host only). Both live in category
+  folders, which the board reader skips: they are Hermes', not blocks.
 - Memory edits: Hermes' `§` format byte for byte, refused while the profile is
   running, and only against the sha256 the editor read.
 - An agent's `dailyBudgetUsd` is McBot-side only (never compiled, no Hermes key): `buildCostReport` compares

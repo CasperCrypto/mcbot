@@ -108,7 +108,6 @@ describe("engine", () => {
     if (!body.ok) return;
     expect(body.report.changes.map((c) => [c.path, c.status])).toEqual([
       [".mcbot/manifest.json", "added"],
-      ["profiles/triage/.no-bundled-skills", "added"],
       ["profiles/triage/SOUL.md", "added"],
       ["profiles/triage/config.yaml", "added"],
       ["profiles/triage/profile.yaml", "added"],

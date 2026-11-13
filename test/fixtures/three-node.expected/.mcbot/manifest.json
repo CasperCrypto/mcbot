@@ -6,11 +6,6 @@
   ],
   "files": [
     {
-      "path": "profiles/triage/.no-bundled-skills",
-      "sha256": "4b119d35f8b55961ffc94e5670b8c91216dfdb2788e46df63405f25bd7e4ff44",
-      "bytes": 168
-    },
-    {
       "path": "profiles/triage/SOUL.md",
       "sha256": "3050031c6be0dc07e8a3bf801fa35609b5ba87045e9ab23b3cafed90b14539b0",
       "bytes": 50

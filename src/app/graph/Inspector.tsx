@@ -1,4 +1,4 @@
-import { ArrowUp, Check, Cloud, HardDrive, MessagesSquare, Plug, Plus, RotateCcw, Send, Square, Trash2, X } from "lucide-react";
+import { ArrowUp, Check, CheckCheck, Cloud, Download, HardDrive, LogIn, MessagesSquare, Plug, Plus, RotateCcw, Search, Send, Square, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { removeNodes, setNodeField, updateEdge } from "../../board/ydoc";
 import type { Issue } from "../../compile";
@@ -8,7 +8,8 @@ import {
 } from "../../contracts/graph";
 import { runAgent } from "../actions";
 import { keyEnvFor } from "../lib/providers";
-import { engine } from "../lib/engine";
+import { REMOTE, engine } from "../lib/engine";
+import type { LibrarySkill } from "../../contracts/api";
 import { duration, tokens as fmtTokens, usd } from "../lib/format";
 import { useBoard } from "../state/board";
 import { latestRunByAgent, useApp } from "../state/store";
@@ -58,7 +59,7 @@ export function Inspector({ node, issues }: { node: GraphNode; issues: Issue[] }
         <div className="inspector-body">
           <Issues issues={issues} />
           {node.kind === "model" && <ModelFields data={node.data} set={set} />}
-          {node.kind === "tool" && <ToolFields data={node.data} set={set} />}
+          {node.kind === "tool" && <ToolFields nodeId={node.id} data={node.data} set={set} />}
           {node.kind === "media" && <MakerFields data={node.data} set={set} />}
           {node.kind === "channel" && <ChannelFields data={node.data} set={set} />}
         </div>
@@ -79,7 +80,7 @@ function AgentPanel({ node, set, issues }: { node: Extract<GraphNode, { kind: "a
       <div className="inspector-body">
         <Issues issues={issues} />
         {tab === "setup" && <AgentSetup node={node} set={set} />}
-        {tab === "skills" && <Skills data={node.data} set={set} />}
+        {tab === "skills" && <><Skills data={node.data} set={set} />{!REMOTE && <SkillLibrary data={node.data} set={set} />}</>}
         {tab === "run" && <RunBox agentNodeId={node.id} profile={node.data.name} />}
       </div>
     </>
@@ -167,7 +168,10 @@ function Abilities({ data, set, forced }: { data: AgentData; set: (f: string, v:
     <div className="stack" data-testid="abilities">
       <div className="row">
         <span className="section-label grow">Abilities</span>
-        {data.capabilities !== null && (
+        {on.size < CAPABILITIES.length && (
+          <button className="icon-btn sm" aria-label="Turn all on" data-tip="Turn all on" data-tip-side="top" data-testid="abilities-all" onClick={() => set("capabilities", CAPABILITIES.map((c) => c.key))}><CheckCheck size={13} /></button>
+        )}
+        {data.capabilities != null && (
           <button className="icon-btn sm" aria-label="Back to defaults" data-tip="Back to defaults" data-tip-side="top" onClick={() => set("capabilities", null)}><RotateCcw size={12} /></button>
         )}
       </div>
@@ -276,6 +280,66 @@ function Skills({ data, set }: { data: AgentData; set: (f: string, v: unknown) =
       ))}
       <button className="btn" onClick={add}><Plus size={14} /> Add skill</button>
     </>
+  );
+}
+
+/**
+ * Hermes' own skills for this agent: its bundled set (seeded after a compile unless turned off)
+ * and the official library, installed into the compiled agent with `hermes skills install`.
+ */
+function SkillLibrary({ data, set }: { data: AgentData; set: (f: string, v: unknown) => void }) {
+  const [library, setLibrary] = useState<LibrarySkill[]>([]);
+  const [installed, setInstalled] = useState<Set<string>>(new Set());
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const builtin = data.builtinSkills !== false;
+  useEffect(() => {
+    let live = true;
+    engine.skills(data.name).then((v) => { if (live) { setLibrary(v.library); setInstalled(new Set(v.installed)); } }).catch(() => undefined);
+    return () => { live = false; };
+  }, [data.name]);
+  const install = async (s: LibrarySkill) => {
+    setBusy(s.id);
+    try {
+      const r = await engine.installSkill(data.name, s.id);
+      setInstalled(new Set(r.installed));
+      useApp.getState().toast({ kind: "ok", text: `${s.name} installed for ${data.displayName || data.name}` });
+    } catch (e) {
+      useApp.getState().toast({ kind: "fail", text: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(null);
+    }
+  };
+  const words = q.trim().toLowerCase();
+  const shown = library.filter((s) => !words || `${s.name} ${s.category} ${s.description} ${s.tags.join(" ")}`.toLowerCase().includes(words)).slice(0, words ? 40 : 12);
+  return (
+    <div className="stack" style={{ gap: 8 }} data-testid="skill-library">
+      <span className="section-label">Hermes skills</span>
+      <div className="abilities">
+        <button type="button" className="ability" aria-pressed={builtin} onClick={() => set("builtinSkills", builtin ? false : null)} data-testid="builtin-skills"
+          data-tip="Hermes' 44 bundled skills, added when you compile" data-tip-side="top">
+          {builtin && <Check size={11} strokeWidth={2.6} />}Built-in skills
+        </button>
+      </div>
+      {library.length > 0 && (
+        <>
+          <label className="catalog-search"><Search size={13} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${library.length} more`} aria-label="Search Hermes skills" data-testid="skill-search" /></label>
+          <div className="chain">
+            {shown.map((s) => {
+              const has = installed.has(s.name);
+              return (
+                <div key={s.id} className="chain-item" data-tip={s.description} data-tip-side="left">
+                  <span className="grow ellipsis">{s.name}</span>
+                  <span className="chip">{s.category}</span>
+                  {has ? <Check size={13} className="faint" aria-label="Installed" />
+                    : <button className="icon-btn sm" aria-label={`Install ${s.name}`} disabled={busy !== null} onClick={() => void install(s)} data-testid={`install-${s.name}`}><Download size={13} /></button>}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -403,8 +467,19 @@ const parsePairs = (text: string, sep: "=" | ":") =>
     return i < 0 ? [l, ""] : [l.slice(0, i).trim(), l.slice(i + 1).trim()];
   }).filter(([k]) => k));
 
-function ToolFields({ data, set }: { data: ToolData; set: (f: string, v: unknown) => void }) {
+function ToolFields({ nodeId, data, set }: { nodeId: string; data: ToolData; set: (f: string, v: unknown) => void }) {
   const errors = fieldErrors(ToolDataSchema, data);
+  const { graph } = useBoard();
+  const agents = graph.edges.flatMap((e) => (e.source === nodeId ? [e.target] : e.target === nodeId ? [e.source] : []))
+    .map((id) => graph.nodes.find((n) => n.id === id)).filter((n): n is Extract<GraphNode, { kind: "agent" }> => n?.kind === "agent");
+  const signIn = async (profile: string) => {
+    try {
+      await engine.signIn(profile, data.name);
+      useApp.getState().toast({ kind: "ok", text: "Finish signing in in your browser" });
+    } catch (e) {
+      useApp.getState().toast({ kind: "fail", text: e instanceof Error ? e.message : String(e) });
+    }
+  };
   // Keys it reads as ${env:NAME}: saved in McBot, written to the agent's .env before each run.
   const keys = [...new Set([...Object.values(data.env), ...Object.values(data.headers)].flatMap((v) => [...v.matchAll(/\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g)].map((m) => m[1]!)))];
   return (
@@ -421,6 +496,17 @@ function ToolFields({ data, set }: { data: ToolData; set: (f: string, v: unknown
       ) : (
         <>
           <Field label="URL" value={data.url} onChange={(v) => set("url", v)} mono />
+          {data.auth === "oauth" && !REMOTE && (
+            <div className="stack" style={{ gap: 6 }} data-testid="tool-signin">
+              <span className="section-label">Sign in</span>
+              {agents.length === 0 ? <span className="faint">Connect it to an agent, then compile.</span>
+                : agents.map((a) => (
+                  <button key={a.id} className="btn" onClick={() => void signIn(a.data.name)} data-tip="Opens your browser to sign in for this agent" data-tip-side="top">
+                    <LogIn size={14} /> {agents.length > 1 ? `Sign in for ${a.data.displayName || a.data.name}` : "Sign in"}
+                  </button>
+                ))}
+            </div>
+          )}
           <TextListField label="Headers" value={Object.entries(data.headers).map(([k, v]) => `${k}: ${v}`).join("\n")} onCommit={(t) => set("headers", parsePairs(t, ":"))} rows={2} placeholder="Authorization: Bearer ${env:TOKEN}" />
         </>
       )}

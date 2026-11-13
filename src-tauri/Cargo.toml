@@ -1,6 +1,6 @@
 [package]
 name = "mcbot"
-version = "0.4.1"
+version = "0.4.2"
 description = "McBot — draw a harness of AI agents and compile it into a runnable Hermes Agent setup"
 license = "MIT"
 edition = "2021"

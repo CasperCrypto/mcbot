@@ -50,6 +50,14 @@ describe("renderConfig", () => {
 });
 
 describe("mcpServerEntry", () => {
+  it("marks an OAuth connector the way Hermes' own catalog does", () => {
+    const t = ToolDataSchema.parse({ name: "notion", transport: "http", url: "https://mcp.notion.com/mcp", auth: "oauth" });
+    expect(mcpServerEntry(t)).toEqual({ url: "https://mcp.notion.com/mcp", auth: "oauth" });
+    const pinned = ToolDataSchema.parse({ name: "x", transport: "http", url: "https://x/mcp", auth: "oauth", oauth: { scope: "read", client_id: "abc" } });
+    expect(Object.keys(mcpServerEntry(pinned).oauth as object)).toEqual(["client_id", "scope"]);
+    expect(mcpServerEntry(ToolDataSchema.parse({ name: "y", transport: "http", url: "https://y/mcp" }))).toEqual({ url: "https://y/mcp" });
+  });
+
   it("emits url + sorted headers for http servers and drops stdio fields", () => {
     const t = ToolDataSchema.parse({ name: "s", transport: "http", url: "https://x/mcp", command: "ignored", headers: { b: "2", a: "1" } });
     expect(mcpServerEntry(t)).toEqual({ url: "https://x/mcp", headers: { a: "1", b: "2" } });

@@ -55,7 +55,7 @@ uniqueness, reserved names, cloud models need a key env var) are in
 <root>/                               a Hermes home: agents run as HERMES_HOME=<root> hermes -p <agent>
   .mcbot/manifest.json                every file McBot owns, with sha256 and size
   profiles/<agent>/
-    SOUL.md  config.yaml  profile.yaml  .no-bundled-skills
+    SOUL.md  config.yaml  profile.yaml  [.no-bundled-skills: only when built-in skills are off]
     skills/<skill>/SKILL.md
     memories/ sessions/ skills/ skins/ logs/ plans/ workspace/ cron/ home/
 ```
