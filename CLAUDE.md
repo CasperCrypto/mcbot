@@ -200,6 +200,13 @@ Change them additively; a breaking change bumps the version.
   Colour means identity (agents, node kinds) or state (running, ok, failed).
   macOS system colours, flat: the accent is system blue; no gradients, glows or
   gradient text (the website follows the same rule).
+- **Glass and springs** (`src/app/styles/glass.css`, loaded last): whatever floats over content
+  (sheets, menus, tooltips, the dock, board blocks, the inspector, the chat header and composer)
+  is a material — `--mat-*` fill, `--mat-blur`, a hairline edge and specular top line
+  (`--mat-edge`) — never a gradient; content surfaces stay solid. Motion uses `--spring-snappy`
+  (controls), `--spring-bouncy` (things that arrive) and `--spring-smooth` (things that move):
+  real springs via CSS `linear()` where supported, cubic fallbacks in tokens.css. The rail's
+  selection and segmented controls' thumbs slide. Reduced motion turns it all off.
 - **Less text.** No explanatory paragraphs in the UI. Labels are short; detail
   lives in tooltips (`data-tip`). Empty states are one line plus one action.
 - **Settings** (`views/SettingsView.tsx`, ⌘, and the gear in the rail): models (local servers
@@ -233,8 +240,11 @@ Change them additively; a breaking change bumps the version.
   returns a non-function crashes React on cleanup.
 - **Dynamic island** (`src/app/shell/Island.tsx`): always in the middle of the title bar. At rest a
   slim pill; it grows (spring, `--ease-island`) into the most important thing now: an approval
-  (answer inline), agents at work, a compile, a new team message, a notice. Click: everything at
-  once plus quick actions. One height (30px) for every title-bar control.
+  (answer inline), agents at work, a compile, a new team message, a notice. It opens into
+  everything at once plus quick actions as the pointer heads for it — its path is projected
+  ~140 ms ahead, a fast sweep across the title bar does not count — leans in when the pointer is
+  close, and closes once the pointer moves away; click or Enter pins it open until Esc or a click
+  outside. One height (30px) for every title-bar control.
 - Views live behind an error boundary; a broken view must not blank the window.
 - **Links out of the app** go through `openExternal` (`src/app/lib/open.ts`): the
   Tauri opener plugin, https only. A plain `target="_blank"` link does nothing

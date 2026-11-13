@@ -21,6 +21,8 @@ import { REMOTE } from "../lib/engine";
 
 const DAY = 86_400_000;
 
+const greeting = (h = new Date().getHours()) => (h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
+
 /** What a running agent is doing right now, from its live events. */
 function stepOf(events: RunEvent[] | undefined): string {
   const open = new Map<string, number>();
@@ -365,6 +367,10 @@ export function HomeView() {
     <section className="main flush-left">
       <div className="scroll-page home" data-testid="home">
         <div className="home-inner">
+          <header className="home-hello" data-testid="home-hello">
+            <h1>{greeting()}, {identity.name.split(" ")[0]}</h1>
+            <span>{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}{live.length ? ` · ${live.length} at work` : ""}</span>
+          </header>
           {agents.length === 0 ? (
             // An empty board: the first thing to do is the only thing shown big.
             <section className="card home-start" data-testid="home-start">

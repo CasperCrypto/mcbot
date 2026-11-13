@@ -1,6 +1,6 @@
 import { Blobatar } from "@blobatar/react";
 import { CircleAlert } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { RunStatus } from "../contracts/run";
 import { FoodFace } from "./faces/FoodFace";
 
@@ -75,9 +75,34 @@ export function TextListField(props: { label: string; value: string; onCommit: (
   );
 }
 
+/** iOS-style segmented control: a glass thumb slides (spring) to the chosen option. */
 export function Segmented<T extends string>({ value, options, onChange }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [thumb, setThumb] = useState<{ x: number; w: number } | null>(null);
+  const [ready, setReady] = useState(false);
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const place = () => {
+      const on = el.querySelector<HTMLButtonElement>('button[aria-pressed="true"]');
+      setThumb(on ? { x: on.offsetLeft, w: on.offsetWidth } : null);
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [value, options.length]);
+  // The first placement is instant; after that it slides.
+  useEffect(() => {
+    if (thumb && !ready) {
+      const t = requestAnimationFrame(() => setReady(true));
+      return () => cancelAnimationFrame(t);
+    }
+    return undefined;
+  }, [thumb, ready]);
   return (
-    <div className="segmented" role="group">
+    <div ref={box} className={`segmented${thumb ? " has-thumb" : ""}`} role="group">
+      {thumb && <span className="segmented-thumb" aria-hidden style={{ width: thumb.w, transform: `translateX(${thumb.x}px)`, transition: ready ? undefined : "none" }} />}
       {options.map((o) => (
         <button key={o.value} type="button" aria-pressed={o.value === value} onClick={() => onChange(o.value)}>{o.label}</button>
       ))}

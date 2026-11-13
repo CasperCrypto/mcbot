@@ -1,0 +1,242 @@
+/*
+ * Materials and motion: the last layer (loaded after premium.css).
+ *
+ * Glass is for what floats over content — sheets, menus, tooltips, the dock, the inspector, the
+ * chat header and composer — never for content itself. It is a material (translucent fill, strong
+ * blur, a hairline edge and a specular top line), not a gradient or a glow. Motion is springs:
+ * snappy for controls, bouncy for things that arrive, smooth for things that move.
+ */
+
+/* Real springs where linear() exists (Safari 17.2+, Chromium 113+); the cubic fallbacks are in tokens.css. */
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --spring-snappy: linear(0, 0.041, 0.139, 0.262, 0.39, 0.513, 0.622, 0.715, 0.792, 0.853, 0.9, 0.935, 0.961, 0.979, 0.992, 1, 1.004, 1.007, 1.008, 1.008, 1.007, 1.006, 1.005, 1.004, 1.003, 1.002, 1);
+    --spring-bouncy: linear(0, 0.049, 0.165, 0.313, 0.467, 0.611, 0.736, 0.837, 0.915, 0.972, 1.009, 1.032, 1.043, 1.046, 1.044, 1.038, 1.032, 1.025, 1.018, 1.012, 1.007, 1.004, 1.001, 1, 0.999, 0.998, 1);
+    --spring-smooth: linear(0, 0.04, 0.131, 0.243, 0.358, 0.466, 0.562, 0.645, 0.715, 0.774, 0.821, 0.859, 0.89, 0.914, 0.934, 0.949, 0.96, 0.97, 0.977, 0.982, 0.986, 0.99, 0.992, 0.994, 0.995, 0.997, 1);
+    --ease-island: var(--spring-bouncy);
+    --ease-out-spring: var(--spring-snappy);
+  }
+}
+
+/* ---------- the window ---------- */
+.main { box-shadow: var(--shadow-1), inset 0 1px 0 rgba(255, 255, 255, 0.035); animation: view-in var(--t-spring) var(--spring-smooth) both; transform-origin: 50% 0; }
+@keyframes view-in { from { opacity: 0; transform: translateY(10px) scale(0.994); filter: blur(6px); } 60% { filter: none; } to { opacity: 1; transform: none; filter: none; } }
+.page-enter { animation: view-in var(--t-spring) var(--spring-smooth) both; }
+
+/* Title-bar controls: ultrathin glass pills that brighten under the pointer. */
+.search-pill, button.presence, .titlebar .btn:not(.primary) {
+  background: var(--mat-ultrathin); border-color: transparent; box-shadow: var(--mat-edge);
+  transition: background var(--t-fast) var(--ease), box-shadow var(--t-fast), transform var(--t) var(--spring-snappy);
+}
+.search-pill:hover, button.presence:hover, .titlebar .btn:not(.primary):hover { background: var(--mat-thin); box-shadow: var(--mat-edge-strong); border-color: transparent; }
+.search-pill:active, button.presence:active { transform: scale(0.97); }
+.board-btn { transition: background var(--t-fast) var(--ease), transform var(--t) var(--spring-snappy); }
+.board-btn:active { transform: scale(0.97); }
+
+/* ---------- rail: one selection that slides between views ---------- */
+.rail { position: relative; }
+.rail-indicator {
+  position: absolute; left: 50%; width: 38px; height: 38px; margin-left: -19px; top: 0; border-radius: var(--r-md); pointer-events: none;
+  background: var(--mat-select); box-shadow: var(--mat-edge);
+  transition: transform var(--t-spring) var(--spring-bouncy), opacity var(--t-fast);
+}
+.rail.has-indicator .rail-btn[aria-current="page"] { background: transparent; box-shadow: none; animation: none; }
+.rail-btn { z-index: 1; transition: background var(--t) var(--ease), color var(--t-fast), transform var(--t-spring) var(--spring-snappy); }
+.rail-btn:hover { background: var(--mat-hover); }
+.rail-btn:active { transform: scale(0.88); }
+.rail-btn svg { transition: transform var(--t-spring) var(--spring-bouncy); }
+.rail-btn[aria-current="page"] svg { transform: scale(1.06); }
+
+/* ---------- sidebars ---------- */
+.list-row { transition: background var(--t-fast) var(--ease), box-shadow var(--t-fast), transform var(--t-spring) var(--spring-snappy); }
+.list-row:hover { background: var(--mat-hover); }
+.list-row:active { transform: scale(0.985); }
+.list-row[aria-selected="true"], .list-row[aria-current="true"] { background: var(--mat-select); box-shadow: var(--mat-edge); }
+.sidebar-search { background: var(--mat-ultrathin); border-color: transparent; box-shadow: var(--mat-edge); }
+
+/* ---------- segmented controls: a glass thumb that slides (ui.tsx Segmented) ---------- */
+.segmented { position: relative; background: rgba(0, 0, 0, 0.28); border-color: transparent; box-shadow: inset 0 0 0 0.5px var(--line-2); isolation: isolate; }
+.segmented-thumb {
+  position: absolute; top: 3px; bottom: 3px; left: 0; border-radius: 7px; z-index: -1; pointer-events: none;
+  background: rgba(255, 255, 255, 0.13); box-shadow: var(--mat-edge-strong), 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: transform var(--t-spring) var(--spring-snappy), width var(--t-spring) var(--spring-snappy);
+}
+.segmented.has-thumb button[aria-pressed="true"] { background: transparent; box-shadow: none; }
+.segmented button { position: relative; transition: color var(--t) var(--ease), transform var(--t) var(--spring-snappy); }
+.segmented button:active { transform: scale(0.96); }
+.segmented button[aria-pressed="true"] { color: var(--text); }
+.seg-float { background: var(--mat-thin); backdrop-filter: var(--mat-blur); -webkit-backdrop-filter: var(--mat-blur); border-color: transparent; box-shadow: var(--shadow-2), var(--mat-edge); }
+.seg-float button[aria-selected="true"] { background: rgba(255, 255, 255, 0.13); box-shadow: var(--mat-edge-strong), 0 1px 3px rgba(0, 0, 0, 0.3); }
+.seg-float button { transition: background var(--t-spring) var(--spring-snappy), color var(--t-fast), box-shadow var(--t); }
+
+/* ---------- buttons ---------- */
+.btn { background: rgba(255, 255, 255, 0.075); border-color: transparent; box-shadow: var(--mat-edge); }
+.btn:hover { background: rgba(255, 255, 255, 0.12); border-color: transparent; }
+.btn:active { transform: scale(0.955); background: var(--mat-press); }
+.btn.primary { background: var(--accent); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(10, 132, 255, 0.22), inset 0 0.5px 0 rgba(255, 255, 255, 0.3); }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.ghost { background: transparent; box-shadow: none; }
+.btn.ghost:hover { background: var(--mat-hover); }
+.btn.light { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
+.icon-btn:hover { background: var(--mat-hover); }
+.icon-btn:active { background: var(--mat-press); }
+
+/* ---------- fields ---------- */
+.field input, .field textarea, .field select { background: rgba(0, 0, 0, 0.26); border-color: transparent; box-shadow: inset 0 0 0 0.5px var(--line-2); transition: box-shadow var(--t) var(--ease), background var(--t-fast); }
+.field input:hover, .field textarea:hover { border-color: transparent; box-shadow: inset 0 0 0 0.5px var(--line-3); }
+.field input:focus, .field textarea:focus, .field select:focus { border-color: transparent; background: rgba(0, 0, 0, 0.34); box-shadow: inset 0 0 0 0.5px var(--line-3), 0 0 0 3.5px rgba(255, 255, 255, 0.055); }
+
+/* ---------- cards ---------- */
+.card { border-color: transparent; box-shadow: var(--mat-edge), var(--shadow-1); }
+.home-row-main, .catalog-card, .team-card, .task-card, .agent-pick, .choice, .provider-pick, .model-pick { transition: background var(--t-fast) var(--ease), box-shadow var(--t) var(--ease), transform var(--t-spring) var(--spring-snappy), border-color var(--t-fast); }
+.catalog-card:hover, .team-card:hover, .task-card:hover, .choice:hover { transform: translateY(-2px); box-shadow: var(--mat-edge-strong), var(--shadow-2); }
+.catalog-card:active, .team-card:active, .task-card:active, .choice:active, .agent-pick:active, .provider-pick:active, .model-pick:active, .home-row-main:active { transform: scale(0.98); }
+
+/* ---------- glass that floats over content ---------- */
+.palette, .team-panel {
+  background: var(--mat-regular); backdrop-filter: var(--mat-blur-strong); -webkit-backdrop-filter: var(--mat-blur-strong);
+  border-color: transparent; box-shadow: var(--shadow-3), var(--mat-edge-strong);
+  animation: sheet-in var(--t-spring) var(--spring-bouncy) both;
+}
+@keyframes sheet-in { from { opacity: 0; transform: translateY(14px) scale(0.965); filter: blur(8px); } 45% { opacity: 1; filter: none; } to { opacity: 1; transform: none; filter: none; } }
+.team-panel { background: var(--mat-thick); transform-origin: 100% 0; animation-name: panel-in; }
+@keyframes panel-in { from { opacity: 0; transform: translateX(18px) scale(0.98); filter: blur(6px); } 45% { opacity: 1; filter: none; } to { opacity: 1; transform: none; filter: none; } }
+.palette-scrim { background: var(--scrim); backdrop-filter: blur(10px) saturate(130%); -webkit-backdrop-filter: blur(10px) saturate(130%); animation: fade-in var(--t) var(--ease) both; }
+.palette-row { transition: background var(--t-fast) var(--ease); }
+.palette-row[aria-selected="true"] { background: var(--mat-select); box-shadow: var(--mat-edge); }
+.palette-row .tile { background: rgba(255, 255, 255, 0.09); box-shadow: var(--mat-edge); }
+.hermes-mark { background: rgba(255, 255, 255, 0.1); box-shadow: var(--mat-edge-strong); }
+
+.menu {
+  background: var(--mat-regular); backdrop-filter: var(--mat-blur-strong); -webkit-backdrop-filter: var(--mat-blur-strong);
+  border-color: transparent; box-shadow: var(--shadow-3), var(--mat-edge-strong); transform-origin: 0 0;
+  animation: menu-in var(--t) var(--spring-snappy) both;
+}
+@keyframes menu-in { from { opacity: 0; transform: scale(0.94) translateY(-4px); } to { opacity: 1; transform: none; } }
+.menu button { transition: background var(--t-fast); }
+
+/* Tooltips: thin glass, a small spring. */
+[data-tip]:hover::after {
+  background: var(--mat-thick); backdrop-filter: var(--mat-blur); -webkit-backdrop-filter: var(--mat-blur);
+  border-color: transparent; box-shadow: var(--shadow-2), var(--mat-edge-strong); border-radius: 8px;
+  animation: tip-in var(--t) var(--spring-snappy) both; animation-delay: 220ms;
+}
+@keyframes tip-in { from { opacity: 0; scale: 0.92; } to { opacity: 1; scale: 1; } }
+
+/* The board's dock, zoom buttons and side panels float over the canvas. */
+.dock {
+  background: var(--mat-thin); backdrop-filter: var(--mat-blur-strong); -webkit-backdrop-filter: var(--mat-blur-strong);
+  border: 0; box-shadow: var(--shadow-3), var(--mat-edge-strong); border-radius: 24px;
+}
+.dock-item { transition: transform var(--t-spring) var(--spring-bouncy); }
+.dock-item:hover { transform: translateY(-6px) scale(1.16); }
+.dock-item:active { transform: translateY(-3px) scale(1.05); transition-duration: var(--t-fast); }
+.dock-item:hover + .dock-item, .dock-item:has(+ .dock-item:hover) { transform: translateY(-2px) scale(1.06); }
+.dock-item .label { background: var(--mat-thick); backdrop-filter: var(--mat-blur); -webkit-backdrop-filter: var(--mat-blur); border: 0; box-shadow: var(--shadow-2), var(--mat-edge-strong); transform: translateY(4px); transition: opacity var(--t-fast), transform var(--t) var(--spring-snappy); }
+.dock-item:hover .label { transform: none; }
+.react-flow__controls { background: var(--mat-thin); backdrop-filter: var(--mat-blur); -webkit-backdrop-filter: var(--mat-blur); border-color: transparent; box-shadow: var(--shadow-2), var(--mat-edge); }
+.inspector, .inspector.glass, .side-panel, .side-panel.glass, .sheet.glass {
+  background: var(--mat-thick); backdrop-filter: var(--mat-blur-strong); -webkit-backdrop-filter: var(--mat-blur-strong);
+  border-color: transparent; box-shadow: var(--shadow-3), var(--mat-edge-strong);
+  animation: panel-in var(--t-spring) var(--spring-bouncy) both; transform-origin: 100% 50%;
+}
+
+/* ---------- chat: the thread scrolls under a glass header and a floating glass composer ---------- */
+.thread { display: block; }
+.thread-head {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 3;
+  background: var(--mat-chrome); backdrop-filter: var(--mat-blur); -webkit-backdrop-filter: var(--mat-blur);
+  border-bottom: var(--hairline) solid var(--line);
+}
+.thread-scroll { position: absolute; inset: 0; padding-top: 86px; padding-bottom: 132px; scroll-padding-bottom: 132px; }
+.composer-wrap { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; pointer-events: none; }
+.composer-wrap > * { pointer-events: auto; }
+.composer, .composer:focus-within {
+  background: var(--mat-regular); backdrop-filter: var(--mat-blur-strong); -webkit-backdrop-filter: var(--mat-blur-strong);
+  border-color: transparent; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.32), var(--mat-edge-strong);
+  transition: box-shadow var(--t) var(--ease), transform var(--t-spring) var(--spring-snappy);
+}
+.composer:focus-within { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 18px 46px rgba(0, 0, 0, 0.38), inset 0 0 0 0.5px rgba(255, 255, 255, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.14); }
+.msg { animation: msg-in var(--t-spring) var(--spring-bouncy) both; }
+.msg.user { transform-origin: 100% 100%; }
+.msg.agent { transform-origin: 0 100%; }
+@keyframes msg-in { from { opacity: 0; transform: translateY(10px) scale(0.97); } to { opacity: 1; transform: none; } }
+.send { transition: transform var(--t-spring) var(--spring-bouncy), background var(--t-fast), opacity var(--t-fast); }
+.send:not(:disabled):hover { transform: scale(1.06); }
+.send:not(:disabled):active { transform: scale(0.9); }
+
+/* ---------- the dynamic island ---------- */
+.island {
+  background: var(--island-bg);
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.07), 0 6px 20px rgba(0, 0, 0, 0.45);
+  transition:
+    width var(--t-spring-long) var(--ease-island), height var(--t-spring-long) var(--ease-island),
+    border-radius var(--t-spring-long) var(--ease-island), box-shadow var(--t) var(--ease), transform var(--t-spring) var(--spring-snappy);
+  will-change: width, height;
+}
+/* The pointer is close: the pill leans in a little, before it opens. */
+.island.near:not(.open) { transform: scale(1.06); box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.14), 0 10px 30px rgba(0, 0, 0, 0.55); }
+.island.open { border-radius: 28px; box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.1), 0 2px 8px rgba(0, 0, 0, 0.4), 0 30px 80px rgba(0, 0, 0, 0.6); }
+.island:not(.open):hover { box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.14), 0 10px 30px rgba(0, 0, 0, 0.55); }
+/* Content appears while the shape is still growing, as on the phone: fade and focus, no pop. */
+.island-inner { animation: island-content 360ms var(--spring-smooth) both; }
+.island.open .island-inner { animation-delay: 60ms; }
+@keyframes island-content { from { opacity: 0; filter: blur(8px); transform: scale(0.94) translateY(-3px); } to { opacity: 1; filter: none; transform: none; } }
+.island-panel > * { animation: island-row 420ms var(--spring-smooth) both; }
+.island-panel > :nth-child(2) { animation-delay: 40ms; }
+.island-panel > :nth-child(3) { animation-delay: 80ms; }
+.island-panel > :nth-child(4) { animation-delay: 110ms; }
+@keyframes island-row { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.island-sec { background: rgba(255, 255, 255, 0.075); box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.06); }
+.island-quick button { background: rgba(255, 255, 255, 0.075); box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.06); transition: background var(--t-fast), transform var(--t-spring) var(--spring-bouncy); }
+.island-quick button:hover { background: rgba(255, 255, 255, 0.14); transform: translateY(-1px); }
+.island-quick button:active { transform: scale(0.93); }
+.island .pill { transition: background var(--t-fast), transform var(--t-spring) var(--spring-bouncy); }
+
+/* ---------- small things ---------- */
+.chip { transition: background var(--t-fast), color var(--t-fast); }
+.kbd { background: rgba(255, 255, 255, 0.07); border-color: transparent; box-shadow: var(--mat-edge); }
+.sticky-add, .sticky { transition: transform var(--t-spring) var(--spring-snappy), box-shadow var(--t); }
+.start-mark { transition: background var(--t) var(--ease), border-color var(--t), transform var(--t-spring) var(--spring-bouncy); }
+.start-steps li[data-done] .start-mark { animation: tick-in var(--t-spring) var(--spring-bouncy) both; }
+@keyframes tick-in { from { transform: scale(0.6); } to { transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .island, .rail-indicator, .segmented-thumb { transition-duration: 1ms !important; }
+}
+/* Where backdrop blur is missing, glass falls back to a solid surface, so text stays readable. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .palette, .menu, .team-panel, .inspector, .side-panel, .dock, .composer, .thread-head, .seg-float { background: var(--bg-raised); }
+}
+
+/* ---------- the board: glass blocks over the canvas ---------- */
+.node {
+  background: rgba(38, 38, 42, 0.66); backdrop-filter: blur(18px) saturate(170%); -webkit-backdrop-filter: blur(18px) saturate(170%);
+  border-color: transparent; box-shadow: var(--shadow-2), var(--mat-edge-strong);
+  transition: box-shadow var(--t) var(--ease), transform var(--t-spring) var(--spring-bouncy);
+}
+.react-flow__node:hover .node { border-color: transparent; box-shadow: var(--shadow-2), inset 0 0 0 0.5px rgba(255, 255, 255, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.14); }
+.react-flow__node.selected .node { border-color: transparent; box-shadow: 0 0 0 1.5px var(--accent-line), 0 0 0 5px var(--accent-soft), var(--shadow-2), var(--mat-edge-strong); }
+/* Picked up: it lifts, like an icon on the home screen. */
+.react-flow__node.dragging .node { transform: scale(1.035); box-shadow: var(--shadow-3), var(--mat-edge-strong); }
+.node.running { box-shadow: 0 0 0 1.5px var(--run), 0 0 0 5px var(--run-soft), var(--shadow-2), var(--mat-edge); }
+.node.has-error { box-shadow: 0 0 0 1px rgba(255, 69, 58, 0.55), var(--shadow-2), var(--mat-edge); }
+.react-flow__node { transition: opacity var(--t) var(--ease); }
+/* Kind tiles: glossy like app icons (a specular top line, a soft contact shadow). */
+.tile { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 0 0 0.5px rgba(255, 255, 255, 0.16), 0 1px 2px rgba(0, 0, 0, 0.3); }
+.tile.file { box-shadow: var(--mat-edge); }
+.react-flow__handle { transition: opacity var(--t-fast), border-color var(--t-fast), transform var(--t) var(--spring-bouncy); }
+.react-flow__handle:hover { transform: scale(1.4); }
+
+/* ---------- Home: a large title, as in iOS ---------- */
+.home-hello { display: grid; gap: 2px; padding: 4px 4px 2px; animation: view-in var(--t-spring-long) var(--spring-smooth) both; }
+.home-hello h1 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.1; }
+.home-hello span { color: var(--text-3); font-size: 13.5px; font-weight: 500; }
+
+/* A bare input (the inspector's budget) looks like every other field. */
+input.input { height: 30px; width: 120px; padding: 0 10px; border: 0; border-radius: var(--r-sm); background: rgba(0, 0, 0, 0.26); box-shadow: inset 0 0 0 0.5px var(--line-2); color: var(--text); outline: none; user-select: text; transition: box-shadow var(--t) var(--ease); }
+input.input:focus { box-shadow: inset 0 0 0 0.5px var(--line-3), 0 0 0 3.5px rgba(255, 255, 255, 0.055); }
+input.input::placeholder { color: var(--text-4); }
+/* A field and its button share a line, even when a note or an error sits under the field. */
+.key-entry, .setup-key { align-items: start; }
+.key-entry:has(> .field > span:first-child:not(.note):not(.error)) > .btn, .setup-key:has(> .field > span:first-child:not(.note):not(.error)) > .btn { margin-top: 23px; }
