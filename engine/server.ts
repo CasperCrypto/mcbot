@@ -40,7 +40,7 @@ import { OwnershipError, readManifest, writeCompileResult } from "./writer";
 import { Sharing, guestAllowed, joinPage, type SharingView } from "./sharing";
 import { frameable } from "./web";
 
-export const ENGINE_VERSION = "0.3.0";
+export const ENGINE_VERSION = "0.4.0";
 
 export interface EngineConfig {
   workspace: string;
