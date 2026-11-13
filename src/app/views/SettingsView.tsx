@@ -13,7 +13,7 @@ import { compileBoard } from "../actions";
 import { newId, uniqueName } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { DEMO, engine, REMOTE } from "../lib/engine";
-import { PEER_COLORS } from "../lib/identity";
+import { PEER_COLORS, nameChosen } from "../lib/identity";
 import { agentsOf, attachModel, chainOf, modelsOf, promoteModel, usersOf, type ModelHealth } from "../lib/models";
 import { useModelHealth } from "../lib/useModelHealth";
 import { openExternal } from "../lib/open";
@@ -411,13 +411,14 @@ function KeysSection() {
 function YouSection() {
   const identity = useApp((s) => s.identity);
   const setIdentity = useApp((s) => s.setIdentity);
-  const [name, setName] = useState(identity.name);
+  const chosen = nameChosen(identity);
+  const [name, setName] = useState(chosen ? identity.name : "");
   return (
     <Card title="You" sub="How teammates see you on shared boards and in team chat." testId="settings-you">
       <div className="row" style={{ gap: 14, alignItems: "flex-end" }}>
         <PersonFace name={name || identity.name} color={identity.color} size={44} />
-        <div className="grow"><Field label="Your name" value={name} onChange={setName} testId="settings-name" /></div>
-        <button className="btn primary" disabled={!name.trim() || name.trim() === identity.name} onClick={() => setIdentity({ ...identity, name: name.trim().slice(0, 64) })}>Save</button>
+        <div className="grow"><Field label="Your name" value={name} onChange={setName} placeholder={identity.name} testId="settings-name" /></div>
+        <button className="btn primary" disabled={!name.trim() || (chosen && name.trim() === identity.name)} onClick={() => setIdentity({ ...identity, name: name.trim().slice(0, 64), chosen: true })}>Save</button>
       </div>
       <div className="field" style={{ marginTop: 12 }}><span>Colour</span>
         <div className="row" style={{ gap: 8 }}>
@@ -493,7 +494,7 @@ function AboutSection() {
     <>
       <Card title="Start over" sub="Answer a few questions and get a ready team on a new board." testId="settings-setup">
         <div className="settings-row"><span className="grow">Your boards stay as they are.</span>
-          <button className="btn sm primary" onClick={() => app.setSetup({ completed: false, profile: null })} data-testid="settings-rerun-setup"><Sparkles size={12} /> Run setup again</button></div>
+          <button className="btn sm primary" onClick={() => app.setSetup({ completed: false, profile: app.setup?.profile ?? null })} data-testid="settings-rerun-setup"><Sparkles size={12} /> Run setup again</button></div>
       </Card>
       <Card title="About McBot" sub={`Version ${health?.version ?? "…"} · free and open source (MIT)`}>
         <div className="settings-row"><span className="grow">Something not working?</span>

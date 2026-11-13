@@ -12,8 +12,9 @@ import { AgentFace, PersonFace, clock, useNow } from "../ui";
  *
  * At rest it is a slim pill (a status dot). When something happens it grows, with a spring, into
  * the one thing that matters most right now: an agent asking before a risky action (answer it
- * right there), agents at work (live clock), a compile, a new team message, a notice. Click it
- * and it opens into everything at once, with quick actions. Esc or a click outside closes it.
+ * right there), agents at work (live clock), a compile, a new team message, a notice. It opens into
+ * everything at once, with quick actions, as the pointer heads for it (or on click / Enter); it
+ * closes when the pointer moves away, or with Esc or a click outside.
  */
 type Mode = "rest" | "ask" | "run" | "compile" | "message" | "toast";
 
@@ -71,7 +72,7 @@ export function Island() {
   }, [mode, open]);
   useEffect(() => {
     if (!open) return;
-    const away = (e: MouseEvent) => { if (!shell.current?.contains(e.target as Node)) setOpen(false); };
+    const away = (e: MouseEvent) => { if (!shell.current?.contains(e.target as Node)) { byPointer.current = false; setOpen(false); } };
     const key = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     window.addEventListener("mousedown", away);
     window.addEventListener("keydown", key);
@@ -81,14 +82,88 @@ export function Island() {
     };
   }, [open]);
 
-  // Opens when the pointer rests on it, closes shortly after it leaves (a short grace, so moving
-  // into the panel never closes it). Click and keyboard still open it too.
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hover = (inside: boolean) => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setOpen(inside), inside ? 120 : 280);
-  };
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  // Opens as the pointer comes toward it, before it gets there: the pointer's path is projected
+  // a little ahead, and a pill it is about to reach opens now (no hover delay). Close by, the pill
+  // leans in. Opened that way, it closes once the pointer has moved clearly away from the panel;
+  // opened by click or keyboard, it stays until a click outside or Esc.
+  const [near, setNear] = useState(false);
+  const byPointer = useRef(false);
+  const openRef = useRef(open);
+  openRef.current = open;
+  useEffect(() => {
+    let raf = 0;
+    let last: { x: number; y: number; t: number; d: number } | null = null;
+    let pending: PointerEvent | null = null;
+    let leaveAt = 0;
+    let dwell: ReturnType<typeof setTimeout> | null = null;
+    const gap = (r: DOMRect, x: number, y: number) => Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+    const tick = () => {
+      raf = 0;
+      const e = pending;
+      const el = shell.current;
+      if (!e || !el) return;
+      const r = el.getBoundingClientRect();
+      const now = performance.now();
+      const d = gap(r, e.clientX, e.clientY);
+      // Where the pointer will be in ~140 ms at its current speed, and how fast it goes (px/ms).
+      let ahead = d;
+      let speed = 0;
+      let closing = false;
+      if (last && now - last.t > 0 && now - last.t < 120) {
+        const dt = now - last.t;
+        const k = 140 / dt;
+        ahead = gap(r, e.clientX + (e.clientX - last.x) * k, e.clientY + (e.clientY - last.y) * k);
+        speed = Math.hypot(e.clientX - last.x, e.clientY - last.y) / dt;
+        closing = d < last.d;
+      }
+      last = { x: e.clientX, y: e.clientY, t: now, d };
+      if (!openRef.current) {
+        setNear(d < 90);
+        // Aimed at it (heading in, not sweeping past), or on it at a walking pace.
+        const aimed = closing && ahead < 4 && d < 140 && speed < 1.4;
+        const on = d < 10 && speed < 1.6;
+        if (aimed || on) {
+          byPointer.current = true;
+          setOpen(true);
+        } else if (d < 10) {
+          // Arrived fast and stopped on it: look again once the pointer has settled.
+          if (dwell) clearTimeout(dwell);
+          dwell = setTimeout(() => { if (!raf) raf = requestAnimationFrame(tick); }, 70);
+        }
+      } else if (byPointer.current) {
+        if (d > 36) {
+          leaveAt ||= now;
+          if (now - leaveAt > 90) {
+            leaveAt = 0;
+            byPointer.current = false;
+            setOpen(false);
+          }
+        } else leaveAt = 0;
+      }
+    };
+    const move = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return;
+      pending = e;
+      if (!raf) raf = requestAnimationFrame(tick);
+    };
+    const out = (e: MouseEvent) => {
+      // The pointer left the window: let go.
+      if (e.relatedTarget) return;
+      setNear(false);
+      if (openRef.current && byPointer.current) {
+        byPointer.current = false;
+        setOpen(false);
+      }
+    };
+    window.addEventListener("pointermove", move, { passive: true });
+    document.addEventListener("mouseout", out);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      document.removeEventListener("mouseout", out);
+      if (raf) cancelAnimationFrame(raf);
+      if (dwell) clearTimeout(dwell);
+    };
+  }, []);
 
   const answer = (r: RunSummary, choice: string) => void engine.answerRun(r.runId, choice).catch((err: unknown) => useApp.getState().toast({ kind: "fail", text: String((err as Error).message ?? err) }));
   const go = (fn: () => void) => () => { setOpen(false); fn(); };
@@ -183,14 +258,12 @@ export function Island() {
     <div className="island-slot">
       <div
         ref={shell}
-        className={`island${open ? " open" : ""} mode-${mode}`}
+        className={`island${open ? " open" : ""}${near ? " near" : ""} mode-${mode}`}
         style={size ? { width: size.w, height: size.h } : undefined}
         role="button" tabIndex={0} aria-expanded={open} aria-label="McBot status"
         
-        onClick={() => { if (!open) setOpen(true); }}
-        onMouseEnter={() => hover(true)}
-        onMouseLeave={() => hover(false)}
-        onKeyDown={(e) => { if (!open && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setOpen(true); } }}
+        onClick={() => { if (!open) { byPointer.current = false; setOpen(true); } else byPointer.current = false; }}
+        onKeyDown={(e) => { if (!open && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); byPointer.current = false; setOpen(true); } }}
         data-testid="island"
       >
         <div ref={inner} className="island-inner" key={open ? "open" : mode}>{body}</div>

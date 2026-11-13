@@ -46,6 +46,10 @@ interface State {
   /** Share on your network / join. */
   shareOpen: boolean;
   teamOpen: boolean;
+  /** Messages typed while an agent was busy, sent in order when it is free (per agent node). */
+  queue: Record<string, { items: string[]; paused: boolean }>;
+  /** Agents with a run being started right now (its first event has not arrived yet). */
+  starting: Record<string, boolean>;
   /** Which part of Settings is open. */
   settingsSection: SettingsSection;
   /** The folder picker (Files, Code, ⌘K Open folder). */
@@ -73,6 +77,14 @@ interface State {
   setTeamOpen(open: boolean): void;
   setFolderPickerOpen(open: boolean): void;
   openSettings(section?: SettingsSection): void;
+  enqueue(agentNodeId: string, text: string): void;
+  /** Take the next queued message (null when empty or paused). */
+  takeQueued(agentNodeId: string): string | null;
+  unqueue(agentNodeId: string, index: number): void;
+  /** A queued message could not start: put it back first and wait for the person. */
+  pauseQueue(agentNodeId: string, text: string): void;
+  resumeQueue(agentNodeId: string): void;
+  setStarting(agentNodeId: string, on: boolean): void;
   folderOpened(id: string): void;
   setFreshNote(id: string | null): void;
   openChat(agentNodeId: string | null): void;
@@ -137,6 +149,25 @@ export const useApp = create<State>((set, get) => ({
   teamOpen: false,
   setShareOpen: (shareOpen) => set({ shareOpen, paletteOpen: false }),
   setTeamOpen: (teamOpen) => set({ teamOpen, paletteOpen: false }),
+  queue: {},
+  starting: {},
+  setStarting: (id, on) => set((s) => ({ starting: { ...s.starting, [id]: on } })),
+  enqueue: (id, text) => set((s) => ({ queue: { ...s.queue, [id]: { items: [...(s.queue[id]?.items ?? []), text], paused: s.queue[id]?.paused ?? false } } })),
+  takeQueued: (id) => {
+    const q = get().queue[id];
+    if (!q || q.paused || q.items.length === 0) return null;
+    const [first, ...rest] = q.items;
+    set((s) => ({ queue: { ...s.queue, [id]: { items: rest, paused: false } } }));
+    return first!;
+  },
+  unqueue: (id, index) => set((s) => {
+    const q = s.queue[id];
+    if (!q) return {};
+    const items = q.items.filter((_, i) => i !== index);
+    return { queue: { ...s.queue, [id]: { items, paused: items.length ? q.paused : false } } };
+  }),
+  pauseQueue: (id, text) => set((s) => ({ queue: { ...s.queue, [id]: { items: [text, ...(s.queue[id]?.items ?? [])], paused: true } } })),
+  resumeQueue: (id) => set((s) => (s.queue[id] ? { queue: { ...s.queue, [id]: { ...s.queue[id]!, paused: false } } } : {})),
   settingsSection: "models",
   openSettings: (section) => set((s) => ({ tab: "settings", settingsSection: section ?? s.settingsSection, paletteOpen: false })),
   folderPickerOpen: false,

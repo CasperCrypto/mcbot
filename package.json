@@ -25,7 +25,8 @@
     "desktop": "tauri dev",
     "engine:patches": "tsx scripts/hermes-patches.ts",
     "site:foods": "tsx scripts/site-foods.ts",
-    "engine:platforms": "tsx scripts/hermes-platforms.ts"
+    "engine:platforms": "tsx scripts/hermes-platforms.ts",
+    "mcbot": "tsx scripts/mcbot.ts"
   },
   "dependencies": {
     "@blobatar/react": "2.7.0",

@@ -1,4 +1,4 @@
-import { ArrowUp, Download, Plug, Plus, Square, Waypoints } from "lucide-react";
+import { ArrowUp, Download, Plug, Plus, Square, Waypoints, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode, ModelData } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
@@ -128,9 +128,16 @@ function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [thread.length, textLen, asking]);
 
+  const queued = useApp((s) => s.queue[agent.id]);
   const send = async () => {
     const prompt = draft.trim();
-    if (!prompt || sending) return;
+    if (!prompt) return;
+    // Busy, starting, or others are waiting: it goes in the queue and is sent when the agent is free.
+    if (running || sending || useApp.getState().starting[agent.id] || queued?.items.length) {
+      useApp.getState().enqueue(agent.id, prompt);
+      setDraft("");
+      return;
+    }
     setSending(true);
     setDraft("");
     const id = await runAgent(boardId, agent.id, prompt);
@@ -172,13 +179,27 @@ function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
         </div>
       </div>
       <div className="composer-wrap">
+        {queued && queued.items.length > 0 && (
+          <div className="queue" data-testid="queue">
+            {queued.items.map((q, i) => (
+              <div key={`${i}-${q}`} className="queue-item">
+                <span className="queue-n num">{i + 1}</span>
+                <span className="grow ellipsis">{q}</span>
+                <button className="icon-btn sm" aria-label="Remove from queue" data-tip="Remove" onClick={() => useApp.getState().unqueue(agent.id, i)}><X size={12} /></button>
+              </div>
+            ))}
+            {queued.paused && (
+              <div className="queue-paused"><span className="grow">Paused: the first one couldn't start</span>
+                <button className="btn sm" onClick={() => useApp.getState().resumeQueue(agent.id)}>Try again</button></div>
+            )}
+          </div>
+        )}
         <div className="composer">
-          <textarea rows={1} value={draft} placeholder={`Message ${name}`} data-testid="composer"
+          <textarea rows={1} value={draft} placeholder={running ? `Queue a message for ${name}` : `Message ${name}`} data-testid="composer"
             onChange={(e) => { setDraft(e.target.value); e.target.style.height = "auto"; e.target.style.height = `${Math.min(200, e.target.scrollHeight)}px`; }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }} />
-          {running
-            ? <button className="send stop" aria-label="Stop" onClick={() => engine.cancelRun(running.runId)}><Square size={12} /></button>
-            : <button className="send" aria-label="Send" disabled={!draft.trim() || sending} onClick={send} data-testid="send"><ArrowUp size={16} /></button>}
+          {running && <button className="send stop" aria-label="Stop" data-tip="Stop" onClick={() => engine.cancelRun(running.runId)}><Square size={12} /></button>}
+          {(!running || draft.trim()) && <button className="send" aria-label={running ? "Queue" : "Send"} data-tip={running ? "Sends when it's free" : undefined} disabled={!draft.trim()} onClick={send} data-testid="send"><ArrowUp size={16} /></button>}
         </div>
       </div>
     </div>

@@ -12,6 +12,7 @@ import { DEMO, engine } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp, type Tab } from "../state/store";
 import { AgentFace, Kbd } from "../ui";
+import { searchRuns } from "../lib/search";
 
 interface Command {
   id: string;
@@ -103,7 +104,7 @@ function useCommands(close: () => void): Command[] {
       { id: "keys", group: "Actions", label: "API keys", icon: <KeyRound size={15} />, run: () => app.openSettings("keys") },
       { id: "hermes", group: "Actions", label: "Engine", hint: "Status and restart", icon: <Cpu size={15} />, run: () => app.setHermesOpen(true) },
       { id: "report", group: "Actions", label: "Report a problem…", hint: "Details to paste into an issue", icon: <LifeBuoy size={15} />, run: () => app.setReportOpen(true) },
-      { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Sparkles size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: null }); } },
+      { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Sparkles size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: app.setup?.profile ?? null }); } },
       ...(DEMO ? [{ id: "reset-demo", group: "Actions", label: "Reset demo", hint: "Start over with the sample board", icon: <RotateCcw size={15} />, run: resetDemo }] : []),
       ...VIEWS.map((v, i) => ({ id: `go-${v.tab}`, group: "Go to", label: v.label, icon: v.icon, keys: ["⌘", String(i + 1)], run: () => { app.setTab(v.tab); close(); } })),
       ...graph.nodes.filter((n) => n.kind === "agent").map((n) => ({
@@ -130,6 +131,8 @@ export function Palette() {
 
 function PaletteBody({ close }: { close: () => void }) {
   const commands = useCommands(close);
+  const runs = useApp((s) => s.runs);
+  const { graph } = useBoard();
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
   const [asking, setAsking] = useState<Command | null>(null);
@@ -141,8 +144,18 @@ function PaletteBody({ close }: { close: () => void }) {
     if (asking) return [];
     const hits = commands.filter((c) => matches(c, query));
     const order = [...new Set(hits.map((c) => c.group))];
-    return order.flatMap((g) => hits.filter((c) => c.group === g));
-  }, [commands, query, asking]);
+    // Past conversations on this board that mention every word, after the commands.
+    const nameOf = (id: string) => {
+      const a = graph.nodes.find((n) => n.id === id);
+      return a?.kind === "agent" ? a.data.displayName || a.data.name : "";
+    };
+    const said: Command[] = searchRuns(Object.values(runs), query).map(({ run, snippet }) => ({
+      id: `run-${run.runId}`, group: "Conversations", label: run.prompt.split("\n")[0]!.slice(0, 80), hint: `${nameOf(run.agentNodeId) || run.profile} · ${snippet}`,
+      icon: <AgentFace seed={run.profile} size={22} status={run.status} />,
+      run: () => { useApp.getState().selectRun(run.runId); useApp.getState().openChat(run.agentNodeId); close(); },
+    }));
+    return [...order.flatMap((g) => hits.filter((c) => c.group === g)), ...said];
+  }, [commands, query, asking, runs, graph, close]);
   // Block bodies on purpose: scrollIntoView returns a Promise in current Chromium,
   // and an effect that returns a non-function crashes React on cleanup.
   useEffect(() => {
@@ -189,7 +202,7 @@ function PaletteBody({ close }: { close: () => void }) {
         <div className="palette-input">
           {asking ? <span className="chip accent">{asking.label.replace("…", "")}</span> : <Search size={18} className="faint" />}
           <input ref={input} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={onKey}
-            placeholder={asking ? asking.ask!.placeholder : "Search or run a command"} spellCheck={false} aria-label="Command" />
+            placeholder={asking ? asking.ask!.placeholder : "Search commands and conversations"} spellCheck={false} aria-label="Command" />
         </div>
         {!asking && (
           <div className="palette-list" ref={list} role="listbox">

@@ -110,7 +110,7 @@ export function CostView() {
       ) : (
         <div className="scroll-page page-enter">
           <div className="kpis" data-testid="cost-kpis">
-            <div className="card kpi"><small>Spend</small><b>{usd(report.totals.usd)}</b><span>{report.totals.sessions} sessions</span></div>
+            <div className="card kpi"><small>Spend</small><b>{usd(report.totals.usd)}</b><span>{report.totals.sessions} session{report.totals.sessions === 1 ? "" : "s"}</span></div>
             <div className="card kpi"><small>Tokens</small><b>{tokens(report.totals.inputTokens + report.totals.outputTokens)}</b><span>{tokens(report.totals.inputTokens)} in · {tokens(report.totals.outputTokens)} out</span></div>
             <div className="card kpi"><small>Per successful run</small><b>{report.costPerSuccessfulRun === null ? "—" : usd(report.costPerSuccessfulRun)}</b><span>{report.totals.successfulRuns} of {report.totals.runs} succeeded</span></div>
             <div className="card kpi"><small>Local compute</small><b>{report.localInferenceSeconds.toFixed(1)}s</b><span data-tip="Wall-clock time of runs on local models. GPU time is not reported." data-tip-side="top">wall-clock</span></div>

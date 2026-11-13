@@ -119,6 +119,37 @@
   --ease-island: cubic-bezier(0.32, 1.28, 0.42, 1);
   --t-island: 520ms;
 
+  /*
+   * Materials: Apple-style glass for anything that floats over content (sheets, menus, the dock,
+   * the inspector, sticky headers, the composer). Translucent fill + strong blur + saturation, a
+   * hairline edge and a specular top line. Thin < regular < thick: the more text a surface holds,
+   * the thicker its material, so what is behind never hurts reading.
+   */
+  --mat-ultrathin: rgba(44, 44, 48, 0.42);
+  --mat-thin: rgba(40, 40, 44, 0.58);
+  --mat-regular: rgba(34, 34, 38, 0.72);
+  --mat-thick: rgba(30, 30, 33, 0.86);
+  --mat-chrome: rgba(28, 28, 30, 0.78);
+  --mat-blur: blur(28px) saturate(185%);
+  --mat-blur-strong: blur(44px) saturate(200%);
+  --mat-edge: inset 0 0 0 0.5px rgba(255, 255, 255, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  --mat-edge-strong: inset 0 0 0 0.5px rgba(255, 255, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --mat-hover: rgba(255, 255, 255, 0.07);
+  --mat-press: rgba(255, 255, 255, 0.11);
+  --mat-select: rgba(255, 255, 255, 0.1);
+  --scrim: rgba(0, 0, 0, 0.32);
+  --island-bg: #000;
+
+  /*
+   * Springs. Real spring curves where the engine supports linear() (sampled from damped springs,
+   * as SwiftUI's .snappy/.bouncy/.smooth); a close cubic-bezier elsewhere (glass.css @supports).
+   */
+  --spring-snappy: cubic-bezier(0.2, 1.1, 0.35, 1);
+  --spring-bouncy: cubic-bezier(0.3, 1.4, 0.4, 1);
+  --spring-smooth: cubic-bezier(0.25, 1, 0.35, 1);
+  --t-spring: 460ms;
+  --t-spring-long: 620ms;
+
   /* layout */
   --titlebar-h: 46px;
   --rail-w: 60px;

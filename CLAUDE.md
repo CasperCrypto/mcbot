@@ -100,6 +100,13 @@ Change them additively; a breaking change bumps the version.
   `hermes gateway ensure` while any compiled agent has a bot with everything filled in.
   No allowed users = nobody can message it (Hermes refuses unknown senders).
 - Run is refused (409) if the agent's files on disk differ from the board — compile first.
+- One run at a time per agent from the UI: a message sent while the agent works (or while its run
+  is starting, `starting` in the store, set by `runAgent`) joins that agent's queue and is sent
+  when it is free (`queue`, dispatched in App.tsx). A message that cannot start goes back first
+  and the queue waits for the person. `scripts/mcbot.ts` (`npm run mcbot`) drives the same
+  loopback API from a terminal; runs it starts show live in every window.
+- The tool catalog (`src/app/graph/catalog.ts`) also has hosted MCP servers that need no key
+  (Exa, Parallel: `transport: http`, `url` only), so agents can search the web from minute one.
 - Memory edits: Hermes' `§` format byte for byte, refused while the profile is
   running, and only against the sha256 the editor read.
 - An agent's `dailyBudgetUsd` is McBot-side only (never compiled, no Hermes key): `buildCostReport` compares
@@ -200,6 +207,13 @@ Change them additively; a breaking change bumps the version.
   Colour means identity (agents, node kinds) or state (running, ok, failed).
   macOS system colours, flat: the accent is system blue; no gradients, glows or
   gradient text (the website follows the same rule).
+- **Glass and springs** (`src/app/styles/glass.css`, loaded last): whatever floats over content
+  (sheets, menus, tooltips, the dock, board blocks, the inspector, the chat header and composer)
+  is a material — `--mat-*` fill, `--mat-blur`, a hairline edge and specular top line
+  (`--mat-edge`) — never a gradient; content surfaces stay solid. Motion uses `--spring-snappy`
+  (controls), `--spring-bouncy` (things that arrive) and `--spring-smooth` (things that move):
+  real springs via CSS `linear()` where supported, cubic fallbacks in tokens.css. The rail's
+  selection and segmented controls' thumbs slide. Reduced motion turns it all off.
 - **Less text.** No explanatory paragraphs in the UI. Labels are short; detail
   lives in tooltips (`data-tip`). Empty states are one line plus one action.
 - **Settings** (`views/SettingsView.tsx`, ⌘, and the gear in the rail): models (local servers
@@ -233,8 +247,11 @@ Change them additively; a breaking change bumps the version.
   returns a non-function crashes React on cleanup.
 - **Dynamic island** (`src/app/shell/Island.tsx`): always in the middle of the title bar. At rest a
   slim pill; it grows (spring, `--ease-island`) into the most important thing now: an approval
-  (answer inline), agents at work, a compile, a new team message, a notice. Click: everything at
-  once plus quick actions. One height (30px) for every title-bar control.
+  (answer inline), agents at work, a compile, a new team message, a notice. It opens into
+  everything at once plus quick actions as the pointer heads for it — its path is projected
+  ~140 ms ahead, a fast sweep across the title bar does not count — leans in when the pointer is
+  close, and closes once the pointer moves away; click or Enter pins it open until Esc or a click
+  outside. One height (30px) for every title-bar control.
 - Views live behind an error boundary; a broken view must not blank the window.
 - **Links out of the app** go through `openExternal` (`src/app/lib/open.ts`): the
   Tauri opener plugin, https only. A plain `target="_blank"` link does nothing
@@ -290,6 +307,7 @@ npm run engine:setup   prepare McBot's own Hermes (once, and after a Hermes upda
 npm run cli -- …    McBot's Hermes in a terminal, on McBot's agents (HERMES_HOME=~/McBot/hermes)
 npm run site:foods the website's food bots and the logo files, from src/app/faces/
 npm run engine:sync -- <hermes-agent checkout> [ref]   merge an upstream Hermes release into hermes/
+npm run mcbot -- agents | run <agent> "<prompt>" [--wait] [--json] [--board <id>]   script the running McBot
 npx tauri build    the installer for this computer (engine + Hermes inside; unsigned)
 MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
 ```

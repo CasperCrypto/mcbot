@@ -21,7 +21,7 @@ export function TeamView() {
     const node = n ? (n.kind === "agent" ? n.data.displayName : n.data.label) || n.data.name : null;
     return node ? `${view} · ${node}` : view;
   };
-  const commit = () => name.trim() && setIdentity({ ...identity, name: name.trim() });
+  const commit = () => name.trim() && setIdentity({ ...identity, name: name.trim(), chosen: true });
 
   return (
     <section className="main flush-left">
