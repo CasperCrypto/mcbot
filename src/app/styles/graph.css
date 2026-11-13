@@ -190,3 +190,8 @@
 .hx-note { font-size: 10.5px; }
 .hx.agent { width: 220px; }
 .hx-chip.more { background: transparent; color: var(--text-3); }
+
+/* Brand logos (Logo.tsx): the brand's tile colour comes inline; near-black marks use the neutral card. */
+.tile.logo { background: var(--bg-active); }
+.tile.logo.dropped { background: var(--bg-card); padding: 5px; }
+.tile.logo.dropped img { width: 100%; height: 100%; object-fit: contain; }

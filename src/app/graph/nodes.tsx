@@ -8,6 +8,7 @@ import type { RunSummary } from "../../contracts/run";
 import { ago, usd } from "../lib/format";
 import type { Peer } from "../state/board";
 import { AgentFace } from "../ui";
+import { LogoTile, nodeLogo } from "./Logo";
 
 export interface FlowNodeData extends Record<string, unknown> {
   node: GraphNode;
@@ -76,7 +77,7 @@ export const ModelNodeView = memo(function ModelNodeView({ data }: NodeProps<Flo
   return (
     <div className={`node node-compact${data.hasError ? " has-error" : ""}`}>
       <Peer peer={data.peer} />
-      <div className={`tile ${m.endpoint === "local" ? "model" : "cloud"}`}>{m.endpoint === "local" ? <HardDrive size={16} /> : <Cloud size={16} />}</div>
+      <LogoTile logo={nodeLogo(data.node)} kind={m.endpoint === "local" ? "model" : "cloud"}>{m.endpoint === "local" ? <HardDrive size={16} /> : <Cloud size={16} />}</LogoTile>
       <div className="grow">
         <div className="label ellipsis">{m.label || m.name}</div>
         <div className="sub ellipsis">{m.model || "set a model"}</div>
@@ -92,7 +93,7 @@ export const ToolNodeView = memo(function ToolNodeView({ data }: NodeProps<FlowN
     <div className={`node node-compact${data.hasError ? " has-error" : ""}${data.active ? " calling" : ""}`}>
       <Peer peer={data.peer} />
       <Handle type="target" position={Position.Left} id="in" />
-      <div className="tile tool">{t.transport === "http" ? <Server size={16} /> : <Plug size={16} />}</div>
+      <LogoTile logo={nodeLogo(data.node)} kind="tool">{t.transport === "http" ? <Server size={16} /> : <Plug size={16} />}</LogoTile>
       <div className="grow">
         <div className="label ellipsis">{t.label || t.name}</div>
         <div className="sub ellipsis">{data.active ? "calling…" : data.errored ? "last call failed" : t.name}</div>
@@ -118,7 +119,7 @@ export const MediaNodeView = memo(function MediaNodeView({ data }: NodeProps<Flo
     <div className={`node node-compact${data.hasError ? " has-error" : ""}${data.active ? " calling" : ""}`}>
       <Peer peer={data.peer} />
       <Handle type="target" position={Position.Left} id="in" />
-      <div className="tile media"><MakerIcon media={m.media} size={16} /></div>
+      <LogoTile logo={nodeLogo(data.node)} kind="media"><MakerIcon media={m.media} size={16} /></LogoTile>
       <div className="grow">
         <div className="label ellipsis">{m.label || (m.media === "video" ? "Videos" : "Images")}</div>
         <div className="sub ellipsis">{data.active ? "making…" : service ? [service, m.model].filter(Boolean).join(" · ") : "pick a service"}</div>
@@ -134,7 +135,7 @@ export const ChannelNodeView = memo(function ChannelNodeView({ data }: NodeProps
     <div className={`node node-compact${data.hasError ? " has-error" : ""}`}>
       <Peer peer={data.peer} />
       <Handle type="target" position={Position.Left} id="in" />
-      <div className="tile channel"><Send size={15} /></div>
+      <LogoTile logo={nodeLogo(data.node)} kind="channel"><Send size={15} /></LogoTile>
       <div className="grow">
         <div className="label ellipsis">{c.label || CHANNEL_PLATFORMS[c.platform].label}</div>
         <div className="sub ellipsis">{CHANNEL_PLATFORMS[c.platform].allowedUsersEnv ? (n ? `${n} allowed` : "nobody allowed yet") : CHANNEL_PLATFORMS[c.platform].label}</div>

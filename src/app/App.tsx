@@ -27,6 +27,7 @@ import { AgentsView } from "./views/AgentsView";
 import { CostView } from "./views/CostView";
 import { FilesView } from "./views/FilesView";
 import { HomeView } from "./views/HomeView";
+import { SkillsView } from "./views/SkillsView";
 import { MemoryView } from "./views/MemoryView";
 import { RunsView } from "./views/RunsView";
 import { TasksView } from "./views/TasksView";
@@ -56,6 +57,7 @@ const VIEW_COMPONENTS = {
   browser: BrowserTab,
   workflows: RunsView,
   memory: MemoryView,
+  skills: SkillsView,
   files: FilesView,
   cost: CostView,
   team: TeamView,

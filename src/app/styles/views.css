@@ -268,3 +268,17 @@
 .start-mark { width: 18px; height: 18px; flex: none; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--line-3); color: #fff; }
 .start-steps li[data-done] .start-mark { background: var(--ok); border-color: var(--ok); }
 .start-steps li[data-next] .start-mark { border-color: var(--accent); }
+
+/* Skills view */
+.skills-page { max-width: 880px; }
+.skill-builtin { padding: 12px 14px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--bg-card); gap: 12px; }
+.skill-card-lib { align-items: flex-start; }
+.skill-card-lib .faint { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* An on/off switch, as on iOS. */
+.switch { position: relative; width: 38px; height: 22px; flex: none; border-radius: 999px; border: none; padding: 0; background: var(--bg-active); transition: background var(--t-fast) var(--ease); cursor: pointer; }
+.switch span { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-1); transition: transform var(--t) var(--spring-snappy, var(--ease)); }
+.switch[aria-checked="true"] { background: var(--accent); }
+.switch[aria-checked="true"] span { transform: translateX(16px); }
+.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.skills-page .catalog-search { margin: 0; }

@@ -696,6 +696,12 @@ export const demoEngine = {
     const dir = `profiles/${bundle.agent.data.name}/`;
     const stale = drift.report.changes.filter((c) => c.path.startsWith(dir) && c.status !== "unchanged");
     if (stale.length) throw new EngineError(409, `The board changed since ${bundle.agent.data.name} was last compiled. Compile, then run.`, { stale: stale.map((c) => c.path) });
+    const limit = bundle.agent.data.dailyBudgetUsd ?? 0;
+    if (limit > 0) {
+      const name = bundle.agent.data.name;
+      const [b] = buildCostReport([{ profile: name, agentNodeId: bundle.agent.id, sessions: state.sessions[name] ?? [], dailyBudgetUsd: limit }], [], bundle.models).budgets;
+      if (b?.state === "over") throw new EngineError(409, `${bundle.agent.data.displayName || name} reached today's budget ($${b.spentTodayUsd.toFixed(2)} of $${limit.toFixed(2)}). Raise it to keep going.`, { budget: b });
+    }
     return { runId: await play(boardId, bundle, prompt) };
   }),
   answerRun: api((runId: string, choice: string) => {
@@ -731,7 +737,7 @@ export const demoEngine = {
   cost: api((boardId: string): CostReport => {
     const { bundles } = bundlesOf(requireBoard(boardId));
     const compiled = manifest()?.profiles ?? [];
-    const profiles = bundles.filter((b) => compiled.includes(b.agent.data.name)).map((b) => ({ profile: b.agent.data.name, agentNodeId: b.agent.id, sessions: state.sessions[b.agent.data.name] ?? [] }));
+    const profiles = bundles.filter((b) => compiled.includes(b.agent.data.name)).map((b) => ({ profile: b.agent.data.name, agentNodeId: b.agent.id, sessions: state.sessions[b.agent.data.name] ?? [], dailyBudgetUsd: b.agent.data.dailyBudgetUsd ?? null }));
     const models = [...new Map(bundles.flatMap((b) => b.models).map((m) => [m.id, m])).values()];
     const runs = Object.values(state.runs).map((e) => summarizeRun(e)).filter((s): s is RunSummary => !!s && s.boardId === boardId);
     return buildCostReport(profiles, runs, models);
@@ -796,7 +802,7 @@ export const demoEngine = {
     return taskView(t, team);
   }),
   // Hermes' skill library: a few of its official skills; installs are simulated in this browser.
-  skills: api((profile?: string): SkillsView => ({ library: DEMO_LIBRARY, installed: profile ? [...(demoInstalled[profile] ?? [])] : [], seeded: !!profile })),
+  skills: api((profile?: string): SkillsView => ({ library: DEMO_LIBRARY, installed: profile ? [...(demoInstalled[profile] ?? [])] : [], seeded: !!profile, compiled: !!profile })),
   installSkill: api((profile: string, id: string): { installed: string[] } => {
     const set = (demoInstalled[profile] ??= new Set());
     set.add(id.split("/").pop()!);

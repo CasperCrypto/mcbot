@@ -1,4 +1,5 @@
 /** Add a chat app: every platform Hermes' gateway ships, wired to the agent you have selected. */
+import { LogoTile, logoFor } from "../graph/Logo";
 import { MessagesSquare, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
@@ -70,7 +71,7 @@ export function ChatAppCatalog() {
               const needs = p.required.map((f) => f.prompt).join(" · ");
               return (
                 <button key={id} className="catalog-card" onClick={() => add(id)} data-testid={`chat-${id}`}>
-                  <span className="tile sm channel">{p.label.slice(0, 1)}</span>
+                  <LogoTile sm logo={logoFor([id])} kind="channel">{p.label.slice(0, 1)}</LogoTile>
                   <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}>
                     <b>{p.label}</b>
                     <span className="faint ellipsis" data-tip={needs}>{needs}</span>

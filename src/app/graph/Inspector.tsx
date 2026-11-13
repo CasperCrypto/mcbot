@@ -1,4 +1,4 @@
-import { ArrowUp, Check, CheckCheck, Cloud, Download, HardDrive, LogIn, MessagesSquare, Plug, Plus, RotateCcw, Search, Send, Square, Trash2, X } from "lucide-react";
+import { ArrowUp, Check, CheckCheck, Cloud, HardDrive, LogIn, MessagesSquare, Plug, Plus, RotateCcw, Send, Sparkles, Square, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { removeNodes, setNodeField, updateEdge } from "../../board/ydoc";
 import type { Issue } from "../../compile";
@@ -9,11 +9,11 @@ import {
 import { runAgent } from "../actions";
 import { keyEnvFor } from "../lib/providers";
 import { REMOTE, engine } from "../lib/engine";
-import type { LibrarySkill } from "../../contracts/api";
 import { duration, tokens as fmtTokens, usd } from "../lib/format";
 import { useBoard } from "../state/board";
 import { latestRunByAgent, useApp } from "../state/store";
 import { AgentFace, Field, Issues, Segmented, TextListField } from "../ui";
+import { LogoTile, nodeLogo } from "./Logo";
 import { MakerIcon } from "./nodes";
 
 type Errors = Record<string, string>;
@@ -43,11 +43,11 @@ export function Inspector({ node, issues }: { node: GraphNode; issues: Issue[] }
     <aside className="inspector glass" aria-label="Inspector" data-testid="inspector">
       <div className="inspector-head">
         {node.kind === "agent" ? <AgentFace seed={node.data.name} size={42} status={status} />
-          : node.kind === "media" ? <span className="tile media"><MakerIcon media={node.data.media} size={16} /></span>
-          : node.kind === "channel" ? <span className="tile channel"><Send size={15} /></span>
-          : <span className={`tile ${node.kind === "tool" ? "tool" : node.data.endpoint === "local" ? "model" : "cloud"}`}>
+          : node.kind === "media" ? <LogoTile logo={nodeLogo(node)} kind="media"><MakerIcon media={node.data.media} size={16} /></LogoTile>
+          : node.kind === "channel" ? <LogoTile logo={nodeLogo(node)} kind="channel"><Send size={15} /></LogoTile>
+          : <LogoTile logo={nodeLogo(node)} kind={node.kind === "tool" ? "tool" : node.data.endpoint === "local" ? "model" : "cloud"}>
             {node.kind === "tool" ? <Plug size={16} /> : node.data.endpoint === "local" ? <HardDrive size={16} /> : <Cloud size={16} />}
-          </span>}
+          </LogoTile>}
         <div className="title">
           <input value={title} placeholder={node.data.name || "Untitled"} onChange={(e) => set(titleField, e.target.value)} aria-label="Name" data-testid="inspector-title" />
           <small className={node.kind === "agent" ? "mono" : undefined}>{sub}</small>
@@ -143,7 +143,7 @@ function Budget({ data, set }: { data: AgentData; set: (f: string, v: unknown) =
   return (
     <div className="stack" style={{ gap: 6 }} data-testid="budget">
       <span className="section-label">Daily budget</span>
-      <label className="row" style={{ gap: 6 }} data-tip="Alerts you in Home at 80% and 100% of this day's spend (UTC). Never compiled." data-tip-side="top">
+      <label className="row" style={{ gap: 6 }} data-tip="Warns at 80%; at 100% new runs stop for the day (UTC). Never compiled." data-tip-side="top">
         <span className="faint">$</span>
         <input className="input mono" type="number" min={0} step={0.5} placeholder="No limit" data-testid="budget-input"
           value={data.dailyBudgetUsd ?? ""} onChange={(e) => { const n = parseFloat(e.target.value); set("dailyBudgetUsd", Number.isFinite(n) && n > 0 ? n : null); }} />
@@ -283,35 +283,9 @@ function Skills({ data, set }: { data: AgentData; set: (f: string, v: unknown) =
   );
 }
 
-/**
- * Hermes' own skills for this agent: its bundled set (seeded after a compile unless turned off)
- * and the official library, installed into the compiled agent with `hermes skills install`.
- */
+/** Hermes' own skills for this agent: the built-in set, and the library in the Skills view. */
 function SkillLibrary({ data, set }: { data: AgentData; set: (f: string, v: unknown) => void }) {
-  const [library, setLibrary] = useState<LibrarySkill[]>([]);
-  const [installed, setInstalled] = useState<Set<string>>(new Set());
-  const [q, setQ] = useState("");
-  const [busy, setBusy] = useState<string | null>(null);
   const builtin = data.builtinSkills !== false;
-  useEffect(() => {
-    let live = true;
-    engine.skills(data.name).then((v) => { if (live) { setLibrary(v.library); setInstalled(new Set(v.installed)); } }).catch(() => undefined);
-    return () => { live = false; };
-  }, [data.name]);
-  const install = async (s: LibrarySkill) => {
-    setBusy(s.id);
-    try {
-      const r = await engine.installSkill(data.name, s.id);
-      setInstalled(new Set(r.installed));
-      useApp.getState().toast({ kind: "ok", text: `${s.name} installed for ${data.displayName || data.name}` });
-    } catch (e) {
-      useApp.getState().toast({ kind: "fail", text: e instanceof Error ? e.message : String(e) });
-    } finally {
-      setBusy(null);
-    }
-  };
-  const words = q.trim().toLowerCase();
-  const shown = library.filter((s) => !words || `${s.name} ${s.category} ${s.description} ${s.tags.join(" ")}`.toLowerCase().includes(words)).slice(0, words ? 40 : 12);
   return (
     <div className="stack" style={{ gap: 8 }} data-testid="skill-library">
       <span className="section-label">Hermes skills</span>
@@ -321,24 +295,7 @@ function SkillLibrary({ data, set }: { data: AgentData; set: (f: string, v: unkn
           {builtin && <Check size={11} strokeWidth={2.6} />}Built-in skills
         </button>
       </div>
-      {library.length > 0 && (
-        <>
-          <label className="catalog-search"><Search size={13} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${library.length} more`} aria-label="Search Hermes skills" data-testid="skill-search" /></label>
-          <div className="chain">
-            {shown.map((s) => {
-              const has = installed.has(s.name);
-              return (
-                <div key={s.id} className="chain-item" data-tip={s.description} data-tip-side="left">
-                  <span className="grow ellipsis">{s.name}</span>
-                  <span className="chip">{s.category}</span>
-                  {has ? <Check size={13} className="faint" aria-label="Installed" />
-                    : <button className="icon-btn sm" aria-label={`Install ${s.name}`} disabled={busy !== null} onClick={() => void install(s)} data-testid={`install-${s.name}`}><Download size={13} /></button>}
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
+      <button className="btn" onClick={() => useApp.getState().setTab("skills")} data-testid="open-skills"><Sparkles size={14} /> Browse the skill library</button>
     </div>
   );
 }

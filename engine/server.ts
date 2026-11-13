@@ -41,7 +41,7 @@ import { OwnershipError, readManifest, writeCompileResult } from "./writer";
 import { Sharing, guestAllowed, joinPage, type SharingView } from "./sharing";
 import { frameable } from "./web";
 
-export const ENGINE_VERSION = "0.4.2";
+export const ENGINE_VERSION = "0.4.3";
 
 export interface EngineConfig {
   workspace: string;
@@ -331,6 +331,13 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const stale = drift.report.changes.filter((c) => c.path.startsWith(dir) && c.status !== "unchanged");
       if (stale.length) throw new HttpError(409, `The board changed since ${bundle.agent.data.name} was last compiled. Compile, then run.`, { stale: stale.map((c) => c.path) });
       if (!(await findHermes())) throw new HttpError(503, "The engine is not set up yet");
+      // A daily budget stops the runs McBot starts once today's (UTC) spend reaches it.
+      const limit = bundle.agent.data.dailyBudgetUsd ?? 0;
+      if (limit > 0) {
+        const name = bundle.agent.data.name;
+        const [b] = buildCostReport([{ profile: name, agentNodeId: bundle.agent.id, sessions: readSessions(cfg.hermesHome, name), dailyBudgetUsd: limit }], [], bundle.models).budgets;
+        if (b?.state === "over") throw new HttpError(409, `${bundle.agent.data.displayName || name} reached today's budget ($${b.spentTodayUsd.toFixed(2)} of $${limit.toFixed(2)}). Raise it to keep going.`, { budget: b });
+      }
       const runId = await runner.start({
         boardId, agentNodeId: bundle.agent.id, profile: bundle.agent.data.name, prompt: body.prompt,
         toolNodes: bundle.tools.map((t) => ({ id: t.id, name: t.data.name })), models: bundle.models,
@@ -348,6 +355,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
         library: src ? listLibrary(src.dir) : [],
         installed: dir ? installedSkills(dir) : [],
         seeded: dir ? bundledSeeded(dir) : false,
+        compiled: dir ? existsSync(dir) : false,
       };
     },
     "POST /api/skills/install": async (req) => {

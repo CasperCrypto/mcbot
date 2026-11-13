@@ -29,6 +29,7 @@ import { Cursors } from "./Cursors";
 import { HermesView } from "./HermesView";
 import { newChannel, newId, newMaker, newModel, newTool } from "./defaults";
 import { Inspector } from "./Inspector";
+import { LogoTile, nodeLogo } from "./Logo";
 import { MakerIcon, makerService, nodeTypes, type FlowNode } from "./nodes";
 import { freeSpot } from "./place";
 
@@ -72,11 +73,11 @@ function HarnessSidebar() {
           {nodes.map((n) => (
             <button key={n.id} className="list-row" aria-selected={n.id === selected} onClick={() => focus(n)}>
               {n.kind === "agent" ? <AgentFace seed={n.data.name} size={28} status={latest.get(n.id)?.status} />
-                : n.kind === "media" ? <span className="tile sm media"><MakerIcon media={n.data.media} size={13} /></span>
-                : n.kind === "channel" ? <span className="tile sm channel"><Send size={12} /></span>
-                : <span className={`tile sm ${n.kind === "tool" ? "tool" : (n.data as ModelData).endpoint === "local" ? "model" : "cloud"}`}>
+                : n.kind === "media" ? <LogoTile sm logo={nodeLogo(n)} kind="media"><MakerIcon media={n.data.media} size={13} /></LogoTile>
+                : n.kind === "channel" ? <LogoTile sm logo={nodeLogo(n)} kind="channel"><Send size={12} /></LogoTile>
+                : <LogoTile sm logo={nodeLogo(n)} kind={n.kind === "tool" ? "tool" : (n.data as ModelData).endpoint === "local" ? "model" : "cloud"}>
                   {n.kind === "tool" ? ((n.data as ToolData).transport === "http" ? <Server size={13} /> : <Plug size={13} />) : (n.data as ModelData).endpoint === "local" ? <HardDrive size={13} /> : <Cloud size={13} />}
-                </span>}
+                </LogoTile>}
               <span className="grow">
                 <span className="title ellipsis" style={{ display: "block" }}>{n.kind === "agent" ? n.data.displayName || n.data.name : ("label" in n.data && n.data.label) || n.data.name}</span>
                 <span className="sub ellipsis mono" style={{ display: "block", fontSize: 11 }}>{n.kind === "model" ? (n.data as ModelData).model || "—" : n.kind === "media" ? makerService(n.data) || "—" : n.kind === "channel" ? `${n.data.allowedUsers.length} allowed` : n.data.name}</span>
