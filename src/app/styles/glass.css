@@ -240,3 +240,22 @@ input.input::placeholder { color: var(--text-4); }
 /* A field and its button share a line, even when a note or an error sits under the field. */
 .key-entry, .setup-key { align-items: start; }
 .key-entry:has(> .field > span:first-child:not(.note):not(.error)) > .btn, .setup-key:has(> .field > span:first-child:not(.note):not(.error)) > .btn { margin-top: 23px; }
+
+/* ---------- fixes and small screens ---------- */
+[data-tip][data-tip-off]:hover::after { display: none; }
+.view-loading { display: grid; place-items: center; color: var(--text-3); }
+.view-loading svg { animation: spin-icon 0.9s linear infinite, fade-in 400ms 250ms var(--ease) both; }
+.person .swatches { gap: 5px; }
+.person .swatch { width: 16px; height: 16px; }
+@media (max-width: 1180px) {
+  /* The title bar keeps room for the island: search becomes an icon. */
+  .search-pill { min-width: 0; padding: 0 9px; }
+  .search-pill .search-label, .search-pill .kbd { display: none; }
+  /* The dock shrinks and the zoom buttons sit above it. */
+  .dock { gap: 6px; padding: 6px 8px; border-radius: 20px; }
+  .dock-item .tile { width: 36px; height: 36px; border-radius: 10px; }
+  .dock-sep { height: 28px; }
+  .react-flow__panel.bottom.left { bottom: 74px; }
+}
+/* Setup choices: title and line stay at the top whatever wraps. */
+.choice { align-content: start; }

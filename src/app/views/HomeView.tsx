@@ -17,6 +17,7 @@ import { useTasks } from "./TasksView";
 import { ApprovalCard } from "../approvals/ApprovalCard";
 import { agentsWithoutModel, modelsOf } from "../lib/models";
 import { useModelHealth } from "../lib/useModelHealth";
+import { nameChosen } from "../lib/identity";
 import { REMOTE } from "../lib/engine";
 
 const DAY = 86_400_000;
@@ -209,6 +210,7 @@ function GettingStarted({ agents, keys, runs, silent }: { agents: AgentNode[]; k
   const health = useApp((s) => s.health);
   const app = useApp.getState();
   const [hidden, setHidden] = useState(hiddenStart);
+  const identity = useApp((s) => s.identity);
   const noModel = agentsWithoutModel(graph);
   const missingKeys = modelsOf(graph).filter((m) => m.data.endpoint === "cloud" && m.data.apiKeyEnv && keys && !keys.includes(m.data.apiKeyEnv));
   const steps = [
@@ -217,9 +219,10 @@ function GettingStarted({ agents, keys, runs, silent }: { agents: AgentNode[]; k
     { id: "engine", label: "Prepare the engine", done: !!health?.hermes.found, action: { label: "Prepare", run: () => app.openSettings("engine") } },
     { id: "compile", label: "Compile", sub: "Writes the agents to disk", done: agents.length > 0 && drift === 0, action: { label: "Compile", run: () => void compileBoard(boardId) } },
     { id: "ask", label: "Ask an agent something", done: runs > 0, action: { label: "Ask", run: () => agents[0] && app.openChat(agents[0].id) } },
+    ...(nameChosen(identity) ? [] : [{ id: "name", label: "Add your name", sub: "Teammates see it", done: false, action: { label: "Add", run: () => app.openSettings("you") } }]),
     ...(REMOTE ? [] : [{ id: "invite", label: "Invite a teammate", sub: "Optional", done: false, action: { label: "Invite", run: () => app.setShareOpen(true) } }]),
   ];
-  const required = steps.filter((s) => s.id !== "invite");
+  const required = steps.filter((s) => s.id !== "invite" && s.id !== "name");
   if (hidden || required.every((s) => s.done)) return null;
   const next = steps.find((s) => !s.done);
   const done = steps.filter((s) => s.done).length;
@@ -368,7 +371,7 @@ export function HomeView() {
       <div className="scroll-page home" data-testid="home">
         <div className="home-inner">
           <header className="home-hello" data-testid="home-hello">
-            <h1>{greeting()}, {identity.name.split(" ")[0]}</h1>
+            <h1>{greeting()}{nameChosen(identity) ? `, ${identity.name.split(" ")[0]}` : ""}</h1>
             <span>{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}{live.length ? ` · ${live.length} at work` : ""}</span>
           </header>
           {agents.length === 0 ? (

@@ -45,7 +45,7 @@ export function Rail() {
       {y !== null && <span className="rail-indicator" aria-hidden style={{ transform: `translateY(${y}px)`, transition: ready ? undefined : "none" }} />}
       {VIEWS.filter((v) => !REMOTE || !HIDDEN_FOR_GUESTS.has(v.tab)).map((v, i) => (
         <button key={v.tab} className="rail-btn" aria-current={tab === v.tab ? "page" : undefined} onClick={() => setTab(v.tab)}
-          data-tip={`${v.label}  ⌘${i + 1}`} data-tip-side="right" data-testid={`tab-${v.tab}`} aria-label={v.label}>
+          data-tip={i < 9 ? `${v.label}  ⌘${i + 1}` : v.label} data-tip-side="right" data-testid={`tab-${v.tab}`} aria-label={v.label}>
           {v.icon}
           {v.tab === "agents" && live > 0 && <span className="badge">{live}</span>}
         </button>

@@ -1,3 +1,4 @@
+import { LoaderCircle } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo } from "react";
 import type { AgentNode } from "../contracts/graph";
 import { compileBoard, refreshDrift } from "./actions";
@@ -31,15 +32,18 @@ import { TasksView } from "./views/TasksView";
 import { TeamView } from "./views/TeamView";
 import { SettingsView } from "./views/SettingsView";
 
+/** Shown while a view that loads on first use (Code, Browser) arrives. */
+const Loading = () => <section className="main flush-left view-loading" aria-busy="true"><LoaderCircle size={20} className="spin-icon" /></section>;
+
 /** Monaco and xterm are big: the Code view loads on first use. */
 const CodeView = lazy(() => import("./workbench/CodeView"));
 function CodeTab() {
-  return <Suspense fallback={<section className="main flush-left" />}><CodeView /></Suspense>;
+  return <Suspense fallback={<Loading />}><CodeView /></Suspense>;
 }
 
 const BrowserView = lazy(() => import("./workbench/BrowserView"));
 function BrowserTab() {
-  return <Suspense fallback={<section className="main flush-left" />}><BrowserView /></Suspense>;
+  return <Suspense fallback={<Loading />}><BrowserView /></Suspense>;
 }
 
 const VIEW_COMPONENTS = {

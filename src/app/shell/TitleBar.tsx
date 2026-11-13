@@ -83,7 +83,7 @@ export function TitleBar() {
         <Users size={13} /> {REMOTE ? REMOTE.label : "Share"}
       </button>
       <button className="search-pill" onClick={() => setPalette(true)} data-testid="open-palette">
-        <Search size={14} /> Search <Kbd>⌘K</Kbd>
+        <Search size={14} /> <span className="search-label">Search</span> <Kbd>⌘K</Kbd>
       </button>
       <button
         className="btn primary" onClick={() => void compileBoard(boardId)} disabled={busy || graph.nodes.length === 0} data-testid="compile"

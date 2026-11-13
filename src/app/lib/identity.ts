@@ -6,6 +6,8 @@ const NAMES = ["Ada", "Grace", "Alan", "Linus", "Hedy", "Ken", "Barbara", "Edsge
 export interface Identity {
   name: string;
   color: string;
+  /** The person typed this name (setup, Settings). A made-up one is never used to greet them. */
+  chosen?: boolean;
 }
 
 const KEY = "mcbot.identity";
@@ -25,6 +27,9 @@ export function loadIdentity(): Identity {
   saveIdentity(fresh);
   return fresh;
 }
+
+/** Whether the name is the person's own (older saved identities: any name McBot didn't make up). */
+export const nameChosen = (id: Identity): boolean => id.chosen ?? !NAMES.includes(id.name);
 
 export function saveIdentity(id: Identity): void {
   try {

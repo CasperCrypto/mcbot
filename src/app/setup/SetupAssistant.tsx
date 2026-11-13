@@ -9,6 +9,7 @@ import { engine } from "../lib/engine";
 import { openExternal } from "../lib/open";
 import { BrandMark } from "../shell/TitleBar";
 import { useApp } from "../state/store";
+import { nameChosen } from "../lib/identity";
 import { AgentFace, Field } from "../ui";
 import { CLOUD_PROVIDERS } from "../lib/providers";
 import { PRESETS, boardName, buildTeam, defaultPicks, presetsFor, userFacts, type ModelChoice } from "./presets";
@@ -42,8 +43,10 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
   const setIdentity = useApp((s) => s.setIdentity);
   const health = useApp((s) => s.health);
   const [step, setStep] = useState<Step>("welcome");
-  const [profile, setProfile] = useState<SetupProfile>({ kind: "personal", name: identity.name, company: "", about: "", role: "" });
-  const [picks, setPicks] = useState<string[]>(defaultPicks("personal"));
+  // A second run starts from the first one's answers; a made-up name is never filled in.
+  const earlier = useApp((s) => s.setup?.profile ?? null);
+  const [profile, setProfile] = useState<SetupProfile>(earlier ?? { kind: "personal", name: nameChosen(identity) ? identity.name : "", company: "", about: "", role: "" });
+  const [picks, setPicks] = useState<string[]>(defaultPicks(earlier?.kind ?? "personal"));
   const [detect, setDetect] = useState<SetupDetect | null>(null);
   const [local, setLocal] = useState<{ server: LocalServer; model: string } | null>(null);
   const [cloudId, setCloudId] = useState<CloudId>("openrouter");
@@ -143,7 +146,7 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
     setRows(plan);
     const set = (i: number, patch: Partial<Row>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)));
     try {
-      if (profile.name.trim() && profile.name.trim() !== identity.name) setIdentity({ ...identity, name: profile.name.trim() });
+      if (profile.name.trim() && profile.name.trim() !== identity.name) setIdentity({ ...identity, name: profile.name.trim(), chosen: true });
       if (preparing) {
         const ok = await prepareHermes();
         set(0, ok ? { label: "Engine ready", status: "ok", detail: undefined } : { label: "The engine couldn't be prepared", status: "warn", detail: "McBot tries again on the first run" });
@@ -182,7 +185,8 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
   };
 
   const skipAll = async () => {
-    await engine.setupComplete(null).catch(() => null);
+    // Skipping a second run keeps what the first one was told (your name for invites, the company).
+    await engine.setupComplete(useApp.getState().setup?.profile ?? null).catch(() => null);
     onDone(null, null);
   };
 
