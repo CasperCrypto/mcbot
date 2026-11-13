@@ -11,10 +11,11 @@
  */
 import { createHash } from "node:crypto";
 import { readdir, stat } from "node:fs/promises";
+import { homedir } from "node:os";
 import { sha256Hex } from "../src/compile/text";
 import { agentEditable } from "../src/harness/live";
-import { basename, isAbsolute, join, resolve } from "node:path";
-import type { FsEntry, FsRoot } from "../src/contracts/api";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import type { FsBrowse, FsEntry, FsRoot } from "../src/contracts/api";
 import { atomicWrite, readTextOrNull, resolveInside, toPosix } from "./fsutil";
 import { SECRET_FILES } from "./profileEnv";
 
@@ -37,6 +38,39 @@ function inside(root: string, rel: string): string {
 
 export { agentEditable };
 
+/** "~/code" → "/Users/you/code"; anything else as typed. */
+export function expandHome(path: string, home = homedir()): string {
+  const p = path.trim();
+  return p === "~" ? home : /^~[\\/]/.test(p) ? join(home, p.slice(2)) : p;
+}
+
+/** Folders people usually open, those that exist here. */
+const PLACES = ["Desktop", "Documents", "Downloads", "Projects", "Developer", "code", "src", "Code", "dev"];
+
+/**
+ * The folder picker (host only, never a network member): the subfolders of one folder, so a
+ * person can open a folder without typing its path. Names only, never a file or its contents.
+ */
+export async function browseFolders(path: string | null, home = homedir()): Promise<FsBrowse> {
+  const abs = resolve(path ? expandHome(path, home) : home);
+  if (!isAbsolute(abs)) throw new FolderError(400, "use an absolute path");
+  const items = await readdir(abs, { withFileTypes: true }).catch((err: NodeJS.ErrnoException) => {
+    throw new FolderError(err.code === "ENOENT" ? 404 : 403, err.code === "ENOENT" ? `${abs} doesn't exist` : `McBot can't read ${abs}`);
+  });
+  const dirs = items
+    .filter((d) => d.isDirectory() && !d.name.startsWith(".") && d.name !== "node_modules")
+    .map((d) => ({ name: d.name, path: join(abs, d.name) }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+    .slice(0, MAX_ENTRIES);
+  const places = [{ name: "Home", path: home }];
+  for (const name of PLACES) {
+    const p = join(home, name);
+    if ((await stat(p).catch(() => null))?.isDirectory()) places.push({ name, path: p });
+  }
+  const parent = dirname(abs);
+  return { path: abs, parent: parent === abs ? null : parent, dirs, places };
+}
+
 export class Folders {
   constructor(private readonly workspace: string, private readonly hermesHome: string) {}
 
@@ -56,8 +90,9 @@ export class Folders {
   }
 
   async open(path: string): Promise<FsRoot> {
-    if (!isAbsolute(path)) throw new FolderError(400, "use an absolute path");
-    const abs = resolve(path);
+    const typed = expandHome(path);
+    if (!isAbsolute(typed)) throw new FolderError(400, "Use a full path, like ~/Documents or /Users/you/project");
+    const abs = resolve(typed);
     const s = await stat(abs).catch(() => null);
     if (!s?.isDirectory()) throw new FolderError(404, `${abs} is not a folder`);
     const list = await this.opened();

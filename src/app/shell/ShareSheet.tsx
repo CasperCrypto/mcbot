@@ -1,49 +1,48 @@
 /**
- * Share on your network: turn sharing on, read out the address and code, see who joined.
- * Join: another computer's address and code. A joined window works on that computer's boards.
+ * Invite your team, like a shared link: one click makes a link that works for 24 hours for
+ * everyone it is sent to (copy it, or email it), until a new link replaces it. Teammates paste
+ * the link into Join. Sharing turns on with the first link and off with "Stop sharing".
  */
-import { Check, Copy, LogOut, RefreshCw, Users, X } from "lucide-react";
+import { Check, Copy, Link2, LogOut, Mail, RefreshCw, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { SharingView } from "../../contracts/api";
 import { DEMO, engine, REMOTE } from "../lib/engine";
-import { remoteUrl, saveRemote } from "../lib/remote";
+import { openExternal } from "../lib/open";
+import { parseInvite, remoteUrl, saveRemote } from "../lib/remote";
 import { useApp } from "../state/store";
 import { PersonFace } from "../ui";
 import { ago } from "../lib/format";
 
 function Join({ onCancel }: { onCancel?: () => void }) {
   const identity = useApp((s) => s.identity);
-  const [address, setAddress] = useState("");
-  const [code, setCode] = useState("");
+  const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const invite = parseInvite(text);
   const join = async () => {
-    if (!address.trim() || !code.trim()) return;
+    if (!invite) return;
     setBusy(true);
     setProblem(null);
-    const url = remoteUrl(address);
+    const url = remoteUrl(invite.address);
     try {
-      const res = await fetch(`${url}/api/join`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code, name: identity.name }) });
+      const res = await fetch(`${url}/api/join`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: invite.code, name: identity.name }) });
       const data = (await res.json().catch(() => ({}))) as { key?: string; error?: string };
       if (!res.ok || !data.key) throw new Error(data.error ?? `That computer answered ${res.status}`);
-      saveRemote({ url, key: data.key, label: address.trim() });
+      saveRemote({ url, key: data.key, label: invite.address });
       location.reload();
     } catch (err) {
-      setProblem(err instanceof TypeError ? "Can't reach that address. Same network? Is sharing on there?" : (err as Error).message);
+      setProblem(err instanceof TypeError ? "Can't reach that computer. Same network? Is McBot open there?" : (err as Error).message);
       setBusy(false);
     }
   };
   return (
     <div className="share-body">
-      <label className="field"><span>Their address</span>
-        <input className="mono" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="192.168.1.20:4318" autoFocus data-testid="join-address" />
-      </label>
-      <label className="field"><span>Invite code</span>
-        <input className="mono" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="K7Q-4XM" maxLength={8} data-testid="join-code"
+      <label className="field"><span>Invite link</span>
+        <input className="mono" value={text} onChange={(e) => { setText(e.target.value); setProblem(null); }} placeholder="http://192.168.1.20:4318/join?code=K7Q-4XM" autoFocus data-testid="join-link"
           onKeyDown={(e) => { if (e.key === "Enter") void join(); }} />
+        {text.trim() && !invite ? <span className="error">Paste the whole link your teammate sent</span> : problem ? <span className="error">{problem}</span> : null}
       </label>
-      {problem && <span className="field"><span className="error">{problem}</span></span>}
-      <div className="row"><span className="grow" />{onCancel && <button className="btn" onClick={onCancel}>Back</button>}<button className="btn primary" disabled={busy || !address.trim() || !code.trim()} onClick={() => void join()} data-testid="join-go">Join</button></div>
+      <div className="row"><span className="grow" />{onCancel && <button className="btn" onClick={onCancel}>Back</button>}<button className="btn primary" disabled={busy || !invite} onClick={() => void join()} data-testid="join-go">Join</button></div>
     </div>
   );
 }
@@ -52,15 +51,18 @@ export function ShareSheet() {
   const open = useApp((s) => s.shareOpen);
   const setOpen = useApp((s) => s.setShareOpen);
   const toast = useApp((s) => s.toast);
+  const identity = useApp((s) => s.identity);
   const [view, setView] = useState<SharingView | null>(null);
   const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setJoining(false);
-    if (!REMOTE) engine.share().then(setView).catch(() => undefined);
-    const t = setInterval(() => { if (!REMOTE) engine.share().then(setView).catch(() => undefined); }, 4000);
+    const load = () => { if (!REMOTE && !DEMO) engine.share().then(setView).catch(() => undefined); };
+    load();
+    const t = setInterval(load, 4000);
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -71,22 +73,29 @@ export function ShareSheet() {
   if (!open) return null;
 
   const act = async (f: () => Promise<SharingView>) => {
+    setBusy(true);
     try {
       setView(await f());
     } catch (err) {
       toast({ kind: "fail", text: (err as Error).message });
+    } finally {
+      setBusy(false);
     }
   };
-  const invite = view?.invite && view.addresses[0] ? `${view.addresses[0]}  ·  ${view.invite.code}` : "";
+  const link = view?.on ? view.link ?? null : null;
+  const message = link ? `${identity.name} invited you to their McBot boards.\n\nOpen McBot → Share → Join someone else's, and paste this link:\n${link}\n\n(Works for 24 hours, on the same network.)` : "";
   const copy = async () => {
+    if (!link) return;
     try {
-      await navigator.clipboard.writeText(`Join my McBot board: ⌘K → Join a shared board\nAddress: ${view?.addresses[0] ?? ""}\nCode: ${view?.invite?.code ?? ""}`);
+      await navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      /* select and copy by hand */
+      toast({ kind: "info", text: "Select the link and copy it" });
     }
   };
+  const email = () => void openExternal(`mailto:?subject=${encodeURIComponent("Join my McBot boards")}&body=${encodeURIComponent(message)}`).catch(() => toast({ kind: "fail", text: "No email app opened. Copy the link instead." }));
+  const left = view?.invite ? Math.max(1, Math.round((view.invite.expiresAt - Date.now()) / 3600_000)) : 0;
 
   return (
     <>
@@ -95,8 +104,8 @@ export function ShareSheet() {
         <header>
           <span className="hermes-mark" aria-hidden><Users size={18} /></span>
           <div className="grow">
-            <h2>{REMOTE ? "Shared board" : joining ? "Join a shared board" : "Share on your network"}</h2>
-            <small>{REMOTE ? `You're working on ${REMOTE.label}'s boards` : joining ? "Same Wi-Fi or office network" : "Teammates edit and run these boards from their McBot, live"}</small>
+            <h2>{REMOTE ? "Shared board" : joining ? "Join a teammate" : "Invite your team"}</h2>
+            <small>{REMOTE ? `You're working on ${REMOTE.label}'s boards` : joining ? "Paste the link they sent you" : "They edit and run these boards from their McBot, live"}</small>
           </div>
           <button className="icon-btn" aria-label="Close" onClick={() => setOpen(false)}><X size={15} /></button>
         </header>
@@ -106,28 +115,33 @@ export function ShareSheet() {
             <p className="faint" style={{ margin: 0 }}>Agents run on their computer, with their keys.</p>
             <div className="row"><span className="grow" /><button className="btn" onClick={() => { saveRemote(null); location.reload(); }} data-testid="share-leave"><LogOut size={13} /> Leave and go back to mine</button></div>
           </div>
-        ) : joining || DEMO ? (
-          DEMO ? (
-            <div className="share-body">
-              <p className="faint" style={{ margin: 0 }}>Sharing between computers works in the desktop app. Here, open this page in a second tab: both are live.</p>
-            </div>
-          ) : <Join onCancel={() => setJoining(false)} />
+        ) : DEMO ? (
+          <div className="share-body">
+            <p className="faint" style={{ margin: 0 }}>Inviting teammates works in the desktop app. Here, open this page in a second tab: both are live.</p>
+          </div>
+        ) : joining ? (
+          <Join onCancel={() => setJoining(false)} />
         ) : (
           <div className="share-body">
-            <label className="share-toggle">
-              <input type="checkbox" checked={!!view?.on} onChange={(e) => void act(() => engine.setShare(e.target.checked))} data-testid="share-toggle" />
-              <span className="grow"><b>Share my boards</b><br /><span className="faint">Only people with a code can join. Your keys and files stay here.</span></span>
-            </label>
-            {view?.on && (
+            {!view?.on ? (
+              <button className="btn primary lg share-create" disabled={busy || !view} onClick={() => void act(() => engine.setShare(true))} data-testid="share-toggle">
+                <Link2 size={15} /> Create invite link
+              </button>
+            ) : (
               <>
                 <div className="share-invite" data-testid="share-invite">
-                  {view.invite && view.addresses.length ? (
+                  {link ? (
                     <>
-                      <span className="grow mono">{invite}</span>
-                      <button className="btn sm" onClick={() => void copy()}>{copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copied" : "Copy"}</button>
+                      <span className="grow mono ellipsis" data-testid="share-link">{link}</span>
+                      <button className="btn sm primary" onClick={() => void copy()} data-testid="share-copy">{copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copied" : "Copy link"}</button>
                     </>
-                  ) : <span className="grow faint">{view.addresses.length ? "Code used. Make a new one for the next teammate." : "No network found on this computer."}</span>}
-                  <button className="icon-btn sm" aria-label="New code" data-tip="New code (15 minutes, one person)" onClick={() => void act(() => engine.newInvite())}><RefreshCw size={13} /></button>
+                  ) : <span className="grow faint">{view.addresses.length ? "The link expired." : "This computer isn't on a network."}</span>}
+                </div>
+                <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+                  {link && <button className="btn sm" onClick={email} data-testid="share-email"><Mail size={12} /> Email invite</button>}
+                  <button className="btn sm ghost" disabled={busy} onClick={() => void act(() => engine.newInvite())} data-tip="The old link stops working"><RefreshCw size={12} /> New link</button>
+                  <span className="grow" />
+                  {link && <span className="faint" style={{ fontSize: 12 }}>Works {left}h · same network</span>}
                 </div>
                 <div className="stack" style={{ gap: 6 }}>
                   <span className="section-label">People</span>
@@ -142,7 +156,12 @@ export function ShareSheet() {
                 </div>
               </>
             )}
-            <div className="row"><span className="grow" /><button className="btn ghost sm" onClick={() => setJoining(true)} data-testid="share-join">Join someone else's</button></div>
+            <div className="row">
+              <span className="faint" style={{ fontSize: 12 }}>Your keys and files stay on this computer.</span>
+              <span className="grow" />
+              {view?.on && <button className="btn ghost sm" disabled={busy} onClick={() => void act(() => engine.setShare(false))} data-testid="share-stop">Stop sharing</button>}
+              <button className="btn ghost sm" onClick={() => setJoining(true)} data-testid="share-join">Join someone else's</button>
+            </div>
           </div>
         )}
       </section>

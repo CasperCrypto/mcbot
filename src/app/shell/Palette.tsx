@@ -1,5 +1,5 @@
 import {
-  BookOpen, Bot, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
+  BookOpen, Bot, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
@@ -56,7 +56,7 @@ function useCommands(close: () => void): Command[] {
       { id: "add-local", group: "Create", label: "Local model", hint: "Ollama, LM Studio, vLLM…", icon: <HardDrive size={15} />, run: () => place(newModel(graph, "local", at("model"))) },
       { id: "add-cloud", group: "Create", label: "Cloud model", hint: "Any OpenAI-compatible API", icon: <Cloud size={15} />, run: () => place(newModel(graph, "cloud", at("model"))) },
       { id: "add-files", group: "Create", label: "Files tool", icon: <Plug size={15} />, run: () => place(newTool(graph, "filesystem", at("tool"), app.health?.workspace ?? null)) },
-      { id: "share", group: "Actions", label: "Share on your network…", icon: <Users size={15} />, run: () => app.setShareOpen(true) },
+      { id: "share", group: "Actions", label: "Invite teammates…", hint: "Copy a link, email it", icon: <Users size={15} />, run: () => app.setShareOpen(true) },
       { id: "add-team", group: "Create", label: "Team…", hint: "Research & write, Support desk, Dev team…", icon: <Users size={15} />, run: () => app.setTeamsOpen(true) },
       { id: "add-tool-catalog", group: "Create", label: "Tool…", hint: "Browser, web search, Notion…", icon: <Plug size={15} />, run: () => app.setCatalogOpen(true) },
       { id: "add-mcp", group: "Create", label: "MCP server", icon: <Server size={15} />, run: () => place(newTool(graph, "stdio", at("tool"), null)) },
@@ -82,21 +82,7 @@ function useCommands(close: () => void): Command[] {
         },
       },
       { id: "compile", group: "Actions", label: "Compile", icon: <Hammer size={15} />, keys: ["⌘", "S"], run: () => { close(); void compileBoard(boardId); } },
-      {
-        id: "open-folder", group: "Actions", label: "Open folder…", hint: "See any folder as a graph", icon: <FolderPlus size={15} />,
-        ask: {
-          placeholder: "/Users/you/project",
-          submit: async (path) => {
-            try {
-              await engine.openFolder(path.trim());
-              app.setTab("files");
-              close();
-            } catch (err) {
-              app.toast({ kind: "fail", text: (err as Error).message });
-            }
-          },
-        },
-      },
+      { id: "open-folder", group: "Actions", label: "Open folder…", hint: "Pick a folder for agents and the editor", icon: <FolderPlus size={15} />, run: () => app.setFolderPickerOpen(true) },
       {
         id: "new-board", group: "Actions", label: "New board…", icon: <Plus size={15} />,
         ask: {
@@ -112,6 +98,9 @@ function useCommands(close: () => void): Command[] {
       { id: "export-board", group: "Actions", label: "Export board", hint: "Save it as a file", icon: <Download size={15} />, run: () => { close(); void exportBoardFile(boardId); } },
       { id: "open-hermes", group: "Actions", label: "Open my Hermes setup", hint: "Draw ~/.hermes as a board", icon: <FolderOpen size={15} />, run: () => { close(); void openHermesSetup(); } },
       { id: "import-board", group: "Actions", label: "Import board…", hint: "Open a board file", icon: <Upload size={15} />, run: () => { close(); importBoardFile(); } },
+      { id: "settings", group: "Actions", label: "Settings", hint: "Models, API keys, your name, team", icon: <Settings size={15} />, keys: ["⌘", ","], run: () => app.openSettings() },
+      { id: "models", group: "Actions", label: "Add a model…", hint: "Ollama, LM Studio, OpenAI, OpenRouter…", icon: <Sparkles size={15} />, run: () => app.openSettings("models") },
+      { id: "keys", group: "Actions", label: "API keys", icon: <KeyRound size={15} />, run: () => app.openSettings("keys") },
       { id: "hermes", group: "Actions", label: "Engine", hint: "Status and restart", icon: <Cpu size={15} />, run: () => app.setHermesOpen(true) },
       { id: "report", group: "Actions", label: "Report a problem…", hint: "Details to paste into an issue", icon: <LifeBuoy size={15} />, run: () => app.setReportOpen(true) },
       { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Sparkles size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: null }); } },

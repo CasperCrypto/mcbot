@@ -24,27 +24,6 @@ const rank = (e: FsEntry, profile: boolean): number => {
 };
 const ext = (name: string) => (name.includes(".") ? name.split(".").pop()!.toLowerCase().slice(0, 4) : "");
 
-function OpenFolder({ onOpened }: { onOpened: (r: FsRoot) => void }) {
-  const toast = useApp((s) => s.toast);
-  const [path, setPath] = useState("");
-  return (
-    <label className="sidebar-search" style={{ margin: "2px 2px 6px" }}>
-      <FolderPlus size={14} />
-      <input autoFocus value={path} placeholder="/path/to/folder" aria-label="Folder path" data-testid="open-folder-input"
-        onChange={(e) => setPath(e.target.value)}
-        onKeyDown={async (e) => {
-          if (e.key !== "Enter" || !path.trim()) return;
-          try {
-            onOpened(await engine.openFolder(path.trim()));
-            setPath("");
-          } catch (err) {
-            toast({ kind: "fail", text: (err as Error).message });
-          }
-        }} />
-    </label>
-  );
-}
-
 export function FilesView() {
   const { boardId } = useBoard();
   const compile = useApp((s) => s.compile);
@@ -54,7 +33,8 @@ export function FilesView() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set([""]));
   const [unfolded, setUnfolded] = useState<Set<string>>(new Set());
   const [file, setFile] = useState<{ path: string; preview: FsPreview | null } | null>(null);
-  const [adding, setAdding] = useState(false);
+  const openedFolder = useApp((s) => s.openedFolder);
+  const pick = () => useApp.getState().setFolderPickerOpen(true);
 
   const loadRoots = useCallback(async () => {
     const list = await engine.roots(boardId).catch(() => [] as FsRoot[]);
@@ -64,6 +44,11 @@ export function FilesView() {
   useEffect(() => {
     void loadRoots();
   }, [loadRoots, compile]);
+  // A folder opened from the picker: show it.
+  useEffect(() => {
+    if (!openedFolder) return;
+    void loadRoots().then(() => setRootId(openedFolder.id));
+  }, [openedFolder, loadRoots]);
 
   const root = roots.find((r) => r.id === rootId) ?? roots[0] ?? null;
   const fetchDir = useCallback(async (rid: string, path: string) => {
@@ -201,15 +186,17 @@ export function FilesView() {
 
   return (
     <>
-      <Sidebar title="Files" action={<button className="icon-btn sm" aria-label="Open folder" data-tip="Open folder" data-tip-side="bottom" onClick={() => setAdding(!adding)} data-testid="open-folder"><FolderPlus size={14} /></button>}>
-        {adding && <OpenFolder onOpened={async (r) => { setAdding(false); await loadRoots(); setRootId(r.id); }} />}
+      <Sidebar title="Files" action={<button className="icon-btn sm" aria-label="Open folder" data-tip="Open folder" data-tip-side="bottom" onClick={pick} data-testid="open-folder"><FolderPlus size={14} /></button>}>
         {profiles.length > 0 && <SidebarGroup label="Agents" />}
         {profiles.map(row)}
         <SidebarGroup label="Folders" />
         {places.map(row)}
+        <button className="list-row faint" onClick={pick} data-testid="open-folder-row">
+          <span className="tile sm folder"><FolderPlus size={13} /></span><span className="grow">Open a folder…</span>
+        </button>
       </Sidebar>
       <section className="main" data-testid="files-graph">
-        {!root ? <Empty title="Nothing to show yet">Compile an agent or open a folder.</Empty> : (
+        {!root ? <Empty title="No folders yet" action={<button className="btn primary" onClick={pick}><FolderPlus size={14} /> Open a folder</button>} /> : (
           <div className="view">
             <div className={`graph-area${file ? " with-panel" : ""}`}><GraphCanvas key={root.id} nodes={nodes} edges={edges} selected={file ? `p:${file.path}` : null} onSelect={onSelect} fitSignature={`${root.id}:${Object.keys(listings).length}:${expanded.size}:${unfolded.size}:${!!file}`} /></div>
             {file && (

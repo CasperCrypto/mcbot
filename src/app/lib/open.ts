@@ -2,7 +2,7 @@ import { DEMO } from "./engine";
 
 /**
  * Open a web page in the person's browser. In the desktop app a plain link does not
- * leave the window, so the shell's opener plugin asks the system (https only, see
+ * leave the window, so the shell's opener plugin asks the system (https and mailto: only, see
  * src-tauri/capabilities/default.json); in a browser it is an ordinary new tab.
  */
 const inApp = () => !DEMO && typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;

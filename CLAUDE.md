@@ -133,7 +133,8 @@ Change them additively; a breaking change bumps the version.
 - First launch runs the setup assistant (`src/app/setup/`): its answers go into
   every agent's SOUL.md and their USER.md memory; `<workspace>/setup.json`
   records that it ran. Local model servers are found by asking the usual
-  addresses for `/v1/models` (Ollama :11434, LM Studio :1234).
+  addresses for `/v1/models` (Ollama :11434, LM Studio :1234, llama.cpp :8080, vLLM :8000,
+  Jan :1337), or any address the person types.
 
 ## The installed app
 
@@ -183,8 +184,11 @@ Change them additively; a breaking change bumps the version.
   request and WebSocket upgrade. **Share on your network** (`engine/sharing.ts`, off by
   default) also opens port 4318 to the LAN while it is on: every request there needs an
   allowed `Origin` and a member key (`Authorization: Bearer`, or `?key=` for WebSocket/SSE),
-  got once with a one-time invite code (15 min, failed joins rate-limited); only key hashes
-  are stored (`<workspace>/sharing.json`, owner-only). Members reach boards, compile, runs,
+  got with the invite link (`http://<address>:4318/join?code=…`: 24 h, for everyone it is sent
+  to, until "New link" replaces it or sharing stops; failed joins rate-limited); only key hashes
+  are stored (`<workspace>/sharing.json`, owner-only). `GET /join` on that port is the one
+  request without an Origin: a static page that says how to join from McBot (no data). The
+  Share sheet copies the link or opens an email draft (`mailto:`); Join takes the pasted link. Members reach boards, compile, runs,
   tasks, schedules, memory and cost (`guestAllowed`), never keys, files, setup, sharing or
   the engine's controls. Agents always run on the host. A joined window keeps the host's
   address and its key in localStorage (`src/app/lib/remote.ts`) and hides Code and Files.
@@ -198,6 +202,11 @@ Change them additively; a breaking change bumps the version.
   gradient text (the website follows the same rule).
 - **Less text.** No explanatory paragraphs in the UI. Labels are short; detail
   lives in tooltips (`data-tip`). Empty states are one line plus one action.
+- **Settings** (`views/SettingsView.tsx`, ⌘, and the gear in the rail): models (local servers
+  found or at any address, cloud presets in `lib/providers.ts`, all OpenAI-compatible; adding one
+  places a model block and wires it to the agents picked, main or backup), API keys (names only,
+  replace or remove), your name, team, engine, run setup again. Home's "Get started" and "Needs
+  you" point there when an agent has no model, a key is missing or a local server isn't answering.
 - **Board | Hermes** (top of the board): Board is what you edit; Hermes (`src/app/graph/HermesView.tsx`)
   draws the whole harness behind it, read-only: gateway, chat apps, each agent's model chain,
   abilities, tools, makers, skills, memory, schedules, the shared task board, approvals.
@@ -238,7 +247,8 @@ Change them additively; a breaking change bumps the version.
   another product's look or trade dress. Blobatar (MIT) is fine.
 - **Local folders:** the engine reads only inside roots the user opened
   (`<workspace>/folders.json`), the shared files folder and compiled profiles,
-  path-checked. The Code view's editor (Monaco, loaded on first use) writes back
+  path-checked. The folder picker (`shell/FolderPicker.tsx`, `GET /api/fs/browse`, host only)
+  lists folder names, never files, so a folder is opened by clicking, not by typing its path. The Code view's editor (Monaco, loaded on first use) writes back
   only to opened folders, the shared files folder, an agent's `workspace/` and its Hermes
   settings (SOUL.md, config.yaml, profile.yaml, skills; the board follows them), never memory,
   logs, state or a key file, and only over the sha256 it read.
@@ -248,8 +258,10 @@ Change them additively; a breaking change bumps the version.
 - **Browser view:** on macOS and Windows the page is a real child webview over the view's page
   area (`src-tauri/src/browser.rs`, Tauri `unstable` feature, one `page-<window>` per window), so
   sites that refuse iframes still load; it hides while a sheet or ⌘K is open (native views draw
-  above HTML). Remote pages get no IPC. Linux (GTK ignores child bounds) and the demo use an
-  iframe plus "Open in a window".
+  above HTML), and is placed again after layout and motion settle (the view has no entry motion).
+  Remote pages get no IPC. Linux (GTK ignores child bounds) and the demo use an iframe: the engine
+  first asks whether the site allows framing (`GET /api/web/frameable`), and one that refuses
+  gets "Open in a window" instead of a blank page.
 
 ## Stack (do not substitute)
 

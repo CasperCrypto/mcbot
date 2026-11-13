@@ -1,9 +1,9 @@
-import { ArrowLeft, ArrowRight, ExternalLink, Globe, RotateCw, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink, Globe, LoaderCircle, RotateCw, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode } from "../../contracts/graph";
 import { runAgent } from "../actions";
 import { nativePage, openBrowser, page, type PageBox } from "../lib/desktop";
-import { DEMO } from "../lib/engine";
+import { DEMO, engine, REMOTE } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, Empty } from "../ui";
@@ -18,39 +18,77 @@ export function toUrl(input: string): string {
 }
 
 const START = ["localhost:3000", "localhost:5173", "news.ycombinator.com", "en.wikipedia.org"];
+const isLocal = (u: string) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(u);
+
+/** The page this window last showed: coming back to Browser shows it again. */
+let remembered: { history: string[]; at: number } = { history: [], at: -1 };
 
 /**
  * The workbench browser: look at a page next to your agents, then hand it to one. In the desktop
- * app the page is a real webview over the page area (src-tauri/src/browser.rs), so every site
- * loads; in a browser tab (the demo) it is an iframe, and sites that refuse framing open in a new
- * tab. Agents browse with their own browser tool (Hermes' Chromium), which "Ask" uses.
+ * app on macOS and Windows the page is a real webview over the page area (src-tauri/src/browser.rs),
+ * so every site loads. Elsewhere it is an iframe: the engine first asks whether the site allows
+ * being framed, and a site that refuses gets a card that opens it in a window instead of a blank
+ * page. Agents browse with their own browser tool (Hermes' Chromium), which "Ask" uses.
  */
 export default function BrowserView() {
   const { boardId, graph } = useBoard();
   const agents = useMemo(() => graph.nodes.filter((n): n is AgentNode => n.kind === "agent"), [graph]);
-  const [history, setHistory] = useState<string[]>([]);
-  const [at, setAt] = useState(-1);
-  const [input, setInput] = useState("");
+  const [history, setHistory] = useState<string[]>(remembered.history);
+  const [at, setAt] = useState(remembered.at);
+  const [input, setInput] = useState(remembered.history[remembered.at] ?? "");
   const [reload, setReload] = useState(0);
   const [question, setQuestion] = useState("");
   const [agentId, setAgentId] = useState<string>("");
-  const frame = useRef<HTMLIFrameElement>(null);
+  /** The native page could not be made: this window uses the iframe from now on. */
+  const [nativeFailed, setNativeFailed] = useState(false);
+  /** Whether the site lets itself be framed (iframe mode only); null while asking. */
+  const [frameOk, setFrameOk] = useState<Record<string, boolean>>({});
   const area = useRef<HTMLDivElement>(null);
-  const native = useMemo(() => nativePage(), []);
+  const native = useMemo(() => nativePage(), []) && !nativeFailed;
   // A native page draws above the window's HTML, so it steps aside while a sheet or ⌘K is open.
-  const covered = useApp((s) => s.paletteOpen || s.compileOpen || s.hermesOpen || s.reportOpen || s.newAgentOpen || s.catalogOpen || s.chatAppsOpen || s.teamOpen || s.teamsOpen || s.shareOpen);
-  const url = at >= 0 ? history[at]! : null;
+  const covered = useApp((s) => s.paletteOpen || s.compileOpen || s.hermesOpen || s.reportOpen || s.newAgentOpen || s.catalogOpen || s.chatAppsOpen || s.teamOpen || s.teamsOpen || s.shareOpen || s.folderPickerOpen);
+  const url = at >= 0 ? history[at] ?? null : null;
+  useEffect(() => {
+    remembered = { history, at };
+  }, [history, at]);
+
   const box = (): PageBox | null => {
     const r = area.current?.getBoundingClientRect();
     return r && r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : null;
   };
 
-  // Desktop: show the typed address in the page; follow its size; hide it when leaving the view.
+  // Desktop: show the address in the page, placed over the page area. The area may not have its
+  // final size and place on the first frame (layout, the view's entry motion), so it is measured
+  // again for a few frames; a failure falls back to the iframe for this window.
   useEffect(() => {
     if (!native || !url) return;
-    const b = box();
-    if (b && !covered) page.show(url, b).catch((err: unknown) => useApp.getState().toast({ kind: "fail", text: String(err) }));
-    else void page.hide();
+    if (covered) {
+      void page.hide();
+      return;
+    }
+    let alive = true;
+    let raf = 0;
+    const show = async (tries: number) => {
+      const b = box();
+      if (!b) {
+        if (tries > 0 && alive) raf = requestAnimationFrame(() => void show(tries - 1));
+        return;
+      }
+      try {
+        await page.show(url, b);
+      } catch (err) {
+        if (!alive) return;
+        setNativeFailed(true);
+        useApp.getState().toast({ kind: "fail", text: `The page couldn't open here: ${String(err)}`, action: { label: "Open in a window", run: () => void openBrowser(url) } });
+      }
+    };
+    void show(30);
+    const settle = [80, 250, 500].map((ms) => setTimeout(() => { const b = box(); if (b && alive) void page.bounds(b); }, ms));
+    return () => {
+      alive = false;
+      cancelAnimationFrame(raf);
+      settle.forEach(clearTimeout);
+    };
   }, [native, url, reload, covered]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!native || !area.current) return;
@@ -61,9 +99,14 @@ export default function BrowserView() {
     const ro = new ResizeObserver(sync);
     ro.observe(area.current);
     window.addEventListener("resize", sync);
+    // Moves that change no size (the view's entry motion, a sidebar sliding) end in these.
+    document.addEventListener("animationend", sync, true);
+    document.addEventListener("transitionend", sync, true);
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", sync);
+      document.removeEventListener("animationend", sync, true);
+      document.removeEventListener("transitionend", sync, true);
     };
   }, [native, url !== null]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -82,6 +125,16 @@ export default function BrowserView() {
     };
   }, [native]);
 
+  // Iframe mode: ask once per address whether the site allows it (localhost always tries).
+  useEffect(() => {
+    if (native || !url || isLocal(url) || url in frameOk || REMOTE) return;
+    let alive = true;
+    void engine.frameable(url).then((r) => { if (alive) setFrameOk((m) => ({ ...m, [url]: r.frameable })); }).catch(() => { if (alive) setFrameOk((m) => ({ ...m, [url]: true })); });
+    return () => {
+      alive = false;
+    };
+  }, [native, url, frameOk]);
+
   const go = (raw: string) => {
     if (!raw.trim()) return;
     const u = toUrl(raw);
@@ -99,6 +152,7 @@ export default function BrowserView() {
     setAt(i);
     setInput(history[i]!);
   };
+  const openOutside = () => url && void openBrowser(url).catch((err: unknown) => useApp.getState().toast({ kind: "fail", text: String(err) }));
   const ask = async () => {
     const agent = agents.find((a) => a.id === (agentId || agents[0]?.id));
     if (!agent || !url || !question.trim()) return;
@@ -109,6 +163,7 @@ export default function BrowserView() {
     }
   };
 
+  const verdict = url && !native ? (isLocal(url) || REMOTE ? true : frameOk[url]) : undefined;
   return (
     <section className="main flush-left browser-main" data-testid="browser-view">
       <div className="browser-bar">
@@ -120,26 +175,26 @@ export default function BrowserView() {
           <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") go(input); }}
             onFocus={(e) => e.target.select()} placeholder="Search or enter an address" aria-label="Address" data-testid="browser-address" />
         </label>
-        <button className="icon-btn sm" aria-label="Open in a window" data-tip="Open in McBot's browser window" disabled={!url}
-          onClick={() => url && void openBrowser(url).catch((err: unknown) => useApp.getState().toast({ kind: "fail", text: String(err) }))}><ExternalLink size={13} /></button>
+        <button className="icon-btn sm" aria-label="Open in a window" data-tip="Open in a window" disabled={!url} onClick={openOutside}><ExternalLink size={13} /></button>
       </div>
       <div className="browser-page">
         {url && native ? (
           <div ref={area} className="browser-native" data-testid="browser-native" />
-        ) : url && DEMO && !/^https?:\/\/(localhost|127\.0\.0\.1)/.test(url) ? (
-          // A web page cannot show most sites inside itself (they forbid it). The desktop app has a
-          // real browser here; the demo says so instead of showing a blank page.
-          <div className="browser-demo" data-testid="browser-demo">
+        ) : url && verdict === undefined ? (
+          <div className="browser-demo"><LoaderCircle size={22} className="spin-icon faint" /></div>
+        ) : url && verdict === false ? (
+          // The site forbids being shown inside another page: say so, and open it where it works.
+          <div className="browser-demo" data-testid="browser-blocked">
             <Globe size={28} className="faint" />
             <b>{new URL(url).host}</b>
-            <span className="faint">Websites can't open inside a web page, so the online demo can't show this site. In the McBot app it opens right here.</span>
+            <span className="faint">{DEMO ? "Websites can't open inside a web page, so the online demo can't show this site. In the McBot app it opens right here." : "This site doesn't allow being shown inside other apps."}</span>
             <div className="row" style={{ justifyContent: "center" }}>
-              <button className="btn light" onClick={() => void openBrowser(url)}><ExternalLink size={14} /> Open in a new tab</button>
+              <button className="btn light" onClick={openOutside} data-testid="browser-open-window"><ExternalLink size={14} /> Open in a window</button>
               {agents.length > 0 && <span className="faint">or ask an agent about it below</span>}
             </div>
           </div>
         ) : url ? (
-          <iframe key={`${url}#${reload}`} ref={frame} src={url} title="Page" sandbox="allow-scripts allow-forms allow-popups allow-same-origin allow-downloads" referrerPolicy="no-referrer" data-testid="browser-frame" />
+          <iframe key={`${url}#${reload}`} src={url} title="Page" sandbox="allow-scripts allow-forms allow-popups allow-same-origin allow-downloads" referrerPolicy="no-referrer" data-testid="browser-frame" />
         ) : (
           <Empty title="Browse next to your agents" action={
             <div className="row" style={{ flexWrap: "wrap", justifyContent: "center" }}>
@@ -147,7 +202,6 @@ export default function BrowserView() {
             </div>
           } />
         )}
-        {url && !native && !DEMO && <div className="browser-hint faint">Blank page? This site blocks being shown inside apps. <button className="btn sm ghost" onClick={() => void openBrowser(url)}>Open in a window</button></div>}
       </div>
       {url && agents.length > 0 && (
         <div className="code-ask browser-ask">

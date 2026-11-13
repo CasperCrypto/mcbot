@@ -1,4 +1,4 @@
-import { ArrowUp, Check, CircleDashed, Clock, Hammer, ListChecks, Pause, Play, Plus, RotateCcw, Square, Trash2, X } from "lucide-react";
+import { ArrowUp, Check, CircleDashed, Clock, Cpu, Hammer, KeyRound, ListChecks, Pause, Play, Plus, RotateCcw, Sparkles, Square, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AgentSchedules, CostReport, TaskView } from "../../contracts/api";
 import type { AgentNode } from "../../contracts/graph";
@@ -15,6 +15,9 @@ import { newId } from "../graph/defaults";
 import { StickyNote } from "../notes/StickyNote";
 import { useTasks } from "./TasksView";
 import { ApprovalCard } from "../approvals/ApprovalCard";
+import { agentsWithoutModel, modelsOf } from "../lib/models";
+import { useModelHealth } from "../lib/useModelHealth";
+import { REMOTE } from "../lib/engine";
 
 const DAY = 86_400_000;
 
@@ -188,6 +191,55 @@ function Schedules({ agents }: { agents: AgentNode[] }) {
   );
 }
 
+const STARTED = "mcbot.getting-started.hidden";
+const hiddenStart = (): boolean => {
+  try {
+    return localStorage.getItem(STARTED) === "1";
+  } catch {
+    return false;
+  }
+};
+
+/** First steps, in order, each with the one action that does it. Hides when done or dismissed. */
+function GettingStarted({ agents, keys, runs, silent }: { agents: AgentNode[]; keys: string[] | null; runs: number; silent: number }) {
+  const { boardId, graph } = useBoard();
+  const drift = useApp((s) => s.drift);
+  const health = useApp((s) => s.health);
+  const app = useApp.getState();
+  const [hidden, setHidden] = useState(hiddenStart);
+  const noModel = agentsWithoutModel(graph);
+  const missingKeys = modelsOf(graph).filter((m) => m.data.endpoint === "cloud" && m.data.apiKeyEnv && keys && !keys.includes(m.data.apiKeyEnv));
+  const steps = [
+    { id: "agents", label: "Add your agents", done: agents.length > 0, action: { label: "Pick a team", run: () => app.setTeamsOpen(true) } },
+    { id: "model", label: "Give them a model", sub: noModel.length ? `${noModel.length} without one` : missingKeys.length ? "A key is missing" : silent ? "Its server isn't answering" : undefined, done: agents.length > 0 && noModel.length === 0 && missingKeys.length === 0 && silent === 0, action: { label: "Add model", run: () => app.openSettings(missingKeys.length && !noModel.length ? "keys" : "models") } },
+    { id: "engine", label: "Prepare the engine", done: !!health?.hermes.found, action: { label: "Prepare", run: () => app.openSettings("engine") } },
+    { id: "compile", label: "Compile", sub: "Writes the agents to disk", done: agents.length > 0 && drift === 0, action: { label: "Compile", run: () => void compileBoard(boardId) } },
+    { id: "ask", label: "Ask an agent something", done: runs > 0, action: { label: "Ask", run: () => agents[0] && app.openChat(agents[0].id) } },
+    ...(REMOTE ? [] : [{ id: "invite", label: "Invite a teammate", sub: "Optional", done: false, action: { label: "Invite", run: () => app.setShareOpen(true) } }]),
+  ];
+  const required = steps.filter((s) => s.id !== "invite");
+  if (hidden || required.every((s) => s.done)) return null;
+  const next = steps.find((s) => !s.done);
+  const done = steps.filter((s) => s.done).length;
+  return (
+    <section className="card home-card start-card" data-testid="getting-started">
+      <div className="home-card-head">
+        <h2>Get started</h2><span className="chip num">{done}/{steps.length}</span><span className="grow" />
+        <button className="icon-btn sm" aria-label="Hide" data-tip="Hide" onClick={() => { try { localStorage.setItem(STARTED, "1"); } catch { /* this session */ } setHidden(true); }}><X size={13} /></button>
+      </div>
+      <ol className="start-steps">
+        {steps.map((s) => (
+          <li key={s.id} data-done={s.done || undefined} data-next={s === next || undefined}>
+            <span className="start-mark">{s.done ? <Check size={12} strokeWidth={3} /> : null}</span>
+            <span className="grow"><span className="title">{s.label}</span>{s.sub && !s.done && <span className="sub"> · {s.sub}</span>}</span>
+            {!s.done && <button className={`btn sm${s === next ? " primary" : " ghost"}`} onClick={s.action.run} data-testid={`start-${s.id}`}>{s.action.label}</button>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 /** Pinned sticky notes from the board, and a card to add one (also placed on the canvas). */
 function Notes() {
   const { doc, graph } = useBoard();
@@ -217,6 +269,8 @@ export function HomeView() {
   const drift = useApp((s) => s.drift);
   const { tasks } = useTasks(boardId, 4000);
   const [cost, setCost] = useState<CostReport | null>(null);
+  const [keys, setKeys] = useState<string[] | null>(null);
+  const health = useApp((s) => s.health);
   const agents = useMemo(() => graph.nodes.filter((n): n is AgentNode => n.kind === "agent"), [graph]);
   const nameOf = (profile: string | null) => {
     const a = agents.find((x) => x.data.name === profile);
@@ -226,6 +280,13 @@ export function HomeView() {
   useEffect(() => {
     engine.cost(boardId).then(setCost).catch(() => undefined);
   }, [boardId, finished]);
+  useEffect(() => {
+    engine.secrets().then((r) => setKeys(r.names)).catch(() => setKeys(null));
+  }, [boardId, graph]);
+  const noModel = agentsWithoutModel(graph);
+  const modelHealth = useModelHealth(modelsOf(graph));
+  const silent = modelsOf(graph).filter((m) => modelHealth[m.id] === "down" || modelHealth[m.id] === "missing");
+  const missingKeys = [...new Set(modelsOf(graph).filter((m) => m.data.endpoint === "cloud" && m.data.apiKeyEnv && keys && !keys.includes(m.data.apiKeyEnv)).map((m) => m.data.apiKeyEnv))];
 
   const list = useMemo(() => Object.values(runs).sort((a, b) => b.startedAt - a.startedAt), [runs]);
   const live = list.filter((r) => r.status === "running");
@@ -244,6 +305,25 @@ export function HomeView() {
 
   // Needs you: one line each, one action.
   const inbox: Item[] = [
+    ...(health && !health.hermes.found && !REMOTE ? [{
+      key: "engine", at: Date.now(), face: <span className="tile sm agent"><Cpu size={14} /></span>, title: "The engine isn't ready", sub: "Prepare it once so agents can run", tone: "warn" as const,
+      action: { label: "Prepare", icon: <Cpu size={12} />, run: () => app.openSettings("engine") }, open: () => app.openSettings("engine"),
+    }] : []),
+    ...(noModel.length ? [{
+      key: "no-model", at: Date.now(), face: <span className="tile sm model"><Sparkles size={14} /></span>,
+      title: `${noModel.map((a) => a.data.displayName || a.data.name).slice(0, 3).join(", ")}${noModel.length > 3 ? ` and ${noModel.length - 3} more` : ""} ${noModel.length > 1 ? "have" : "has"} no model`, sub: "Agents need a model to think with", tone: "warn" as const,
+      action: { label: "Add model", icon: <Plus size={12} />, run: () => app.openSettings("models") }, open: () => app.openSettings("models"),
+    }] : []),
+    ...silent.map((m): Item => ({
+      key: `model-${m.id}`, at: Date.now(), face: <span className="tile sm model"><Sparkles size={14} /></span>,
+      title: modelHealth[m.id] === "down" ? `${m.data.label || m.data.name} isn't running` : `${m.data.label || m.data.name} doesn't have ${m.data.model}`,
+      sub: modelHealth[m.id] === "down" ? `Nothing answers at ${m.data.baseUrl}` : "Pull the model, or pick one it has", tone: "warn",
+      action: { label: "Fix", icon: <Sparkles size={12} />, run: () => app.openSettings("models") }, open: () => app.openSettings("models"),
+    })),
+    ...missingKeys.map((k): Item => ({
+      key: `key-${k}`, at: Date.now(), face: <span className="tile sm file"><KeyRound size={14} /></span>, title: `${k} isn't saved`, sub: "A cloud model needs this key", tone: "warn",
+      action: { label: "Add key", icon: <KeyRound size={12} />, run: () => app.openSettings("keys") }, open: () => app.openSettings("keys"),
+    })),
     ...(drift ? [{
       key: "compile", at: Date.now(), face: <span className="tile sm agent"><Hammer size={14} /></span>, title: `${drift} file${drift > 1 ? "s" : ""} differ from the board`, sub: "Agents run what was last compiled", tone: "warn" as const,
       action: { label: "Compile", icon: <Hammer size={12} />, run: () => void compileBoard(boardId) }, open: () => app.setTab("graph"),
@@ -297,6 +377,7 @@ export function HomeView() {
               </div>
             </section>
           ) : <Ask agents={agents} />}
+          {agents.length > 0 && <GettingStarted agents={agents} keys={keys} runs={list.length} silent={silent.length} />}
           <Notes />
 
           <div className="home-grid">

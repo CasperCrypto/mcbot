@@ -3,7 +3,9 @@ import type { BoardInfo, CompileResponse, Health, SetupState } from "../../contr
 import { summarizeRun, type RunEvent, type RunSummary } from "../../contracts/run";
 import { loadIdentity, saveIdentity, type Identity } from "../lib/identity";
 
-export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "files" | "cost" | "team";
+export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "files" | "cost" | "team" | "settings";
+
+export type SettingsSection = "models" | "keys" | "you" | "team" | "engine" | "about";
 
 export interface Toast {
   id: number;
@@ -44,6 +46,12 @@ interface State {
   /** Share on your network / join. */
   shareOpen: boolean;
   teamOpen: boolean;
+  /** Which part of Settings is open. */
+  settingsSection: SettingsSection;
+  /** The folder picker (Files, Code, ⌘K Open folder). */
+  folderPickerOpen: boolean;
+  /** The folder the picker opened last: Files and Code reload their folders and show it. */
+  openedFolder: { id: string; at: number } | null;
   /** A sticky note this window just made: it opens ready to type. */
   freshNote: string | null;
   /** The agent whose thread is open in Agents. */
@@ -63,6 +71,9 @@ interface State {
   setTeamsOpen(open: boolean): void;
   setShareOpen(open: boolean): void;
   setTeamOpen(open: boolean): void;
+  setFolderPickerOpen(open: boolean): void;
+  openSettings(section?: SettingsSection): void;
+  folderOpened(id: string): void;
   setFreshNote(id: string | null): void;
   openChat(agentNodeId: string | null): void;
   showTask(id: string | null, tab?: boolean): void;
@@ -126,6 +137,12 @@ export const useApp = create<State>((set, get) => ({
   teamOpen: false,
   setShareOpen: (shareOpen) => set({ shareOpen, paletteOpen: false }),
   setTeamOpen: (teamOpen) => set({ teamOpen, paletteOpen: false }),
+  settingsSection: "models",
+  openSettings: (section) => set((s) => ({ tab: "settings", settingsSection: section ?? s.settingsSection, paletteOpen: false })),
+  folderPickerOpen: false,
+  openedFolder: null,
+  setFolderPickerOpen: (folderPickerOpen) => set({ folderPickerOpen, paletteOpen: false }),
+  folderOpened: (id) => set({ openedFolder: { id, at: Date.now() }, folderPickerOpen: false }),
   setTeamsOpen: (teamsOpen) => set({ teamsOpen, paletteOpen: false, newAgentOpen: false }),
   freshNote: null,
   setFreshNote: (freshNote) => set({ freshNote }),
