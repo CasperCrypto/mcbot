@@ -4,8 +4,8 @@ import { useApp } from "../state/store";
 import { REMOTE } from "../lib/engine";
 import { VIEWS } from "./Palette";
 
-/** On another computer's boards: its files and folders stay there, so Code and Files are hidden. */
-export const HIDDEN_FOR_GUESTS = new Set(["code", "files"]);
+/** On another computer's boards: its files, folders and skill library stay there, so Code, Files and Skills are hidden. */
+export const HIDDEN_FOR_GUESTS = new Set(["code", "files", "skills"]);
 
 export function Rail() {
   const tab = useApp((s) => s.tab);

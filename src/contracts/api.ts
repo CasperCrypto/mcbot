@@ -298,6 +298,8 @@ export interface SkillsView {
   installed: string[];
   /** Hermes' bundled skills are seeded into this agent. */
   seeded: boolean;
+  /** The agent's profile exists on disk (installing needs it). */
+  compiled: boolean;
 }
 
 export interface TasksView {

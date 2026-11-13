@@ -116,11 +116,12 @@ Change them additively; a breaking change bumps the version.
   `hermes -p <agent> skills opt-in --sync` once per profile without `skills/.bundled_manifest`
   (`engine/skills.ts`). The official library (`hermes/optional-skills`) installs per agent with
   `hermes -p <agent> skills install official/<path> --yes` (host only). Both live in category
-  folders, which the board reader skips: they are Hermes', not blocks.
+  folders, which the board reader skips: they are Hermes', not blocks. The Skills view
+  (`views/SkillsView.tsx`, host only) shows all three per agent; the Inspector links to it.
 - Memory edits: Hermes' `§` format byte for byte, refused while the profile is
   running, and only against the sha256 the editor read.
 - An agent's `dailyBudgetUsd` is McBot-side only (never compiled, no Hermes key): `buildCostReport` compares
-  today's (UTC) spend with it; Cost shows the bar and Home's "Needs you" warns at 80% and 100%. It does not stop runs yet.
+  today's (UTC) spend with it; Cost shows the bar and Home's "Needs you" warns at 80% and 100%; at 100% `POST /api/runs` refuses (409) the runs McBot starts (Hermes' own schedules and task-board runs are not stopped).
 - Cost comes from each profile's `state.db`; Hermes-priced vs McBot-estimated is
   always labelled. Hermes reports no GPU time — do not fabricate it.
 - API keys typed into McBot live in `<workspace>/secrets.json` (owner-only); boards
@@ -257,6 +258,11 @@ Change them additively; a breaking change bumps the version.
   canvas; runs, memory and folders use the read-only `views/GraphCanvas.tsx`.
   Give each GraphCanvas a `key` per subject (root, run, agent) so React Flow
   state never leaks between subjects.
+- **Logos:** tools, connectors, chat apps, model servers and makers show their brand's mark
+  (`graph/Logo.tsx`, `nodeLogo`): `npm run site:logos` generates `src/app/lib/logos.generated.ts`
+  from `design/logos/<key>.svg` (anyone can drop one in; drawn as `<img>`, never HTML) and Simple
+  Icons (CC0, devDependency only); `npm test` fails while it is stale. A brand colour is content,
+  like note paper. No logo = the kind's own tile.
 - **Faces:** agents are glass food bots (`src/app/faces/foods.ts`): the name picks
   the food and its `--food-*` colour, so the same name is always the same bot.
   An agent's expression is its run state: thinking, happy, sad. People are

@@ -5,6 +5,7 @@ import { addEdge, addNode } from "../../board/ydoc";
 import type { AgentNode } from "../../contracts/graph";
 import { CATALOG, CONNECTOR_TOOLS, catalogNode, type CatalogTool } from "../graph/catalog";
 import { newId, newTool } from "../graph/defaults";
+import { LogoTile, logoFor } from "../graph/Logo";
 import { freeSpot } from "../graph/place";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
@@ -65,7 +66,7 @@ export function ToolCatalog() {
               <div className="catalog-grid">
                 {list.filter((t) => t.group === g).map((t) => (
                   <button key={t.id} className="catalog-card" onClick={() => add(t)} data-testid={`catalog-${t.id}`}>
-                    <span className="tile sm tool">{t.label.slice(0, 1)}</span>
+                    <LogoTile sm logo={logoFor([t.name, t.id], t.url)} kind="tool">{t.label.slice(0, 1)}</LogoTile>
                     <span className="grow" style={{ display: "grid", gap: 2 }}>
                       <b>{t.label}</b>
                       <span className="faint">{t.does}</span>

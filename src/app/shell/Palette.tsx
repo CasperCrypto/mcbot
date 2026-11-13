@@ -35,6 +35,7 @@ export const VIEWS: { tab: Tab; label: string; icon: ReactNode }[] = [
   { tab: "browser", label: "Browser", icon: <Globe size={15} /> },
   { tab: "workflows", label: "Activity", icon: <Workflow size={15} /> },
   { tab: "memory", label: "Memory", icon: <Brain size={15} /> },
+  { tab: "skills", label: "Skills", icon: <Sparkles size={15} /> },
   { tab: "files", label: "Files", icon: <FolderOpen size={15} /> },
   { tab: "cost", label: "Cost", icon: <ChartColumnBig size={15} /> },
   { tab: "team", label: "Team", icon: <Users size={15} /> },
