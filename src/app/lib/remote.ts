@@ -36,3 +36,12 @@ export function remoteUrl(address: string): string {
   const a = address.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "");
   return `http://${/:\d+$/.test(a) ? a : `${a}:4318`}`;
 }
+
+/** "http://192.168.1.20:4318/join?code=K7Q-4XM", or "192.168.1.20:4318 · K7Q-4XM" pasted from a message. */
+export function parseInvite(text: string): { address: string; code: string } | null {
+  const t = text.trim();
+  const url = /(https?:\/\/)?([\w.-]+(?::\d+)?)\/join\?code=([A-Za-z0-9-]+)/.exec(t);
+  if (url) return { address: url[2]!, code: url[3]!.toUpperCase() };
+  const pair = /([\w.-]+:\d+)\D+?([A-Za-z2-9]{3}-?[A-Za-z2-9]{3})\b/.exec(t);
+  return pair ? { address: pair[1]!, code: pair[2]!.toUpperCase() } : null;
+}

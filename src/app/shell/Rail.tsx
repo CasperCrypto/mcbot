@@ -1,4 +1,4 @@
-import { Command } from "lucide-react";
+import { Command, Settings } from "lucide-react";
 import { useApp } from "../state/store";
 import { REMOTE } from "../lib/engine";
 import { VIEWS } from "./Palette";
@@ -24,8 +24,9 @@ export function Rail() {
         </button>
       ))}
       <div className="rail-foot">
+        <button className="rail-btn" aria-current={tab === "settings" ? "page" : undefined} onClick={() => useApp.getState().openSettings()} data-tip="Settings  ⌘," data-tip-side="right" data-testid="tab-settings" aria-label="Settings"><Settings size={15} /></button>
         <button className="rail-btn" onClick={() => setPalette(true)} data-tip="Commands  ⌘K" data-tip-side="right" aria-label="Commands"><Command size={15} /></button>
-        <button className="rail-btn" style={{ width: 38, height: 26 }} onClick={() => useApp.getState().setHermesOpen(true)} data-testid="hermes-dot"
+        <button className="rail-btn" style={{ width: 38, height: 26 }} onClick={() => useApp.getState().openSettings("engine")} data-testid="hermes-dot"
           data-tip={health ? (health.hermes.found ? "Engine ready" : "Engine not set up") : "Engine offline"} data-tip-side="right" aria-label="Hermes">
           <span className={`dot ${health ? (health.hermes.found ? "ok" : "warn") : "fail"}`} />
         </button>

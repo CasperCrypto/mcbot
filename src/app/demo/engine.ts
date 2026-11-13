@@ -13,7 +13,7 @@ import { exportFileName } from "../../board/files";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
@@ -828,6 +828,19 @@ export const demoEngine = {
     }
     throw new EngineError(400, "The browser demo can't read your disk. The desktop app opens any folder.", {});
   }),
+  /** The demo can't look at other sites' headers; it says so for every site but localhost (BrowserView). */
+  frameable: api((url: string) => ({ frameable: /^https?:\/\/(localhost|127\.0\.0\.1)/.test(url), url })),
+  /** A pretend disk: the demo can't see the visitor's folders, so the picker shows a sample home. */
+  browse: api((path: string | null): FsBrowse => {
+    const home = "/Users/you";
+    const tree: Record<string, string[]> = { [home]: ["Desktop", "Documents", "Downloads", "Projects"], [`${home}/Projects`]: ["acme-support"] };
+    const at = path && tree[path.replace(/^~/, home)] ? path.replace(/^~/, home) : home;
+    return {
+      path: at, parent: at === home ? "/Users" : at.slice(0, at.lastIndexOf("/")),
+      dirs: (tree[at] ?? []).map((name) => ({ name, path: `${at}/${name}` })),
+      places: [{ name: "Home", path: home }, ...["Desktop", "Documents", "Downloads", "Projects"].map((name) => ({ name, path: `${home}/${name}` }))],
+    };
+  }),
   closeFolder: api((id: string) => {
     if (id === SAMPLE_FOLDER.id) state.sampleOpen = false;
     save();
@@ -889,6 +902,10 @@ export const demoEngine = {
   media: async (_profile: string, _path: string): Promise<Blob> => {
     throw new EngineError(404, "Runs are simulated in this demo", {});
   },
+  removeSecret: api((name: string) => {
+    secretNames.delete(name);
+    return { names: [...secretNames] };
+  }),
   setSecret: api((name: string, value: string) => {
     if (!/^[A-Z_][A-Z0-9_]{0,63}$/.test(name) || !value.trim()) throw new EngineError(400, "That key doesn't look right", {});
     secretNames.add(name);

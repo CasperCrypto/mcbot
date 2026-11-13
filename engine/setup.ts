@@ -9,6 +9,9 @@ import type { LocalServer, SetupProfile, SetupState } from "../src/contracts/api
 export const LOCAL_SERVERS: readonly { name: string; baseUrl: string }[] = [
   { name: "Ollama", baseUrl: "http://127.0.0.1:11434/v1" },
   { name: "LM Studio", baseUrl: "http://127.0.0.1:1234/v1" },
+  { name: "llama.cpp", baseUrl: "http://127.0.0.1:8080/v1" },
+  { name: "vLLM", baseUrl: "http://127.0.0.1:8000/v1" },
+  { name: "Jan", baseUrl: "http://127.0.0.1:1337/v1" },
 ];
 
 /** `GET <baseUrl>/models` (the OpenAI list shape). null when the server does not answer. */

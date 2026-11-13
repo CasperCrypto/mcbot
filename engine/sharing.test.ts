@@ -7,6 +7,7 @@ import { WebsocketProvider } from "y-websocket";
 import * as Y from "yjs";
 import { addNode, graphFromDoc } from "../src/board/ydoc";
 import { newCode } from "./sharing";
+import { parseInvite } from "../src/app/lib/remote";
 import { startEngine, type Engine } from "./server";
 
 const ORIGIN = "tauri://localhost";
@@ -39,10 +40,17 @@ describe("share on your network", () => {
   });
 
   let key = "";
-  it("lets a teammate join once with the invite code, and only from McBot", async () => {
-    const view = await host<{ on: boolean; invite: { code: string } | null }>("/api/share", { on: true });
+  it("lets teammates join with the invite link, only from McBot, until a new link replaces it", async () => {
+    const view = await host<{ on: boolean; invite: { code: string; expiresAt: number } | null; link: string | null; addresses: string[] }>("/api/share", { on: true });
     expect(view.on).toBe(true);
     const code = view.invite!.code;
+    expect(view.invite!.expiresAt - Date.now()).toBeGreaterThan(23 * 3600_000);
+    if (view.addresses[0]) expect(view.link).toBe(`http://${view.addresses[0]}/join?code=${code}`);
+    // Opened in a web browser, the link is a page that says how to join (no Origin, no data).
+    const page = await remote(`/join?code=${code}`, { origin: null });
+    expect(page.status).toBe(200);
+    expect(page.headers.get("content-type")).toContain("text/html");
+    expect(await page.text()).not.toContain(code);
     expect((await remote("/api/health", { origin: null })).status).toBe(403);
     expect((await remote("/api/health")).status).toBe(401);
     expect((await remote("/api/join", { body: { code: "AAA-AAA", name: "Sam" } })).status).toBe(403);
@@ -50,8 +58,10 @@ describe("share on your network", () => {
     expect(joined.status).toBe(200);
     key = ((await joined.json()) as { key: string }).key;
     expect(key).toMatch(/^mcb_/);
+    expect((await remote("/api/join", { body: { code, name: "Ana" } })).status).toBe(200);
+    await host("/api/share/invite", {});
     expect((await remote("/api/join", { body: { code, name: "Eve" } })).status).toBe(403);
-    expect((await host<{ members: { name: string }[] }>("/api/share")).members.map((m) => m.name)).toEqual(["Sam"]);
+    expect((await host<{ members: { name: string }[] }>("/api/share")).members.map((m) => m.name)).toEqual(["Sam", "Ana"]);
   });
 
   it("gives a member the boards, never this computer's keys, files or sharing", async () => {
@@ -88,6 +98,12 @@ describe("share on your network", () => {
     await new Promise((r) => setTimeout(r, 300));
     expect(stranger.provider.synced).toBe(false);
     stranger.provider.destroy();
+  });
+
+  it("reads an invite pasted as a link or as address and code", () => {
+    expect(parseInvite("Join my boards: http://192.168.1.20:4318/join?code=K7Q-4XM")).toEqual({ address: "192.168.1.20:4318", code: "K7Q-4XM" });
+    expect(parseInvite("Address: 10.0.0.5:4318\nCode: k7q-4xm")).toEqual({ address: "10.0.0.5:4318", code: "K7Q-4XM" });
+    expect(parseInvite("hello")).toBeNull();
   });
 
   it("closes the network port when the person stops sharing", async () => {

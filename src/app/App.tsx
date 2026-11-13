@@ -12,6 +12,7 @@ import { ChatAppCatalog } from "./shell/ChatAppCatalog";
 import { TeamPanel } from "./shell/TeamPanel";
 import { TeamsSheet } from "./shell/TeamsSheet";
 import { ShareSheet } from "./shell/ShareSheet";
+import { FolderPicker } from "./shell/FolderPicker";
 import { Palette, VIEWS } from "./shell/Palette";
 import { Rail } from "./shell/Rail";
 import { SetupAssistant } from "./setup/SetupAssistant";
@@ -28,6 +29,7 @@ import { MemoryView } from "./views/MemoryView";
 import { RunsView } from "./views/RunsView";
 import { TasksView } from "./views/TasksView";
 import { TeamView } from "./views/TeamView";
+import { SettingsView } from "./views/SettingsView";
 
 /** Monaco and xterm are big: the Code view loads on first use. */
 const CodeView = lazy(() => import("./workbench/CodeView"));
@@ -52,6 +54,7 @@ const VIEW_COMPONENTS = {
   files: FilesView,
   cost: CostView,
   team: TeamView,
+  settings: SettingsView,
 } as const;
 
 function BoardEffects() {
@@ -78,7 +81,10 @@ function BoardEffects() {
       if (!(e.metaKey || e.ctrlKey)) return;
       const app = useApp.getState();
       const k = e.key.toLowerCase();
-      if (k === "k") {
+      if (k === ",") {
+        e.preventDefault();
+        app.openSettings();
+      } else if (k === "k") {
         e.preventDefault();
         app.setPalette(!app.paletteOpen);
       } else if (k === "s" && app.tab !== "code") {
@@ -132,6 +138,7 @@ function Shell() {
       </Boundary>
       <Boundary>
         <ShareSheet />
+        <FolderPicker />
       </Boundary>
       <BoardEffects />
     </>

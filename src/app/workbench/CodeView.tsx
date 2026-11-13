@@ -59,6 +59,7 @@ function Tree({ root, path, depth, open, toggle, listings, onFile, current }: {
 export default function CodeView() {
   const { boardId, graph } = useBoard();
   const toast = useApp((s) => s.toast);
+  const openedFolder = useApp((s) => s.openedFolder);
   const [roots, setRoots] = useState<FsRoot[]>([]);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [listings, setListings] = useState<Record<string, FsEntry[]>>({});
@@ -88,8 +89,14 @@ export default function CodeView() {
       setRoots(r);
       // Folded to start; an agent's workspace/ (where it works) opens with it.
       for (const root of r) if (root.kind === "profile") setOpen((s) => new Set(s).add(`${root.id}:workspace`));
+      // A folder just opened from the picker starts unfolded.
+      const fresh = openedFolder && r.find((x) => x.id === openedFolder.id);
+      if (fresh) {
+        setOpen((s) => new Set(s).add(`${fresh.id}:`));
+        void load(fresh, "");
+      }
     }).catch(() => undefined);
-  }, [boardId, load]);
+  }, [boardId, load, openedFolder]);
 
   /** Keys are `<root id>:<path>`; root ids are `kind:name` (profile:triage, folder:ab12…). */
   const toggle = (key: string) => {
@@ -199,7 +206,7 @@ export default function CodeView() {
   return (
     <>
       <Sidebar title="Code" testId="code-sidebar" action={
-        <button className="icon-btn sm" aria-label="Open a folder" data-tip="Open a folder" onClick={() => useApp.getState().setPalette(true)}><FolderPlus size={14} /></button>
+        <button className="icon-btn sm" aria-label="Open a folder" data-tip="Open a folder" onClick={() => useApp.getState().setFolderPickerOpen(true)} data-testid="code-open-folder"><FolderPlus size={14} /></button>
       }>
         {groups.map((g) => {
           const list = roots.filter((r) => g.kinds.includes(r.kind));
@@ -223,7 +230,7 @@ export default function CodeView() {
             </div>
           );
         })}
-        {roots.length === 0 && <div className="faint" style={{ padding: "8px 10px" }}>Compile the board, or open a folder.</div>}
+        <button className="tree-row root faint" onClick={() => useApp.getState().setFolderPickerOpen(true)}><FolderPlus size={13} /><span>Open a folder…</span></button>
       </Sidebar>
       <section className="main code-main">
         <div className="code-tabs" role="tablist">

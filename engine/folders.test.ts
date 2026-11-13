@@ -83,3 +83,20 @@ describe("folder browsing", () => {
     expect((await api(`/api/fs/list?root=${root.id}&path=`)).status).toBe(404);
   });
 });
+
+describe("the folder picker", () => {
+  it("lists only the folders inside a folder, and the usual places", async () => {
+    const { browseFolders, expandHome } = await import("./folders");
+    mkdirSync(join(outside, "Documents"), { recursive: true });
+    mkdirSync(join(outside, ".hidden"), { recursive: true });
+    const b = await browseFolders(outside, outside);
+    expect(b.path).toBe(outside);
+    expect(b.dirs.map((d) => d.name)).toEqual(["Documents", "src"]);
+    expect(b.places.map((p) => p.name)).toEqual(["Home", "Documents", "src"]);
+    expect((await browseFolders("~/src", outside)).dirs.map((d) => d.name)).toEqual(["lib"]);
+    expect(expandHome("~/x", "/home/me")).toBe(join("/home/me", "x"));
+    await expect(browseFolders(join(outside, "nope"), outside)).rejects.toThrow(/doesn't exist/);
+    const res = await api<{ dirs: unknown[] }>(`/api/fs/browse?path=${encodeURIComponent(outside)}`);
+    expect(res.status).toBe(200);
+  });
+});

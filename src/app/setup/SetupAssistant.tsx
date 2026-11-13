@@ -9,18 +9,19 @@ import { engine } from "../lib/engine";
 import { openExternal } from "../lib/open";
 import { BrandMark } from "../shell/TitleBar";
 import { useApp } from "../state/store";
-import { AgentFace, Field, Segmented } from "../ui";
+import { AgentFace, Field } from "../ui";
+import { CLOUD_PROVIDERS } from "../lib/providers";
 import { PRESETS, boardName, buildTeam, defaultPicks, presetsFor, userFacts, type ModelChoice } from "./presets";
 
 type Step = "welcome" | "kind" | "about" | "agents" | "brain" | "build";
 const STEPS: Step[] = ["welcome", "kind", "about", "agents", "brain", "build"];
 
+/** Every preset is an OpenAI-compatible address (src/app/lib/providers.ts); "Other" is any such API. */
 const CLOUDS = [
-  { id: "openrouter", label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", key: "OPENROUTER_API_KEY" },
-  { id: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", key: "OPENAI_API_KEY" },
-  { id: "other", label: "Other", baseUrl: "", key: "MCBOT_CLOUD_API_KEY" },
-] as const;
-type CloudId = (typeof CLOUDS)[number]["id"];
+  ...CLOUD_PROVIDERS.map((p) => ({ id: p.id, label: p.label, baseUrl: p.baseUrl, key: p.keyEnv, keysUrl: p.keysUrl, model: p.model })),
+  { id: "other", label: "Other…", baseUrl: "", key: "MCBOT_CLOUD_API_KEY", keysUrl: "", model: "" },
+];
+type CloudId = string;
 
 const KINDS: { kind: SetupKind; title: string; sub: string; icon: ReactNode }[] = [
   { kind: "personal", title: "Just me", sub: "An assistant and helpers", icon: <User size={22} /> },
@@ -46,7 +47,8 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
   const [detect, setDetect] = useState<SetupDetect | null>(null);
   const [local, setLocal] = useState<{ server: LocalServer; model: string } | null>(null);
   const [cloudId, setCloudId] = useState<CloudId>("openrouter");
-  const [cloud, setCloud] = useState({ key: "", model: "", baseUrl: "", saved: false, models: null as string[] | null, error: "" });
+  const [cloud, setCloud] = useState({ key: "", model: CLOUDS[0]!.model, baseUrl: "", saved: false, models: null as string[] | null, error: "" });
+  const [custom, setCustom] = useState({ url: "", state: "idle" as "idle" | "busy" | "none" });
   const [rows, setRows] = useState<Row[]>([]);
   const [result, setResult] = useState<{ boardId: string; agentNodeId: string | null } | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
@@ -87,6 +89,20 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
   useEffect(() => {
     setCloud((c) => ({ ...c, saved: !!detect?.secrets.includes(provider.key), models: null, error: "" }));
   }, [cloudId, detect]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** A local server at an address of the person's own (another port, another computer). */
+  const checkCustom = async () => {
+    const url = custom.url.trim().replace(/\/+$/, "");
+    if (!/^https?:\/\//.test(url)) return setCustom({ ...custom, state: "none" });
+    const base = /\/v1$/.test(url) ? url : `${url}/v1`;
+    setCustom({ ...custom, state: "busy" });
+    const { models: found } = await engine.setupModels(base).catch(() => ({ models: null }));
+    if (!found?.length) return setCustom({ ...custom, state: "none" });
+    const server: LocalServer = { name: "Local server", baseUrl: base, models: found };
+    setDetect((d) => (d ? { ...d, local: [...d.local.filter((x) => x.baseUrl !== base), server] } : d));
+    setLocal({ server, model: found[0]! });
+    setCustom({ url: "", state: "idle" });
+  };
 
   const saveKey = async () => {
     try {
@@ -274,11 +290,21 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
                   }))}
                 </div>
               )}
+              <div className="setup-key">
+                <Field label="Running somewhere else?" value={custom.url} onChange={(v) => setCustom({ url: v, state: "idle" })} placeholder="http://127.0.0.1:8080/v1" mono
+                  error={custom.state === "none" ? "No OpenAI-compatible server answered there" : null} testId="setup-local-url" />
+                <button className="btn" disabled={!custom.url.trim() || custom.state === "busy"} onClick={() => void checkCustom()}>{custom.state === "busy" ? <LoaderCircle size={13} className="spin-icon" /> : "Check"}</button>
+              </div>
             </section>
 
             <section className="setup-section">
               <header><Cloud size={14} /> In the cloud</header>
-              <Segmented value={cloudId} onChange={(v) => setCloudId(v)} options={CLOUDS.map((c) => ({ value: c.id, label: c.label }))} />
+              <div className="provider-grid" role="radiogroup" aria-label="Provider">
+                {CLOUDS.map((c) => (
+                  <button key={c.id} role="radio" aria-checked={cloudId === c.id} className="provider-pick" data-testid={`setup-provider-${c.id}`}
+                    onClick={() => { setCloudId(c.id); setCloud((x) => ({ ...x, model: c.model })); }}>{c.label}</button>
+                ))}
+              </div>
               {provider.id === "other" && (
                 <Field label="Address" value={cloud.baseUrl} onChange={(v) => setCloud({ ...cloud, baseUrl: v })} placeholder="https://api.example.com/v1" mono />
               )}
@@ -287,7 +313,8 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
                   <button className="btn ghost sm" onClick={() => setCloud({ ...cloud, saved: false })}>Change</button></div>
               ) : (
                 <div className="setup-key">
-                  <Field label="API key" type="password" value={cloud.key} onChange={(v) => setCloud({ ...cloud, key: v, error: "" })} placeholder="Paste your key" error={cloud.error || null} testId="setup-key" />
+                  <Field label="API key" type="password" value={cloud.key} onChange={(v) => setCloud({ ...cloud, key: v, error: "" })} placeholder="Paste your key" error={cloud.error || null} testId="setup-key"
+                    note={provider.keysUrl ? <button className="link-btn" style={{ padding: 0 }} onClick={() => void openExternal(provider.keysUrl)}>Get a {provider.label} key ↗</button> : undefined} />
                   <button className="btn" disabled={!cloud.key.trim()} onClick={() => void saveKey()} data-testid="setup-save-key">Save</button>
                 </div>
               )}

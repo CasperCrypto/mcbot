@@ -125,7 +125,8 @@ computer's windows. That keeps it safe while there are no accounts. Three
 steps:
 
 1. **M12a, host on your network.** The owner turns on Share. McBot shows an
-   invite link with a one-time code. A teammate opens it in their McBot and gets
+   invite link (24 hours, any number of teammates, replaced with "New link").
+   A teammate pastes it into Join in their McBot and gets
    a member key, kept in their keychain. The engine then also accepts that
    computer, but only with a valid key, and still checks `Origin` and `Host`.
    Agents run on the host's computer.

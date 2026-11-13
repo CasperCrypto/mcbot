@@ -7,6 +7,7 @@ import {
   type AgentData, type Capability, type ChannelData, type GraphNode, type MediaData, type ModelData, type Skill, type ToolData,
 } from "../../contracts/graph";
 import { runAgent } from "../actions";
+import { keyEnvFor } from "../lib/providers";
 import { engine } from "../lib/engine";
 import { duration, tokens as fmtTokens, usd } from "../lib/format";
 import { useBoard } from "../state/board";
@@ -347,9 +348,7 @@ function ModelFields({ data, set }: { data: ModelData; set: (f: string, v: unkno
 }
 
 /** The variable a cloud key is saved under: the usual one for known services, else one per model node. */
-const keyNameFor = (d: ModelData) =>
-  /openrouter\.ai/i.test(d.baseUrl) ? "OPENROUTER_API_KEY" : /api\.openai\.com/i.test(d.baseUrl) ? "OPENAI_API_KEY"
-    : `MCBOT_${d.name.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_API_KEY`;
+const keyNameFor = (d: ModelData) => keyEnvFor(d.baseUrl, d.name);
 
 /**
  * A key, typed once and kept on this computer by the engine, never on the board: the

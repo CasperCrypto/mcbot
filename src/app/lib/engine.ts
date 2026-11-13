@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
@@ -74,6 +74,8 @@ const http = {
   cost: (boardId: string) => call<CostReport>("GET", `/api/cost?boardId=${encodeURIComponent(boardId)}`),
   roots: (boardId: string) => call<FsRoot[]>("GET", `/api/fs/roots?boardId=${encodeURIComponent(boardId)}`),
   openFolder: (path: string) => call<FsRoot>("POST", "/api/fs/roots", { path }),
+  browse: (path: string | null) => call<FsBrowse>("GET", `/api/fs/browse${path ? `?path=${encodeURIComponent(path)}` : ""}`),
+  frameable: (url: string) => call<{ frameable: boolean; url: string }>("GET", `/api/web/frameable?url=${encodeURIComponent(url)}`),
   closeFolder: (id: string) => call<{ ok: true }>("POST", "/api/fs/roots/close", { id }),
   list: (root: string, path: string) => call<FsListing>("GET", `/api/fs/list?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
   writeFile: (root: string, path: string, text: string, baseSha256: string | null) => call<{ path: string; bytes: number; sha256: string; followed?: string[] }>("PUT", "/api/fs/write", { root, path, text, baseSha256 }),
@@ -85,6 +87,7 @@ const http = {
   setupComplete: (profile: SetupProfile | null) => call<SetupState>("POST", "/api/setup/complete", { profile }),
   setSecret: (name: string, value: string) => call<{ names: string[] }>("POST", "/api/secrets", { name, value }),
   secrets: () => call<{ names: string[] }>("GET", "/api/secrets"),
+  removeSecret: (name: string) => call<{ names: string[] }>("POST", "/api/secrets/remove", { name }),
   media: (profile: string, path: string) => blob(`/api/media?profile=${encodeURIComponent(profile)}&path=${encodeURIComponent(path)}`),
   hermes: () => call<HermesInfo>("GET", "/api/hermes"),
   restartGateway: () => call<HermesInfo>("POST", "/api/hermes/gateway/restart", {}),

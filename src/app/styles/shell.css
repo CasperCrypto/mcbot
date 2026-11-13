@@ -182,6 +182,8 @@ button.island-sec:hover { background: rgba(255, 255, 255, 0.09); }
 .share-toggle input { margin-top: 3px; accent-color: var(--accent); width: 16px; height: 16px; }
 .share-invite { display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 14px; border-radius: var(--r-md); background: var(--bg-input); border: 1px solid var(--line-2); font-size: 14px; letter-spacing: 0.02em; user-select: text; }
 .share-btn { gap: 6px; }
+.share-create { justify-content: center; gap: 8px; height: 40px; }
+.share-invite .mono { font-size: 12.5px; letter-spacing: 0; }
 .share-btn.remote { border-color: var(--accent-line); color: var(--accent-text); }
 
 /* ---------- presence button and team panel ---------- */
@@ -207,3 +209,20 @@ button.presence:hover { background: var(--bg-hover); border-color: var(--line); 
 .team-person .grow { display: grid; gap: 1px; font-size: 13px; }
 .team-person .faint { font-size: 11.5px; }
 .online-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
+
+/* ---------- folder picker ---------- */
+.picker { width: min(760px, calc(100vw - 32px)); top: 9vh; }
+.picker-body { display: grid; grid-template-columns: 168px minmax(0, 1fr); height: min(440px, 60vh); }
+.picker-places { padding: 10px 8px; border-right: 1px solid var(--line); overflow: auto; display: grid; align-content: start; gap: 1px; }
+.picker-places .list-row { padding: 6px 10px; font-size: 13px; gap: 8px; }
+.picker-main { display: flex; flex-direction: column; min-width: 0; padding: 10px 12px; gap: 6px; }
+.picker-path { display: flex; align-items: center; gap: 6px; }
+.picker-path input { flex: 1; height: 30px; padding: 0 10px; border-radius: var(--r-sm); background: var(--bg-input); border: 1px solid var(--line-2); font-size: 12.5px; user-select: text; }
+.picker-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; font-size: 12px; min-height: 18px; }
+.link-btn { border: 0; background: transparent; padding: 0 2px; color: var(--text-2); font: inherit; cursor: pointer; }
+.link-btn:hover { color: var(--text); }
+.picker-list { flex: 1; overflow: auto; display: grid; align-content: start; gap: 1px; }
+.picker-list .list-row { padding: 6px 10px; font-size: 13px; gap: 8px; }
+.folder-ink { color: var(--k-folder); flex: none; }
+.picker-foot { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
+@media (max-width: 640px) { .picker-body { grid-template-columns: minmax(0, 1fr); } .picker-places { display: none; } }

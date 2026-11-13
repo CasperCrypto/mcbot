@@ -170,6 +170,16 @@ export interface FsListing {
   truncated: number;
 }
 
+/** The folder picker: the folders inside one folder (names only, never files), host only. */
+export interface FsBrowse {
+  path: string;
+  /** null at the top of the disk. */
+  parent: string | null;
+  dirs: { name: string; path: string }[];
+  /** Home, Desktop, Documents, Downloads and the like that exist on this computer. */
+  places: { name: string; path: string }[];
+}
+
 export interface FsPreview {
   path: string;
   bytes: number;
@@ -319,4 +329,6 @@ export interface SharingView {
   port: number;
   members: { id: string; name: string; joinedAt: number; lastSeen: number }[];
   invite: { code: string; expiresAt: number } | null;
+  /** The invite as a link teammates open or paste into Join (`http://<address>/join?code=…`). */
+  link?: string | null;
 }

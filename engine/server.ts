@@ -23,7 +23,7 @@ import { diagnosticsText, osLine, redact, tail } from "./diagnostics";
 import type { Graph, ModelNode } from "../src/contracts/graph";
 import { buildCostReport } from "./cost";
 import { atomicWrite } from "./fsutil";
-import { FolderError, Folders } from "./folders";
+import { FolderError, Folders, browseFolders } from "./folders";
 import { bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, setupHome, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
 import { JOB_ID_RE, createScheduleArgv, readSchedules, scheduleActionArgv } from "./schedules";
@@ -37,7 +37,8 @@ import { RunStore } from "./runStore";
 import { SecretError, Secrets } from "./secrets";
 import { SetupStore, detectLocal, listModels } from "./setup";
 import { OwnershipError, readManifest, writeCompileResult } from "./writer";
-import { Sharing, guestAllowed, type SharingView } from "./sharing";
+import { Sharing, guestAllowed, joinPage, type SharingView } from "./sharing";
+import { frameable } from "./web";
 
 export const ENGINE_VERSION = "0.3.0";
 
@@ -295,6 +296,14 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       void syncAgents();
       return { names: await secrets.names() };
     },
+    /** Forget a saved key (Settings). Agents that name it run without it after the next sync. */
+    "POST /api/secrets/remove": async (req) => {
+      const { name } = parse(z.object({ name: z.string() }), await json(req));
+      await secrets.remove(name);
+      if (cfg.managedRoot) runner.markGatewayStale();
+      void syncAgents();
+      return { names: await secrets.names() };
+    },
     "POST /api/boards": async (req) => {
       const { name } = parse(z.object({ name: z.string().trim().min(1).max(80) }), await json(req));
       const id = `${slugOf(name)}-${randomBytes(2).toString("hex")}`;
@@ -470,6 +479,13 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const { path } = parse(z.object({ path: z.string().trim().min(1) }), await json(req));
       return folders.open(path);
     },
+    /** The Browser view asks whether a site lets itself be shown in a frame (host only). */
+    "GET /api/web/frameable": async (_req, url) => {
+      const target = parse(z.string().url().refine((u) => /^https?:\/\//i.test(u), "http(s) only"), url.searchParams.get("url"));
+      return frameable(target);
+    },
+    /** The folder picker: subfolders of one folder (default: home). Host only. */
+    "GET /api/fs/browse": async (_req, url) => browseFolders(url.searchParams.get("path")),
     "POST /api/fs/roots/close": async (req) => {
       const { id } = parse(z.object({ id: z.string().startsWith("folder:") }), await json(req));
       await folders.close(id);
@@ -573,6 +589,14 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     cors(req, res);
     if (shared) {
+      // The invite link opened in a web browser: a page that says how to join from McBot (no data).
+      if (req.method === "GET" && url.pathname === "/join") {
+        const who = (await setup.get()).profile?.name?.trim() || "A teammate";
+        return void res.writeHead(200, {
+          "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff",
+          "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+        }).end(joinPage(who));
+      }
       if (!req.headers.origin || !allowed.has(req.headers.origin)) return deny(res, 403, "origin not allowed");
       if (req.method === "OPTIONS") return void res.writeHead(204).end();
       if (req.method === "POST" && url.pathname === "/api/join") {
