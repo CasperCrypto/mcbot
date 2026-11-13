@@ -1,5 +1,5 @@
 import { LoaderCircle } from "lucide-react";
-import { lazy, Suspense, useEffect, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import type { AgentNode } from "../contracts/graph";
 import { compileBoard, refreshDrift, runAgent } from "./actions";
 import { GraphView } from "./graph/GraphView";
@@ -20,6 +20,7 @@ import { SetupAssistant } from "./setup/SetupAssistant";
 import { BrandMark, TitleBar } from "./shell/TitleBar";
 import { BoardProvider, useBoard } from "./state/board";
 import { useSignals } from "./state/signals";
+import { inApp } from "./lib/desktop";
 import { useApp } from "./state/store";
 import { useTasks } from "./views/TasksView";
 import { AgentsView } from "./views/AgentsView";
@@ -167,13 +168,27 @@ function Shell() {
   );
 }
 
+/** When the page opened: the installed app's engine needs a few seconds to start after the window. */
+const OPENED = Date.now();
+/** How long a starting engine may stay silent before McBot says something is wrong. */
+const PATIENCE_MS = 20_000;
+
 function Offline({ down }: { down: boolean }) {
+  // The window opens before the engine answers: that is "starting", not a problem, for a while.
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const stuck = down && now - OPENED > PATIENCE_MS;
   return (
     <div className="offline" style={{ gridRow: "1 / span 2" }} data-tauri-drag-region>
-      <div className="empty">
+      <div className="empty" data-testid="offline">
         <BrandMark size={44} />
-        <h3>{down ? "McBot engine isn't running" : "Connecting…"}</h3>
-        {down && <p>Start it with <code>npm run dev</code>.</p>}
+        <h3>{stuck ? "McBot's engine didn't start" : "Starting McBot…"}</h3>
+        {!stuck && <LoaderCircle size={18} className="spin-icon faint" />}
+        {stuck && (inApp() ? <p>Quit McBot and open it again. If it keeps happening, the engine log is in McBot's data folder (engine.log).</p>
+          : <p>Start it with <code>npm run dev</code>.</p>)}
       </div>
     </div>
   );

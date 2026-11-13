@@ -10,12 +10,21 @@ export async function compileBoard(boardId: string, opts: { quiet?: boolean } = 
   app.setCompile({ compileBusy: true });
   try {
     const res = await engine.compile(boardId);
-    app.setCompile({ compile: res, compileOpen: !opts.quiet || !res.ok, drift: res.ok ? 0 : null });
+    // The compile sheet (files and diffs) opens only when asked for; a compile says how it went in
+    // a notice, and a board with problems points at the first block to fix.
+    app.setCompile({ compile: res, compileOpen: false, drift: res.ok ? 0 : null });
+    const showFiles = { label: "Files", run: () => { const a = useApp.getState(); a.setTab("graph"); a.setCompile({ compileOpen: true }); } };
     if (res.ok) {
       const n = changedCount(res);
-      if (!opts.quiet) app.toast({ kind: "ok", text: n ? `Compiled — ${n} file${n === 1 ? "" : "s"} written to ${res.report.root}` : "Compiled — already up to date" });
+      if (!opts.quiet) app.toast({ kind: "ok", text: n ? `Compiled · ${n} file${n === 1 ? "" : "s"} updated` : "Compiled · already up to date", action: showFiles });
     } else {
-      app.toast({ kind: "fail", text: res.error });
+      const errors = res.issues.filter((i) => i.level === "error");
+      const first = errors.find((i) => i.nodeId);
+      app.toast({
+        kind: "fail",
+        text: errors.length ? `${errors.length} thing${errors.length === 1 ? "" : "s"} to fix first: ${errors[0]!.message}` : res.error,
+        action: first ? { label: "Fix", run: () => { const a = useApp.getState(); a.setTab("graph"); a.select(first.nodeId!); } } : undefined,
+      });
     }
     return res.ok;
   } catch (err) {

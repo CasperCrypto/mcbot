@@ -1,7 +1,7 @@
 {
   "name": "mcbot",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Draw a harness of AI agents as a graph; compile it into a real, runnable Hermes Agent setup.",
   "license": "MIT",
   "type": "module",

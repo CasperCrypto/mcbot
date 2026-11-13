@@ -83,6 +83,7 @@ function useCommands(close: () => void): Command[] {
         },
       },
       { id: "compile", group: "Actions", label: "Compile", icon: <Hammer size={15} />, keys: ["⌘", "S"], run: () => { close(); void compileBoard(boardId); } },
+      { id: "compile-files", group: "Actions", label: "Compiled files", hint: "What the last compile wrote, file by file", icon: <FolderOpen size={15} />, run: () => { close(); app.setTab("graph"); app.setCompile({ compileOpen: true }); } },
       { id: "open-folder", group: "Actions", label: "Open folder…", hint: "Pick a folder for agents and the editor", icon: <FolderPlus size={15} />, run: () => app.setFolderPickerOpen(true) },
       {
         id: "new-board", group: "Actions", label: "New board…", icon: <Plus size={15} />,

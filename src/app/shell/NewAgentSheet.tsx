@@ -1,5 +1,6 @@
 /** Make an agent: a name, what it does, how it works, and the model it thinks with. */
 import { Cloud, HardDrive, X } from "lucide-react";
+import { withRichAnswers } from "../chat/rich";
 import { useEffect, useMemo, useState } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
 import { RESERVED_PROFILE_NAMES, type GraphNode, type ModelNode } from "../../contracts/graph";
@@ -49,7 +50,7 @@ export function NewAgentSheet() {
     setBusy(true);
     const app = useApp.getState();
     const base = newAgent(graph, freeSpot(graph, "agent", null, null)) as Extract<GraphNode, { kind: "agent" }>;
-    const agent: GraphNode = { ...base, data: { ...base.data, name: id, displayName: name.trim(), description: about.trim(), soul: soul.trim() ? soul : "" } };
+    const agent: GraphNode = { ...base, data: { ...base.data, name: id, displayName: name.trim(), description: about.trim(), soul: withRichAnswers(soul.trim()) } };
     let modelId = model;
     doc.transact(() => {
       addNode(doc, agent);

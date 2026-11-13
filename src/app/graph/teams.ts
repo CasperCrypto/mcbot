@@ -3,6 +3,7 @@
  * click. Pure: the board in, the nodes and edges to add out (tested against the real compiler).
  */
 import type { Graph, GraphEdge, GraphNode, ModelNode } from "../../contracts/graph";
+import { withRichAnswers } from "../chat/rich";
 import { RESERVED_PROFILE_NAMES } from "../../contracts/graph";
 
 interface Member {
@@ -85,7 +86,7 @@ export function teamToAdd(graph: Graph, team: StarterTeam, model: ModelNode | nu
     ids.set(m.name, id);
     // The lead on top, its team in a row below: hand-offs read top to bottom.
     const position = i === 0 ? { x: left + 340 + ((team.members.length - 2) * 260) / 2, y: top } : { x: left + 340 + (i - 1) * 260, y: top + 240 };
-    nodes.push({ id, kind: "agent", position, data: { name, displayName: m.displayName, description: m.description, soul: m.soul, skills: [], capabilities: null } });
+    nodes.push({ id, kind: "agent", position, data: { name, displayName: m.displayName, description: m.description, soul: withRichAnswers(m.soul), skills: [], capabilities: null } });
     edges.push({ id: `edge-${uid()}`, source: modelNode.id, target: id, order: 0 });
   });
   for (const [from, to] of team.handoffs) edges.push({ id: `edge-${uid()}`, source: ids.get(from)!, target: ids.get(to)!, order: 0 });
