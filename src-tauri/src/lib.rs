@@ -122,8 +122,10 @@ fn set_attention(app: AppHandle<Wry>, count: u32) {
 /// The workbench's browser: one McBot window showing a web page (what an agent built on
 /// localhost, a report, any https site), reused for the next page. http(s) only. The page gets
 /// no access to McBot (the window's capabilities list only McBot's own windows).
+// Async on purpose: building a window inside a synchronous command deadlocks on Windows (Tauri's
+// docs), which left a white browser window that could not even be closed.
 #[tauri::command]
-fn browser_open(app: AppHandle<Wry>, url: String) -> Result<(), String> {
+async fn browser_open(app: AppHandle<Wry>, url: String) -> Result<(), String> {
     let parsed: tauri::Url = url.parse().map_err(|_| format!("{url} is not a web address"))?;
     if !matches!(parsed.scheme(), "http" | "https") {
         return Err("Only http and https pages open here".into());

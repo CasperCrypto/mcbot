@@ -332,7 +332,8 @@ function Canvas() {
 }
 
 export function GraphView() {
-  // Board: the parts you edit. Hermes: the whole harness behind them, read-only.
+  // Board: the parts you edit. Hermes: the whole harness behind them; a click on a part opens the
+  // block that makes it, on the Board.
   const [mode, setMode] = useState<"board" | "hermes">("board");
   return (
     <ReactFlowProvider>
@@ -341,9 +342,9 @@ export function GraphView() {
         <div className="view page-enter">
           <div className="seg-float" role="tablist" aria-label="View">
             <button role="tab" aria-selected={mode === "board"} onClick={() => setMode("board")} data-testid="mode-board">Board</button>
-            <button role="tab" aria-selected={mode === "hermes"} onClick={() => setMode("hermes")} data-testid="mode-hermes">Hermes</button>
+            <button role="tab" aria-selected={mode === "hermes"} onClick={() => setMode("hermes")} data-testid="mode-hermes" data-tip="Everything Hermes runs, live. Click a part to change it" data-tip-side="bottom">Hermes</button>
           </div>
-          {mode === "board" ? <Canvas /> : <HermesView />}
+          {mode === "board" ? <Canvas /> : <HermesView onEdit={(nodeId) => { setMode("board"); useApp.getState().select(nodeId); }} />}
         </div>
       </section>
     </ReactFlowProvider>

@@ -1,4 +1,5 @@
-import { FileText, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { FileText, Hammer, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { compileBoard } from "../actions";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AgentMemoryView, MemoryFileView } from "../../contracts/api";
 import { engine } from "../lib/engine";
@@ -130,7 +131,9 @@ export function MemoryView() {
       </Sidebar>
       <section className="main" data-testid="memory-graph">
         {agent && !agent.compiled ? (
-          <Empty title={`${agent.displayName} has no profile yet`}>Compile the board to create it.</Empty>
+          <Empty title={`${agent.displayName} has no memory yet`} action={
+            <button className="btn primary" onClick={() => void compileBoard(boardId).then((ok) => { if (ok) void load(); })}><Hammer size={13} /> Compile to create it</button>
+          }>Memory starts once the agent is compiled. Then it remembers by itself, and you can add notes here.</Empty>
         ) : agent ? (
           <div className="view">
             <div className={`graph-area${sel ? " with-panel" : ""}`}><GraphCanvas key={agent.profile} nodes={nodes} edges={edges} selected={sel ? (sel.index === null ? sel.target : `${sel.target}:${sel.index}`) : null} onSelect={onSelect} fitSignature={`${agent.profile}:${nodes.length}:${!!sel}`} /></div>

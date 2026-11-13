@@ -10,7 +10,18 @@ import { DEMO, engine, REMOTE } from "../lib/engine";
 import { openExternal } from "../lib/open";
 import { parseInvite, remoteUrl, saveRemote } from "../lib/remote";
 import { useApp } from "../state/store";
-import { PersonFace } from "../ui";
+import { PersonFace, Segmented } from "../ui";
+import { MAIL_SERVICES, composeUrl, inviteMessage, parseEmails, type MailService } from "../lib/invite";
+
+const SERVICE_KEY = "mcbot.invite.mail";
+const savedService = (): MailService => {
+  try {
+    const v = localStorage.getItem(SERVICE_KEY);
+    return v === "outlook" || v === "app" ? v : "gmail";
+  } catch {
+    return "gmail";
+  }
+};
 import { ago } from "../lib/format";
 
 function Join({ onCancel }: { onCancel?: () => void }) {
@@ -56,6 +67,8 @@ export function ShareSheet() {
   const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [emails, setEmails] = useState("");
+  const [service, setService] = useState<MailService>(savedService);
 
   useEffect(() => {
     if (!open) return;
@@ -83,7 +96,6 @@ export function ShareSheet() {
     }
   };
   const link = view?.on ? view.link ?? null : null;
-  const message = link ? `${identity.name} invited you to their McBot boards.\n\nOpen McBot → Share → Join someone else's, and paste this link:\n${link}\n\n(Works for 24 hours, on the same network.)` : "";
   const copy = async () => {
     if (!link) return;
     try {
@@ -94,7 +106,19 @@ export function ShareSheet() {
       toast({ kind: "info", text: "Select the link and copy it" });
     }
   };
-  const email = () => void openExternal(`mailto:?subject=${encodeURIComponent("Join my McBot boards")}&body=${encodeURIComponent(message)}`).catch(() => toast({ kind: "fail", text: "No email app opened. Copy the link instead." }));
+  const to = parseEmails(emails);
+  const email = () => {
+    if (!link || !to) return;
+    try {
+      localStorage.setItem(SERVICE_KEY, service);
+    } catch {
+      /* this time only */
+    }
+    const { subject, body } = inviteMessage(identity.name, link);
+    void openExternal(composeUrl(service, to, subject, body))
+      .then(() => { setEmails(""); toast({ kind: "ok", text: `Invite ready to send to ${to.join(", ")}` }); })
+      .catch(() => toast({ kind: "fail", text: service === "app" ? "No mail app opened. Try Gmail or Outlook, or copy the link." : "Couldn't open your email. Copy the link instead." }));
+  };
   const left = view?.invite ? Math.max(1, Math.round((view.invite.expiresAt - Date.now()) / 3600_000)) : 0;
 
   return (
@@ -129,6 +153,21 @@ export function ShareSheet() {
               </button>
             ) : (
               <>
+                {link && (
+                  <div className="share-email">
+                    <div className="share-email-row">
+                      <Mail size={14} className="faint" />
+                      <input value={emails} onChange={(e) => setEmails(e.target.value)} placeholder="teammate@company.com" aria-label="Email" data-testid="share-email-to"
+                        onKeyDown={(e) => { if (e.key === "Enter") email(); }} />
+                      <button className="btn sm primary" disabled={!to} onClick={email} data-testid="share-email">Send invite</button>
+                    </div>
+                    <div className="row" style={{ gap: 8 }}>
+                      <span className="faint" style={{ fontSize: 12 }}>Send from</span>
+                      <div style={{ width: 240 }}><Segmented value={service} onChange={setService} options={MAIL_SERVICES} /></div>
+                      {emails.trim() && !to && <span className="error" style={{ fontSize: 12 }}>Check the address</span>}
+                    </div>
+                  </div>
+                )}
                 <div className="share-invite" data-testid="share-invite">
                   {link ? (
                     <>
@@ -138,7 +177,6 @@ export function ShareSheet() {
                   ) : <span className="grow faint">{view.addresses.length ? "The link expired." : "This computer isn't on a network."}</span>}
                 </div>
                 <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
-                  {link && <button className="btn sm" onClick={email} data-testid="share-email"><Mail size={12} /> Email invite</button>}
                   <button className="btn sm ghost" disabled={busy} onClick={() => void act(() => engine.newInvite())} data-tip="The old link stops working"><RefreshCw size={12} /> New link</button>
                   <span className="grow" />
                   {link && <span className="faint" style={{ fontSize: 12 }}>Works {left}h · same network</span>}

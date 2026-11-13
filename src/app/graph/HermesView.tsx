@@ -14,6 +14,7 @@ import { engine } from "../lib/engine";
 import { GraphCanvas, type GEdge, type GNode } from "../views/GraphCanvas";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
+import { hermesTarget } from "./hermesTarget";
 import { AgentFace } from "../ui";
 
 const MAX_CHIPS = 6;
@@ -35,7 +36,7 @@ function Box({ icon, title, sub, lines, tone }: { icon: React.ReactNode; title: 
   );
 }
 
-export function HermesView() {
+export function HermesView({ onEdit }: { onEdit?: (nodeId: string) => void }) {
   const { graph, boardId } = useBoard();
   const runs = useApp((s) => s.runs);
   const { bundles } = useMemo(() => resolveGraph(graph), [graph]);
@@ -124,7 +125,15 @@ export function HermesView() {
   if (!bundles.length) return <div className="empty"><h3>No agents yet</h3><p>Add one on the board, and its whole Hermes setup shows here.</p></div>;
   return (
     <div className="graph-area hermes-view" data-testid="hermes-view">
-      <GraphCanvas key={`hermes:${boardId}`} nodes={nodes} edges={edges} fitSignature={`${boardId}:${nodes.length}:${memory.length}:${schedules.length}`} />
+      <GraphCanvas key={`hermes:${boardId}`} nodes={nodes} edges={edges} fitSignature={`${boardId}:${nodes.length}:${memory.length}:${schedules.length}`}
+        onSelect={(id) => {
+          const t = id ? hermesTarget(id, bundles) : null;
+          if (!t) return;
+          if ("node" in t) onEdit?.(t.node);
+          else if (t.tab === "settings") useApp.getState().openSettings("engine");
+          else useApp.getState().setTab(t.tab);
+        }} />
+      <div className="hermes-hint">Click any part to change it</div>
     </div>
   );
 }

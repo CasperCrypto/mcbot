@@ -79,7 +79,7 @@ export default function BrowserView() {
       } catch (err) {
         if (!alive) return;
         setNativeFailed(true);
-        useApp.getState().toast({ kind: "fail", text: `The page couldn't open here: ${String(err)}`, action: { label: "Open in a window", run: () => void openBrowser(url) } });
+        useApp.getState().toast({ kind: "fail", text: `The page couldn't open here: ${String(err)}`, action: { label: "Open in your browser", run: () => void openBrowser(url) } });
       }
     };
     void show(30);
@@ -175,7 +175,7 @@ export default function BrowserView() {
           <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") go(input); }}
             onFocus={(e) => e.target.select()} placeholder="Search or enter an address" aria-label="Address" data-testid="browser-address" />
         </label>
-        <button className="icon-btn sm" aria-label="Open in a window" data-tip="Open in a window" disabled={!url} onClick={openOutside}><ExternalLink size={13} /></button>
+        <button className="icon-btn sm" aria-label="Open in your browser" data-tip="Open in your browser" disabled={!url} onClick={openOutside}><ExternalLink size={13} /></button>
       </div>
       <div className="browser-page">
         {url && native ? (
@@ -189,7 +189,7 @@ export default function BrowserView() {
             <b>{new URL(url).host}</b>
             <span className="faint">{DEMO ? "Websites can't open inside a web page, so the online demo can't show this site. In the McBot app it opens right here." : "This site doesn't allow being shown inside other apps."}</span>
             <div className="row" style={{ justifyContent: "center" }}>
-              <button className="btn light" onClick={openOutside} data-testid="browser-open-window"><ExternalLink size={14} /> Open in a window</button>
+              <button className="btn light" onClick={openOutside} data-testid="browser-open-window"><ExternalLink size={14} /> Open in your browser</button>
               {agents.length > 0 && <span className="faint">or ask an agent about it below</span>}
             </div>
           </div>

@@ -149,6 +149,8 @@ Change them additively; a breaking change bumps the version.
   executable, `scripts/build-engine.mjs`, Tauri `externalBin`) and Hermes as a
   resource (`scripts/stage-hermes.mjs`: only git-tracked files of `hermes/`).
   `tauri build` runs all three (`beforeBuildCommand`).
+- The window opens a few seconds before the engine answers: it says "Starting McBot…" and only
+  after 20 s says the engine didn't start (the `npm run dev` hint only outside the app).
 - In release builds the shell starts the engine with `MCBOT_HERMES_BUNDLE` and
   `MCBOT_DATA_DIR` and kills it on quit; `tauri dev` runs `npm run dev` instead.
   The engine copies the read-only Hermes to `<data>/hermes-<stamp>`
@@ -195,7 +197,9 @@ Change them additively; a breaking change bumps the version.
   to, until "New link" replaces it or sharing stops; failed joins rate-limited); only key hashes
   are stored (`<workspace>/sharing.json`, owner-only). `GET /join` on that port is the one
   request without an Origin: a static page that says how to join from McBot (no data). The
-  Share sheet copies the link or opens an email draft (`mailto:`); Join takes the pasted link. Members reach boards, compile, runs,
+  Share sheet copies the link or emails it: McBot has no mail server, so it opens a ready-to-send
+  message to the typed address in Gmail or Outlook on the web, or the mail app (`lib/invite.ts`);
+  Join takes the pasted link. Members reach boards, compile, runs,
   tasks, schedules, memory and cost (`guestAllowed`), never keys, files, setup, sharing or
   the engine's controls. Agents always run on the host. A joined window keeps the host's
   address and its key in localStorage (`src/app/lib/remote.ts`) and hides Code and Files.
@@ -222,8 +226,17 @@ Change them additively; a breaking change bumps the version.
   replace or remove), your name, team, engine, run setup again. Home's "Get started" and "Needs
   you" point there when an agent has no model, a key is missing or a local server isn't answering.
 - **Board | Hermes** (top of the board): Board is what you edit; Hermes (`src/app/graph/HermesView.tsx`)
-  draws the whole harness behind it, read-only: gateway, chat apps, each agent's model chain,
-  abilities, tools, makers, skills, memory, schedules, the shared task board, approvals.
+  draws the whole harness behind it: gateway, chat apps, each agent's model chain, abilities,
+  tools, makers, skills, memory, schedules, the shared task board, approvals. A click on a part
+  opens what makes it (`hermesTarget.ts`): the block on the Board, or the Memory, Home, Tasks or
+  engine view, so what you change is always what compiles.
+- **Compile** says how it went in a notice (with "Fix" on the first block with a problem); the
+  compile sheet (files and diffs) opens only when asked (the notice's "Files", ⌘K → Compiled files).
+- **Rich answers** (`src/app/chat/rich.ts`, `RichText.tsx`): an agent's answer is drawn from
+  Markdown (headings, lists, tables, code with Copy, links through `openExternal`, images it made)
+  plus ` ```chart ` (JSON → SVG bar, line or pie) and ` ```choices ` (reply buttons on the latest
+  answer). Parsed to blocks and rendered as React elements, never HTML. New agents' souls carry
+  three lines that teach the format (`withRichAnswers`: presets, starter teams, New agent).
 - Connections are agent-centred (Hermes' model): a model, tool, maker or chat app connects only to
   an agent. While a connection is drawn the rest dims; a refused drop says why. Chains between
   them are workflows (M10).
@@ -276,6 +289,9 @@ Change them additively; a breaking change bumps the version.
   area (`src-tauri/src/browser.rs`, Tauri `unstable` feature, one `page-<window>` per window), so
   sites that refuse iframes still load; it hides while a sheet or ⌘K is open (native views draw
   above HTML), and is placed again after layout and motion settle (the view has no entry motion).
+  "Open in your browser" hands a page to the system browser (opener plugin: https, and http on
+  localhost); `browser_open` (McBot's own window) is async, since a window built in a synchronous
+  command deadlocks on Windows.
   Remote pages get no IPC. Linux (GTK ignores child bounds) and the demo use an iframe: the engine
   first asks whether the site allows framing (`GET /api/web/frameable`), and one that refuses
   gets "Open in a window" instead of a blank page.

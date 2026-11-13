@@ -24,7 +24,11 @@ export async function notify(title: string, body: string): Promise<void> {
   if (allowed) n.sendNotification({ title, body: body.slice(0, 180) });
 }
 
-/** Show a web page in McBot's browser window (desktop), or a new tab (browser). http(s) only. */
+/**
+ * Open a web page in the person's own browser (desktop: the system default, through the opener
+ * plugin; a browser tab otherwise). http(s) only: any https page, and http on this computer
+ * (an agent's preview server), as src-tauri/capabilities/default.json allows.
+ */
 export async function openBrowser(url: string): Promise<void> {
   const u = /^[a-z]+:\/\//i.test(url) ? url : `http://${url}`;
   if (!/^https?:\/\//i.test(u)) throw new Error("Only http and https pages open here");
@@ -32,8 +36,8 @@ export async function openBrowser(url: string): Promise<void> {
     window.open(u, "_blank", "noopener,noreferrer");
     return;
   }
-  const { invoke } = await import("@tauri-apps/api/core");
-  await invoke("browser_open", { url: u });
+  const { openUrl } = await import("@tauri-apps/plugin-opener");
+  await openUrl(u);
 }
 
 /** The Browser view's page in the desktop app: a real webview over the view's page area

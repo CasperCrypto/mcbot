@@ -12,6 +12,7 @@ import { useApp } from "../state/store";
 import { AgentFace, Empty } from "../ui";
 import { toolLabel } from "../lib/toolLabel";
 import { ApprovalCard } from "../approvals/ApprovalCard";
+import { RichText } from "../chat/RichText";
 
 function shortTime(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -74,7 +75,7 @@ function Made({ profile, kind, path }: { profile: string; kind: "image" | "video
   );
 }
 
-function AgentMessage({ run, events, name }: { run: RunSummary; events: RunEvent[] | undefined; name: string }) {
+function AgentMessage({ run, events, name, onChoose }: { run: RunSummary; events: RunEvent[] | undefined; name: string; onChoose?: (reply: string) => void }) {
   const tools = (events ?? []).filter((e): e is Extract<RunEvent, { type: "run.tool.started" }> => e.type === "run.tool.started");
   const failedTools = new Set((events ?? []).filter((e) => e.type === "run.tool.finished" && e.isError).map((e) => (e.type === "run.tool.finished" ? e.tool : "")));
   const text = (run.text || "").trim();
@@ -92,7 +93,9 @@ function AgentMessage({ run, events, name }: { run: RunSummary; events: RunEvent
       {run.status === "running" && !text ? (
         run.approval ? null : <div className="bubble" style={{ padding: 0 }}><span className="typing"><i /><i /><i /></span></div>
       ) : (
-        <div className="bubble" data-testid="agent-text">{text || (failed ? run.error ?? "Failed" : "")}</div>
+        failed && !text ? <div className="bubble" data-testid="agent-text">{run.error ?? "Failed"}</div>
+          : <div className="bubble"><RichText text={text} onChoose={run.status === "running" ? undefined : onChoose}
+            image={(src, alt) => /^[a-z]+:\/\//i.test(src) ? <span className="faint" data-tip={src}>{alt || "image"}</span> : <Made profile={run.profile} kind="image" path={src} />} /></div>
       )}
       {made.length > 0 && <div className="made-grid">{made.map((m) => <Made key={`${m.seq}-${m.kind}`} profile={run.profile} kind={m.kind} path={m.path} />)}</div>}
       {run.status !== "running" && (
@@ -114,6 +117,14 @@ function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLTextAreaElement>(null);
+  // The box grows with what is typed and shrinks back once it is sent (or cleared).
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = "auto";
+    if (draft) el.style.height = `${Math.min(200, el.scrollHeight)}px`;
+  }, [draft]);
   const name = agent.data.displayName || agent.data.name;
 
   const thread = useMemo(() => Object.values(runs).filter((r) => r.agentNodeId === agent.id).sort((a, b) => a.startedAt - b.startedAt), [runs, agent.id]);
@@ -132,6 +143,11 @@ function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
   const send = async () => {
     const prompt = draft.trim();
     if (!prompt) return;
+    setDraft("");
+    await ask(prompt);
+  };
+  /** Ask the agent (the composer, or a reply button): straight away, or in the queue while it works. */
+  const ask = async (prompt: string) => {
     // Busy, starting, or others are waiting: it goes in the queue and is sent when the agent is free.
     if (running || sending || useApp.getState().starting[agent.id] || queued?.items.length) {
       useApp.getState().enqueue(agent.id, prompt);
@@ -172,7 +188,7 @@ function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
               <div key={r.runId} style={{ display: "grid", gap: 14 }}>
                 {sep}
                 <div className="msg user"><div className="bubble">{r.prompt}</div></div>
-                <AgentMessage run={r} events={events[r.runId]} name={name} />
+                <AgentMessage run={r} events={events[r.runId]} name={name} onChoose={r === thread.at(-1) ? (reply) => void ask(reply) : undefined} />
               </div>
             );
           })}
@@ -196,7 +212,7 @@ function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
         )}
         <div className="composer">
           <textarea rows={1} value={draft} placeholder={running ? `Queue a message for ${name}` : `Message ${name}`} data-testid="composer"
-            onChange={(e) => { setDraft(e.target.value); e.target.style.height = "auto"; e.target.style.height = `${Math.min(200, e.target.scrollHeight)}px`; }}
+            ref={box} onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }} />
           {running && <button className="send stop" aria-label="Stop" data-tip="Stop" onClick={() => engine.cancelRun(running.runId)}><Square size={12} /></button>}
           {(!running || draft.trim()) && <button className="send" aria-label={running ? "Queue" : "Send"} data-tip={running ? "Sends when it's free" : undefined} disabled={!draft.trim()} onClick={send} data-testid="send"><ArrowUp size={16} /></button>}

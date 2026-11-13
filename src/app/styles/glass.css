@@ -273,3 +273,61 @@ input.input::placeholder { color: var(--text-4); }
 .queue-n { width: 18px; height: 18px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 10.5px; font-weight: 650; background: rgba(255, 255, 255, 0.1); color: var(--text-2); }
 .queue-paused { display: flex; align-items: center; gap: 8px; padding: 4px 6px 2px 8px; font-size: 12px; color: var(--warn); }
 .composer .send + .send { margin-left: -2px; }
+
+/* ---------- share: invite by email ---------- */
+.share-email { display: grid; gap: 8px; }
+.share-email-row { display: flex; align-items: center; gap: 8px; padding: 5px 5px 5px 12px; border-radius: var(--r-md); background: rgba(0, 0, 0, 0.26); box-shadow: inset 0 0 0 0.5px var(--line-2); }
+.share-email-row:focus-within { box-shadow: inset 0 0 0 0.5px var(--line-3), 0 0 0 3.5px rgba(255, 255, 255, 0.055); }
+.share-email-row input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 13px; user-select: text; }
+.hermes-view .react-flow__node { cursor: pointer; }
+.hermes-view .react-flow__node:hover .hx, .hermes-view .react-flow__node:hover > div { box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.24), var(--shadow-2); }
+.hermes-hint { position: absolute; left: 50%; bottom: 18px; translate: -50% 0; z-index: 5; padding: 6px 12px; border-radius: var(--r-pill); font-size: 12px; color: var(--text-2); background: var(--mat-thin); backdrop-filter: var(--mat-blur); -webkit-backdrop-filter: var(--mat-blur); box-shadow: var(--shadow-2), var(--mat-edge); pointer-events: none; }
+
+/* ---------- rich answers: Markdown, tables, code, charts, reply buttons (chat/RichText.tsx) ---------- */
+.rich { display: grid; gap: 10px; white-space: normal; min-width: 0; }
+.rich p { margin: 0; white-space: pre-wrap; }
+.rich h3, .rich h4, .rich h5 { margin: 6px 0 0; letter-spacing: -0.015em; }
+.rich h3 { font-size: 18px; font-weight: 700; }
+.rich h4 { font-size: 16px; font-weight: 650; }
+.rich h5 { font-size: 14px; font-weight: 650; }
+.rich ul, .rich ol { margin: 0; padding-left: 22px; display: grid; gap: 4px; }
+.rich blockquote { margin: 0; padding: 2px 0 2px 14px; border-left: 2px solid var(--line-3); color: var(--text-2); white-space: pre-wrap; }
+.rich hr { width: 100%; border: 0; border-top: var(--hairline) solid var(--line-2); margin: 4px 0; }
+.rich a { color: var(--accent-text); text-decoration: none; }
+.rich a:hover { text-decoration: underline; }
+.rich-code-inline { padding: 1px 5px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); font-size: 0.88em; }
+.rich-code { border-radius: var(--r-md); background: rgba(0, 0, 0, 0.32); box-shadow: inset 0 0 0 0.5px var(--line-2); overflow: hidden; }
+.rich-code-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 4px 12px; font-size: 11px; color: var(--text-3); border-bottom: var(--hairline) solid var(--line); }
+.rich-code pre { margin: 0; padding: 12px 14px; overflow: auto; font: 12.5px/1.55 var(--mono); color: var(--text); user-select: text; }
+.rich-table { overflow: auto; border-radius: var(--r-md); box-shadow: inset 0 0 0 0.5px var(--line-2); }
+.rich-table table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.rich-table th, .rich-table td { padding: 8px 12px; text-align: left; border-bottom: var(--hairline) solid var(--line); vertical-align: top; }
+.rich-table th { font-weight: 600; color: var(--text-2); background: rgba(255, 255, 255, 0.04); }
+.rich-table tr:last-child td { border-bottom: 0; }
+.rich-chart { margin: 0; padding: 14px 16px 12px; border-radius: var(--r-lg); background: rgba(255, 255, 255, 0.035); box-shadow: inset 0 0 0 0.5px var(--line-2); display: grid; gap: 8px; }
+.rich-chart figcaption { font-size: 13px; font-weight: 650; }
+.rich-chart-body { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.rich-chart svg { flex: 1; min-width: 0; max-height: 260px; overflow: visible; }
+.rich-chart-grid { stroke: var(--line); stroke-width: 1; }
+.rich-chart-tick { fill: var(--text-3); font-size: 10.5px; font-family: var(--font); }
+.rich-chart-mark { transition: opacity var(--t-fast); animation: chart-in var(--t-spring) var(--spring-smooth) both; transform-box: fill-box; transform-origin: 50% 100%; }
+.rich-chart svg:hover .rich-chart-mark { opacity: 0.55; }
+.rich-chart svg .rich-chart-mark:hover { opacity: 1; }
+@keyframes chart-in { from { opacity: 0; transform: scaleY(0.4); } to { opacity: 1; transform: none; } }
+.rich-chart-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 12px; color: var(--text-2); flex: none; max-width: 40%; }
+.rich-chart-legend li { display: flex; align-items: center; gap: 7px; }
+.rich-chart-legend i { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+.rich-chart-legend b { margin-left: auto; padding-left: 10px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.rich-choices { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; }
+.rich-choice {
+  height: 32px; padding: 0 14px; border: 0; border-radius: var(--r-pill); font-size: 13px; font-weight: 550; color: var(--text);
+  background: var(--mat-thin); box-shadow: var(--mat-edge); transition: background var(--t-fast), transform var(--t-spring) var(--spring-bouncy);
+  animation: row-in var(--t-slow) var(--ease) both;
+}
+.rich-choice:hover { background: rgba(255, 255, 255, 0.14); transform: translateY(-1px); }
+.rich-choice:active { transform: scale(0.95); }
+.rich-img .made { max-width: 420px; }
+.rich-link-off { text-decoration: underline dotted; }
+.msg.agent .bubble:has(.rich) { white-space: normal; }
+/* The composer holds text: thick material, so the thread behind never competes with it. */
+.composer, .composer:focus-within { background: var(--mat-thick); }
