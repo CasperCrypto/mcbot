@@ -53,9 +53,11 @@ export interface RunnerOptions {
 
 /** The gateway was booting or shutting down when the client connected (hermes_cli/gateway_chat.py). */
 const GATEWAY_NOT_READY = /Gateway (starting|draining)/i;
+/** How long a stopped run may take to wind down before McBot ends it. */
+export const STOP_GRACE_MS = 4000;
 
 export class Runner {
-  private readonly active = new Map<string, { child: ChildProcess | null; profile: string; cancelled?: boolean; hermesRunId?: string; abort?: AbortController }>();
+  private readonly active = new Map<string, { child: ChildProcess | null; profile: string; startedAt: number; cancelled?: boolean; finished?: boolean; hermesRunId?: string; abort?: AbortController }>();
   private gatewayStale = false;
   private gatewayRestart: Promise<void> | null = null;
   private gatewayEnsure: Promise<unknown> = Promise.resolve();
@@ -75,17 +77,47 @@ export class Runner {
     return [...this.active.keys()];
   }
 
+  /**
+   * Stop a run, whatever it is doing. Hermes' runs API stops at its next step, so a long model
+   * answer, a tool or a pending approval would keep it going: after STOP_GRACE_MS McBot stops
+   * listening and ends the run itself. A one-shot process gets SIGINT, then SIGTERM, then SIGKILL.
+   * A run that is still starting is stopped before Hermes is asked.
+   */
   cancel(runId: string): boolean {
     const run = this.active.get(runId);
-    if (run?.hermesRunId && this.opts.api) {
-      run.cancelled = true;
-      void this.opts.api.runs.stop(run.profile, run.hermesRunId);
-      return true;
-    }
-    if (!run?.child) return false;
+    if (!run) return false;
+    if (run.cancelled) return true;
     run.cancelled = true;
-    run.child.kill(process.platform === "win32" ? undefined : "SIGINT");
+    this.opts.store.emit(runId, { type: "run.log", stream: "stderr", line: "[mcbot] stopping" });
+    if (run.hermesRunId && this.opts.api) void this.opts.api.runs.stop(run.profile, run.hermesRunId);
+    const child = run.child;
+    if (child) child.kill(process.platform === "win32" ? undefined : "SIGINT");
+    setTimeout(() => {
+      if (!this.active.has(runId)) return;
+      if (child && child.exitCode === null) child.kill(process.platform === "win32" ? undefined : "SIGTERM");
+      run.abort?.abort();
+      this.endStopped(runId);
+      setTimeout(() => { if (child && child.exitCode === null) child.kill("SIGKILL"); }, STOP_GRACE_MS);
+    }, STOP_GRACE_MS);
     return true;
+  }
+
+  /** Every event of a run goes through here, so a run finishes once (a stopped run may still report). */
+  private emit(runId: string, e: Parameters<RunStore["emit"]>[1]): void {
+    const run = this.active.get(runId);
+    if (e.type === "run.finished") {
+      if (run?.finished) return;
+      if (run) run.finished = true;
+    }
+    this.opts.store.emit(runId, e);
+  }
+
+  /** The person stopped it: one `run.finished` (interrupted), unless the run already finished. */
+  private endStopped(runId: string): void {
+    const run = this.active.get(runId);
+    if (!run || run.finished) return;
+    run.finished = true;
+    this.opts.store.emit(runId, { type: "run.finished", status: "interrupted", exitCode: null, text: "", tokens: null, durationMs: Date.now() - run.startedAt, sessionId: null, error: "Stopped" });
   }
 
   private async refreshGateway(runId: string, bin: HermesBinary): Promise<void> {
@@ -160,12 +192,13 @@ export class Runner {
     await this.refreshGateway(runId, bin);
     const saved: Record<string, string> = (await this.opts.secrets?.().catch(() => ({}))) ?? {};
     await writeProfileKeys(join(root, "profiles", req.profile), { ...resolveEntries(req.env ?? [], saved), ...api.env }).catch((err: Error) =>
-      store.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] could not write this agent's keys: ${err.message}` }));
+      this.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] could not write this agent's keys: ${err.message}` }));
     const fail = (error: string): void => {
-      store.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: Date.now() - started, sessionId: null, error });
+      this.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: Date.now() - started, sessionId: null, error });
     };
     if (!(await this.ensureApi(runId, bin))) return fail("The engine gateway did not start its runs API");
     const entry = this.active.get(runId);
+    if (entry?.cancelled) return this.endStopped(runId);
     let hermesRunId: string;
     try {
       hermesRunId = await api.runs.start(req.profile, req.prompt);
@@ -174,7 +207,10 @@ export class Runner {
     }
     const abort = new AbortController();
     if (entry) Object.assign(entry, { hermesRunId, abort });
-    if (entry?.cancelled) void api.runs.stop(req.profile, hermesRunId);
+    if (entry?.cancelled) {
+      void api.runs.stop(req.profile, hermesRunId);
+      if (entry.finished) abort.abort();
+    }
     const mapper = new RunsApiMapper(req.toolNodes);
     let finished = false;
     try {
@@ -182,11 +218,11 @@ export class Runner {
         for (const ev of mapper.map(e, started)) {
           if (ev.type === "run.finished") {
             const sessionId = await api.runs.sessionOf(req.profile, hermesRunId);
-            store.emit(runId, { ...ev, sessionId });
+            this.emit(runId, { ...ev, sessionId });
             finished = true;
             if (sessionId) this.emitCost(runId, req, sessionId);
           } else {
-            store.emit(runId, ev);
+            this.emit(runId, ev);
           }
         }
         if (isTerminal(e)) break;
@@ -204,12 +240,12 @@ export class Runner {
       const row = readSession(root, req.profile, sessionId);
       if (!row) return;
       const priced = priceSession(row, req.models);
-      store.emit(runId, {
+      this.emit(runId, {
         type: "run.cost", sessionId, model: row.model, provider: row.billingProvider, reportedUsd: row.estimatedCostUsd,
         costStatus: row.costStatus, estimatedUsd: priced.source === "estimate" ? priced.usd : null,
       });
     } catch (err) {
-      store.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] could not read state.db for cost: ${(err as Error).message}` });
+      this.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] could not read state.db for cost: ${(err as Error).message}` });
     }
   }
 
@@ -220,13 +256,13 @@ export class Runner {
     const viaApi = !!this.opts.api && bin?.kind === "bundled";
     const argv = viaApi ? ["runs-api", "/p/" + req.profile + "/v1/runs"] : chatArgv(req.profile, bin ?? undefined);
     const cwd = resolveInside(root, `profiles/${req.profile}/workspace`);
-    this.active.set(runId, { child: null, profile: req.profile });
-    store.emit(runId, { type: "run.started", boardId: req.boardId, agentNodeId: req.agentNodeId, profile: req.profile, prompt: req.prompt, argv, hermesHome: root, cwd });
+    this.active.set(runId, { child: null, profile: req.profile, startedAt: Date.now() });
+    this.emit(runId, { type: "run.started", boardId: req.boardId, agentNodeId: req.agentNodeId, profile: req.profile, prompt: req.prompt, argv, hermesHome: root, cwd });
 
     const go = viaApi && bin
-      ? prepareHermes(bin, root, (line) => store.emit(runId, { type: "run.log", stream: "stderr", line })).then((b) => this.executeApi(runId, req, b))
+      ? prepareHermes(bin, root, (line) => this.emit(runId, { type: "run.log", stream: "stderr", line })).then((b) => this.executeApi(runId, req, b))
       : this.execute(runId, req, argv, cwd, bin);
-    void go.catch((err: Error) => store.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: 0, sessionId: null, error: err.message }))
+    void go.catch((err: Error) => this.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: 0, sessionId: null, error: err.message }))
       .finally(() => this.active.delete(runId));
     return runId;
   }
@@ -234,19 +270,20 @@ export class Runner {
   private async execute(runId: string, req: StartRun, argv: string[], cwd: string, found: HermesBinary | null): Promise<void> {
     const { store, root } = this.opts;
     const started = Date.now();
-    const bin = found && (await prepareHermes(found, root, (line) => store.emit(runId, { type: "run.log", stream: "stderr", line })));
+    const bin = found && (await prepareHermes(found, root, (line) => this.emit(runId, { type: "run.log", stream: "stderr", line })));
     if (!bin) {
-      store.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: 0, sessionId: null, error: "The engine is not set up yet" });
+      this.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: 0, sessionId: null, error: "The engine is not set up yet" });
       return;
     }
     await this.refreshGateway(runId, bin);
+    if (this.active.get(runId)?.cancelled) return this.endStopped(runId);
 
     const stderrTail: string[] = [];
     let sessionId: string | null = null;
     const saved: Record<string, string> = (await this.opts.secrets?.().catch(() => ({}))) ?? {};
     const env = hermesEnv(root, { ...process.env, ...saved });
     await writeProfileKeys(join(root, "profiles", req.profile), resolveEntries(req.env ?? [], saved)).catch((err: Error) =>
-      store.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] could not write this agent's keys: ${err.message}` }));
+      this.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] could not write this agent's keys: ${err.message}` }));
 
     /** One Hermes process. A first attempt holds back "the gateway is still starting" so it can be retried. */
     const attempt = (retryable: boolean) => new Promise<{ exit: { code: number | null; signal: string | null; error?: Error }; mapper: StreamMapper; held: boolean }>((resolve) => {
@@ -267,13 +304,13 @@ export class Runner {
           }
           if (e.type === "run.session") sessionId = e.sessionId;
           if (e.type === "run.finished" && e.sessionId) sessionId = e.sessionId;
-          store.emit(runId, e);
+          this.emit(runId, e);
         }
       });
       createInterface({ input: child.stderr! }).on("line", (line) => {
         stderrTail.push(line);
         if (stderrTail.length > 40) stderrTail.shift();
-        store.emit(runId, { type: "run.log", stream: "stderr", line });
+        this.emit(runId, { type: "run.log", stream: "stderr", line });
       });
       child.stdin!.on("error", () => undefined);
       child.stdin!.end(req.prompt);
@@ -283,23 +320,23 @@ export class Runner {
     // deadline"); by then it is up, so one more attempt answers.
     let { exit, mapper, held } = await attempt(true);
     if (held && !this.active.get(runId)?.cancelled) {
-      store.emit(runId, { type: "run.log", stream: "stderr", line: "[mcbot] Hermes' gateway was still starting; trying again" });
+      this.emit(runId, { type: "run.log", stream: "stderr", line: "[mcbot] Hermes' gateway was still starting; trying again" });
       ({ exit, mapper } = await attempt(false));
     }
 
     if (exit.error) {
-      store.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: Date.now() - started, sessionId: null, error: `could not start hermes: ${exit.error.message}` });
+      this.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: Date.now() - started, sessionId: null, error: `could not start hermes: ${exit.error.message}` });
       return;
     }
     const tail = mapper.finish(exit.code, exit.signal, Date.now() - started, stderrTail);
-    if (tail) store.emit(runId, tail);
+    if (tail) this.emit(runId, tail);
 
     if (sessionId) {
       try {
         const row = readSession(root, req.profile, sessionId);
         if (row) {
           const priced = priceSession(row, req.models);
-          store.emit(runId, {
+          this.emit(runId, {
             type: "run.cost",
             sessionId,
             model: row.model,
@@ -310,7 +347,7 @@ export class Runner {
           });
         }
       } catch (err) {
-        store.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] could not read state.db for cost: ${(err as Error).message}` });
+        this.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] could not read state.db for cost: ${(err as Error).message}` });
       }
     }
   }

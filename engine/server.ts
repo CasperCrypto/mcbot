@@ -41,7 +41,7 @@ import { OwnershipError, readManifest, writeCompileResult } from "./writer";
 import { Sharing, guestAllowed, joinPage, type SharingView } from "./sharing";
 import { frameable } from "./web";
 
-export const ENGINE_VERSION = "0.4.3";
+export const ENGINE_VERSION = "0.4.4";
 
 export interface EngineConfig {
   workspace: string;
@@ -102,6 +102,18 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   let onBoardSaved: (boardId: string) => void = () => undefined;
   const relay = new BoardRelay(join(cfg.workspace, "boards"), (boardId) => onBoardSaved(boardId));
   const store = new RunStore(join(cfg.workspace, "runs"));
+  /**
+   * A run that shows as running but has no process here (McBot quit or the engine restarted mid-run):
+   * Stop ends it, so it never stays "running" forever.
+   */
+  const endOrphan = async (runId: string): Promise<boolean> => {
+    const events = await store.events(runId);
+    if (!events.length || events.some((e) => e.type === "run.finished")) return false;
+    store.emit(runId, { type: "run.finished", status: "interrupted", exitCode: null, text: "", tokens: null, durationMs: Date.now() - events[0]!.ts, sessionId: null, error: "Stopped (McBot had restarted during this run)" });
+    return true;
+  };
+  // Nothing runs in a fresh engine: a run still marked running is left from before it started.
+  void store.list().then((runs) => Promise.all(runs.filter((r) => r.status === "running").map((r) => endOrphan(r.runId)))).catch(() => undefined);
   const secrets = new Secrets(join(cfg.workspace, "secrets.json"));
   let setupJob: HermesInfo["setup"] = { state: "idle", lines: [] };
   const setup = new SetupStore(join(cfg.workspace, "setup.json"));
@@ -708,7 +720,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     try {
       let body: unknown;
       if (runMatch && req.method === "GET" && !runMatch[2]) body = await store.events(runMatch[1]!);
-      else if (runMatch && req.method === "POST" && runMatch[2] === "/cancel") body = { cancelled: runner.cancel(runMatch[1]!) };
+      else if (runMatch && req.method === "POST" && runMatch[2] === "/cancel") body = { cancelled: runner.cancel(runMatch[1]!) || (await endOrphan(runMatch[1]!)) };
       else if (runMatch && req.method === "POST" && runMatch[2] === "/approval") {
         // An approval card's answer: once, session, always or deny.
         const { choice } = parse(z.object({ choice: z.enum(["once", "session", "always", "deny"]) }), await json(req));

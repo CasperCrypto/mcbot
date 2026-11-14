@@ -100,6 +100,11 @@ Change them additively; a breaking change bumps the version.
   `hermes gateway ensure` while any compiled agent has a bot with everything filled in.
   No allowed users = nobody can message it (Hermes refuses unknown senders).
 - Run is refused (409) if the agent's files on disk differ from the board — compile first.
+- **Stop** (`Runner.cancel`, every Stop button through `stopRun` in `actions.ts`) always ends a run
+  within `STOP_GRACE_MS` (4 s): it asks Hermes (`/v1/runs/<id>/stop`, which only acts between steps)
+  or sends SIGINT, then ends the run itself (`interrupted`, one `run.finished` per run) and escalates
+  to SIGTERM/SIGKILL. A run still starting never reaches Hermes. A run left "running" by an engine
+  that quit is ended at start and by Stop. Stop also clears that agent's queued messages.
 - One run at a time per agent from the UI: a message sent while the agent works (or while its run
   is starting, `starting` in the store, set by `runAgent`) joins that agent's queue and is sent
   when it is free (`queue`, dispatched in App.tsx). A message that cannot start goes back first

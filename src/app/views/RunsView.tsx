@@ -1,4 +1,5 @@
 import { CircleCheck, CircleX, Coins, MessageSquare, Plug, Square, X } from "lucide-react";
+import { stopRun } from "../actions";
 import { useEffect, useMemo, useState } from "react";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 import { ago, duration, tokens, usd } from "../lib/format";
@@ -135,7 +136,7 @@ export function RunsView() {
               <span className="faint num" style={{ fontSize: 12 }}>
                 {[run.finishedAt ? duration(run.finishedAt - run.startedAt) : null, run.tokens ? `${tokens(run.tokens.input)} in · ${tokens(run.tokens.output)} out` : null, run.toolCalls ? `${run.toolCalls} tool call${run.toolCalls > 1 ? "s" : ""}` : null].filter(Boolean).join("  ·  ")}
               </span>
-              {run.status === "running" && <button className="btn sm" onClick={() => engine.cancelRun(run.runId)}><Square size={11} /> Stop</button>}
+              {run.status === "running" && <button className="btn sm" onClick={() => void stopRun(run.runId)}><Square size={11} /> Stop</button>}
             </div>
             <div style={{ position: "absolute", inset: "52px 0 0 0" }} data-testid="run-graph">
               <div className={`graph-area${current ? " with-panel" : ""}`}><GraphCanvas key={run.runId} nodes={nodes} edges={edges} dir="TB" selected={step} onSelect={setStep} fitSignature={`${run.runId}:${steps.length}:${!!current}`} /></div>

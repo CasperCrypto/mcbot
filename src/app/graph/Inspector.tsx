@@ -6,7 +6,7 @@ import {
   AgentDataSchema, CAPABILITIES, ChannelDataSchema, PLATFORMS, channelKeyName, type Platform, DEFAULT_CAPABILITIES, MEDIA_PROVIDERS, MediaDataSchema, ModelDataSchema, ToolDataSchema,
   type AgentData, type Capability, type ChannelData, type GraphNode, type MediaData, type ModelData, type Skill, type ToolData,
 } from "../../contracts/graph";
-import { runAgent } from "../actions";
+import { runAgent, stopRun } from "../actions";
 import { keyEnvFor } from "../lib/providers";
 import { REMOTE, engine } from "../lib/engine";
 import { duration, tokens as fmtTokens, usd } from "../lib/format";
@@ -325,7 +325,7 @@ function RunBox({ agentNodeId, profile }: { agentNodeId: string; profile: string
         <textarea rows={2} value={prompt} placeholder={`Ask ${profile}…`} data-testid="run-prompt" onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void go(); } }} />
         {running
-          ? <button className="send stop" aria-label="Stop" onClick={() => latest && engine.cancelRun(latest.runId)}><Square size={12} /></button>
+          ? <button className="send stop" aria-label="Stop" onClick={() => latest && void stopRun(latest.runId)}><Square size={12} /></button>
           : <button className="send" aria-label="Run" disabled={!prompt.trim() || busy} onClick={go} data-testid="run-button"><ArrowUp size={16} /></button>}
       </div>
       {latest && (

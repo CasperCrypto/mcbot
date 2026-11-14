@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode, ModelData } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 import { resolveGraph } from "../../compile";
-import { runAgent } from "../actions";
+import { runAgent, stopRun } from "../actions";
 import { engine } from "../lib/engine";
 import { duration, tokens, usd } from "../lib/format";
 import { Sidebar } from "../shell/Sidebar";
@@ -214,7 +214,7 @@ function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
           <textarea rows={1} value={draft} placeholder={running ? `Queue a message for ${name}` : `Message ${name}`} data-testid="composer"
             ref={box} onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }} />
-          {running && <button className="send stop" aria-label="Stop" data-tip="Stop" onClick={() => engine.cancelRun(running.runId)}><Square size={12} /></button>}
+          {running && <button className="send stop" aria-label="Stop" data-tip="Stop" onClick={() => void stopRun(running.runId)}><Square size={12} /></button>}
           {(!running || draft.trim()) && <button className="send" aria-label={running ? "Queue" : "Send"} data-tip={running ? "Sends when it's free" : undefined} disabled={!draft.trim()} onClick={send} data-testid="send"><ArrowUp size={16} /></button>}
         </div>
       </div>

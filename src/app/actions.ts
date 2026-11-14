@@ -129,3 +129,19 @@ export function importBoardFile(): void {
   };
   input.click();
 }
+
+/** Stop a run (every Stop button): McBot ends it within a few seconds even if Hermes is mid-step. */
+export async function stopRun(runId: string): Promise<void> {
+  const app = useApp.getState();
+  try {
+    // Stop means stop: messages waiting for this agent don't start by themselves afterwards.
+    const agent = app.runs[runId]?.agentNodeId;
+    const waiting = agent ? app.queue[agent]?.items.length ?? 0 : 0;
+    if (agent && waiting) useApp.setState((s) => ({ queue: { ...s.queue, [agent]: { items: [], paused: false } } }));
+    const { cancelled } = await engine.cancelRun(runId);
+    const cleared = waiting ? ` ${waiting} waiting message${waiting > 1 ? "s" : ""} cleared.` : "";
+    app.toast({ kind: "info", text: cancelled ? `Stopping…${cleared}` : `It had already finished.${cleared}` });
+  } catch (e) {
+    app.toast({ kind: "fail", text: (e as Error).message });
+  }
+}
