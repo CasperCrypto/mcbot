@@ -1,7 +1,7 @@
 import { Bot, Check, Hammer, LoaderCircle, MessagesSquare, Search, ShieldAlert, Square, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RunSummary } from "../../contracts/run";
-import { compileBoard } from "../actions";
+import { compileBoard, stopRun } from "../actions";
 import { engine } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
@@ -191,7 +191,7 @@ export function Island() {
               <AgentFace seed={r.profile} size={24} status="running" />
               <button className="grow island-link" onClick={go(() => openChat(r.agentNodeId))}><b>{nameOf(r)}</b><span className="faint ellipsis">{r.prompt}</span></button>
               <span className="time">{clock(now - r.startedAt)}</span>
-              <button className="icon-btn sm" aria-label="Stop" data-tip="Stop" onClick={() => void engine.cancelRun(r.runId)}><Square size={11} /></button>
+              <button className="icon-btn sm" aria-label="Stop" data-tip="Stop" onClick={() => void stopRun(r.runId)}><Square size={11} /></button>
             </div>
           ))}
         </div>

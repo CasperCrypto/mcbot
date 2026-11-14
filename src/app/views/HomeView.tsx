@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AgentSchedules, CostReport, TaskView } from "../../contracts/api";
 import type { AgentNode } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
-import { compileBoard, openHermesSetup, runAgent } from "../actions";
+import { compileBoard, openHermesSetup, runAgent, stopRun } from "../actions";
 import { engine } from "../lib/engine";
 import { ago, usd } from "../lib/format";
 import { useBoard } from "../state/board";
@@ -446,7 +446,7 @@ export function HomeView() {
                             <span className="sub ellipsis">{stepOf(events[r.runId])}</span>
                           </span>
                         </button>
-                        <button className="icon-btn sm" aria-label="Stop" data-tip="Stop" onClick={() => void engine.cancelRun(r.runId)}><Square size={11} /></button>
+                        <button className="icon-btn sm" aria-label="Stop" data-tip="Stop" onClick={() => void stopRun(r.runId)}><Square size={11} /></button>
                       </div>
                     ))}
                     {working.map((t) => (
