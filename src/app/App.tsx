@@ -1,4 +1,5 @@
 import { LoaderCircle } from "lucide-react";
+import { FrameStrip } from "./shell/WindowControls";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import type { AgentNode } from "../contracts/graph";
 import { compileBoard, refreshDrift, runAgent } from "./actions";
@@ -195,6 +196,7 @@ function Offline({ down }: { down: boolean }) {
   const stuck = down && now - OPENED > PATIENCE_MS;
   return (
     <div className="offline" style={{ gridRow: "1 / span 2" }} data-tauri-drag-region>
+      <FrameStrip />
       <div className="empty" data-testid="offline">
         <BrandMark size={44} />
         <h3>{stuck ? "McBot Studio's engine didn't start" : "Starting McBot Studio…"}</h3>

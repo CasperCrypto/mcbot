@@ -45,7 +45,7 @@ export async function refreshDrift(boardId: string): Promise<void> {
   }
 }
 
-export async function runAgent(boardId: string, agentNodeId: string, prompt: string): Promise<string | null> {
+export async function runAgent(boardId: string, agentNodeId: string, prompt: string, retried = false): Promise<string | null> {
   const app = useApp.getState();
   // Until the run's first event arrives, the agent counts as busy (the chat's queue waits for it).
   app.setStarting(agentNodeId, true);
@@ -56,6 +56,14 @@ export async function runAgent(boardId: string, agentNodeId: string, prompt: str
     return runId;
   } catch (err) {
     app.setStarting(agentNodeId, false);
+    if (err instanceof EngineError && err.status === 409 && err.body.stale && !retried) {
+      // The board changed since the last compile: write the agents' files, then send. A message should
+      // just go, as in any chat app; only a compile that fails stops it (and says why, with "Fix").
+      app.setStarting(agentNodeId, true);
+      const ok = await compileBoard(boardId, { quiet: true });
+      app.setStarting(agentNodeId, false);
+      return ok ? runAgent(boardId, agentNodeId, prompt, true) : null;
+    }
     if (err instanceof EngineError && err.status === 409 && err.body.stale) {
       app.toast({
         kind: "fail",

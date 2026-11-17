@@ -98,3 +98,22 @@ export async function showApp(): Promise<void> {
   const { invoke } = await import("@tauri-apps/api/core");
   await invoke("island_open").catch(() => undefined);
 }
+
+/** Windows and Linux draw no native frame (tauri.windows.conf.json): the title bar carries its own window buttons. */
+export const ownFrame = () => inApp() && !/Mac/i.test(navigator.userAgent);
+export async function windowAct(act: "min" | "max" | "close"): Promise<void> {
+  if (!inApp()) return;
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  const w = getCurrentWindow();
+  if (act === "min") await w.minimize();
+  else if (act === "max") await w.toggleMaximize();
+  else await w.close();
+}
+export async function onMaximized(cb: (max: boolean) => void): Promise<() => void> {
+  if (!inApp()) return () => undefined;
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  const w = getCurrentWindow();
+  const check = () => { void w.isMaximized().then(cb).catch(() => undefined); };
+  check();
+  return w.onResized(check);
+}

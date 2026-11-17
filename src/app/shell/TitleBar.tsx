@@ -11,6 +11,7 @@ import { Island } from "./Island";
 import { unreadCount } from "./TeamPanel";
 import { useDismiss } from "../lib/presence";
 import { useDoctor } from "./DoctorSheet";
+import { WindowControls } from "./WindowControls";
 
 /** The McBot logo: the gray glass burger. */
 export function BrandMark({ size = 22 }: { size?: number }) {
@@ -63,6 +64,8 @@ function DoctorButton() {
   const errors = findings.filter((f) => f.level === "error").length;
   const warns = findings.filter((f) => f.level === "warn").length;
   const n = errors || warns;
+  // Quiet when all is well: the stethoscope appears only when there is something to look at.
+  if (!findings.length) return null;
   return (
     <button className="icon-btn doctor-btn" onClick={() => useApp.getState().setDoctorOpen(true)} data-testid="doctor-open" aria-label="Check the harness"
       data-tip={findings.length ? `${findings.length} thing${findings.length > 1 ? "s" : ""} to look at` : "Harness checked: all good"} data-tip-side="bottom">
@@ -82,13 +85,16 @@ export function TitleBar() {
   const people = [{ clientId: -1, name: identity.name, color: identity.color }, ...peers];
   const teamOpen = useApp((s) => s.teamOpen);
   const unread = teamOpen ? 0 : unreadCount(boardId, graph.messages, identity.name);
+  const tab = useApp((s) => s.tab);
+  // Compile belongs to the board; elsewhere it shows up only when the agents' files are out of date or broken.
+  const showCompile = tab === "graph" || errors > 0 || (drift ?? 0) > 0;
 
   return (
     <header className="titlebar" data-tauri-drag-region>
       <BrandMark />
       <BoardMenu />
       {DEMO && <span className="chip warn" data-tip="Browser demo: compile is real, runs are simulated" data-tip-side="bottom" data-testid="demo-chip">Demo</span>}
-      <div className="spacer" />
+      <div className="spacer" data-tauri-drag-region />
       <Island />
       <button className="presence" data-testid="presence" data-dismiss-ignore onClick={() => useApp.getState().setTeamOpen(!useApp.getState().teamOpen)}
         data-tip={`${people.length === 1 ? "Only you here" : `${people.length} here`} · team chat`} data-tip-side="bottom">
@@ -99,15 +105,15 @@ export function TitleBar() {
         <MessagesSquare size={14} className="faint" />
         {unread > 0 && <span className="unread" data-testid="team-unread">{unread}</span>}
       </button>
-      <button className={`btn sm share-btn${REMOTE ? " remote" : ""}`} onClick={() => useApp.getState().setShareOpen(true)} data-testid="share-open"
+      <button className={`icon-btn share-btn${REMOTE ? " remote" : ""}`} onClick={() => useApp.getState().setShareOpen(true)} data-testid="share-open" aria-label="Share"
         data-tip={REMOTE ? `On ${REMOTE.label}'s boards` : "Share on your network"} data-tip-side="bottom">
-        <Users size={13} /> {REMOTE ? REMOTE.label : "Share"}
+        <Users size={15} />{REMOTE && <span className="share-host">{REMOTE.label}</span>}
       </button>
       <button className="search-pill" onClick={() => setPalette(true)} data-testid="open-palette">
         <Search size={14} /> <span className="search-label">Search</span> <Kbd>⌘K</Kbd>
       </button>
       <DoctorButton />
-      <button
+      {showCompile && <button
         className="btn primary" onClick={() => void compileBoard(boardId)} disabled={busy || graph.nodes.length === 0} data-testid="compile"
         data-tip={errors ? `${errors} problem${errors > 1 ? "s" : ""} on the board` : drift ? `${drift} file${drift > 1 ? "s" : ""} out of date · ⌘S` : "Up to date · ⌘S"} data-tip-side="bottom"
       >
@@ -115,7 +121,8 @@ export function TitleBar() {
         Compile
         {errors > 0 ? <span className="chip fail" style={{ height: 18, background: "rgba(0,0,0,.25)", color: "#fff" }}>{errors}</span>
           : drift ? <span className="chip" style={{ height: 18, background: "rgba(255,255,255,.22)", color: "#fff" }}>{drift}</span> : null}
-      </button>
+      </button>}
+      <WindowControls />
     </header>
   );
 }

@@ -3,6 +3,7 @@
  * Ends with a compiled team that already knows who it works for.
  */
 import { ArrowLeft, Building2, Check, Cloud, Copy, HardDrive, LoaderCircle, RefreshCw, TriangleAlert, User, Users } from "lucide-react";
+import { FrameStrip } from "../shell/WindowControls";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { LocalServer, SetupDetect, SetupKind, SetupProfile } from "../../contracts/api";
 import { engine } from "../lib/engine";
@@ -206,6 +207,8 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
 
   return (
     <div className="setup" data-testid="setup">
+      <FrameStrip />
+      {step !== "build" && step !== "welcome" && <button className="btn ghost sm setup-skip" onClick={() => void skipAll()} data-testid="setup-skip-top">Skip setup</button>}
       <div className="setup-drag" data-tauri-drag-region />
       <main className="setup-body" key={step}>
         {step === "welcome" && (
