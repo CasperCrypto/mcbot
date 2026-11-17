@@ -1,0 +1,57 @@
+/*
+ * The last layer: iOS and macOS details over everything (loaded after glass.css).
+ * Filled fields (iOS "system fill"), continuous corners where the engine draws them, a press
+ * on everything you can tap, and one keyboard focus ring. Tokens only; reduced motion turns
+ * the motion off (premium.css).
+ */
+:root {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  accent-color: var(--accent);
+  /* iOS system fills (dark): the quiet gray behind fields and controls */
+  --fill-1: rgba(120, 120, 128, 0.36);
+  --fill-2: rgba(120, 120, 128, 0.32);
+  --fill-3: rgba(120, 120, 128, 0.24);
+  --fill-4: rgba(120, 120, 128, 0.18);
+  --r-card: 18px;
+}
+::selection { background: rgba(10, 132, 255, 0.38); color: inherit; }
+img, svg { -webkit-user-drag: none; }
+
+/* Fields: filled, borderless, soft; focus lifts the fill (iOS text fields, macOS search fields). */
+.field input, .field textarea, .field select, .search-pill {
+  background: var(--fill-4);
+  border-color: transparent;
+  border-radius: 10px;
+  transition: background var(--t-fast) var(--ease), box-shadow var(--t) var(--ease);
+}
+.field input:hover, .field textarea:hover, .field select:hover { background: var(--fill-3); border-color: transparent; }
+.field input:focus, .field textarea:focus, .field select:focus { background: var(--fill-3); border-color: transparent; box-shadow: 0 0 0 2px var(--accent-line); }
+
+/* Cards and sheets: rounder, no outline, depth from material and shadow. */
+.card { border-radius: var(--r-card); border-color: transparent; box-shadow: var(--mat-edge), var(--shadow-1); }
+.palette, .hermes-sheet { border-radius: 22px; }
+.list-row, .assignee, .suggest-card { border-radius: 10px; }
+
+/* Everything you can tap gives under the finger, then springs back. */
+.catalog-card, .task-card, .home-row-main, .suggest-card, .assignee, .pill, .list-row, .abilities button {
+  transition: background var(--t-fast) var(--ease), transform var(--t-spring) var(--spring-snappy), box-shadow var(--t) var(--ease);
+}
+.catalog-card:active, .task-card:active, .home-row-main:active, .suggest-card:active, .assignee:active, .pill:active { transform: scale(0.97); }
+.list-row:active { background: var(--mat-press); }
+
+/* One keyboard focus ring, only for the keyboard (a click leaves none, as on macOS). */
+:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 2px; border-radius: inherit; }
+.field input:focus-visible, .field textarea:focus-visible, .composer textarea:focus-visible, .team-compose textarea:focus-visible { outline: none; }
+
+/* Notices arrive like iOS banners: from above, with a little bounce. */
+.island-bar { animation-timing-function: var(--spring-bouncy); }
+
+/* Continuous corners (the iOS squircle) wherever the engine can draw them. */
+@supports (corner-shape: squircle) {
+  .card, .palette, .hermes-sheet, .inspector, .composer, .btn, .field input, .field textarea, .field select, .search-pill,
+  .catalog-card, .task-card, .list-row, .assignee, .suggest-card, .msg.user .bubble, .island { corner-shape: squircle; }
+  .card { border-radius: 26px; }
+  .palette, .hermes-sheet { border-radius: 32px; }
+  .btn, .field input, .field textarea, .field select, .search-pill, .list-row, .assignee { border-radius: 14px; }
+}
