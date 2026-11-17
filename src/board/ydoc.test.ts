@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import { GraphSchema } from "../contracts/graph";
 import { compile } from "../compile";
-import { addNote, graphFromDoc, loadGraphIntoDoc, moveNode, removeNodes, setNodeField, setNoteField } from "./ydoc";
+import { addFrame, addNote, graphFromDoc, loadGraphIntoDoc, moveNode, removeFrame, removeNodes, setFrameField, setNodeField, setNoteField } from "./ydoc";
 
 const fixture = GraphSchema.parse(JSON.parse(readFileSync(join(import.meta.dirname, "../../test/fixtures/full.graph.json"), "utf8")));
 
@@ -51,6 +51,25 @@ describe("board ydoc", () => {
     loadGraphIntoDoc(doc, fixture);
     removeNodes(doc, ["m-local"]);
     expect(graphFromDoc(doc).edges.map((e) => e.id)).toEqual(["e1", "e10", "e3", "e4", "e6", "e7", "e8", "e9"]);
+  });
+
+  it("keeps frames, merges edits to them, and never lets them change what compiles", () => {
+    const a = new Y.Doc();
+    loadGraphIntoDoc(a, fixture);
+    expect("frames" in graphFromDoc(a)).toBe(false);
+    addFrame(a, { id: "frame-1", title: "Research", color: "blue", position: { x: 0, y: 0 }, size: { width: 600, height: 400 } });
+    const b = new Y.Doc();
+    sync(a, b);
+    setFrameField(a, "frame-1", "title", "Research desk");
+    setFrameField(b, "frame-1", "size", { width: 700, height: 420 });
+    sync(a, b);
+    expect(graphFromDoc(b).frames).toEqual([{ id: "frame-1", title: "Research desk", color: "blue", position: { x: 0, y: 0 }, size: { width: 700, height: 420 } }]);
+    const c = new Y.Doc();
+    loadGraphIntoDoc(c, GraphSchema.parse(JSON.parse(JSON.stringify(graphFromDoc(b)))));
+    expect(graphFromDoc(c).frames?.[0]?.title).toBe("Research desk");
+    expect(compile(graphFromDoc(b)).files).toEqual(compile(fixture).files);
+    removeFrame(b, "frame-1");
+    expect("frames" in graphFromDoc(b)).toBe(false);
   });
 
   it("keeps sticky notes, merges edits to them, and leaves a board without notes as it was", () => {

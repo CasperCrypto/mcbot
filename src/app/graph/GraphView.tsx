@@ -17,7 +17,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { Bot, StickyNote as NoteIcon, Clapperboard, Cloud, Command, FileCode2, FolderOpen, HardDrive, Image, Plug, Plus, Send, Server } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { addEdge, addNode, addNote, moveNode, removeEdges, removeNodes, setNoteField } from "../../board/ydoc";
+import { addEdge, addNode, addNote, moveNode, removeEdges, removeNodes, setFrameField, setNoteField } from "../../board/ydoc";
 import { resolveGraph } from "../../compile";
 import type { GraphNode, MediaData, ModelData, ToolData } from "../../contracts/graph";
 import { Sidebar, SidebarGroup } from "../shell/Sidebar";
@@ -35,10 +35,13 @@ import { LiveFiles } from "./LiveFiles";
 import { useLingering, usePresence } from "../lib/presence";
 import { LogoTile, nodeLogo } from "./Logo";
 import { MakerIcon, makerService, nodeTypes, type FlowNode } from "./nodes";
+import { FrameNodeView } from "./FrameNode";
 import { freeSpot } from "./place";
 
 /** React Flow (MIT) is credited in the About screen's notices; its corner badge is not part of the board. */
 const PRO = { hideAttribution: true } as const;
+/** Blocks, notes and frames (frames are areas behind the blocks: FrameNode.tsx). */
+const TYPES = { ...nodeTypes, frame: FrameNodeView };
 /** Half the dot grid: blocks land in line with each other. */
 const SNAP: [number, number] = [11, 11];
 const MINI: Record<string, string> = { agent: "var(--k-agent)", model: "var(--k-model)", tool: "var(--k-tool)", media: "var(--k-media, var(--k-tool))", channel: "var(--k-channel, var(--k-tool))", note: "var(--note-yellow, var(--text-4))" };
@@ -173,7 +176,17 @@ function Canvas() {
         const p = old.get(id);
         return { id, type: "note", position: p?.dragging ? p.position : n.position, dragging: p?.dragging, measured: p?.measured, zIndex: -1, data: { note: n } } as unknown as FlowNode;
       });
-      return [...notes, ...graph.nodes.map((n): FlowNode => {
+      // Frames sit behind everything, id "frame:<id>", dragged by their title strip.
+      const frames = (graph.frames ?? []).map((f) => {
+        const id = `frame:${f.id}`;
+        const p = old.get(id);
+        const resizing = !!(p as { resizing?: boolean } | undefined)?.resizing;
+        return {
+          id, type: "frame", position: p?.dragging || resizing ? p!.position : f.position, dragging: p?.dragging, measured: p?.measured, selected: p?.selected,
+          width: resizing ? p!.width : f.size.width, height: resizing ? p!.height : f.size.height, zIndex: -2, dragHandle: ".frame-head", data: { frame: f },
+        } as unknown as FlowNode;
+      });
+      return [...frames, ...notes, ...graph.nodes.map((n): FlowNode => {
         const p = old.get(n.id);
         const bundle = resolved.bundles.find((b) => b.agent.id === n.id);
         const run = n.kind === "agent" ? latest.get(n.id) ?? null : null;
@@ -223,6 +236,11 @@ function Canvas() {
     setRfNodes((nds) => applyNodeChanges(changes, nds));
     const removed: string[] = [];
     for (const c of changes) {
+      if (c.type !== "add" && c.id.startsWith("frame:")) {
+        // A frame moves by its title strip; its own button removes it (never Backspace); resizing saves on release.
+        if (c.type === "position" && c.position && c.dragging) setFrameField(doc, c.id.slice(6), "position", { x: Math.round(c.position.x), y: Math.round(c.position.y) });
+        continue;
+      }
       const note = c.type !== "add" && c.id.startsWith("note:") ? c.id.slice(5) : null;
       if (note) {
         if (c.type === "position" && c.position) setNoteField(doc, note, "position", { x: Math.round(c.position.x), y: Math.round(c.position.y) });
@@ -280,6 +298,38 @@ function Canvas() {
         : "Already connected.",
     });
   }, [kindOf]);
+
+  // Dragging a frame carries what sits inside it: the blocks and notes whose centre is in the frame
+  // when the drag starts.
+  const rfRef = useRef<FlowNode[]>([]);
+  rfRef.current = rfNodes;
+  const frameDrag = useRef<{ id: string; start: { x: number; y: number }; members: Map<string, { x: number; y: number }> } | null>(null);
+  const onNodeDragStart = useCallback((_: unknown, n: FlowNode) => {
+    frameDrag.current = null;
+    if (!n.id.startsWith("frame:")) return;
+    const f = (graph.frames ?? []).find((x) => `frame:${x.id}` === n.id);
+    if (!f) return;
+    const members = new Map<string, { x: number; y: number }>();
+    for (const m of rfRef.current) {
+      if (m.id.startsWith("frame:")) continue;
+      const w = m.measured?.width ?? 200, h = m.measured?.height ?? 80;
+      const cx = m.position.x + w / 2, cy = m.position.y + h / 2;
+      if (cx > f.position.x && cx < f.position.x + f.size.width && cy > f.position.y && cy < f.position.y + f.size.height) members.set(m.id, { ...m.position });
+    }
+    frameDrag.current = { id: n.id, start: { ...n.position }, members };
+  }, [graph]);
+  const onNodeDrag = useCallback((_: unknown, n: FlowNode) => {
+    const d = frameDrag.current;
+    if (!d || d.id !== n.id || !d.members.size) return;
+    const dx = n.position.x - d.start.x, dy = n.position.y - d.start.y;
+    setRfNodes((nds) => nds.map((x) => { const p = d.members.get(x.id); return p ? { ...x, position: { x: p.x + dx, y: p.y + dy } } : x; }));
+    for (const [id, p] of d.members) {
+      const at = { x: Math.round(p.x + dx), y: Math.round(p.y + dy) };
+      if (id.startsWith("note:")) setNoteField(doc, id.slice(5), "position", at);
+      else moveNode(doc, id, at);
+    }
+  }, [doc]);
+  const onNodeDragStop = useCallback(() => { frameDrag.current = null; }, []);
 
   // Right-click: add a block where you clicked, or a block's own actions (ContextMenu.tsx).
   const [menu, setMenu] = useState<MenuAt | null>(null);
@@ -374,17 +424,21 @@ function Canvas() {
         proOptions={PRO}
         nodes={rfNodes}
         edges={rfEdges}
-        nodeTypes={nodeTypes}
+        nodeTypes={TYPES}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeDragStart={onNodeDragStart as never}
+        onNodeDrag={onNodeDrag as never}
+        onNodeDragStop={onNodeDragStop}
         onConnectStart={onConnectStart}
         onConnectEnd={onConnectEnd as never}
         isValidConnection={isValidConnection}
         connectionMode={ConnectionMode.Loose}
         onPaneClick={() => { select(null); setMenu(null); }}
         onPaneContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, flow: flow.screenToFlowPosition({ x: e.clientX, y: e.clientY }), nodeId: null }); }}
-        onNodeContextMenu={(e, n) => { e.preventDefault(); if (n.id.startsWith("note:")) return; select(n.id); setMenu({ x: e.clientX, y: e.clientY, flow: n.position, nodeId: n.id }); }}
+        onSelectionContextMenu={(e, ns) => { e.preventDefault(); const first = ns.find((n) => !n.id.startsWith("frame:") && !n.id.startsWith("note:")); if (first) setMenu({ x: e.clientX, y: e.clientY, flow: first.position, nodeId: first.id }); }}
+        onNodeContextMenu={(e, n) => { e.preventDefault(); if (n.id.startsWith("note:") || n.id.startsWith("frame:")) return; if (!n.selected) { lastSelected.current = null; select(n.id); } setMenu({ x: e.clientX, y: e.clientY, flow: n.position, nodeId: n.id }); }}
         fitView
         fitViewOptions={{ padding: 0.35, maxZoom: 1 }}
         minZoom={0.2}
@@ -433,7 +487,9 @@ function Canvas() {
           <FileCode2 size={13} /> Files{drift ? <span className="chip warn">{drift}</span> : null}
         </button>
       )}
-      {menu && <ContextMenu at={menu} onClose={() => setMenu(null)} onFit={fit} />}
+      {menu && <ContextMenu at={menu} onClose={() => setMenu(null)} onFit={fit} selection={rfNodes
+        .filter((n) => !n.id.startsWith("frame:") && (n.selected || n.id === menu.nodeId))
+        .map((n) => ({ x: n.position.x, y: n.position.y, width: n.measured?.width ?? 200, height: n.measured?.height ?? 80 }))} />}
       {live.mounted && <LiveFiles closing={live.closing} onClose={() => useApp.getState().setLiveFilesOpen(false)} />}
       {inspecting.value && <Inspector key={inspecting.value.id} node={inspecting.value} closing={inspecting.closing} issues={issuesByNode.get(inspecting.value.id) ?? []} />}
       {compiling.mounted && <CompileSheet wide={!selected} closing={compiling.closing} />}

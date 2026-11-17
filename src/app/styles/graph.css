@@ -219,3 +219,26 @@
 .canvas:has(.live-files) .react-flow__controls { left: calc(var(--live-w) + 20px); bottom: 84px; }
 .react-flow__minimap.minimap { background: var(--bg-raised); border-radius: var(--r-md); box-shadow: var(--shadow-2), var(--mat-edge); overflow: hidden; }
 .react-flow__minimap.minimap .react-flow__minimap-mask { fill: rgba(0, 0, 0, 0.55); }
+
+/* Frames (graph/FrameNode.tsx): a titled, tinted area behind the blocks. Their colours are content,
+   like note paper (--note-*). Only the title strip and the resize edges take the pointer, so the
+   board inside still pans and box-selects. */
+.react-flow__node-frame { pointer-events: none !important; background: transparent; border: 0; padding: 0; }
+.board-frame { --frame: var(--note-blue); width: 100%; height: 100%; border-radius: var(--r-xl); background: color-mix(in srgb, var(--frame) 7%, transparent); border: 1px solid color-mix(in srgb, var(--frame) 28%, transparent); }
+.board-frame[data-color="yellow"] { --frame: var(--note-yellow); }
+.board-frame[data-color="green"] { --frame: var(--note-green); }
+.board-frame[data-color="pink"] { --frame: var(--note-pink); }
+.board-frame[data-color="purple"] { --frame: var(--note-purple); }
+.board-frame[data-color="gray"] { --frame: var(--note-gray); }
+.react-flow__node-frame.selected .board-frame { border-color: color-mix(in srgb, var(--frame) 60%, transparent); }
+.frame-head { pointer-events: all; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px 0 14px; cursor: grab; }
+.frame-head:active { cursor: grabbing; }
+.frame-title { font-size: 13px; font-weight: 650; letter-spacing: -0.01em; color: color-mix(in srgb, var(--frame) 85%, white); cursor: text; }
+.frame-head input { pointer-events: all; font: inherit; font-size: 13px; font-weight: 650; background: transparent; border: 0; outline: 0; color: var(--text); min-width: 0; flex: 1; }
+.frame-dot, .frame-x { pointer-events: all; border: 0; padding: 0; display: grid; place-items: center; opacity: 0; transition: opacity var(--t-fast); }
+.frame-head:hover .frame-dot, .frame-head:hover .frame-x, .react-flow__node-frame.selected .frame-dot, .react-flow__node-frame.selected .frame-x { opacity: 1; }
+.frame-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--frame); margin-left: auto; cursor: pointer; }
+.frame-x { width: 20px; height: 20px; border-radius: 6px; background: transparent; color: var(--text-3); cursor: pointer; }
+.frame-x:hover { background: var(--mat-hover); color: var(--text); }
+.react-flow__node-frame .frame-resize-handle { pointer-events: all; width: 9px; height: 9px; border-radius: 3px; background: var(--frame, var(--accent)); border: 0; }
+.react-flow__node-frame .frame-resize-line { pointer-events: all; border-color: transparent; }
