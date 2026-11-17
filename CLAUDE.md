@@ -347,6 +347,10 @@ Change them additively; a breaking change bumps the version.
   ~140 ms ahead, a fast sweep across the title bar does not count — leans in when the pointer is
   close, and closes once the pointer moves away; click or Enter pins it open until Esc or a click
   outside. One height (30px) for every title-bar control.
+- **Command palette** (`shell/Palette.tsx`, `lib/rank.ts`): ranked like a launcher: fuzzy fit (loose letter
+  matching only on a command's name), then frecency (use counts, fading with age, kept in localStorage);
+  empty shows "Suggested" (what you use most) first; a query nothing answers offers "Ask <agent>" as the
+  last row; ⌘K / Ctrl+K on a row opens its actions (`Command.actions`); Tab on an "Ask…" row starts it.
 - **Floating island** (desktop only; `src-tauri/src/lib.rs` `island`, `shell/IslandPill.tsx`, `lib/islandBridge.ts`):
   a small always-on-top window at the top centre of the screen, shown while no McBot window is in
   front and an agent works or asks (or every window is hidden, so it is the way back). Click brings
