@@ -5,6 +5,7 @@ import {
   ConnectionMode,
   MarkerType,
   Controls,
+  MiniMap,
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
@@ -14,7 +15,7 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Bot, StickyNote as NoteIcon, Clapperboard, Cloud, Command, FolderOpen, HardDrive, Image, Plug, Plus, Send, Server } from "lucide-react";
+import { Bot, StickyNote as NoteIcon, Clapperboard, Cloud, Command, FileCode2, FolderOpen, HardDrive, Image, Plug, Plus, Send, Server } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode, addNote, moveNode, removeEdges, removeNodes, setNoteField } from "../../board/ydoc";
 import { resolveGraph } from "../../compile";
@@ -29,12 +30,17 @@ import { Cursors } from "./Cursors";
 import { HermesView } from "./HermesView";
 import { newChannel, newId, newMaker, newModel, newTool } from "./defaults";
 import { Inspector } from "./Inspector";
+import { LiveFiles } from "./LiveFiles";
 import { LogoTile, nodeLogo } from "./Logo";
 import { MakerIcon, makerService, nodeTypes, type FlowNode } from "./nodes";
 import { freeSpot } from "./place";
 
 /** React Flow (MIT) is credited in the About screen's notices; its corner badge is not part of the board. */
 const PRO = { hideAttribution: true } as const;
+/** Half the dot grid: blocks land in line with each other. */
+const SNAP: [number, number] = [11, 11];
+const MINI: Record<string, string> = { agent: "var(--k-agent)", model: "var(--k-model)", tool: "var(--k-tool)", media: "var(--k-media, var(--k-tool))", channel: "var(--k-channel, var(--k-tool))", note: "var(--note-yellow, var(--text-4))" };
+const miniColor = (n: { type?: string }) => MINI[n.type ?? ""] ?? "var(--text-4)";
 
 const PAIRS = new Set(["agent:model", "model:agent", "agent:tool", "tool:agent", "agent:media", "media:agent", "agent:channel", "channel:agent", "agent:agent"]);
 const MAKER_TOOLS: Record<string, MediaData["media"]> = { image_generate: "image", video_generate: "video" };
@@ -120,6 +126,8 @@ function Canvas() {
   const compileRes = useApp((s) => s.compile);
   const health = useApp((s) => s.health);
   const setPalette = useApp((s) => s.setPalette);
+  const liveOpen = useApp((s) => s.liveFilesOpen);
+  const drift = useApp((s) => s.drift);
   const flow = useReactFlow();
   const wrap = useRef<HTMLDivElement>(null);
 
@@ -151,7 +159,10 @@ function Canvas() {
   const peerOnNode = useMemo(() => new Map(peers.filter((p) => p.selection).map((p) => [p.selection!, p])), [peers]);
 
   const [rfNodes, setRfNodes] = useState<FlowNode[]>([]);
+  const lastSelected = useRef<string | null>(null);
   useEffect(() => {
+    const external = lastSelected.current !== selectedNodeId;
+    lastSelected.current = selectedNodeId;
     setRfNodes((prev) => {
       const old = new Map(prev.map((n) => [n.id, n]));
       // Sticky notes ride along as their own node type, id "note:<id>".
@@ -168,7 +179,8 @@ function Canvas() {
           id: n.id,
           type: n.kind,
           position: p?.dragging ? p.position : n.position,
-          selected: n.id === selectedNodeId,
+          // Several blocks picked on the canvas (Shift-drag a box, ⌘-click) stay picked while the board changes.
+          selected: external || !p ? n.id === selectedNodeId : !!p.selected || n.id === selectedNodeId,
           dragging: p?.dragging,
           measured: p?.measured,
           data: {
@@ -212,7 +224,10 @@ function Canvas() {
       }
       if (c.type === "position" && c.position) moveNode(doc, c.id, c.position);
       if (c.type === "remove") removed.push(c.id);
-      if (c.type === "select" && c.selected) select(c.id);
+      if (c.type === "select" && c.selected) {
+        lastSelected.current = c.id; // picked on the canvas: keep the rest of a multi-selection
+        select(c.id);
+      }
     }
     if (removed.length) {
       removeNodes(doc, removed);
@@ -259,6 +274,25 @@ function Canvas() {
     });
   }, [kindOf]);
 
+  // Fit the whole board into the room left beside the live files panel (⌘0, and when it opens or closes).
+  const fit = useCallback(() => void flow.fitView({ padding: liveOpen ? { left: "470px", top: "70px", right: "50px", bottom: "110px" } : 0.25, maxZoom: 1, duration: 400 }), [flow, liveOpen]);
+  const firstFit = useRef(true);
+  useEffect(() => {
+    if (firstFit.current) { firstFit.current = false; if (!liveOpen) return; }
+    const t = setTimeout(fit, 60);
+    return () => clearTimeout(t);
+  }, [liveOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "0" && !(e.target as HTMLElement | null)?.closest("input, textarea, .monaco-editor")) {
+        e.preventDefault();
+        fit();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fit]);
+
   const center = () => {
     const r = wrap.current?.getBoundingClientRect();
     return flow.screenToFlowPosition({ x: (r?.left ?? 0) + (r?.width ?? 800) / 2, y: (r?.top ?? 0) + (r?.height ?? 600) / 2 });
@@ -297,15 +331,20 @@ function Canvas() {
         minZoom={0.2}
         maxZoom={2}
         deleteKeyCode={["Backspace", "Delete"]}
+        snapToGrid
+        snapGrid={SNAP}
+        selectionKeyCode="Shift"
+        multiSelectionKeyCode={["Meta", "Control"]}
         colorMode="dark"
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1.1} color="rgba(255,255,255,0.075)" />
         <Controls position="bottom-left" showInteractive={false} />
+        {graph.nodes.length >= 8 && !selected && <MiniMap position="bottom-right" pannable zoomable className="minimap" nodeBorderRadius={6} nodeColor={miniColor} />}
         <Cursors peers={peers} />
       </ReactFlow>
 
       {graph.nodes.length > 0 && (
-        <div className={`dock-wrap${selected ? " shifted" : ""}`}>
+        <div className={`dock-wrap${selected ? " shifted" : ""}${liveOpen ? " with-live" : ""}`}>
           <div className="dock glass" role="toolbar" aria-label="Add to the harness">
             <DockItem tile="agent" icon={<Bot size={20} />} label="New agent" testId="add-agent" onClick={() => useApp.getState().setNewAgentOpen(true)} />
             <div className="dock-sep" />
@@ -330,6 +369,12 @@ function Canvas() {
         </div>
       )}
 
+      {graph.nodes.length > 0 && !liveOpen && (
+        <button className="live-toggle glass" onClick={() => useApp.getState().setLiveFilesOpen(true)} data-testid="live-files-open" data-tip="The files this board writes, live" data-tip-side="right">
+          <FileCode2 size={13} /> Files{drift ? <span className="chip warn">{drift}</span> : null}
+        </button>
+      )}
+      {liveOpen && graph.nodes.length > 0 && <LiveFiles onClose={() => useApp.getState().setLiveFilesOpen(false)} />}
       {selected && <Inspector key={selected.id} node={selected} issues={issuesByNode.get(selected.id) ?? []} />}
       {compileOpen && <CompileSheet wide={!selected} />}
     </div>

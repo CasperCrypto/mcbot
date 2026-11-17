@@ -40,6 +40,8 @@ interface State {
   newAgentOpen: boolean;
   /** The tool catalog. */
   catalogOpen: boolean;
+  /** The board's live files panel (what Compile would write). */
+  liveFilesOpen: boolean;
   chatAppsOpen: boolean;
   /** Starter teams. */
   teamsOpen: boolean;
@@ -71,6 +73,7 @@ interface State {
   setReportOpen(open: boolean): void;
   setNewAgentOpen(open: boolean): void;
   setCatalogOpen(open: boolean): void;
+  setLiveFilesOpen(open: boolean): void;
   setChatAppsOpen(open: boolean): void;
   setTeamsOpen(open: boolean): void;
   setShareOpen(open: boolean): void;
@@ -143,6 +146,7 @@ export const useApp = create<State>((set, get) => ({
   newAgentOpen: false,
   setNewAgentOpen: (newAgentOpen) => set({ newAgentOpen, paletteOpen: false }),
   catalogOpen: false,
+  liveFilesOpen: (() => { try { return localStorage.getItem("mcbot.liveFiles") === "1"; } catch { return false; } })(),
   chatAppsOpen: false,
   teamsOpen: false,
   shareOpen: false,
@@ -178,6 +182,10 @@ export const useApp = create<State>((set, get) => ({
   freshNote: null,
   setFreshNote: (freshNote) => set({ freshNote }),
   setCatalogOpen: (catalogOpen) => set({ catalogOpen, paletteOpen: false }),
+  setLiveFilesOpen: (liveFilesOpen) => {
+    try { localStorage.setItem("mcbot.liveFiles", liveFilesOpen ? "1" : "0"); } catch { /* private window */ }
+    set({ liveFilesOpen, paletteOpen: false });
+  },
   setChatAppsOpen: (chatAppsOpen) => set({ chatAppsOpen, paletteOpen: false }),
   openChat: (chatAgentId) => set({ chatAgentId, tab: "agents" }),
   openTask: null,

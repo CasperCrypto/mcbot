@@ -257,6 +257,16 @@ Change them additively; a breaking change bumps the version.
   tools, makers, skills, memory, schedules, the shared task board, approvals. A click on a part
   opens what makes it (`hermesTarget.ts`): the block on the Board, or the Memory, Home, Tasks or
   engine view, so what you change is always what compiles.
+- **Undo** (`src/board/undo.ts`): Yjs' UndoManager over blocks, wires, notes and the board name
+  (never chat), tracking only origin `null`, i.e. this window's own edits, so ⌘Z / ⇧⌘Z never take
+  back a teammate's or the engine's change; edits within 600 ms are one step. Created with the doc
+  (`state/board.tsx`); text fields and the code editor keep their own undo.
+- **Live files** (`graph/LiveFiles.tsx`, the board's "Files" button, ⌘K): while you edit, the
+  engine's dry-run compile (`GET /api/compile`, the real writer and config.yaml merge) is shown
+  file by file, whole, with its changes against disk marked; selecting a block opens its agent's
+  config.yaml. Nothing is written until Compile. The board fits beside it (⌘0 fits too).
+- The canvas snaps to half the dot grid, Shift-drag selects a box, ⌘/Ctrl-click adds to a
+  selection, and a minimap shows from 8 blocks on.
 - **Compile** says how it went in a notice (with "Fix" on the first block with a problem); the
   compile sheet (files and diffs) opens only when asked (the notice's "Files", ⌘K → Compiled files).
 - **Rich answers** (`src/app/chat/rich.ts`, `RichText.tsx`): an agent's answer is drawn from
@@ -377,4 +387,4 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   Product shots (`site/assets/*.webp`) are taken from the demo at 1440×900 @2x
   without the Demo chip; re-shoot them when the UI they show changes.
 
-Shortcuts: ⌘K commands · ⌘1–9 views · ⌘S compile · ⌘N new window (desktop).
+Shortcuts: ⌘K commands · ⌘1–9 views · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘0 fit the board · ⌘N new window (desktop).

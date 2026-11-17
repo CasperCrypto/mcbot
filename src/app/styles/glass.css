@@ -135,7 +135,7 @@
 .dock-item .label { background: var(--mat-thick); backdrop-filter: var(--mat-blur); -webkit-backdrop-filter: var(--mat-blur); border: 0; box-shadow: var(--shadow-2), var(--mat-edge-strong); transform: translateY(4px); transition: opacity var(--t-fast), transform var(--t) var(--spring-snappy); }
 .dock-item:hover .label { transform: none; }
 .react-flow__controls { background: var(--mat-thin); backdrop-filter: var(--mat-blur); -webkit-backdrop-filter: var(--mat-blur); border-color: transparent; box-shadow: var(--shadow-2), var(--mat-edge); }
-.inspector, .inspector.glass, .side-panel, .side-panel.glass, .sheet.glass {
+.inspector, .inspector.glass, .side-panel, .side-panel.glass, .sheet.glass, .live-files.glass {
   background: var(--mat-thick); backdrop-filter: var(--mat-blur-strong); -webkit-backdrop-filter: var(--mat-blur-strong);
   border-color: transparent; box-shadow: var(--shadow-3), var(--mat-edge-strong);
   animation: panel-in var(--t-spring) var(--spring-bouncy) both; transform-origin: 100% 50%;
