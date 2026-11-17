@@ -6,7 +6,7 @@ import { ago, duration, tokens, usd } from "../lib/format";
 import { engine } from "../lib/engine";
 import { Sidebar } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
-import { useDismiss } from "../lib/presence";
+import { useDismiss, useLingering } from "../lib/presence";
 import { useApp } from "../state/store";
 import { AgentFace, Empty } from "../ui";
 import { GraphCanvas, type GEdge, type GNode } from "./GraphCanvas";
@@ -115,6 +115,8 @@ export function RunsView() {
   }));
   const edges: GEdge[] = steps.slice(1).map((s, i) => ({ id: `e${i}`, source: steps[i]!.id, target: s.id, live: run?.status === "running" }));
   const current = steps.find((s) => s.id === step) ?? null;
+  // The step's panel keeps its content while it slides away.
+  const shownStep = useLingering(current);
 
   return (
     <>
@@ -145,11 +147,11 @@ export function RunsView() {
             </div>
             <div style={{ position: "absolute", inset: "52px 0 0 0" }} data-testid="run-graph">
               <div className={`graph-area${current ? " with-panel" : ""}`}><GraphCanvas key={run.runId} nodes={nodes} edges={edges} dir="TB" selected={step} onSelect={setStep} fitSignature={`${run.runId}:${steps.length}:${!!current}`} /></div>
-              {current && (
-                <aside ref={stepPanel} className="side-panel glass">
-                  <div className="side-panel-head"><b className={`grow ellipsis${current.kind === "tool" ? " mono" : ""}`}>{current.title}</b><button className="icon-btn" aria-label="Close" onClick={() => setStep(null)}><X size={15} /></button></div>
+              {shownStep.value && (
+                <aside ref={stepPanel} className="side-panel glass" data-closing={shownStep.closing || undefined}>
+                  <div className="side-panel-head"><b className={`grow ellipsis${shownStep.value.kind === "tool" ? " mono" : ""}`}>{shownStep.value.title}</b><button className="icon-btn" aria-label="Close" onClick={() => setStep(null)}><X size={15} /></button></div>
                   <div className="side-panel-body stack" style={{ gap: 14 }}>
-                    {current.detail.map((d) => (
+                    {shownStep.value.detail.map((d) => (
                       <div key={d.label} className="stack" style={{ gap: 6 }}>
                         <span className="section-label">{d.label}</span>
                         <pre className="code">{d.body || "—"}</pre>

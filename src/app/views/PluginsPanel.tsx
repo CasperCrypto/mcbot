@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CatalogPlugin, InstalledPlugin } from "../../contracts/api";
 import { engine } from "../lib/engine";
 import { useApp } from "../state/store";
+import { SkeletonCards } from "../ui";
 
 const PAGE = 60;
 let catalogCache: CatalogPlugin[] | null = null;
@@ -61,7 +62,7 @@ export function PluginsPanel({ profile, label, compiled, onCompile }: { profile:
         <div className="row"><span className="section-label grow">In {label}{mine.length ? ` · ${mine.length}` : ""}</span></div>
         {!compiled ? (
           <div className="row skill-builtin"><span className="grow faint">Plugins go into the agent on disk.</span><button className="btn sm primary" onClick={onCompile}>Compile</button></div>
-        ) : !installed ? <span className="faint">Loading…</span> : mine.length === 0 ? <span className="faint">None yet. Add one below.</span> : (
+        ) : !installed ? <SkeletonCards count={2} /> : mine.length === 0 ? <span className="faint">None yet. Add one below.</span> : (
           <div className="catalog-grid">
             {mine.map((p) => (
               <div key={p.name} className="catalog-card skill-card-lib" data-testid={`plugin-${p.name}`}>
@@ -88,7 +89,7 @@ export function PluginsPanel({ profile, label, compiled, onCompile }: { profile:
             {cats.map((c) => <button key={c} type="button" className="ability" aria-pressed={cat === c} onClick={() => { setCat(cat === c ? null : c); setLimit(PAGE); }}>{c[0]!.toUpperCase() + c.slice(1)}</button>)}
           </div>
         )}
-        {!catalog ? <span className="faint">Loading…</span> : shown.length === 0 ? <span className="faint">Nothing matches.</span> : (
+        {!catalog ? <SkeletonCards count={6} /> : shown.length === 0 ? <span className="faint">Nothing matches.</span> : (
           <div className="catalog-grid">
             {shown.slice(0, limit).map((p) => (
               <div key={p.name} className="catalog-card skill-card-lib" data-testid={`cat-${p.name}`}>

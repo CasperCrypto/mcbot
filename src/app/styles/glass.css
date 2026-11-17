@@ -339,7 +339,12 @@ input.input::placeholder { color: var(--text-4); }
 .palette-scrim[data-closing] { animation: scrim-out 200ms var(--ease) both; }
 .palette[data-closing], [role="dialog"].palette[data-closing] { animation: sheet-out 190ms cubic-bezier(0.4, 0, 1, 1) both; }
 .team-panel[data-closing] { animation: panel-out 190ms cubic-bezier(0.4, 0, 1, 1) both; }
+.inspector[data-closing], .side-panel[data-closing] { animation: panel-out 190ms cubic-bezier(0.4, 0, 1, 1) both; }
+.live-files[data-closing] { animation: panel-out-left 190ms cubic-bezier(0.4, 0, 1, 1) both; }
+.sheet[data-closing] { animation: sheet-down-out 190ms cubic-bezier(0.4, 0, 1, 1) both; }
 @keyframes scrim-out { to { opacity: 0; } }
+@keyframes panel-out-left { to { opacity: 0; transform: translateX(-16px) scale(0.985); filter: blur(4px); } }
+@keyframes sheet-down-out { to { opacity: 0; transform: translateY(18px); filter: blur(4px); } }
 @keyframes sheet-out { to { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(6px); } }
 @keyframes panel-out { to { opacity: 0; transform: translateX(16px) scale(0.985); filter: blur(4px); } }
 
@@ -359,3 +364,9 @@ input.input::placeholder { color: var(--text-4); }
 
 /* Reading panels: thicker glass, so wires and blocks behind never cross their text. */
 .inspector.glass, .team-panel, .live-files.glass, .side-panel.glass { background: var(--mat-panel); }
+
+/* Loading: flat shapes of what is coming that breathe (as iOS redacts), never the word "Loading…". */
+.skeleton-card { display: grid; gap: 8px; align-content: start; min-height: 64px; pointer-events: none; animation: none; }
+.skeleton { display: block; height: 10px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); animation: skeleton-breathe 1.4s ease-in-out infinite; }
+@keyframes skeleton-breathe { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }

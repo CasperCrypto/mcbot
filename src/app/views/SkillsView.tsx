@@ -15,7 +15,7 @@ import { engine } from "../lib/engine";
 import { Sidebar } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
-import { AgentFace, Empty, Segmented } from "../ui";
+import { AgentFace, Empty, Segmented, SkeletonCards } from "../ui";
 import { PluginsPanel } from "./PluginsPanel";
 
 /** A pasted link or identifier installs; plain words search. */
@@ -205,7 +205,7 @@ export function SkillsView() {
 
             <div className="stack" style={{ gap: 8 }} data-testid="skills-learned">
               <div className="row"><span className="section-label grow"><Sparkles size={12} /> Taught itself{learned.length ? ` · ${learned.length}` : ""}</span></div>
-              {!state ? <span className="faint">Loading…</span> : learned.length === 0 ? <span className="faint">{state.compiled ? "Nothing yet. Skills it writes during runs show up here." : "Compile, then run it: skills it writes show up here."}</span> : (
+              {!state ? <SkeletonCards count={2} /> : learned.length === 0 ? <span className="faint">{state.compiled ? "Nothing yet. Skills it writes during runs show up here." : "Compile, then run it: skills it writes show up here."}</span> : (
                 <div className="catalog-grid">
                   {learned.map((sk) => (
                     <div key={sk.path} className="catalog-card skill-card-lib" data-testid={`learned-${sk.name}`}>
@@ -282,7 +282,7 @@ export function SkillsView() {
                   {cats.map((c) => <button key={c} type="button" className="ability" aria-pressed={cat === c} onClick={() => setCat(cat === c ? null : c)}>{pretty(c)}</button>)}
                 </div>
               )}
-              {!state ? <span className="faint">Loading…</span> : shown.length === 0 ? <span className="faint">Nothing matches.</span> : (
+              {!state ? <SkeletonCards count={6} /> : shown.length === 0 ? <span className="faint">Nothing matches.</span> : (
                 <div className="catalog-grid">
                   {shown.map((s) => {
                     const has = installed.has(s.name);
