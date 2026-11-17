@@ -663,7 +663,7 @@ export const demoEngine = {
   hermes: api((): HermesInfo => demoHermes()),
   diagnostics: api((): Diagnostics => ({
     text: [
-      "McBot 0.2.0 · browser demo",
+      "McBot Studio · browser demo",
       `System: ${navigator.userAgent}`,
       "Engine: simulated in this browser",
       `Boards: ${state.boards.length}`,

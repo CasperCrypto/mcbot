@@ -20,6 +20,14 @@ view saves an agent's SOUL.md, config.yaml, profile.yaml and skills (`agentEdita
 watcher follows edits by the CLI or agents. Three-way against `<workspace>/hermes-seen.json`, so
 a board edit not compiled yet stays and McBot's own compile never echoes back.
 
+**Name:** people see **McBot Studio** (app, installers, window, About, website at
+https://mcbot.studio, README, setup, invites). Internal names stay `mcbot` and must not change:
+`mcbot.graph/v1`, `mcbot.compile/v1`, `.mcbot/`, `MCBOT_*`, `mcbot-<name>` providers,
+`--source mcbot`, `~/McBot`, the npm package, the repo, and the app identifier
+`dev.mcbot.desktop` (it names the data folder holding the 1.3 GB engine tools; changing it
+re-downloads them for everyone). The Windows MSI upgrade code is pinned in tauri.conf.json because
+Tauri derives it from the product name.
+
 ## Hard rules
 
 1. **Merge only code we may ship under MIT.** McBot is MIT. MIT, Apache-2.0 and

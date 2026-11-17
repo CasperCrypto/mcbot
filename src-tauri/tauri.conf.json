@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "McBot",
+  "productName": "McBot Studio",
   "version": "0.4.4",
   "identifier": "dev.mcbot.desktop",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "McBot",
+        "title": "McBot Studio",
         "width": 1440,
         "height": 900,
         "minWidth": 960,
@@ -51,6 +51,11 @@
     "category": "DeveloperTool",
     "shortDescription": "Draw a team of AI agents and run it.",
     "license": "MIT",
+    "windows": {
+      "wix": {
+        "upgradeCode": "d608baf7-18c3-58ea-b011-a2e58805a369"
+      }
+    },
     "macOS": {
       "minimumSystemVersion": "11.0",
       "signingIdentity": "-"

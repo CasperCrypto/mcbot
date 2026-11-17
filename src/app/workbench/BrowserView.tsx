@@ -187,7 +187,7 @@ export default function BrowserView() {
           <div className="browser-demo" data-testid="browser-blocked">
             <Globe size={28} className="faint" />
             <b>{new URL(url).host}</b>
-            <span className="faint">{DEMO ? "Websites can't open inside a web page, so the online demo can't show this site. In the McBot app it opens right here." : "This site doesn't allow being shown inside other apps."}</span>
+            <span className="faint">{DEMO ? "Websites can't open inside a web page, so the online demo can't show this site. In the McBot Studio app it opens right here." : "This site doesn't allow being shown inside other apps."}</span>
             <div className="row" style={{ justifyContent: "center" }}>
               <button className="btn light" onClick={openOutside} data-testid="browser-open-window"><ExternalLink size={14} /> Open in your browser</button>
               {agents.length > 0 && <span className="faint">or ask an agent about it below</span>}

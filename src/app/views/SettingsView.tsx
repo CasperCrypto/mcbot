@@ -496,7 +496,7 @@ function AboutSection() {
         <div className="settings-row"><span className="grow">Your boards stay as they are.</span>
           <button className="btn sm primary" onClick={() => app.setSetup({ completed: false, profile: app.setup?.profile ?? null })} data-testid="settings-rerun-setup"><Sparkles size={12} /> Run setup again</button></div>
       </Card>
-      <Card title="About McBot" sub={`Version ${health?.version ?? "…"} · free and open source (MIT)`}>
+      <Card title="About McBot Studio" sub={`Version ${health?.version ?? "…"} · free and open source (MIT)`}>
         <div className="settings-row"><span className="grow">Something not working?</span>
           <button className="btn sm" onClick={() => app.setReportOpen(true)}><LifeBuoy size={12} /> Report a problem</button>
           <button className="btn sm ghost" onClick={() => void openExternal("https://github.com/CasperCrypto/mcbot")}><ExternalLink size={12} /> GitHub</button></div>

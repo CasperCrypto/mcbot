@@ -15,7 +15,7 @@ describe("emailing an invite", () => {
     const gmail = new URL(composeUrl("gmail", ["ana@acme.com"], subject, body));
     expect(gmail.host).toBe("mail.google.com");
     expect(gmail.searchParams.get("to")).toBe("ana@acme.com");
-    expect(gmail.searchParams.get("su")).toBe("Kacper invited you to McBot");
+    expect(gmail.searchParams.get("su")).toBe("Kacper invited you to McBot Studio");
     expect(gmail.searchParams.get("body")).toBe(body);
     const outlook = new URL(composeUrl("outlook", ["a@x.io", "b@x.io"], subject, body));
     expect(outlook.searchParams.get("to")).toBe("a@x.io,b@x.io");

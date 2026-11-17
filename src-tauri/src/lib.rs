@@ -86,7 +86,7 @@ fn tray(app: &AppHandle<Wry>) -> tauri::Result<()> {
     TrayIconBuilder::with_id("mcbot")
         .icon(Image::from_bytes(include_bytes!("../icons/tray.png"))?)
         .icon_as_template(true)
-        .tooltip("McBot")
+        .tooltip("McBot Studio")
         .menu(&menu)
         .show_menu_on_left_click(cfg!(target_os = "macos"))
         .on_tray_icon_event(|icon, event| {
@@ -136,7 +136,7 @@ async fn browser_open(app: AppHandle<Wry>, url: String) -> Result<(), String> {
         return w.set_focus().map_err(|e| e.to_string());
     }
     WebviewWindowBuilder::new(&app, "browser", WebviewUrl::External(parsed))
-        .title("McBot Browser")
+        .title("McBot Studio Browser")
         .inner_size(1200.0, 820.0)
         .build()
         .map(|_| ())
@@ -149,7 +149,7 @@ static WINDOWS: AtomicUsize = AtomicUsize::new(1);
 fn new_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let n = WINDOWS.fetch_add(1, Ordering::SeqCst) + 1;
     let builder = WebviewWindowBuilder::new(app, format!("board-{n}"), WebviewUrl::App("index.html".into()))
-        .title("McBot")
+        .title("McBot Studio")
         .inner_size(1440.0, 900.0)
         .min_inner_size(960.0, 600.0);
     let builder = builder.theme(Some(tauri::Theme::Dark)).background_color(tauri::window::Color(21, 21, 22, 255));
@@ -166,10 +166,10 @@ fn menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let new_win = MenuItem::with_id(app, "new-window", "New Window", true, Some("CmdOrCtrl+N"))?;
     let app_menu = Submenu::with_items(
         app,
-        "McBot",
+        "McBot Studio",
         true,
         &[
-            &PredefinedMenuItem::about(app, Some("About McBot"), Some(AboutMetadata::default()))?,
+            &PredefinedMenuItem::about(app, Some("About McBot Studio"), Some(AboutMetadata::default()))?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::hide(app, None)?,
             &PredefinedMenuItem::quit(app, None)?,
