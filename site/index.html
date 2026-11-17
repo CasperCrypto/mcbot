@@ -14,6 +14,7 @@
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="preload" as="image" href="assets/burger.webp" imagesrcset="assets/burger-sm.webp 489w, assets/burger.webp 978w" imagesizes="(max-width: 600px) 300px, 400px">
 <link rel="stylesheet" href="foods.css">
+<link rel="stylesheet" href="studio.css">
 <style>
 /* Layout: one centred column, 1080px. The product shots and the food bots carry the page;
    everything else is neutral, like a Mac: black page, gray surfaces, the system font,
@@ -110,7 +111,7 @@ h1 .dim { color: var(--text-2); }
 .works ul { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 22px; color: var(--text-2); font-size: 15px; }
 
 /* sections */
-section.block { padding: 128px 0 0; }
+section.block { padding-top: 128px; }
 h2 { margin: 0; font: 700 clamp(32px, 4.6vw, 48px)/1.08 var(--display); letter-spacing: -0.02em; text-wrap: balance; max-width: 760px; }
 .section-lede { margin: 12px 0 0; color: var(--text-2); font-size: 19px; max-width: 620px; text-wrap: pretty; }
 .center { text-align: center; }
@@ -237,10 +238,11 @@ footer .spacer { flex: 1; }
       McBot Studio
     </a>
     <nav class="nav-links" aria-label="Sections">
-      <a href="#crew">Agents</a>
       <a href="#how">How it works</a>
+      <a href="#palette">Command bar</a>
+      <a href="#island">Island</a>
       <a href="#graphs">Graphs</a>
-      <a href="#engine">Engine</a>
+      <a href="#download">Download</a>
     </nav>
     <span class="spacer"></span>
     <a class="btn sm gh" href="https://github.com/CasperCrypto/mcbot" data-gh aria-label="McBot Studio on GitHub">
@@ -275,10 +277,39 @@ footer .spacer { flex: 1; }
         <a class="btn" href="./demo/" data-demo>Try it in your browser</a>
       </div>
     </div>
-    <div class="hero-shot" data-tilt>
-      <div class="window">
-        <img src="assets/hero.webp" width="2880" height="1800" alt="McBot Studio's canvas: a Triage desk agent running on a local model, a Researcher on a cloud model, two tools, and a teammate's cursor.">
-        <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
+    <div class="hero-win">
+      <div class="mac" data-hero role="img" aria-label="Animated demo: nodes appear on the board, Compile writes the agent's files, then Researcher answers a question.">
+        <div class="mac-bar">
+          <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="grow"></span>
+          <div class="isl" data-s="rest"><span class="dot"></span><span class="txt">Support desk</span></div>
+          <button class="tb primary" type="button" data-compile tabindex="-1">Compile</button>
+        </div>
+        <div class="mac-body">
+          <div class="cv" data-cv>
+            <svg class="w" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <path pathLength="1" d="M14 26 C32 26 32 50 50 50"/><path pathLength="1" d="M14 74 C32 74 32 50 50 50"/>
+              <path pathLength="1" d="M50 50 C68 50 68 26 86 26"/><path pathLength="1" d="M50 50 C68 50 68 74 86 74"/>
+            </svg>
+            <div class="nd" style="left:14%;top:26%"><span class="t m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><span><b>Local model</b><small>qwen3:8b</small></span></div>
+            <div class="nd" style="left:14%;top:74%"><span class="t c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 0 0 4.5 12 3.5 3.5 0 0 0 6 19Z"/></svg></span><span><b>Cloud model</b><small>claude-sonnet</small></span></div>
+            <div class="nd agent" style="left:50%;top:50%"><span class="face" data-face="idle"></span><span><b>Researcher</b><small>@researcher</small></span></div>
+            <div class="nd" style="left:86%;top:26%"><span class="t o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0ZM12 18v4"/></svg></span><span><b>Shared files</b><small>files</small></span></div>
+            <div class="nd" style="left:86%;top:74%"><span class="t o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0ZM12 18v4"/></svg></span><span><b>Web search</b><small>exa</small></span></div>
+          </div>
+          <aside class="side" data-side aria-hidden="true">
+            <div data-files style="transition: opacity 0.3s">
+              <h4>Compiled · 5 files</h4>
+              <div class="frow"><span>researcher/SOUL.md</span><span>151 B</span></div>
+              <div class="frow"><span>researcher/config.yaml</span><span>734 B</span></div>
+              <div class="frow"><span>researcher/skills/search</span><span>309 B</span></div>
+              <div class="frow"><span>researcher/memories/USER.md</span><span>96 B</span></div>
+              <div class="frow"><span>.mcbot/manifest.json</span><span>1.2 KB</span></div>
+            </div>
+            <div class="chat" data-chat><div class="me">What needs me today?</div><div class="ai"></div></div>
+          </aside>
+          <button class="tb replay" type="button" data-replay>Replay</button>
+        </div>
       </div>
     </div>
   </div>
@@ -291,40 +322,91 @@ footer .spacer { flex: 1; }
   </div>
   </div>
 
+  <section class="block wrap" id="how">
+    <div class="center">
+      <h2>The graph is the setup.</h2>
+      <p class="section-lede">Draw it, compile it, run it, watch it. No config files to write by hand.</p>
+    </div>
+    <div class="flow" data-flow>
+      <div class="tabs" role="tablist" aria-label="How it works">
+        <button class="tab" role="tab" type="button" data-tab="draw" aria-selected="true"><b>1. Draw</b><small>Drag a model onto an agent. A second one becomes the fallback. Plug in tools.</small><i></i></button>
+        <button class="tab" role="tab" type="button" data-tab="compile" aria-selected="false"><b>2. Compile</b><small>⌘S writes each agent's real files. Every change shown as a diff.</small><i></i></button>
+        <button class="tab" role="tab" type="button" data-tab="run" aria-selected="false"><b>3. Run</b><small>Message an agent. Risky steps stop and ask you first.</small><i></i></button>
+        <button class="tab" role="tab" type="button" data-tab="watch" aria-selected="false"><b>4. Watch</b><small>What each agent remembers, and what it costs, per day.</small><i></i></button>
+      </div>
+      <div class="mac" role="tabpanel">
+        <div class="mac-bar"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span><div class="isl" data-s="rest"><span class="dot"></span><span class="txt">Draw</span></div></div>
+        <div class="mac-body">
+          <div class="scene" data-scene="draw">
+              <div class="lib"><h4>Parts</h4>
+                <div class="part"><span class="t" style="background:#ff9f0a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>Local model</div>
+                <div class="part"><span class="t" style="background:#0a84ff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 0 0 4.5 12 3.5 3.5 0 0 0 6 19Z"/></svg></span>Cloud model</div>
+                <div class="part"><span class="t" style="background:#30b0c7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0ZM12 18v4"/></svg></span>Files tool</div>
+              </div>
+              <div class="cv" style="left:182px">
+                <svg class="w" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  <path pathLength="1" d="M30 50 C54 50 54 20 78 20"/><path pathLength="1" d="M30 50 C54 50 54 50 78 50"/><path pathLength="1" d="M30 50 C54 50 54 80 78 80"/>
+                </svg>
+                <div class="nd agent in" style="left:30%;top:50%"><span class="face" data-face="idle"></span><span><b>Researcher</b><small>@researcher</small></span></div>
+                <div class="nd" style="left:78%;top:20%"><span class="t m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><span><b>Local model</b><small>qwen3:8b</small></span></div><div class="nd" style="left:78%;top:50%"><span class="t c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 0 0 4.5 12 3.5 3.5 0 0 0 6 19Z"/></svg></span><span><b>Cloud model</b><small>claude-sonnet</small></span></div><div class="nd" style="left:78%;top:80%"><span class="t o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0ZM12 18v4"/></svg></span><span><b>Files</b><small>shared</small></span></div>
+                <span class="lbl" style="left:54%;top:30%">thinks with</span><span class="lbl" style="left:54%;top:50%">falls back to</span><span class="lbl" style="left:54%;top:66%">uses</span>
+              </div>
+            </div>
+          <div class="scene" data-scene="compile"><div class="tree"><div><span>SOUL.md</span><span>151 B</span></div><div><span>config.yaml</span><span>734 B</span></div><div><span>skills/</span><span>2</span></div><div><span>USER.md</span><span>96 B</span></div></div><div class="code"><span class="ln c"># researcher/config.yaml</span><span class="ln "><span class="k">model:</span></span><span class="ln old">  <span class="k">default:</span> <span class="s">qwen3:8b</span></span><span class="ln new">  <span class="k">default:</span> <span class="s">qwen3:14b</span></span><span class="ln ">  <span class="k">provider:</span> <span class="s">custom:mcbot-local</span></span><span class="ln c"># written by McBot Studio. Edit here or in Hermes: they stay in sync.</span></div><div class="keys"><kbd>⌘</kbd><kbd>S</kbd></div></div>
+          <div class="scene" data-scene="run"><div class="chatfull">
+              <div class="me">Delete the old build folder</div>
+              <div class="ai"></div>
+              <div class="ask"><div class="h"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 7.6 8 9 4.8-1.4 8-4.5 8-9V6Z"/><path d="M12 8v4M12 16h.01"/></svg>Researcher asks before acting</div><code>rm -rf ~/Projects/site/build</code>
+                <div class="row"><button class="tb a" type="button" tabindex="-1">Allow once</button><button class="tb" type="button" tabindex="-1">For this chat</button><button class="tb" type="button" tabindex="-1">Deny</button></div><div class="ok">Allowed once</div></div>
+              <div class="ai done-line"></div>
+            </div></div>
+          <div class="scene" data-scene="watch"><div class="cols">
+              <div class="pan"><h4>Spend today</h4><p class="big">$0.00</p><div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+              <div class="pan"><h4>Memory · Researcher</h4><div class="mem"><div>Sam prefers short answers<small>USER.md</small></div><div>Billing questions go to Sam<small>MEMORY.md</small></div><div>Acme pays on the 15th<small>MEMORY.md</small></div></div></div>
+            </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block wrap" id="palette">
+    <div class="center">
+      <h2>Everything, one shortcut away.</h2>
+      <p class="section-lede">Press <span class="kb">⌘</span> <span class="kb">⇧</span> <span class="kb">Space</span> from any app. Search, run a command, or just ask an agent. Try it:</p>
+    </div>
+    <div class="pal-wrap">
+      <div class="pal" data-pal>
+        <div class="pin"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search commands and conversations" aria-label="Try the command bar" spellcheck="false" autocomplete="off"></div>
+        <div class="list" role="listbox"></div>
+        <div class="foot"><span class="b">McBot</span><span class="g"></span><span class="k"><span data-pal-primary>Open</span><span class="kb">↵</span></span><span class="k">Actions <span class="kb">⌘</span><span class="kb">K</span></span><span class="k">Close <span class="kb">esc</span></span></div>
+      </div>
+      <p class="pal-note" data-pal-note aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="block wrap" id="island">
+    <div class="center">
+      <h2>Hide McBot. Keep the island.</h2>
+      <p class="section-lede">A small pill stays at the top of your screen while agents work. Approve a risky step without opening the app.</p>
+    </div>
+    <div class="desk" data-desk>
+      <div class="menubar"><b>Notes</b><span>File</span><span>Edit</span><span>View</span><span class="sp"></span><span>Tue 9:41</span></div>
+      <div class="pill" data-s="rest" role="status">
+        <div class="top"></div>
+        <div class="more"><div><code></code><div class="acts"><button type="button" class="a" data-act="once">Allow once</button><button type="button" data-act="deny">Deny</button></div></div></div>
+      </div>
+      <div class="win"><div class="mac-bar"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span><span class="mac-title">McBot Studio</span></div></div>
+      <div class="ctl"><button class="tb" type="button" data-do="work">Agent starts</button><button class="tb" type="button" data-do="ask">Agent asks</button><button class="tb" type="button" data-hide aria-pressed="false">Hide McBot</button></div>
+      <div class="toastlet" aria-live="polite"></div>
+    </div>
+  </section>
+
   <section class="block wrap" id="crew">
     <div class="center">
       <h2>Every agent has a face.</h2>
       <p class="section-lede">Its eyes show what it is doing: working, done or stuck.</p>
     </div>
     <div class="crew" data-crew role="img" aria-label="Ten agents wired to the models and tools they use, each working on its own"><svg class="wires" aria-hidden="true"></svg></div>
-  </section>
-
-  <section class="block wrap" id="how">
-    <div>
-      <h2>The graph is the setup.</h2>
-      <p class="section-lede">No config files to write by hand. What you draw is what runs.</p>
-    </div>
-    <div class="steps">
-      <div class="step">
-        <div class="n"><b>1</b> Draw</div>
-        <h3>Agents, models, tools</h3>
-        <p>Drag a model onto an agent. Add a second one and it becomes the fallback. Plug in tools.</p>
-      </div>
-      <div class="step">
-        <div class="n"><b>2</b> Compile</div>
-        <h3>Real files on disk</h3>
-        <p><code>⌘S</code> writes each agent's files: <code>SOUL.md</code>, <code>config.yaml</code>, skills. Every file hashed, every change shown as a diff.</p>
-      </div>
-      <div class="step">
-        <div class="n"><b>3</b> Run</div>
-        <h3>Watch it work</h3>
-        <p>Message an agent. Its node lights up, tool calls glow, and every run is kept as a graph.</p>
-      </div>
-    </div>
-    <div class="window wide-shot">
-      <img src="assets/compile.webp" width="1800" height="1125" loading="lazy" alt="The compile sheet listing ten files with hashes and sizes, showing the config.yaml diff after switching the local model to qwen3:14b.">
-      <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
-    </div>
   </section>
 
   <section class="block wrap" id="graphs">
@@ -448,6 +530,7 @@ footer .spacer { flex: 1; }
 
 <script src="foods.js"></script>
 <script src="site.js"></script>
+<script src="studio.js"></script>
 <script>
 (() => {
   const REPO = "CasperCrypto/mcbot";
