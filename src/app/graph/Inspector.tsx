@@ -1,5 +1,5 @@
 import { ArrowUp, Check, CheckCheck, Cloud, HardDrive, LogIn, MessagesSquare, Plug, Plus, RotateCcw, Send, Sparkles, Square, Trash2, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { removeNodes, setNodeField, updateEdge } from "../../board/ydoc";
 import type { Issue } from "../../compile";
 import {
@@ -11,6 +11,7 @@ import { keyEnvFor } from "../lib/providers";
 import { REMOTE, engine } from "../lib/engine";
 import { duration, tokens as fmtTokens, usd } from "../lib/format";
 import { useBoard } from "../state/board";
+import { useDismiss } from "../lib/presence";
 import { latestRunByAgent, useApp } from "../state/store";
 import { AgentFace, Field, Issues, Segmented, TextListField } from "../ui";
 import { LogoTile, nodeLogo } from "./Logo";
@@ -30,6 +31,10 @@ export function Inspector({ node, issues }: { node: GraphNode; issues: Issue[] }
   const select = useApp((s) => s.select);
   const runs = useApp((s) => s.runs);
   const set = (field: string, value: unknown) => setNodeField(doc, node.id, field, value);
+  // Esc puts it away (a click on the empty board already does).
+  const panel = useRef<HTMLElement>(null);
+  const deselect = useCallback(() => select(null), [select]);
+  useDismiss(true, deselect, panel, { outside: false });
   const status = node.kind === "agent" ? latestRunByAgent(runs).get(node.id)?.status : undefined;
 
   const titleField = node.kind === "agent" ? "displayName" : "label";
@@ -40,7 +45,7 @@ export function Inspector({ node, issues }: { node: GraphNode; issues: Issue[] }
     : node.kind === "channel" ? "Chat app" : "MCP server";
 
   return (
-    <aside className="inspector glass" aria-label="Inspector" data-testid="inspector">
+    <aside ref={panel} className="inspector glass" aria-label="Inspector" data-testid="inspector">
       <div className="inspector-head">
         {node.kind === "agent" ? <AgentFace seed={node.data.name} size={42} status={status} />
           : node.kind === "media" ? <LogoTile logo={nodeLogo(node)} kind="media"><MakerIcon media={node.data.media} size={16} /></LogoTile>

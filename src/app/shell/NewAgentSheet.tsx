@@ -10,6 +10,7 @@ import { freeSpot } from "../graph/place";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace } from "../ui";
+import { usePresence } from "../lib/presence";
 
 /** "Launch Writer" → "launch-writer": Hermes' profile id grammar, unique on the board. */
 export function agentIdFor(name: string, taken: ReadonlySet<string>): string {
@@ -41,7 +42,9 @@ export function NewAgentSheet() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!open) return null;
+  // Stays a moment after closing, to leave the way it came (lib/presence.ts).
+  const presence = usePresence(open);
+  if (!presence.mounted) return null;
   const taken = new Set(graph.nodes.filter((n) => n.kind === "agent").map((n) => String(n.data.name)));
   const id = agentIdFor(name, taken);
 
@@ -71,8 +74,8 @@ export function NewAgentSheet() {
 
   return (
     <>
-      <div className="palette-scrim" onClick={() => setOpen(false)} />
-      <section className="palette hermes-sheet new-agent" role="dialog" aria-label="New agent" data-testid="new-agent">
+      <div data-closing={presence.closing || undefined} className="palette-scrim" onClick={() => setOpen(false)} />
+      <section className="palette hermes-sheet new-agent" role="dialog" aria-modal="true" data-closing={presence.closing || undefined} aria-label="New agent" data-testid="new-agent">
         <header>
           <AgentFace seed={id} size={44} />
           <div className="grow">

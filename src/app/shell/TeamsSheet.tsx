@@ -9,6 +9,7 @@ import { TEAMS, teamToAdd, type StarterTeam } from "../graph/teams";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace } from "../ui";
+import { usePresence } from "../lib/presence";
 
 export function TeamsSheet() {
   const open = useApp((s) => s.teamsOpen);
@@ -20,7 +21,9 @@ export function TeamsSheet() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, setOpen]);
-  if (!open) return null;
+  // Stays a moment after closing, to leave the way it came (lib/presence.ts).
+  const presence = usePresence(open);
+  if (!presence.mounted) return null;
 
   const add = async (team: StarterTeam) => {
     // The board's primary local model if it has one, else its first model, else a new local one.
@@ -41,8 +44,8 @@ export function TeamsSheet() {
 
   return (
     <>
-      <div className="palette-scrim" onClick={() => setOpen(false)} />
-      <section className="palette hermes-sheet catalog" role="dialog" aria-label="Add a team" data-testid="teams-sheet">
+      <div data-closing={presence.closing || undefined} className="palette-scrim" onClick={() => setOpen(false)} />
+      <section className="palette hermes-sheet catalog" role="dialog" aria-modal="true" data-closing={presence.closing || undefined} aria-label="Add a team" data-testid="teams-sheet">
         <header>
           <span className="hermes-mark" aria-hidden><Users size={18} /></span>
           <div className="grow">

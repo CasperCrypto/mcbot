@@ -1,11 +1,12 @@
 import { CircleCheck, CircleX, Coins, MessageSquare, Plug, Square, X } from "lucide-react";
 import { stopRun } from "../actions";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 import { ago, duration, tokens, usd } from "../lib/format";
 import { engine } from "../lib/engine";
 import { Sidebar } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
+import { useDismiss } from "../lib/presence";
 import { useApp } from "../state/store";
 import { AgentFace, Empty } from "../ui";
 import { GraphCanvas, type GEdge, type GNode } from "./GraphCanvas";
@@ -81,6 +82,10 @@ export function RunsView() {
   const selectRun = useApp((s) => s.selectRun);
   const loadEvents = useApp((s) => s.loadEvents);
   const [step, setStep] = useState<string | null>(null);
+  // The step's details close with a click elsewhere (another step opens its own) or Esc.
+  const stepPanel = useRef<HTMLElement>(null);
+  const closeStep = useCallback(() => setStep(null), []);
+  useDismiss(step !== null, closeStep, stepPanel);
 
   const list = useMemo(() => Object.values(runs).sort((a, b) => b.startedAt - a.startedAt), [runs]);
   const run = (selectedRunId && runs[selectedRunId]) || list[0] || null;
@@ -141,7 +146,7 @@ export function RunsView() {
             <div style={{ position: "absolute", inset: "52px 0 0 0" }} data-testid="run-graph">
               <div className={`graph-area${current ? " with-panel" : ""}`}><GraphCanvas key={run.runId} nodes={nodes} edges={edges} dir="TB" selected={step} onSelect={setStep} fitSignature={`${run.runId}:${steps.length}:${!!current}`} /></div>
               {current && (
-                <aside className="side-panel glass">
+                <aside ref={stepPanel} className="side-panel glass">
                   <div className="side-panel-head"><b className={`grow ellipsis${current.kind === "tool" ? " mono" : ""}`}>{current.title}</b><button className="icon-btn" aria-label="Close" onClick={() => setStep(null)}><X size={15} /></button></div>
                   <div className="side-panel-body stack" style={{ gap: 14 }}>
                     {current.detail.map((d) => (

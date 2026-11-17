@@ -14,6 +14,7 @@ import { useBoard } from "../state/board";
 import { useApp, type Tab } from "../state/store";
 import { AgentFace, Kbd } from "../ui";
 import { searchRuns } from "../lib/search";
+import { usePresence } from "../lib/presence";
 
 interface Command {
   id: string;
@@ -149,11 +150,13 @@ function matches(c: Command, q: string): boolean {
 export function Palette() {
   const open = useApp((s) => s.paletteOpen);
   const setPalette = useApp((s) => s.setPalette);
-  if (!open) return null;
-  return <PaletteBody close={() => setPalette(false)} />;
+  // Stays a moment after closing, to leave the way it came (lib/presence.ts).
+  const presence = usePresence(open);
+  if (!presence.mounted) return null;
+  return <PaletteBody close={() => setPalette(false)} closing={presence.closing} />;
 }
 
-function PaletteBody({ close }: { close: () => void }) {
+function PaletteBody({ close, closing }: { close: () => void; closing: boolean }) {
   const commands = useCommands(close);
   const runs = useApp((s) => s.runs);
   const { graph } = useBoard();
@@ -221,8 +224,8 @@ function PaletteBody({ close }: { close: () => void }) {
   let lastGroup = "";
   return (
     <>
-      <div className="palette-scrim" onClick={close} />
-      <div className="palette" role="dialog" aria-label="Command palette" data-testid="palette">
+      <div data-closing={closing || undefined} className="palette-scrim" onClick={close} />
+      <div className="palette" role="dialog" aria-modal="true" data-closing={closing || undefined} aria-label="Command palette" data-testid="palette">
         <div className="palette-input">
           {asking ? <span className="chip accent">{asking.label.replace("…", "")}</span> : <Search size={18} className="faint" />}
           <input ref={input} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={onKey}

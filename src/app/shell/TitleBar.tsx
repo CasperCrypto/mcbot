@@ -69,7 +69,7 @@ export function TitleBar() {
       {DEMO && <span className="chip warn" data-tip="Browser demo: compile is real, runs are simulated" data-tip-side="bottom" data-testid="demo-chip">Demo</span>}
       <div className="spacer" />
       <Island />
-      <button className="presence" data-testid="presence" onClick={() => useApp.getState().setTeamOpen(!useApp.getState().teamOpen)}
+      <button className="presence" data-testid="presence" data-dismiss-ignore onClick={() => useApp.getState().setTeamOpen(!useApp.getState().teamOpen)}
         data-tip={`${people.length === 1 ? "Only you here" : `${people.length} here`} · team chat`} data-tip-side="bottom">
         {people.slice(0, 5).map((p) => (
           <span key={p.clientId} className="presence-face"><PersonFace name={p.name} color={p.color} size={24} /></span>

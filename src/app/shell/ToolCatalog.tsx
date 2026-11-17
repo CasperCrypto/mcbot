@@ -9,6 +9,7 @@ import { LogoTile, logoFor } from "../graph/Logo";
 import { freeSpot } from "../graph/place";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
+import { usePresence } from "../lib/presence";
 
 export function ToolCatalog() {
   const open = useApp((s) => s.catalogOpen);
@@ -26,7 +27,9 @@ export function ToolCatalog() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, setOpen]);
-  if (!open) return null;
+  // Stays a moment after closing, to leave the way it came (lib/presence.ts).
+  const presence = usePresence(open);
+  if (!presence.mounted) return null;
 
   const taken = new Set(graph.nodes.filter((n) => n.kind === "tool").map((n) => String(n.data.name)));
   const place = (make: (pos: { x: number; y: number }) => ReturnType<typeof catalogNode>) => {
@@ -48,8 +51,8 @@ export function ToolCatalog() {
 
   return (
     <>
-      <div className="palette-scrim" onClick={() => setOpen(false)} />
-      <section className="palette hermes-sheet catalog" role="dialog" aria-label="Add a tool" data-testid="tool-catalog">
+      <div data-closing={presence.closing || undefined} className="palette-scrim" onClick={() => setOpen(false)} />
+      <section className="palette hermes-sheet catalog" role="dialog" aria-modal="true" data-closing={presence.closing || undefined} aria-label="Add a tool" data-testid="tool-catalog">
         <header>
           <span className="hermes-mark" aria-hidden><Plug size={18} /></span>
           <div className="grow">

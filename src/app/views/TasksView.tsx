@@ -1,10 +1,11 @@
 import { ArrowUp, Ban, Check, CircleDashed, GitBranch, MessageSquare, Plus, RotateCcw, Undo2, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TaskAction, TaskDetail, TaskStatus, TaskView } from "../../contracts/api";
 import type { AgentNode } from "../../contracts/graph";
 import { engine } from "../lib/engine";
 import { ago } from "../lib/format";
 import { useBoard } from "../state/board";
+import { useDismiss } from "../lib/presence";
 import { useApp } from "../state/store";
 import { AgentFace, Empty, PersonFace } from "../ui";
 
@@ -149,10 +150,14 @@ function Detail({ id, agents, onClose, onChanged }: { id: string; agents: AgentN
     }
   };
 
-  if (!task) return <aside className="side-panel glass"><div className="side-panel-head"><b className="grow">Task</b><button className="icon-btn" aria-label="Close" onClick={onClose}><X size={15} /></button></div></aside>;
+  // A click on the board of tasks (or anywhere else) or Esc closes it; a comment being typed keeps it open.
+  const panel = useRef<HTMLElement>(null);
+  useDismiss(true, onClose, panel, { outside: !text.trim() });
+
+  if (!task) return <aside ref={panel} className="side-panel glass"><div className="side-panel-head"><b className="grow">Task</b><button className="icon-btn" aria-label="Close" onClick={onClose}><X size={15} /></button></div></aside>;
   const lane = LANES.find((l) => l.status === task.status);
   return (
-    <aside className="side-panel glass" data-testid="task-detail">
+    <aside ref={panel} className="side-panel glass" data-testid="task-detail">
       <div className="side-panel-head">
         <b className="grow ellipsis">{task.title}</b>
         <span className={`chip ${STATE_CHIP[task.status] ?? ""}`}>{lane?.label ?? task.status}</span>

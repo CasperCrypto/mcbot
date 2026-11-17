@@ -5,6 +5,7 @@ import { engine } from "../lib/engine";
 import { openExternal } from "../lib/open";
 import { issueUrl } from "../lib/report";
 import { useApp } from "../state/store";
+import { usePresence } from "../lib/presence";
 
 export function ReportSheet() {
   const open = useApp((s) => s.reportOpen);
@@ -31,7 +32,9 @@ export function ReportSheet() {
     };
   }, [open, setOpen]);
 
-  if (!open) return null;
+  // Stays a moment after closing, to leave the way it came (lib/presence.ts).
+  const presence = usePresence(open);
+  if (!presence.mounted) return null;
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(text ?? "");
@@ -42,8 +45,8 @@ export function ReportSheet() {
   };
   return (
     <>
-      <div className="palette-scrim" onClick={() => setOpen(false)} />
-      <section className="palette hermes-sheet report-sheet" role="dialog" aria-label="Report a problem" data-testid="report-sheet">
+      <div data-closing={presence.closing || undefined} className="palette-scrim" onClick={() => setOpen(false)} />
+      <section className="palette hermes-sheet report-sheet" role="dialog" aria-modal="true" data-closing={presence.closing || undefined} aria-label="Report a problem" data-testid="report-sheet">
         <header>
           <span className="hermes-mark" aria-hidden><LifeBuoy size={18} /></span>
           <div className="grow">

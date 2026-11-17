@@ -4,7 +4,7 @@
  * Messages live in the board (`messages`, src/board/ydoc.ts), so everyone on it sees them live.
  */
 import { ArrowUp, MessagesSquare, UserPlus, Users, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { addMessage } from "../../board/ydoc";
 import type { AgentNode, Message } from "../../contracts/graph";
 import type { SharingView } from "../../contracts/api";
@@ -12,6 +12,7 @@ import { runAgent } from "../actions";
 import { mentionOf } from "../lib/mention";
 import { engine, REMOTE } from "../lib/engine";
 import { useBoard } from "../state/board";
+import { useDismiss, usePresence } from "../lib/presence";
 import { useApp } from "../state/store";
 import { AgentFace, PersonFace } from "../ui";
 
@@ -126,18 +127,20 @@ export function TeamPanel() {
   useEffect(() => {
     if (!open) return;
     if (!REMOTE) engine.share().then(setShare).catch(() => setShare(null));
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, setOpen]);
-  if (!open) return null;
+  }, [open]);
+  // A click anywhere else (the board, Home…) or Esc puts it away.
+  const panel = useRef<HTMLElement>(null);
+  const hide = useCallback(() => setOpen(false), [setOpen]);
+  useDismiss(open, hide, panel);
+  const presence = usePresence(open);
+  if (!presence.mounted) return null;
 
   const here = [{ clientId: -1, name: identity.name, color: identity.color, tab: useApp.getState().tab as string | null, me: true }, ...peers.map((p) => ({ ...p, me: false }))];
   // Teammates who joined from other computers; the ones here now are listed above already.
   const members = (share?.members ?? []).filter((m) => !here.some((h) => h.name === m.name));
 
   return (
-    <aside className="team-panel" role="dialog" aria-label="Team" data-testid="team-panel">
+    <aside ref={panel} className="team-panel" role="dialog" aria-label="Team" data-testid="team-panel" data-closing={presence.closing || undefined}>
       <header className="team-head">
         <div className="seg">
           <button aria-pressed={tab === "chat"} onClick={() => setTab("chat")} data-testid="team-tab-chat"><MessagesSquare size={13} /> Chat</button>

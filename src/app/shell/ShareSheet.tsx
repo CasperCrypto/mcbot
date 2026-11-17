@@ -23,6 +23,7 @@ const savedService = (): MailService => {
   }
 };
 import { ago } from "../lib/format";
+import { usePresence } from "../lib/presence";
 
 function Join({ onCancel }: { onCancel?: () => void }) {
   const identity = useApp((s) => s.identity);
@@ -83,7 +84,9 @@ export function ShareSheet() {
       window.removeEventListener("keydown", onKey);
     };
   }, [open, setOpen]);
-  if (!open) return null;
+  // Stays a moment after closing, to leave the way it came (lib/presence.ts).
+  const presence = usePresence(open);
+  if (!presence.mounted) return null;
 
   const act = async (f: () => Promise<SharingView>) => {
     setBusy(true);
@@ -123,8 +126,8 @@ export function ShareSheet() {
 
   return (
     <>
-      <div className="palette-scrim" onClick={() => setOpen(false)} />
-      <section className="palette hermes-sheet share-sheet" role="dialog" aria-label="Share" data-testid="share-sheet">
+      <div data-closing={presence.closing || undefined} className="palette-scrim" onClick={() => setOpen(false)} />
+      <section className="palette hermes-sheet share-sheet" role="dialog" aria-modal="true" data-closing={presence.closing || undefined} aria-label="Share" data-testid="share-sheet">
         <header>
           <span className="hermes-mark" aria-hidden><Users size={18} /></span>
           <div className="grow">
