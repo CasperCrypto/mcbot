@@ -13,6 +13,7 @@
 <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="preload" as="image" href="assets/burger.webp" imagesrcset="assets/burger-sm.webp 489w, assets/burger.webp 978w" imagesizes="(max-width: 600px) 300px, 400px">
+<script>document.documentElement.classList.add("js")</script>
 <link rel="stylesheet" href="foods.css">
 <link rel="stylesheet" href="studio.css">
 <style>
@@ -257,6 +258,7 @@ footer .spacer { flex: 1; }
 
 <main id="top">
   <div class="hero">
+    <div class="prism" data-prism aria-hidden="true"></div>
     <div class="bot" data-bot tabindex="0" role="button" aria-label="McBot, a glass burger. Poke it.">
       <div class="bot-float">
         <div class="bot-tilt">
@@ -315,7 +317,7 @@ footer .spacer { flex: 1; }
     </div>
   </div>
 
-  <div class="values wrap">
+  <div class="values wrap" data-reveal>
     <div><span class="vi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span><b>On your computer</b><small>Agents, memory and keys stay with you. No account.</small></div>
     <div><span class="vi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg></span><b>Real files</b><small>The graph compiles to plain files a real runtime reads.</small></div>
     <div><span class="vi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 7.6 8 9 4.8-1.4 8-4.5 8-9V6Z"/><path d="m9 12 2 2 4-4"/></svg></span><b>Asks before acting</b><small>Risky steps stop and wait for your OK.</small></div>
@@ -330,12 +332,12 @@ footer .spacer { flex: 1; }
   </div>
 
   <section class="block wrap" id="how">
-    <div class="center">
+    <div class="center" data-reveal>
       <span class="eyebrow">How it works</span>
       <h2>The graph is the setup.</h2>
       <p class="section-lede">Draw it, compile it, run it, watch it. No config files to write by hand.</p>
     </div>
-    <div class="flow" data-flow>
+    <div class="flow" data-flow data-reveal>
       <div class="tabs" role="tablist" aria-label="How it works">
         <button class="tab" role="tab" type="button" data-tab="draw" aria-selected="true"><b>1. Draw</b><small>Drag a model onto an agent. A second one becomes the fallback. Plug in tools.</small><i></i></button>
         <button class="tab" role="tab" type="button" data-tab="compile" aria-selected="false"><b>2. Compile</b><small>⌘S writes each agent's real files. Every change shown as a diff.</small><i></i></button>
@@ -378,12 +380,16 @@ footer .spacer { flex: 1; }
   </section>
 
   <section class="block wrap" id="palette">
-    <div class="center">
+    <div class="center" data-reveal>
       <span class="eyebrow">Command bar</span>
       <h2>Everything, one shortcut away.</h2>
-      <p class="section-lede">Press <span class="kb">⌘</span> <span class="kb">⇧</span> <span class="kb">Space</span> from any app. Search, run a command, or just ask an agent. Try it:</p>
+      <p class="section-lede">Press these from any app. Search, run a command, or just ask an agent. Try it below.</p>
+      <div class="keycaps" data-keys aria-label="Command, Shift, Space">
+        <span class="keycap"><i>⌘</i><small>command</small></span><span class="keycap"><i>⇧</i><small>shift</small></span><span class="keycap wide"><i>Space</i></span>
+      </div>
     </div>
     <div class="pal-wrap">
+      <div class="prism sm soft" data-prism aria-hidden="true"></div>
       <div class="pal" data-pal>
         <div class="pin"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search commands and conversations" aria-label="Try the command bar" spellcheck="false" autocomplete="off"></div>
         <div class="list" role="listbox"></div>
@@ -394,7 +400,7 @@ footer .spacer { flex: 1; }
   </section>
 
   <section class="block wrap" id="island">
-    <div class="center">
+    <div class="center" data-reveal>
       <span class="eyebrow">The island</span>
       <h2>Hide McBot. Keep the island.</h2>
       <p class="section-lede">A small pill stays at the top of your screen while agents work. Approve a risky step without opening the app.</p>
@@ -412,7 +418,7 @@ footer .spacer { flex: 1; }
   </section>
 
   <section class="block wrap" id="crew">
-    <div class="center">
+    <div class="center" data-reveal>
       <span class="eyebrow">Agents</span>
       <h2>Every agent has a face.</h2>
       <p class="section-lede">Its eyes show what it is doing: working, done or stuck.</p>
@@ -421,13 +427,13 @@ footer .spacer { flex: 1; }
   </section>
 
   <section class="block wrap" id="graphs">
-    <div class="center">
+    <div class="center" data-reveal>
       <span class="eyebrow">Insight</span>
       <h2>See what your agents do, remember and spend.</h2>
       <p class="section-lede">Every run, memory and cost is a graph you can open.</p>
     </div>
     <div class="bento">
-      <article class="bc" data-play>
+      <article class="bc" data-play data-reveal>
         <h3>Runs</h3><p>Every step, tool call and token, laid out as it happened.</p>
         <div class="mini"><div class="seq">
           <div class="st" style="--i:0"><i class="d"></i><span>Prompt</span><em>Any open tickets about an invoice?</em></div>
@@ -437,7 +443,7 @@ footer .spacer { flex: 1; }
           <div class="st sum" style="--i:4"><span>1.8k tokens</span><em>$0.0057</em></div>
         </div></div>
       </article>
-      <article class="bc" data-play>
+      <article class="bc" data-play data-reveal>
         <h3>Memory</h3><p>What each agent has learned. Edit it in place.</p>
         <div class="mini"><div class="seq mem2">
           <div class="st chip" style="--i:0"><i class="d ok"></i><span>Triage desk</span></div>
@@ -448,7 +454,7 @@ footer .spacer { flex: 1; }
           <div class="st ind2" style="--i:5"><span>Maya runs support and prefers short answers</span></div>
         </div></div>
       </article>
-      <article class="bc" data-play>
+      <article class="bc" data-play data-reveal>
         <h3>Files</h3><p>Open any folder and browse it as a graph.</p>
         <div class="mini tree2">
           <div class="tr" style="--i:0"><b>acme-support</b></div>
@@ -459,7 +465,7 @@ footer .spacer { flex: 1; }
           <div class="tr l2" style="--i:5"><span>index.ts</span><em>610 B</em></div>
         </div>
       </article>
-      <article class="bc" data-play>
+      <article class="bc" data-play data-reveal>
         <h3>Cost</h3><p>Spend and tokens per agent, model and day. Estimates are labelled.</p>
         <div class="mini cost">
           <div class="nums"><div><small>Spend, 7 days</small><b data-count="2.84" data-pre="$" data-dec="2">$0.00</b></div><div><small>Per run</small><b>$0.0023</b></div><div><small>Tokens</small><b data-count="18" data-suf="k">0k</b></div></div>
@@ -470,13 +476,13 @@ footer .spacer { flex: 1; }
   </section>
 
   <section class="block wrap" id="engine">
-    <div class="center">
+    <div class="center" data-reveal>
       <span class="eyebrow">Yours</span>
       <h2>Your agents stay yours.</h2>
       <p class="section-lede">McBot Studio is the board and the engine: memory, skills, tools and chat apps, running on your own computer.</p>
     </div>
     <div class="bento three">
-      <article class="bc" data-play>
+      <article class="bc" data-play data-reveal>
         <h3>Plain files you can read</h3><p>Each agent compiles to a folder of ordinary files.</p>
         <div class="mini files2">
           <div class="tr" style="--i:0"><span>profiles/triage/SOUL.md</span><em>151 B</em></div>
@@ -485,7 +491,7 @@ footer .spacer { flex: 1; }
           <div class="tr" style="--i:3"><span>.mcbot/manifest.json</span><em>1.2 KB</em></div>
         </div>
       </article>
-      <article class="bc" data-play>
+      <article class="bc" data-play data-reveal>
         <h3>Answers where you are</h3><p>Give an agent its own Telegram bot. It answers the people you allow.</p>
         <div class="mini bub">
           <div class="b me" style="--i:0">Where is the Acme invoice?</div>
@@ -493,7 +499,7 @@ footer .spacer { flex: 1; }
           <div class="b me" style="--i:2">Thanks</div>
         </div>
       </article>
-      <article class="bc" data-play>
+      <article class="bc" data-play data-reveal>
         <h3>Local first</h3><p>Run on Ollama, LM Studio, vLLM or any OpenAI-compatible API.</p>
         <div class="mini srv">
           <div class="tr" style="--i:0"><i class="d ok"></i><span>Ollama</span><em>qwen3:8b</em></div>
@@ -506,7 +512,7 @@ footer .spacer { flex: 1; }
   </section>
 
   <section class="block wrap" id="download">
-    <div class="center">
+    <div class="center" data-reveal>
       <span class="eyebrow">Download</span>
       <h2>One app. Everything inside.</h2>
       <p class="section-lede">Install McBot Studio, open it, start drawing.</p>
@@ -555,6 +561,7 @@ footer .spacer { flex: 1; }
 
   <div class="wrap">
     <div class="closing">
+      <div class="prism sm" data-prism aria-hidden="true"></div>
       <div class="parade" data-parade aria-hidden="true"></div>
       <h2>Open source. Free to use.</h2>
       <p class="section-lede" style="margin-left: auto; margin-right: auto">Read the code, run it yourself, make it better.</p>

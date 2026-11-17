@@ -475,3 +475,50 @@
   }, { threshold: 0.3 });
   for (const c of cards) io.observe(c);
 })();
+
+/* ---------- prism light, spotlight cards, reveals, the keys ---------- */
+(() => {
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const SPECTRUM = ["#ff3b30", "#ff9500", "#ffd60a", "#30d158", "#64d2ff", "#0a84ff", "#bf5af2"];
+  for (const el of $$("[data-prism]")) {
+    let h = '<i class="core"></i><i class="beam soft"></i><i class="beam"></i>';
+    SPECTRUM.forEach((c, i) => {
+      const a = 4 + i * 4.2;
+      const st = `--c:${c};--a:${a}deg;--d:${(-i * 1.3).toFixed(1)}s`;
+      h += `<i class="fan" style="${st}"></i><i class="fan thin" style="${st}"></i>`;
+    });
+    el.innerHTML = h;
+  }
+  // the prism leans a little toward the pointer
+  const hero = $$(".hero")[0]; const main = hero && $$(".prism", hero)[0];
+  if (main && !reduce) {
+    let tx = 0; let cx = 0;
+    addEventListener("pointermove", (e) => { tx = (e.clientX / innerWidth - 0.5) * 6; }, { passive: true });
+    const tick = () => { cx += (tx - cx) * 0.06; main.style.setProperty("--tilt", `${cx.toFixed(2)}deg`); requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }
+  // spotlight on cards
+  for (const c of $$(".bc, .values > div, .os")) {
+    c.addEventListener("pointermove", (e) => { const r = c.getBoundingClientRect(); c.style.setProperty("--mx", `${e.clientX - r.left}px`); c.style.setProperty("--my", `${e.clientY - r.top}px`); }, { passive: true });
+  }
+  // reveals
+  const rv = $$("[data-reveal]");
+  if (!("IntersectionObserver" in window) || reduce) rv.forEach((e) => e.classList.add("in"));
+  else {
+    const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+    rv.forEach((e) => io.observe(e));
+  }
+  // the keys press on their own, and for real when you press them
+  const keys = $$("[data-keys] .keycap");
+  if (keys.length) {
+    const press = (on) => keys.forEach((k) => k.classList.toggle("down", on));
+    addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === "Space") { e.preventDefault(); press(true); $$("[data-pal] input")[0]?.focus(); } });
+    addEventListener("keyup", () => press(false));
+    if (!reduce) {
+      let visible = false;
+      new IntersectionObserver((es) => { visible = es[0].isIntersecting; }, { threshold: 0.5 }).observe(keys[0].parentElement);
+      setInterval(() => { if (!visible) return; keys.forEach((k, i) => setTimeout(() => k.classList.add("down"), i * 120)); setTimeout(() => press(false), 650); }, 4200);
+    }
+  }
+})();

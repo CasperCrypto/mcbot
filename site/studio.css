@@ -318,3 +318,60 @@ section.block { padding-top: 148px; }
 .tr em, .st em { flex: none; }
 .st em { flex: 0 1 auto; }
 @media (max-width: 860px) { .values.wrap { margin-top: 48px; } }
+
+/* =====================================================================
+   Prism light. The burger is glass: a white beam enters it and a spectrum fans out, on black.
+   This is the one place the site uses light and gradients (hero, command bar, closing card).
+   The app itself stays flat. Everything is pointer-events: none and decorative.
+   ===================================================================== */
+.hero { position: relative; }
+.hero > *:not(.prism) { position: relative; z-index: 1; }
+.prism { --oy: 232px; --len: 58%; position: absolute; left: 0; right: 0; top: 0; height: 760px; z-index: 0; pointer-events: none; overflow: hidden; transform: rotate(var(--tilt, 0deg)); transform-origin: 50% var(--oy); }
+.prism .beam, .prism .core, .prism .fan { position: absolute; pointer-events: none; }
+/* the white beam arriving from the upper left */
+.prism .beam { right: 50%; top: calc(var(--oy) - 1px); width: 46%; height: 2px; transform-origin: 100% 50%; transform: rotate(17deg); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95)); }
+.prism .beam.soft { height: 26px; top: calc(var(--oy) - 13px); filter: blur(16px); opacity: 0.45; }
+/* the spectrum leaving it */
+.prism .fan { left: 50%; top: calc(var(--oy) - 10px); width: var(--len); height: 20px; transform-origin: 0 50%; transform: rotate(var(--a)); background: linear-gradient(90deg, var(--c) 0%, var(--c) 30%, transparent 100%); mix-blend-mode: screen; filter: blur(14px); opacity: 0.5; animation: spread 9s ease-in-out infinite alternate; animation-delay: var(--d); }
+.prism .fan.thin { height: 3px; top: calc(var(--oy) - 1.5px); filter: blur(1.5px); opacity: 0.8; }
+.prism .core { left: calc(50% - 90px); top: calc(var(--oy) - 90px); width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 255, 255, 0.28), transparent); filter: blur(10px); animation: pulse 6s ease-in-out infinite alternate; }
+@keyframes spread { from { transform: rotate(var(--a)); } to { transform: rotate(calc(var(--a) + 3deg)); } }
+@keyframes pulse { from { opacity: 0.6; transform: scale(0.9); } to { opacity: 1; transform: scale(1.15); } }
+.prism.sm { --oy: 50%; --len: 70%; height: 100%; top: 0; }
+.prism.sm .beam { transform: rotate(10deg); width: 40%; }
+.prism.soft { opacity: 0.55; }
+.closing, .pal-wrap { position: relative; overflow: hidden; }
+.closing > *:not(.prism):not(.parade), .pal-wrap > *:not(.prism) { position: relative; z-index: 1; }
+.closing { overflow: visible; }
+.closing .prism { border-radius: var(--r-lg); overflow: hidden; }
+
+/* ---------- raycast-class finish: bigger type, glossy keys, spotlight cards ---------- */
+h1 { font-size: clamp(44px, 7.6vw, 90px); letter-spacing: -0.04em; line-height: 1.02; }
+h2 { letter-spacing: -0.03em; }
+.btn { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); }
+.btn.primary, .btn.light { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 40px rgba(255, 255, 255, 0.12); }
+.nav { background: rgba(0, 0, 0, 0.55); }
+
+.keycaps { margin: 34px auto 0; display: flex; justify-content: center; gap: 12px; perspective: 700px; }
+.keycap { position: relative; display: grid; place-items: center; width: 88px; height: 88px; border-radius: 20px; background: linear-gradient(#303034, #1c1c1f); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 7px 0 #0a0a0b, 0 18px 30px rgba(0, 0, 0, 0.65); transition: transform 0.14s var(--smooth), box-shadow 0.14s var(--smooth); }
+.keycap.wide { width: 200px; }
+.keycap i { font: 500 30px/1 var(--display); font-style: normal; color: var(--text); }
+.keycap.wide i { font-size: 20px; letter-spacing: 0.02em; }
+.keycap small { position: absolute; left: 12px; bottom: 9px; font-size: 11px; color: var(--text-3); letter-spacing: 0.02em; }
+.keycap.down { transform: translateY(6px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 1px 0 #0a0a0b, 0 6px 12px rgba(0, 0, 0, 0.6); }
+.keycap.down i { color: #fff; }
+
+/* cards: a hairline of light on top and a spotlight that follows the pointer */
+.bc, .values > div, .os { position: relative; }
+.bc::before, .values > div::before { content: ""; position: absolute; top: 0; left: 12%; right: 12%; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent); pointer-events: none; z-index: 2; }
+.bc::after, .values > div::after, .os::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.08), transparent 65%); opacity: 0; transition: opacity 0.35s; pointer-events: none; }
+.bc:hover::after, .values > div:hover::after, .os:hover::after { opacity: 1; }
+
+/* reveal: sections rise in once as they arrive */
+.js [data-reveal] { opacity: 0; transform: translateY(28px); transition: opacity 0.8s var(--smooth), transform 0.9s var(--smooth); }
+.js [data-reveal].in { opacity: 1; transform: none; }
+@media (max-width: 560px) { .keycap { width: 64px; height: 64px; border-radius: 16px; } .keycap.wide { width: 140px; } .keycap i { font-size: 24px; } .prism { height: 620px; } .prism .fan { --len: 80%; } }
+@media (prefers-reduced-motion: reduce) {
+  .prism .fan, .prism .core { animation: none; }
+  .js [data-reveal] { opacity: 1; transform: none; transition: none; }
+}
