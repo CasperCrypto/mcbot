@@ -23,6 +23,9 @@ export const CLOUD_PROVIDERS: CloudProvider[] = [
   { id: "groq", label: "Groq", baseUrl: "https://api.groq.com/openai/v1", keyEnv: "GROQ_API_KEY", keysUrl: "https://console.groq.com/keys", model: "llama-3.3-70b-versatile" },
   { id: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", keyEnv: "DEEPSEEK_API_KEY", keysUrl: "https://platform.deepseek.com/api_keys", model: "deepseek-chat" },
   { id: "mistral", label: "Mistral", baseUrl: "https://api.mistral.ai/v1", keyEnv: "MISTRAL_API_KEY", keysUrl: "https://console.mistral.ai/api-keys", model: "mistral-small-latest" },
+  // Base URL and key variable: hermes_cli/auth.py:223 (Hermes' own opencode-zen provider). The first model is a
+  // guess to be replaced by the provider's list (`/v1/models`); whether Zen answers without a key is not verified.
+  { id: "opencode-zen", label: "OpenCode Zen", baseUrl: "https://opencode.ai/zen/v1", keyEnv: "OPENCODE_ZEN_API_KEY", keysUrl: "https://opencode.ai/auth", model: "deepseek-flash" },
   { id: "together", label: "Together", baseUrl: "https://api.together.xyz/v1", keyEnv: "TOGETHER_API_KEY", keysUrl: "https://api.together.ai/settings/api-keys", model: "meta-llama/Llama-3.3-70B-Instruct-Turbo" },
 ];
 
