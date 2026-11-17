@@ -454,3 +454,24 @@
     }
   }
 })();
+
+/* ---------- live cards: play once when they scroll into view; numbers count up ---------- */
+(() => {
+  const cards = [...document.querySelectorAll("[data-play]")];
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const count = (card) => {
+    for (const el of card.querySelectorAll("[data-count]")) {
+      const to = parseFloat(el.dataset.count); const pre = el.dataset.pre || ""; const suf = el.dataset.suf || ""; const dec = +(el.dataset.dec || 0);
+      const show = (v) => { el.textContent = `${pre}${v.toFixed(dec)}${suf}`; };
+      if (reduce) { show(to); continue; }
+      const t0 = performance.now();
+      const tick = (t) => { const k = Math.min(1, (t - t0) / 1100); show(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+    }
+  };
+  if (!("IntersectionObserver" in window) || reduce) { for (const c of cards) { c.classList.add("play"); count(c); } return; }
+  const io = new IntersectionObserver((es) => {
+    for (const e of es) if (e.isIntersecting) { e.target.classList.add("play"); count(e.target); io.unobserve(e.target); }
+  }, { threshold: 0.3 });
+  for (const c of cards) io.observe(c);
+})();
