@@ -12,6 +12,7 @@ import { useApp } from "../state/store";
 import { AgentFace, Empty } from "../ui";
 import { toolLabel } from "../lib/toolLabel";
 import { ApprovalCard } from "../approvals/ApprovalCard";
+import { screenCaptures } from "../chat/screen";
 import { RichText } from "../chat/RichText";
 
 function shortTime(ts: number): string {
@@ -45,6 +46,24 @@ export function madeMedia(events: RunEvent[] | undefined): { kind: "image" | "vi
     }
   }
   return out;
+}
+
+/** The agent's screen: the latest capture while it works ("Live"), every step to scrub through after. */
+function Screen({ profile, shots, live }: { profile: string; shots: { path: string; seq: number; action: string }[]; live: boolean }) {
+  const [at, setAt] = useState<number | null>(null);
+  const i = live || at === null ? shots.length - 1 : Math.min(at, shots.length - 1);
+  const shot = shots[i]!;
+  return (
+    <div className="screen" data-testid="agent-screen">
+      <div className="screen-head">
+        {live ? <span className="chip run screen-live"><i /> Live</span> : <span className="chip">Screen</span>}
+        <span className="faint ellipsis grow">{shot.action || "capture"}</span>
+        <span className="faint num">{i + 1}/{shots.length}</span>
+      </div>
+      <Made key={shot.path} profile={profile} kind="image" path={shot.path} />
+      {!live && shots.length > 1 && <input type="range" min={0} max={shots.length - 1} value={i} onChange={(e) => setAt(Number(e.target.value))} aria-label="Step" />}
+    </div>
+  );
 }
 
 /** One made image or video, fetched from the engine (read-only, inside the agent's folder). */
@@ -81,6 +100,7 @@ function AgentMessage({ run, events, name, onChoose }: { run: RunSummary; events
   const text = (run.text || "").trim();
   const failed = run.status === "failed" || run.status === "interrupted";
   const made = madeMedia(events);
+  const shots = screenCaptures(events);
   return (
     <div className={`msg agent${failed ? " failed" : ""}`} data-testid="agent-message">
       <div className="from"><AgentFace seed={run.profile} size={18} status={run.status} /><b>{name}</b></div>
@@ -89,6 +109,7 @@ function AgentMessage({ run, events, name, onChoose }: { run: RunSummary; events
           {tools.map((t) => <span key={t.seq} className={`step-chip${failedTools.has(t.tool) ? " fail" : ""}`} data-tip={t.tool}><Plug size={11} /><span>{toolLabel(t.tool)}</span></span>)}
         </div>
       )}
+      {shots.length > 0 && <Screen profile={run.profile} shots={shots} live={run.status === "running"} />}
       <ApprovalCard run={run} />
       {run.status === "running" && !text ? (
         run.approval ? null : <div className="bubble" style={{ padding: 0 }}><span className="typing"><i /><i /><i /></span></div>

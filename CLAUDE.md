@@ -130,7 +130,15 @@ Change them additively; a breaking change bumps the version.
   (`engine/skills.ts`). The official library (`hermes/optional-skills`) installs per agent with
   `hermes -p <agent> skills install official/<path> --yes` (host only). Both live in category
   folders, which the board reader skips: they are Hermes', not blocks. The Skills view
-  (`views/SkillsView.tsx`, host only) shows all three per agent; the Inspector links to it.
+  (`views/SkillsView.tsx`, host only) shows all three per agent plus what each agent taught itself
+  (`profileSkills`); the Inspector links to it. Its one box searches every registry Hermes knows
+  (`hermes skills search --json`) or, given a GitHub link or SKILL.md URL, installs it into the
+  `added` category after Hermes' scan (`skillSources`: a GitHub folder tries `owner/repo/path`, then
+  the raw SKILL.md). Its Plugins pane (`views/PluginsPanel.tsx`, `engine/plugins.ts`) lists the
+  agent's plugins with on/off and the curated catalog (`hermes/plugin-catalog`); every change goes
+  through `hermes -p <agent> plugins …`, which writes `plugins.enabled` itself (never compiled).
+- Computer use: the chat shows the agent's screen (`chat/screen.ts`: each `computer_use` capture's
+  `screenshot_path`), live while it runs and as a step slider after; Stop takes it back.
 - Memory edits: Hermes' `§` format byte for byte, refused while the profile is
   running, and only against the sha256 the editor read.
 - An agent's `dailyBudgetUsd` is McBot-side only (never compiled, no Hermes key): `buildCostReport` compares
@@ -184,6 +192,9 @@ Change them additively; a breaking change bumps the version.
   (`engine/bundle.ts`) and keeps tools in `<data>/hermes-runtime`; its log is
   `<data>/engine.log`. First launch: the setup assistant prepares Hermes in the
   background (`POST /api/hermes/prepare`), minutes, with progress.
+- **Launcher:** ⌘⇧Space / Ctrl+Shift+Space from anywhere (`SUMMON`, tauri-plugin-global-shortcut)
+  brings the front window forward with ⌘K open; ⌘K can "Ask <agent>…" directly. If another app
+  holds the combination, McBot only logs it.
 - The shell adds a menu bar (tray) icon whose count is Home's "Needs you" (`set_attention`,
   sent by the window) and system notifications when an agent finishes, fails, asks for a
   review or is blocked while no McBot window is in front (`src/app/state/signals.ts`).
@@ -387,4 +398,4 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   Product shots (`site/assets/*.webp`) are taken from the demo at 1440×900 @2x
   without the Demo chip; re-shoot them when the UI they show changes.
 
-Shortcuts: ⌘K commands · ⌘1–9 views · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘0 fit the board · ⌘N new window (desktop).
+Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Skills, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘0 fit the board · ⌘N new window (desktop).

@@ -19,7 +19,7 @@ use std::sync::Mutex;
 use tauri::image::Image;
 use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Manager, RunEvent, Runtime, WebviewUrl, WebviewWindowBuilder, Wry};
+use tauri::{AppHandle, Emitter, Manager, RunEvent, Runtime, WebviewUrl, WebviewWindowBuilder, Wry};
 
 /// The engine this app started, stopped when the app quits.
 struct Engine(Mutex<Option<Child>>);
@@ -52,6 +52,26 @@ fn start_engine<R: Runtime>(app: &AppHandle<R>) -> Result<Option<Child>, String>
 
 /// The menu bar icon's "needs you" line, updated by the windows (`set_attention`).
 struct Attention(Mutex<Option<MenuItem<Wry>>>);
+
+/// From anywhere on the computer: bring McBot Studio forward with ⌘K open, like a launcher.
+/// If another app already holds the combination, McBot keeps working without it.
+pub const SUMMON: &str = "CommandOrControl+Shift+Space";
+
+fn summon_plugin<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
+    use tauri_plugin_global_shortcut::ShortcutState;
+    tauri_plugin_global_shortcut::Builder::new()
+        .with_handler(|app, _shortcut, event| {
+            if event.state() == ShortcutState::Pressed {
+                // The window that comes forward (the same one `show` picks) opens ⌘K; a new one just opens.
+                let front = app.webview_windows().into_keys().next();
+                show(app);
+                if let Some(label) = front {
+                    let _ = app.emit_to(label.as_str(), "summon", ());
+                }
+            }
+        })
+        .build()
+}
 
 /// Bring a McBot window to the front, opening one if every window was closed.
 fn show<R: Runtime>(app: &AppHandle<R>) {
@@ -204,6 +224,7 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(summon_plugin())
         .manage(Engine(Mutex::new(None)))
         .manage(Attention(Mutex::new(None)))
         .manage(terminal::Terminals::default())
@@ -228,6 +249,12 @@ pub fn run() {
             handle.set_menu(menu(handle)?)?;
             if let Err(err) = tray(handle) {
                 eprintln!("mcbot: no menu bar icon: {err}");
+            }
+            {
+                use tauri_plugin_global_shortcut::GlobalShortcutExt;
+                if let Err(err) = handle.global_shortcut().register(SUMMON) {
+                    eprintln!("mcbot: {SUMMON} is taken by another app: {err}");
+                }
             }
             if let Some(main) = app.get_webview_window("main") {
                 main.set_focus()?;

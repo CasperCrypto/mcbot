@@ -13,7 +13,7 @@ import { exportFileName } from "../../board/files";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
-import type { LibrarySkill, ProfileSkill, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
@@ -649,12 +649,22 @@ const api = <A extends unknown[], R>(f: (...a: A) => R | Promise<R>) => async (.
 
 const DEMO_LIBRARY: LibrarySkill[] = [{"id":"official/creative/concept-diagrams","name":"concept-diagrams","category":"creative","description":"Generate flat, minimal educational SVG visuals as HTML.","tags":["diagrams","svg","visualization"]},{"id":"official/creative/creative-ideation","name":"creative-ideation","category":"creative","description":"Generate ideas via named methods from creative practice.","tags":["Creative","Ideation","Brainstorming"]},{"id":"official/creative/meme-generation","name":"meme-generation","category":"creative","description":"Create meme PNGs from templates with Pillow text overlay.","tags":["creative","memes","images"]},{"id":"official/creative/social-media-content-calendar","name":"social-media-content-calendar","category":"creative","description":"Plan multi-platform social campaigns: briefs to posting.","tags":["Social-Media","Content-Calendar","Publishing"]},{"id":"official/productivity/decision-questionnaire","name":"decision-questionnaire","category":"productivity","description":"Turn an unanswerable decision into a questionnaire doc.","tags":["decision","async"]},{"id":"official/productivity/live-dashboard","name":"live-dashboard","category":"productivity","description":"Build self-updating dashboards from live sources.","tags":["dashboards","reporting"]}];
 const demoInstalled: Record<string, Set<string>> = {};
+/** A few real entries of Hermes' plugin catalog (hermes/plugin-catalog); installs are simulated here. */
+const DEMO_PLUGINS: CatalogPlugin[] = [{"name": "abeyance", "title": "Abeyance", "summary": "Your Hermes cron jobs wait for you instead of guessing.", "description": "", "category": "automation", "tier": "community", "maintainer": "0xkinno", "repo": "https://github.com/0xkinno/abeyance", "version": "0.1.4", "platforms": ["linux"], "tools": 0, "hooks": 5, "needsKeys": []}, {"name": "advanced-delegation", "title": "Advanced Delegation", "summary": "Two extra delegation modes for `delegate_task`, next to the built-in default.", "description": "", "category": "tools", "tier": "official", "maintainer": "NousResearch", "repo": "https://github.com/NousResearch/hermes-official-plugins", "version": "1.1.1", "platforms": [], "tools": 0, "hooks": 0, "needsKeys": []}, {"name": "apify", "title": "Apify", "summary": "Apify, the largest marketplace of tools for AI: discover, run, and collect results from thousands of ready-to-run Actors, from the comfort of your agent, plus an Apify backend for the built-in web_search and web_extra…", "description": "", "category": "web", "tier": "verified", "maintainer": "apify", "repo": "https://github.com/apify/apify-hermes-agent-plugin", "version": "0.1.5", "platforms": [], "tools": 3, "hooks": 0, "needsKeys": ["APIFY_API_TOKEN"]}, {"name": "blender", "title": "Blender", "summary": "Official Blender Lab MCP server over stdio, pinned to upstream v1.0.3, with a Blender workflow skill.", "description": "", "category": "tools", "tier": "official", "maintainer": "NousResearch", "repo": "https://github.com/NousResearch/hermes-official-plugins", "version": "0.4.1", "platforms": ["windows", "macos", "linux"], "tools": 0, "hooks": 0, "needsKeys": []}, {"name": "camofox", "title": "camofox", "summary": "Camofox browser backend: browse with a self-hosted anti-detection Firefox (Camoufox, C++ fingerprint spoofing) through the camofox-browser REST server.", "description": "", "category": "web", "tier": "official", "maintainer": "NousResearch", "repo": "https://github.com/NousResearch/hermes-official-plugins", "version": "1.1.0", "platforms": [], "tools": 11, "hooks": 2, "needsKeys": ["CAMOFOX_URL"]}, {"name": "cua-spaces", "title": "Cua Spaces", "summary": "Cua's own plugin: runs Hermes's terminal, file and code tools inside a Cua Space, an isolated Linux, macOS or Windows machine you can watch live, as a terminal backend (`hermes config set terminal.backend cua`).", "description": "", "category": "tools", "tier": "verified", "maintainer": "trycua", "repo": "https://github.com/trycua/hermes-cua-spaces", "version": "0.4.0", "platforms": [], "tools": 0, "hooks": 0, "needsKeys": []}, {"name": "elevenlabs-music", "title": "ElevenLabs Music", "summary": "ElevenLabs Music for Hermes: describe a song or paste your lyrics and Hermes writes, generates and sends the track, 3 seconds to 10 minutes, vocals or instrumental.", "description": "", "category": "tools", "tier": "official", "maintainer": "NousResearch", "repo": "https://github.com/NousResearch/hermes-official-plugins", "version": "1.0.0", "platforms": [], "tools": 8, "hooks": 0, "needsKeys": ["ELEVENLABS_API_KEY"]}, {"name": "advisor", "title": "Advisor", "summary": "A persistent second model reviews every agent turn.", "description": "", "category": "automation", "tier": "community", "maintainer": "ljubomirj", "repo": "https://github.com/ljubomirj/hermes-advisor-plugin", "version": "1.2.0", "platforms": ["linux", "macos", "windows"], "tools": 0, "hooks": 2, "needsKeys": []}];
+const demoPlugins: Record<string, InstalledPlugin[]> = {};
+/** Skills the demo "finds" in the registries Hermes searches. */
+const DEMO_FOUND: SkillSearchResult[] = [
+  { name: "pdf", identifier: "skills-sh/anthropics/skills/pdf", source: "skills-sh", trust: "trusted", description: "Read, fill and merge PDF files." },
+  { name: "xlsx", identifier: "skills-sh/anthropics/skills/xlsx", source: "skills-sh", trust: "trusted", description: "Make and edit spreadsheets with formulas and charts." },
+  { name: "brand-voice", identifier: "clawhub/brand-voice", source: "clawhub", trust: "community", description: "Write in a company's tone, from a few samples." },
+];
 /** In the demo every agent has taught itself one skill during an earlier (simulated) run. */
 const demoProfileSkills = (profile: string): ProfileSkill[] => [
   { name: "read-link-lists", path: "skills/read-link-lists/SKILL.md", category: null, description: "Open each link in a pasted list and summarise it in one line.", origin: "learned", modified: new Date(Date.now() - 2 * 86_400_000).toISOString() },
   ...[...(demoInstalled[profile] ?? [])].map((name): ProfileSkill => {
     const lib = DEMO_LIBRARY.find((l) => l.name === name);
-    return { name, path: `skills/${lib?.category ?? "misc"}/${name}/SKILL.md`, category: lib?.category ?? null, description: lib?.description ?? "", origin: "library", modified: new Date().toISOString() };
+    const found = DEMO_FOUND.find((f) => f.name === name);
+    return { name, path: `skills/${lib?.category ?? "added"}/${name}/SKILL.md`, category: lib?.category ?? "added", description: lib?.description ?? found?.description ?? "", origin: "library", modified: new Date().toISOString() };
   }),
 ];
 
@@ -815,6 +825,26 @@ export const demoEngine = {
     const set = (demoInstalled[profile] ??= new Set());
     set.add(id.split("/").pop()!);
     return { installed: [...set].sort() };
+  }),
+  searchSkills: api((q: string): { results: SkillSearchResult[] } => {
+    const w = q.trim().toLowerCase();
+    return { results: DEMO_FOUND.filter((r) => `${r.name} ${r.description}`.toLowerCase().includes(w)) };
+  }),
+  addSkill: api((profile: string, source: string): { installed: string[]; skills: ProfileSkill[]; from: string } => {
+    const name = source.replace(/\/SKILL\.md$/i, "").replace(/\/+$/, "").split("/").pop() || "skill";
+    (demoInstalled[profile] ??= new Set()).add(name);
+    return { installed: [...demoInstalled[profile]!].sort(), skills: demoProfileSkills(profile), from: source };
+  }),
+  pluginCatalog: api((): { plugins: CatalogPlugin[] } => ({ plugins: DEMO_PLUGINS })),
+  plugins: api((profile: string): { compiled: boolean; installed: InstalledPlugin[] } => ({ compiled: true, installed: demoPlugins[profile] ?? [] })),
+  pluginAct: api((profile: string, name: string, act: "install" | "enable" | "disable" | "remove"): { compiled: boolean; installed: InstalledPlugin[] } => {
+    const list = (demoPlugins[profile] ??= []);
+    const at = list.findIndex((p) => p.name === name);
+    const entry = DEMO_PLUGINS.find((p) => p.name === name);
+    if (act === "install" && at < 0) list.push({ name, enabled: true, version: entry?.version ?? "", summary: entry?.summary ?? "", source: `catalog:${entry?.tier ?? "community"}` });
+    if ((act === "enable" || act === "disable") && at >= 0) list[at]!.enabled = act === "enable";
+    if (act === "remove" && at >= 0) list.splice(at, 1);
+    return { compiled: true, installed: [...list] };
   }),
   uninstallSkill: api((profile: string, name: string): { installed: string[]; skills: ProfileSkill[] } => {
     demoInstalled[profile]?.delete(name);

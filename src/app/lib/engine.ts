@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { ProfileSkill, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
@@ -105,6 +105,11 @@ const http = {
   actOnSchedule: (boardId: string, profile: string, id: string, action: "pause" | "resume" | "run" | "remove") => call<AgentSchedules>("POST", "/api/schedules/act", { boardId, profile, id, action }),
   skills: (profile?: string) => call<SkillsView>("GET", `/api/skills${profile ? `?profile=${encodeURIComponent(profile)}` : ""}`),
   installSkill: (profile: string, id: string) => call<{ installed: string[] }>("POST", "/api/skills/install", { profile, id }),
+  searchSkills: (q: string) => call<{ results: SkillSearchResult[] }>("GET", `/api/skills/search?q=${encodeURIComponent(q)}`),
+  addSkill: (profile: string, source: string) => call<{ installed: string[]; skills: ProfileSkill[]; from: string }>("POST", "/api/skills/add", { profile, source }),
+  pluginCatalog: () => call<{ plugins: CatalogPlugin[] }>("GET", "/api/plugins/catalog"),
+  plugins: (profile: string) => call<{ compiled: boolean; installed: InstalledPlugin[] }>("GET", `/api/plugins?profile=${encodeURIComponent(profile)}`),
+  pluginAct: (profile: string, name: string, act: "install" | "enable" | "disable" | "remove") => call<{ compiled: boolean; installed: InstalledPlugin[] }>("POST", "/api/plugins/act", { profile, name, act }),
   uninstallSkill: (profile: string, name: string) => call<{ installed: string[]; skills: ProfileSkill[] }>("POST", "/api/skills/uninstall", { profile, name }),
   updateSkill: (profile: string, name: string) => call<{ installed: string[]; skills: ProfileSkill[] }>("POST", "/api/skills/update", { profile, name }),
   signIn: (profile: string, name: string) => call<{ started: boolean }>("POST", "/api/connectors/login", { profile, name }),

@@ -20,7 +20,7 @@ import { SetupAssistant } from "./setup/SetupAssistant";
 import { BrandMark, TitleBar } from "./shell/TitleBar";
 import { BoardProvider, useBoard } from "./state/board";
 import { useSignals } from "./state/signals";
-import { inApp } from "./lib/desktop";
+import { inApp, onSummon } from "./lib/desktop";
 import { useApp } from "./state/store";
 import { useTasks } from "./views/TasksView";
 import { AgentsView } from "./views/AgentsView";
@@ -124,6 +124,14 @@ function BoardEffects() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [boardId]);
+
+  // The launcher shortcut from anywhere: this window comes forward with ⌘K open.
+  useEffect(() => {
+    let off: (() => void) | null = null;
+    let live = true;
+    void onSummon(() => useApp.getState().setPalette(true)).then((f) => { if (live) off = f; else f(); });
+    return () => { live = false; off?.(); };
+  }, []);
   return null;
 }
 

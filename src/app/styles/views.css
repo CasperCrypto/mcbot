@@ -283,3 +283,13 @@
 .switch[aria-checked="true"] span { transform: translateX(16px); }
 .switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .skills-page .catalog-search { margin: 0; }
+
+/* The agent's screen while it uses the computer (AgentsView Screen). */
+.screen { display: grid; gap: 6px; max-width: 560px; padding: 8px; border-radius: var(--r-lg); background: var(--bg-card); border: 1px solid var(--line); }
+.screen-head { display: flex; align-items: center; gap: 8px; font-size: 12px; min-width: 0; }
+.screen-live i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 4px; animation: live-dot 1.2s ease-in-out infinite; }
+@keyframes live-dot { 50% { opacity: 0.25; } }
+.screen .made { max-width: none; }
+.screen .made img { width: 100%; height: auto; border-radius: var(--r-md); }
+.screen input[type="range"] { width: 100%; accent-color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .screen-live i { animation: none; } }
