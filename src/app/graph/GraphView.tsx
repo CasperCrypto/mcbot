@@ -28,7 +28,8 @@ import { AgentFace } from "../ui";
 import { CompileSheet } from "./CompileSheet";
 import { Cursors } from "./Cursors";
 import { HermesView } from "./HermesView";
-import { newChannel, newId, newMaker, newModel, newTool } from "./defaults";
+import { duplicateNode, newChannel, newId, newMaker, newModel, newTool } from "./defaults";
+import { ContextMenu, type MenuAt } from "./ContextMenu";
 import { Inspector } from "./Inspector";
 import { LiveFiles } from "./LiveFiles";
 import { useLingering, usePresence } from "../lib/presence";
@@ -275,6 +276,23 @@ function Canvas() {
     });
   }, [kindOf]);
 
+  // Right-click: add a block where you clicked, or a block's own actions (ContextMenu.tsx).
+  const [menu, setMenu] = useState<MenuAt | null>(null);
+  // ⌘D duplicates the selected block beside it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "d" || (e.target as HTMLElement | null)?.closest("input, textarea, [contenteditable='true'], .monaco-editor")) return;
+      const node = graph.nodes.find((n) => n.id === useApp.getState().selectedNodeId);
+      if (!node) return;
+      e.preventDefault();
+      const copy = duplicateNode(graph, node);
+      addNode(doc, copy);
+      select(copy.id);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [graph, doc, select]);
+
   // Fit the whole board into the room left beside the live files panel (⌘0, and when it opens or closes).
   const fit = useCallback(() => void flow.fitView({ padding: liveOpen ? { left: "470px", top: "70px", right: "50px", bottom: "110px" } : 0.25, maxZoom: 1, duration: 400 }), [flow, liveOpen]);
   const firstFit = useRef(true);
@@ -330,7 +348,9 @@ function Canvas() {
         onConnectEnd={onConnectEnd as never}
         isValidConnection={isValidConnection}
         connectionMode={ConnectionMode.Loose}
-        onPaneClick={() => select(null)}
+        onPaneClick={() => { select(null); setMenu(null); }}
+        onPaneContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, flow: flow.screenToFlowPosition({ x: e.clientX, y: e.clientY }), nodeId: null }); }}
+        onNodeContextMenu={(e, n) => { e.preventDefault(); if (n.id.startsWith("note:")) return; select(n.id); setMenu({ x: e.clientX, y: e.clientY, flow: n.position, nodeId: n.id }); }}
         fitView
         fitViewOptions={{ padding: 0.35, maxZoom: 1 }}
         minZoom={0.2}
@@ -379,6 +399,7 @@ function Canvas() {
           <FileCode2 size={13} /> Files{drift ? <span className="chip warn">{drift}</span> : null}
         </button>
       )}
+      {menu && <ContextMenu at={menu} onClose={() => setMenu(null)} onFit={fit} />}
       {live.mounted && <LiveFiles closing={live.closing} onClose={() => useApp.getState().setLiveFilesOpen(false)} />}
       {inspecting.value && <Inspector key={inspecting.value.id} node={inspecting.value} closing={inspecting.closing} issues={issuesByNode.get(inspecting.value.id) ?? []} />}
       {compiling.mounted && <CompileSheet wide={!selected} closing={compiling.closing} />}

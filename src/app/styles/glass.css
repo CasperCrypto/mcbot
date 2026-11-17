@@ -370,3 +370,11 @@ input.input::placeholder { color: var(--text-4); }
 .skeleton { display: block; height: 10px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); animation: skeleton-breathe 1.4s ease-in-out infinite; }
 @keyframes skeleton-breathe { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+/* Right-click menu on the board (graph/ContextMenu.tsx): a macOS menu at the pointer. */
+.context-menu { min-width: 210px; transform-origin: 0 0; }
+.menu .menu-keys { color: var(--text-4); font-size: 11.5px; letter-spacing: 0.04em; }
+.menu button:hover .menu-keys { color: rgba(255, 255, 255, 0.75); }
+.menu button.danger { color: var(--fail); }
+.menu button.danger:hover { background: var(--fail); color: #fff; }
+.menu button:active { transform: scale(0.985); }

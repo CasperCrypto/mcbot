@@ -1,5 +1,5 @@
 import { Check, ChevronDown, Download, FolderOpen, Hammer, MessagesSquare, LoaderCircle, Plus, Search, Upload, Users } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { resolveGraph } from "../../compile";
 import { compileBoard, exportBoardFile, importBoardFile, openHermesSetup } from "../actions";
 import { DEMO, REMOTE } from "../lib/engine";
@@ -9,6 +9,7 @@ import { Logo } from "../faces/FoodFace";
 import { Kbd, PersonFace } from "../ui";
 import { Island } from "./Island";
 import { unreadCount } from "./TeamPanel";
+import { useDismiss } from "../lib/presence";
 
 /** The McBot logo: the gray glass burger. */
 export function BrandMark({ size = 22 }: { size?: number }) {
@@ -24,6 +25,10 @@ function BoardMenu() {
   const btn = useRef<HTMLButtonElement>(null);
   const current = boards.find((b) => b.id === boardId);
   const r = btn.current?.getBoundingClientRect();
+  // Esc closes it; a click elsewhere lands on its scrim.
+  const menu = useRef<HTMLDivElement>(null);
+  const hide = useCallback(() => setOpen(false), []);
+  useDismiss(open, hide, menu, { outside: false });
   return (
     <>
       <button ref={btn} className="board-btn" onClick={() => setOpen(!open)} aria-haspopup="menu" aria-expanded={open} data-testid="board-menu">
@@ -32,7 +37,7 @@ function BoardMenu() {
       {open && (
         <>
           <div className="scrim" onClick={() => setOpen(false)} />
-          <div className="menu" role="menu" style={{ top: (r?.bottom ?? 40) + 6, left: r?.left ?? 0 }}>
+          <div ref={menu} className="menu" role="menu" style={{ top: (r?.bottom ?? 40) + 6, left: r?.left ?? 0 }}>
             {boards.map((b) => (
               <button key={b.id} role="menuitem" onClick={() => { setBoard(b.id); setOpen(false); }}>
                 <span className="grow ellipsis">{b.name || b.id}</span>
