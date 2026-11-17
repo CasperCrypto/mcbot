@@ -258,7 +258,6 @@ footer .spacer { flex: 1; }
 
 <main id="top">
   <div class="hero">
-    <div class="aura" data-aura aria-hidden="true"></div>
     <div class="bot" data-bot tabindex="0" role="button" aria-label="McBot, a glass burger. Poke it.">
       <div class="bot-float">
         <div class="bot-tilt">
@@ -269,7 +268,6 @@ footer .spacer { flex: 1; }
       <div class="bot-shadow"></div>
     </div>
     <div class="wrap">
-      <a class="badge" href="https://github.com/CasperCrypto/mcbot" data-gh><span class="dot"></span>Free and open source<span class="chev">›</span></a>
       <h1>Draw your AI team. <span class="dim">Run it for real.</span></h1>
       <p class="lede">McBot Studio turns a graph of agents, models and tools into working agents on your computer. The same graph shows what every agent is doing, remembers and costs.</p>
       <div class="ctas">
@@ -285,7 +283,7 @@ footer .spacer { flex: 1; }
         <div class="mac-bar">
           <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
           <span class="grow"></span>
-          <div class="isl" data-s="rest"><span class="dot"></span><span class="txt">Support desk</span></div>
+          <div class="isl" data-s="rest"><span class="txt">Support desk</span></div>
           <button class="tb primary" type="button" data-compile tabindex="-1">Compile</button>
         </div>
         <div class="mac-body">
@@ -345,7 +343,7 @@ footer .spacer { flex: 1; }
         <button class="tab" role="tab" type="button" data-tab="watch" aria-selected="false"><b>4. Watch</b><small>What each agent remembers, and what it costs, per day.</small><i></i></button>
       </div>
       <div class="mac" role="tabpanel">
-        <div class="mac-bar"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span><div class="isl" data-s="rest"><span class="dot"></span><span class="txt">Draw</span></div></div>
+        <div class="mac-bar"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span><div class="isl" data-s="rest"><span class="txt">Draw</span></div></div>
         <div class="mac-body">
           <div class="scene" data-scene="draw">
               <div class="lib"><h4>Parts</h4>
@@ -389,7 +387,6 @@ footer .spacer { flex: 1; }
       </div>
     </div>
     <div class="pal-wrap">
-      <div class="aura sm soft" data-aura aria-hidden="true"></div>
       <div class="pal" data-pal>
         <div class="pin"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search commands and conversations" aria-label="Try the command bar" spellcheck="false" autocomplete="off"></div>
         <div class="list" role="listbox"></div>
@@ -436,17 +433,17 @@ footer .spacer { flex: 1; }
       <article class="bc" data-play data-reveal>
         <h3>Runs</h3><p>Every step, tool call and token, laid out as it happened.</p>
         <div class="mini"><div class="seq">
-          <div class="st" style="--i:0"><i class="d"></i><span>Prompt</span><em>Any open tickets about an invoice?</em></div>
-          <div class="st" style="--i:1"><i class="d t"></i><span>list_directory</span><em>301 ms</em></div>
-          <div class="st" style="--i:2"><i class="d t"></i><span>read_file</span><em>118 ms</em></div>
-          <div class="st" style="--i:3"><i class="d ok"></i><span>Answer</span><em>Billing tickets go to Sam.</em></div>
+          <div class="st" style="--i:0"><span>Prompt</span><em>Any open tickets about an invoice?</em></div>
+          <div class="st" style="--i:1"><span>list_directory</span><em>301 ms</em></div>
+          <div class="st" style="--i:2"><span>read_file</span><em>118 ms</em></div>
+          <div class="st" style="--i:3"><span>Answer</span><em>Billing tickets go to Sam.</em></div>
           <div class="st sum" style="--i:4"><span>1.8k tokens</span><em>$0.0057</em></div>
         </div></div>
       </article>
       <article class="bc" data-play data-reveal>
         <h3>Memory</h3><p>What each agent has learned. Edit it in place.</p>
         <div class="mini"><div class="seq mem2">
-          <div class="st chip" style="--i:0"><i class="d ok"></i><span>Triage desk</span></div>
+          <div class="st chip" style="--i:0"><span>Triage desk</span></div>
           <div class="st ind" style="--i:1"><span>MEMORY.md</span><em>4% full</em></div>
           <div class="st ind2" style="--i:2"><span>Billing goes to Sam; outages to on-call</span></div>
           <div class="st ind2" style="--i:3"><span>Acme: first reply within 4 hours</span></div>
@@ -502,10 +499,10 @@ footer .spacer { flex: 1; }
       <article class="bc" data-play data-reveal>
         <h3>Local first</h3><p>Run on Ollama, LM Studio, vLLM or any OpenAI-compatible API.</p>
         <div class="mini srv">
-          <div class="tr" style="--i:0"><i class="d ok"></i><span>Ollama</span><em>qwen3:8b</em></div>
-          <div class="tr" style="--i:1"><i class="d ok"></i><span>LM Studio</span><em>ready</em></div>
-          <div class="tr" style="--i:2"><i class="d"></i><span>vLLM</span><em>not running</em></div>
-          <div class="tr" style="--i:3"><i class="d ok"></i><span>OpenRouter</span><em>key saved</em></div>
+          <div class="tr" style="--i:0"><span>Ollama</span><em>qwen3:8b</em></div>
+          <div class="tr" style="--i:1"><span>LM Studio</span><em>ready</em></div>
+          <div class="tr" style="--i:2"><span>vLLM</span><em>not running</em></div>
+          <div class="tr" style="--i:3"><span>OpenRouter</span><em>key saved</em></div>
         </div>
       </article>
     </div>
@@ -561,7 +558,6 @@ footer .spacer { flex: 1; }
 
   <div class="wrap">
     <div class="closing">
-      <div class="aura sm" data-aura aria-hidden="true"></div>
       <div class="parade" data-parade aria-hidden="true"></div>
       <h2>Open source. Free to use.</h2>
       <p class="section-lede" style="margin-left: auto; margin-right: auto">Read the code, run it yourself, make it better.</p>

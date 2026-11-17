@@ -476,24 +476,10 @@
   for (const c of cards) io.observe(c);
 })();
 
-/* ---------- aura light, spotlight cards, reveals, the keys ---------- */
+/* ---------- reveals and the keys ---------- */
 (() => {
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // the aura: soft holographic ribbons of light, built once for each [data-aura]
-  for (const el of $$("[data-aura]")) el.innerHTML = '<i class="blob l"></i><i class="blob r"></i><i class="rib a"></i><i class="rib b"></i><i class="rib c"></i>';
-  // and it leans a little toward the pointer
-  const heroAura = $$(".hero .aura")[0];
-  if (heroAura && !reduce) {
-    let tx = 0; let cx = 0;
-    addEventListener("pointermove", (e) => { tx = (e.clientX / innerWidth - 0.5) * 60; }, { passive: true });
-    const tick = () => { cx += (tx - cx) * 0.05; heroAura.style.setProperty("--px", `${cx.toFixed(1)}px`); requestAnimationFrame(tick); };
-    requestAnimationFrame(tick);
-  }
-  // spotlight on cards
-  for (const c of $$(".bc, .values > div, .os")) {
-    c.addEventListener("pointermove", (e) => { const r = c.getBoundingClientRect(); c.style.setProperty("--mx", `${e.clientX - r.left}px`); c.style.setProperty("--my", `${e.clientY - r.top}px`); }, { passive: true });
-  }
   // reveals
   const rv = $$("[data-reveal]");
   if (!("IntersectionObserver" in window) || reduce) rv.forEach((e) => e.classList.add("in"));

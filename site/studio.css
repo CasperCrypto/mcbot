@@ -45,7 +45,7 @@
 .cur.tap svg { transform: scale(0.82); }
 
 /* ---------- the board ---------- */
-.cv { position: absolute; inset: 0; background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px); background-size: 22px 22px; transition: right 0.6s var(--smooth); }
+.cv { position: absolute; inset: 0; transition: right 0.6s var(--smooth); }
 .cv.shift { right: 38%; }
 .cv svg.w { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .cv svg.w path { fill: none; stroke: rgba(255, 255, 255, 0.22); stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 0.7s var(--smooth); }
@@ -319,44 +319,19 @@ section.block { padding-top: 148px; }
 .st em { flex: 0 1 auto; }
 @media (max-width: 860px) { .values.wrap { margin-top: 48px; } }
 
-/* =====================================================================
-   Aura: soft holographic light washing across the black, like light through glass. A few big
-   blurred ribbons of colour that drift slowly. Decorative only (pointer-events: none). The one place the
-   site uses gradients; the app stays flat.
-   ===================================================================== */
 .hero { position: relative; }
-.hero > *:not(.aura) { position: relative; z-index: 1; }
-.aura { --px: 0px; position: absolute; left: 0; right: 0; top: 0; height: 980px; z-index: 0; pointer-events: none; overflow: hidden; }
-.aura i { position: absolute; display: block; pointer-events: none; will-change: transform; margin-left: var(--px); }
-.aura .rib { left: -15%; width: 130%; height: 300px; filter: blur(64px); opacity: 0.5; background: linear-gradient(90deg, transparent 0%, #ff7ad9 16%, #ffd479 34%, #86ffc2 52%, #7ad5ff 70%, #b49bff 86%, transparent 100%); animation: drift 22s ease-in-out infinite alternate; }
-.aura .rib.a { top: 90px; transform: rotate(-13deg); }
-.aura .rib.b { top: 470px; height: 240px; opacity: 0.34; transform: rotate(9deg); background: linear-gradient(90deg, transparent 0%, #7ad5ff 14%, #b49bff 32%, #ff7ad9 50%, #ffd479 68%, #86ffc2 84%, transparent 100%); animation-duration: 28s; animation-direction: alternate-reverse; }
-.aura .rib.c { top: 280px; height: 180px; opacity: 0.28; transform: rotate(-4deg); filter: blur(80px); background: linear-gradient(90deg, transparent, #ffffff 40%, #ffd9f3 60%, transparent); animation-duration: 34s; }
-.aura .blob { width: 560px; height: 560px; border-radius: 50%; filter: blur(110px); opacity: 0.3; animation: float 26s ease-in-out infinite alternate; }
-.aura .blob.l { left: -160px; top: 180px; background: #ff6bd0; }
-.aura .blob.r { right: -180px; top: 40px; background: #5ac8ff; animation-delay: -9s; }
-@keyframes drift { from { translate: -5% 0; } to { translate: 5% 3%; } }
-@keyframes float { from { translate: 0 -30px; } to { translate: 40px 50px; } }
-.aura.sm { height: 100%; }
-.aura.sm .rib { height: 150px; filter: blur(48px); }
-.aura.sm .rib.a { top: 8%; } .aura.sm .rib.b { top: 52%; height: 130px; } .aura.sm .rib.c { top: 30%; }
-.aura.sm .blob { width: 320px; height: 320px; filter: blur(80px); }
-.aura.sm .blob.l { top: 10%; left: -80px; } .aura.sm .blob.r { top: 20%; right: -90px; }
-.aura.soft { opacity: 0.6; }
-.closing, .pal-wrap { position: relative; overflow: hidden; }
-.closing > *:not(.aura):not(.parade), .pal-wrap > *:not(.aura) { position: relative; z-index: 1; }
-.closing { overflow: visible; }
-.closing .aura { border-radius: var(--r-lg); overflow: hidden; }
+.hero > * { position: relative; z-index: 1; }
+.closing, .pal-wrap { position: relative; }
 
 /* ---------- raycast-class finish: bigger type, glossy keys, spotlight cards ---------- */
 h1 { font-size: clamp(44px, 7.6vw, 90px); letter-spacing: -0.04em; line-height: 1.02; }
 h2 { letter-spacing: -0.03em; }
 .btn { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); }
-.btn.primary, .btn.light { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 40px rgba(255, 255, 255, 0.12); }
+.btn.primary, .btn.light { box-shadow: none; }
 .nav { background: rgba(0, 0, 0, 0.55); }
 
 .keycaps { margin: 34px auto 0; display: flex; justify-content: center; gap: 12px; perspective: 700px; }
-.keycap { position: relative; display: grid; place-items: center; width: 88px; height: 88px; border-radius: 20px; background: linear-gradient(#303034, #1c1c1f); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 7px 0 #0a0a0b, 0 18px 30px rgba(0, 0, 0, 0.65); transition: transform 0.14s var(--smooth), box-shadow 0.14s var(--smooth); }
+.keycap { position: relative; display: grid; place-items: center; width: 88px; height: 88px; border-radius: 20px; background: #232326; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 7px 0 #0a0a0b, 0 18px 30px rgba(0, 0, 0, 0.65); transition: transform 0.14s var(--smooth), box-shadow 0.14s var(--smooth); }
 .keycap.wide { width: 200px; }
 .keycap i { font: 500 30px/1 var(--display); font-style: normal; color: var(--text); }
 .keycap.wide i { font-size: 20px; letter-spacing: 0.02em; }
@@ -366,9 +341,7 @@ h2 { letter-spacing: -0.03em; }
 
 /* cards: a hairline of light on top and a spotlight that follows the pointer */
 .bc, .values > div, .os { position: relative; }
-.bc::before, .values > div::before { content: ""; position: absolute; top: 0; left: 12%; right: 12%; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent); pointer-events: none; z-index: 2; }
-.bc::after, .values > div::after, .os::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.08), transparent 65%); opacity: 0; transition: opacity 0.35s; pointer-events: none; }
-.bc:hover::after, .values > div:hover::after, .os:hover::after { opacity: 1; }
+.bc::before, .values > div::before { content: ""; position: absolute; top: 0; left: 14%; right: 14%; height: 1px; background: rgba(255, 255, 255, 0.14); pointer-events: none; z-index: 2; }
 
 /* reveal: sections rise in once as they arrive */
 .js [data-reveal] { opacity: 0; transform: translateY(28px); transition: opacity 0.8s var(--smooth), transform 0.9s var(--smooth); }
@@ -390,3 +363,34 @@ h2 { letter-spacing: -0.03em; }
 .closing .aura { opacity: 0.8; }
 .closing .section-lede { color: rgba(255, 255, 255, 0.88); text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45); }
 .closing h2 { text-shadow: 0 1px 18px rgba(0, 0, 0, 0.35); }
+
+
+/* ---------- Raycast finish: near-black, hairlines, floating nav, big tight type. No gradients, no dots. ---------- */
+:root { --surface: #0e0e0f; --surface-2: #151516; --hair: rgba(255, 255, 255, 0.07); }
+body { background: #000; }
+.nav { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom: 0 !important; pointer-events: none; }
+.nav-pill { pointer-events: auto; margin-top: 12px; max-width: 1000px; height: 54px; border-radius: 18px; background: rgba(10, 10, 11, 0.82); backdrop-filter: saturate(180%) blur(22px); -webkit-backdrop-filter: saturate(180%) blur(22px); box-shadow: inset 0 0 0 1px var(--hair); padding-left: 18px; padding-right: 10px; }
+.bc, .values > div, .os, .step, .card, .view { background: var(--surface); box-shadow: inset 0 0 0 1px var(--hair); }
+.os.current { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22); }
+.mini, .cost .nums > div, .st, .tr { box-shadow: none; }
+.mini { background: #080809; box-shadow: inset 0 0 0 1px var(--hair); }
+.st, .tr { background: #131314; }
+.crew { background: var(--surface); box-shadow: inset 0 0 0 1px var(--hair); }
+.crew::before { display: none; }
+.pal-wrap { background: var(--surface); box-shadow: inset 0 0 0 1px var(--hair); }
+.closing { background: var(--surface); box-shadow: inset 0 0 0 1px var(--hair); }
+.mac, .pal { box-shadow: 0 0 0 1px var(--hair), 0 40px 100px rgba(0, 0, 0, 0.7); }
+.eyebrow { color: var(--text-2); text-transform: none; letter-spacing: 0.01em; font-weight: 500; }
+.tab[aria-selected="true"] { background: var(--surface); box-shadow: inset 0 0 0 1px var(--hair); }
+.btn { background: #151516; box-shadow: inset 0 0 0 1px var(--hair); }
+.btn:hover { background: #1c1c1e; }
+.btn.primary, .btn.light { background: #f5f5f7; color: #000; box-shadow: none; }
+.btn.primary:hover, .btn.light:hover { background: #fff; }
+.works { border-top: 1px solid var(--hair); margin-top: 72px; }
+/* every status dot goes: state is said in words */
+.isl .dot, .pill .top .dot, .crew-bot b::before, .mini .d, .pal .foot .b::before { display: none !important; }
+.isl, .pill .top { gap: 0; }
+.crew-bot b { padding-left: 9px; }
+.pal .foot .b { gap: 0; }
+.bot-shadow { display: none; }
+.desk { background: #121214; } .desk .menubar { background: rgba(0, 0, 0, 0.5); }
