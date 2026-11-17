@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Download, FolderOpen, Hammer, MessagesSquare, LoaderCircle, Plus, Search, Upload, Users } from "lucide-react";
+import { Check, ChevronDown, Download, FolderOpen, Hammer, LoaderCircle, MessagesSquare, Plus, Search, Stethoscope, Upload, Users } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { resolveGraph } from "../../compile";
 import { compileBoard, exportBoardFile, importBoardFile, openHermesSetup } from "../actions";
@@ -10,6 +10,7 @@ import { Kbd, PersonFace } from "../ui";
 import { Island } from "./Island";
 import { unreadCount } from "./TeamPanel";
 import { useDismiss } from "../lib/presence";
+import { useDoctor } from "./DoctorSheet";
 
 /** The McBot logo: the gray glass burger. */
 export function BrandMark({ size = 22 }: { size?: number }) {
@@ -56,6 +57,21 @@ function BoardMenu() {
   );
 }
 
+/** The harness doctor: a stethoscope that counts what is wrong (red: it won't run, yellow: worth fixing). */
+function DoctorButton() {
+  const findings = useDoctor();
+  const errors = findings.filter((f) => f.level === "error").length;
+  const warns = findings.filter((f) => f.level === "warn").length;
+  const n = errors || warns;
+  return (
+    <button className="icon-btn doctor-btn" onClick={() => useApp.getState().setDoctorOpen(true)} data-testid="doctor-open" aria-label="Check the harness"
+      data-tip={findings.length ? `${findings.length} thing${findings.length > 1 ? "s" : ""} to look at` : "Harness checked: all good"} data-tip-side="bottom">
+      <Stethoscope size={15} />
+      {n > 0 && <span className={`doctor-count ${errors ? "fail" : "warn"}`} data-testid="doctor-count">{n}</span>}
+    </button>
+  );
+}
+
 export function TitleBar() {
   const { graph, peers, boardId } = useBoard();
   const identity = useApp((s) => s.identity);
@@ -90,6 +106,7 @@ export function TitleBar() {
       <button className="search-pill" onClick={() => setPalette(true)} data-testid="open-palette">
         <Search size={14} /> <span className="search-label">Search</span> <Kbd>⌘K</Kbd>
       </button>
+      <DoctorButton />
       <button
         className="btn primary" onClick={() => void compileBoard(boardId)} disabled={busy || graph.nodes.length === 0} data-testid="compile"
         data-tip={errors ? `${errors} problem${errors > 1 ? "s" : ""} on the board` : drift ? `${drift} file${drift > 1 ? "s" : ""} out of date · ⌘S` : "Up to date · ⌘S"} data-tip-side="bottom"

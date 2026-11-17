@@ -283,6 +283,35 @@ function Canvas() {
 
   // Right-click: add a block where you clicked, or a block's own actions (ContextMenu.tsx).
   const [menu, setMenu] = useState<MenuAt | null>(null);
+  // Building with the keyboard: Tab / ⇧Tab walk the blocks (the focused one is selected, its
+  // inspector opens), arrows nudge it (React Flow), F2 or Enter names it, ⌘D duplicates it.
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return undefined;
+    const onFocus = (e: FocusEvent) => {
+      const node = (e.target as HTMLElement | null)?.closest?.(".react-flow__node") as HTMLElement | null;
+      const id = node?.dataset.id;
+      if (!id || id.startsWith("note:") || !node!.matches(":focus-visible")) return;
+      if (useApp.getState().selectedNodeId !== id) select(id);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "F2" && e.key !== "Enter") return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest("input, textarea, select, button, [contenteditable='true']") && !t.closest(".react-flow__node")) return;
+      const title = document.querySelector<HTMLInputElement>('[data-testid="inspector-title"]');
+      if (!title || !useApp.getState().selectedNodeId) return;
+      e.preventDefault();
+      title.focus();
+      title.select();
+    };
+    el.addEventListener("focusin", onFocus);
+    el.addEventListener("keydown", onKey);
+    return () => {
+      el.removeEventListener("focusin", onFocus);
+      el.removeEventListener("keydown", onKey);
+    };
+  }, [select]);
+
   // ⌘D duplicates the selected block beside it.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

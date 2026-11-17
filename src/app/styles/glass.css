@@ -384,3 +384,19 @@ input.input::placeholder { color: var(--text-4); }
 .react-flow__edge-text { fill: var(--text-2); font-size: 10.5px; font-weight: 500; letter-spacing: 0.01em; }
 .react-flow__edge-textwrapper { animation: fade-in var(--t) var(--ease) both; }
 @media (prefers-reduced-motion: reduce) { .react-flow__edge-textwrapper { animation: none; } }
+
+/* Harness doctor (shell/DoctorSheet.tsx). */
+.doctor-btn { position: relative; width: 30px; height: 30px; }
+.doctor-count { position: absolute; top: 1px; right: 0; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px; font-size: 9.5px; font-weight: 700; display: grid; place-items: center; color: #fff; box-shadow: 0 0 0 2px var(--bg-chrome); animation: tick-in var(--t-spring) var(--spring-bouncy) both; }
+.doctor-count.fail { background: var(--fail); }
+.doctor-count.warn { background: var(--warn); color: #000; }
+.doctor-list { display: grid; gap: 2px; padding: 6px; overflow: auto; max-height: min(60vh, 520px); }
+.doctor-row { display: flex; align-items: center; gap: 12px; padding: 10px 10px; border-radius: var(--r-md); animation: row-in var(--t-slow) var(--ease) both; }
+.doctor-row:hover { background: var(--mat-hover); }
+.doctor-row small { font-size: 12px; }
+.doctor-icon { display: grid; place-items: center; flex: none; }
+.doctor-row.error .doctor-icon { color: var(--fail); }
+.doctor-row.warn .doctor-icon { color: var(--warn); }
+.doctor-row.tip .doctor-icon { color: var(--text-3); }
+.doctor-ok { display: grid; justify-items: center; gap: 10px; padding: 34px 24px 40px; text-align: center; color: var(--text-2); }
+.doctor-ok svg { color: var(--ok); }

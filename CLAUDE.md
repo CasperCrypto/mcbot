@@ -292,6 +292,14 @@ Change them additively; a breaking change bumps the version.
   to `body` because the view animates with a transform) adds a block where you clicked, or opens
   a block's actions: Open, Chat, Its files, Duplicate (⌘D, `duplicateNode`: new id, free name,
   no wires), Delete.
+- **Harness doctor** (`graph/doctor.ts`, pure and tested; `shell/DoctorSheet.tsx`): the stethoscope
+  in the title bar counts what is wrong (red: it won't run, yellow: runs badly or unseen) and its
+  sheet lists every finding with one fix: compile errors, agents without a model, unsaved keys of
+  models in use, silent local servers, chat apps nobody may message, blocks wired to no agent
+  (Remove, undoable), unpriced cloud models, paid agents with no daily budget, files that differ
+  from disk, an engine not ready. ⌘K "Check the harness".
+- **Keyboard:** Tab / ⇧Tab walk the blocks (the focused block is selected), arrows nudge, F2 or
+  Enter names it, ⌘D duplicates, ⌫ deletes, Esc deselects.
 - **Compile** says how it went in a notice (with "Fix" on the first block with a problem); the
   compile sheet (files and diffs) opens only when asked (the notice's "Files", ⌘K → Compiled files).
 - **Rich answers** (`src/app/chat/rich.ts`, `RichText.tsx`): an agent's answer is drawn from
