@@ -1,4 +1,5 @@
 import { DEMO } from "./engine";
+import { ISLAND_ACT, ISLAND_READY, ISLAND_STATE, type IslandAct, type IslandState } from "./islandBridge";
 
 /**
  * The desktop shell's signals: the menu bar icon's "needs you" count and system notifications.
@@ -68,3 +69,32 @@ export const page = {
     return getCurrentWindow().listen<{ url: string; loading: boolean }>("browser:url", (e) => fn(e.payload.url, e.payload.loading));
   },
 };
+
+/** The floating island (src-tauri `island`): the main window sends its summary and obeys its buttons. */
+export async function islandBridge(getState: () => IslandState, onAct: (a: IslandAct) => void): Promise<{ push: () => void; stop: () => void }> {
+  if (!inApp() || getCurrentLabel() !== "main") return { push: () => undefined, stop: () => undefined };
+  const { listen, emit } = await import("@tauri-apps/api/event");
+  const push = () => void emit(ISLAND_STATE, getState());
+  const a = await listen<IslandAct>(ISLAND_ACT, (e) => onAct(e.payload));
+  const r = await listen(ISLAND_READY, push);
+  push();
+  return { push, stop: () => { a(); r(); } };
+}
+export async function setIslandActive(active: boolean): Promise<void> {
+  if (!inApp()) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("island_active", { active }).catch(() => undefined);
+}
+export async function toggleApp(): Promise<void> {
+  if (!inApp()) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("island_toggle_app").catch(() => undefined);
+}
+function getCurrentLabel(): string | undefined {
+  return (window as unknown as { __TAURI_INTERNALS__?: { metadata?: { currentWindow?: { label?: string } } } }).__TAURI_INTERNALS__?.metadata?.currentWindow?.label;
+}
+export async function showApp(): Promise<void> {
+  if (!inApp()) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("island_open").catch(() => undefined);
+}

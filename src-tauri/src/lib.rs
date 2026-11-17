@@ -19,7 +19,7 @@ use std::sync::Mutex;
 use tauri::image::Image;
 use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager, RunEvent, Runtime, WebviewUrl, WebviewWindowBuilder, Wry};
+use tauri::{AppHandle, Emitter, Manager, RunEvent, Runtime, WebviewUrl, WebviewWindowBuilder, WindowEvent, Wry};
 
 /// The engine this app started, stopped when the app quits.
 struct Engine(Mutex<Option<Child>>);
@@ -53,6 +53,93 @@ fn start_engine<R: Runtime>(app: &AppHandle<R>) -> Result<Option<Child>, String>
 /// The menu bar icon's "needs you" line, updated by the windows (`set_attention`).
 struct Attention(Mutex<Option<MenuItem<Wry>>>);
 
+/// The floating island: a small always-on-top window (label `island`) at the top centre of the
+/// screen. It shows while no McBot window is in front and something needs the person (or every
+/// window is hidden, so it is the way back); a click brings the app forward, its arrow hides it.
+struct Island(Mutex<bool>);
+
+fn mcbot_windows<R: Runtime>(app: &AppHandle<R>) -> Vec<tauri::WebviewWindow<R>> {
+    app.webview_windows().into_iter().filter(|(l, _)| l != "island").map(|(_, w)| w).collect()
+}
+
+fn shown<R: Runtime>(w: &tauri::WebviewWindow<R>) -> bool {
+    w.is_visible().unwrap_or(false) && !w.is_minimized().unwrap_or(false)
+}
+
+/// Show or hide the island by the rules above. Cheap: called on every focus change.
+fn refresh_island<R: Runtime>(app: &AppHandle<R>) {
+    let Some(pill) = app.get_webview_window("island") else { return };
+    let wins = mcbot_windows(app);
+    let front = wins.iter().any(|w| shown(w) && w.is_focused().unwrap_or(false));
+    let any_shown = wins.iter().any(shown);
+    let active = *app.state::<Island>().0.lock().unwrap();
+    let want = !wins.is_empty() && !front && (active || !any_shown);
+    let _ = if want { pill.show() } else { pill.hide() };
+}
+
+/// Check again once the window system has settled (minimize and hide report late).
+fn refresh_island_soon<R: Runtime>(app: &AppHandle<R>) {
+    refresh_island(app);
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        refresh_island(&app);
+    });
+}
+
+fn build_island(app: &AppHandle<Wry>) -> tauri::Result<()> {
+    WebviewWindowBuilder::new(app, "island", WebviewUrl::App("index.html".into()))
+        .title("McBot")
+        .inner_size(240.0, 32.0)
+        .decorations(false)
+        .resizable(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .shadow(false)
+        .focused(false)
+        .visible(false)
+        .background_color(tauri::window::Color(0, 0, 0, 255))
+        .build()?;
+    Ok(())
+}
+
+/// The pill is as big as its content, centred at the top of the primary screen.
+#[tauri::command]
+fn island_resize(app: AppHandle<Wry>, width: f64, height: f64) {
+    let Some(pill) = app.get_webview_window("island") else { return };
+    let (w, h) = (width.clamp(160.0, 520.0), height.clamp(24.0, 200.0));
+    let _ = pill.set_size(tauri::LogicalSize::new(w, h));
+    if let Ok(Some(m)) = app.primary_monitor() {
+        let scale = m.scale_factor();
+        let x = m.position().x as f64 / scale + (m.size().width as f64 / scale - w) / 2.0;
+        let y = m.position().y as f64 / scale;
+        let _ = pill.set_position(tauri::LogicalPosition::new(x, y));
+    }
+}
+
+/// The window says whether something is going on that the person should see from anywhere.
+#[tauri::command]
+fn island_active(app: AppHandle<Wry>, active: bool) {
+    *app.state::<Island>().0.lock().unwrap() = active;
+    refresh_island(&app);
+}
+
+/// The pill was clicked: bring McBot forward.
+#[tauri::command]
+fn island_open(app: AppHandle<Wry>) {
+    show(&app);
+    refresh_island_soon(&app);
+}
+
+/// The pill's arrow: hide McBot's windows (the pill stays, the way back).
+#[tauri::command]
+fn island_toggle_app(app: AppHandle<Wry>) {
+    for w in mcbot_windows(&app) {
+        let _ = w.hide();
+    }
+    refresh_island_soon(&app);
+}
+
 /// From anywhere on the computer: bring McBot Studio forward with ⌘K open, like a launcher.
 /// If another app already holds the combination, McBot keeps working without it.
 pub const SUMMON: &str = "CommandOrControl+Shift+Space";
@@ -63,7 +150,7 @@ fn summon_plugin<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .with_handler(|app, _shortcut, event| {
             if event.state() == ShortcutState::Pressed {
                 // The window that comes forward (the same one `show` picks) opens ⌘K; a new one just opens.
-                let front = app.webview_windows().into_keys().next();
+                let front = app.webview_windows().into_keys().find(|l| l != "island");
                 show(app);
                 if let Some(label) = front {
                     let _ = app.emit_to(label.as_str(), "summon", ());
@@ -75,8 +162,9 @@ fn summon_plugin<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
 
 /// Bring a McBot window to the front, opening one if every window was closed.
 fn show<R: Runtime>(app: &AppHandle<R>) {
-    match app.webview_windows().into_values().next() {
+    match app.webview_windows().into_values().find(|w| w.label() != "island") {
         Some(w) => {
+            let w = app.webview_windows().into_iter().find(|(l, _)| l != "island").map(|(_, w)| w).unwrap_or(w);
             let _ = w.unminimize();
             let _ = w.show();
             let _ = w.set_focus();
@@ -227,9 +315,14 @@ pub fn run() {
         .plugin(summon_plugin())
         .manage(Engine(Mutex::new(None)))
         .manage(Attention(Mutex::new(None)))
+        .manage(Island(Mutex::new(false)))
         .manage(terminal::Terminals::default())
         .invoke_handler(tauri::generate_handler![
             set_attention,
+            island_resize,
+            island_active,
+            island_open,
+            island_toggle_app,
             browser_open,
             browser::browser_show,
             browser::browser_bounds,
@@ -256,10 +349,18 @@ pub fn run() {
                     eprintln!("mcbot: {SUMMON} is taken by another app: {err}");
                 }
             }
+            if let Err(err) = build_island(handle) {
+                eprintln!("mcbot: no floating island: {err}");
+            }
             if let Some(main) = app.get_webview_window("main") {
                 main.set_focus()?;
             }
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if window.label() != "island" && matches!(event, WindowEvent::Focused(_) | WindowEvent::CloseRequested { .. } | WindowEvent::Destroyed) {
+                refresh_island_soon(window.app_handle());
+            }
         })
         .on_menu_event(|app, event| match event.id().as_ref() {
             "new-window" => {

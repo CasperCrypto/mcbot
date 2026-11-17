@@ -400,3 +400,12 @@ input.input::placeholder { color: var(--text-4); }
 .doctor-row.tip .doctor-icon { color: var(--text-3); }
 .doctor-ok { display: grid; justify-items: center; gap: 10px; padding: 34px 24px 40px; text-align: center; color: var(--text-2); }
 .doctor-ok svg { color: var(--ok); }
+
+/* The floating island window (shell `island`): flush with the top of the screen, black like the notch. */
+.pill-island { display: inline-flex; flex-direction: column; gap: 6px; min-width: 200px; max-width: 420px; padding: 4px 10px 8px; background: #000; color: #fff; font-size: 12px; user-select: none; animation: island-content 360ms var(--spring-smooth) both; }
+.pill-row { display: flex; align-items: center; gap: 8px; height: 24px; cursor: pointer; }
+.pill-row b { font-weight: 600; flex: 1; min-width: 0; }
+.pill-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent, #0a84ff); margin: 0 7px; }
+.pill-count { padding: 0 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); font-variant-numeric: tabular-nums; }
+.pill-ask { display: flex; align-items: center; gap: 6px; }
+.pill-ask code { flex: 1; min-width: 0; opacity: 0.7; }

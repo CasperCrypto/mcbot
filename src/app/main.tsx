@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { IslandPill } from "./shell/IslandPill";
 import "./styles/index.css";
 
 // In the macOS app the title bar is an overlay: leave room for the traffic lights.
@@ -14,8 +15,13 @@ document.addEventListener("pointerdown", (e) => {
   el.addEventListener("pointerleave", () => el.removeAttribute("data-tip-off"), { once: true });
 }, true);
 
+// The shell's floating island is its own small window with its own page (label `island`).
+const meta = (window as unknown as { __TAURI_INTERNALS__?: { metadata?: { currentWindow?: { label?: string } } } }).__TAURI_INTERNALS__;
+const pill = meta?.metadata?.currentWindow?.label === "island";
+if (pill) document.documentElement.dataset.island = "";
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    {pill ? <IslandPill /> : <App />}
   </StrictMode>,
 );

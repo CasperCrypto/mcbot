@@ -3,7 +3,9 @@ import type { TaskView } from "../../contracts/api";
 import type { AgentNode } from "../../contracts/graph";
 import type { RunSummary } from "../../contracts/run";
 import { attentionCount } from "../lib/attention";
-import { notify, setAttention } from "../lib/desktop";
+import { notify, setAttention, setIslandActive, islandBridge } from "../lib/desktop";
+import { islandStateOf, type IslandAct, type IslandState } from "../lib/islandBridge";
+import { engine } from "../lib/engine";
 
 /**
  * Keep the menu bar count current, and notify when an agent finishes or a task changes in a way
@@ -20,6 +22,26 @@ export function useSignals(tasks: readonly TaskView[] | null, runs: Record<strin
   useEffect(() => {
     void setAttention(attentionCount(tasks ?? [], Object.values(runs), drift));
   }, [tasks, runs, drift]);
+
+  // The floating island: what to show while McBot is hidden, and its buttons.
+  const island = useRef<IslandState>({ mode: "rest", text: "McBot", count: 0 });
+  const push = useRef<() => void>(() => undefined);
+  useEffect(() => {
+    const list = Object.values(runs);
+    island.current = islandStateOf(list, (r) => nameOf(r.profile), attentionCount(tasks ?? [], list, drift));
+    void setIslandActive(island.current.mode !== "rest");
+    push.current();
+  }, [tasks, runs, drift]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let live = true;
+    let stop = () => undefined as void;
+    const onAct = (a: IslandAct) => {
+      if (a.type === "answer") void engine.answerRun(a.runId, a.choice).catch(() => undefined);
+      else void import("../lib/desktop").then((d) => (a.type === "open" ? d.showApp() : d.toggleApp()));
+    };
+    void islandBridge(() => island.current, onAct).then((b) => { if (!live) { b.stop(); return; } push.current = b.push; stop = b.stop; });
+    return () => { live = false; stop(); };
+  }, []);
 
   // A run that starts asking before a risky action: always worth a notification.
   const asked = useRef(new Set<string>());

@@ -347,6 +347,13 @@ Change them additively; a breaking change bumps the version.
   ~140 ms ahead, a fast sweep across the title bar does not count — leans in when the pointer is
   close, and closes once the pointer moves away; click or Enter pins it open until Esc or a click
   outside. One height (30px) for every title-bar control.
+- **Floating island** (desktop only; `src-tauri/src/lib.rs` `island`, `shell/IslandPill.tsx`, `lib/islandBridge.ts`):
+  a small always-on-top window at the top centre of the screen, shown while no McBot window is in
+  front and an agent works or asks (or every window is hidden, so it is the way back). Click brings
+  McBot forward, its arrow hides McBot's windows, Allow once / Deny answer an approval from anywhere.
+  The `main` window owns the state and sends a summary by events; the pill holds no board, no keys.
+  Black and flush with the screen edge (no transparency: macOS needs a private API for it).
+- **New agent** (`shell/NewAgentSheet.tsx`): six one-click starting cards (`agentSuggestions.ts`) fill name, purpose and soul.
 - Views live behind an error boundary; a broken view must not blank the window.
 - **Links out of the app** go through `openExternal` (`src/app/lib/open.ts`): the
   Tauri opener plugin, https only. A plain `target="_blank"` link does nothing

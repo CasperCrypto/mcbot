@@ -11,14 +11,9 @@ import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace } from "../ui";
 import { usePresence } from "../lib/presence";
+import { AGENT_SUGGESTIONS, agentIdFor } from "./agentSuggestions";
 
-/** "Launch Writer" → "launch-writer": Hermes' profile id grammar, unique on the board. */
-export function agentIdFor(name: string, taken: ReadonlySet<string>): string {
-  const base = name.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "agent";
-  const ok = (id: string) => !taken.has(id) && !(RESERVED_PROFILE_NAMES as readonly string[]).includes(id);
-  if (ok(base)) return base;
-  for (let i = 2; ; i++) if (ok(`${base}-${i}`)) return `${base}-${i}`;
-}
+export { agentIdFor };
 
 export function NewAgentSheet() {
   const open = useApp((s) => s.newAgentOpen);
@@ -85,6 +80,15 @@ export function NewAgentSheet() {
           <button className="icon-btn" aria-label="Close" onClick={() => setOpen(false)}><X size={15} /></button>
         </header>
         <div className="new-agent-body">
+          <div className="suggest-row" role="group" aria-label="Suggestions">
+            {AGENT_SUGGESTIONS.map((s) => (
+              <button key={s.name} className="suggest-card" data-tip={s.about} data-testid="new-agent-suggestion"
+                onClick={() => { setName(s.name); setAbout(s.about); setSoul(s.soul); }}>
+                <AgentFace seed={agentIdFor(s.name, new Set())} size={26} />
+                <span className="ellipsis">{s.name}</span>
+              </button>
+            ))}
+          </div>
           <label className="field"><span>Name</span>
             <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Writer" maxLength={60} data-testid="new-agent-name"
               onKeyDown={(e) => { if (e.key === "Enter") void create(); }} />
