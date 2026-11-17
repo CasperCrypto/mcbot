@@ -20,8 +20,8 @@ export function parseEmails(text: string): string[] | null {
 
 export function inviteMessage(from: string, link: string): { subject: string; body: string } {
   return {
-    subject: `${from} invited you to McBot`,
-    body: `${from} invited you to their McBot boards.\n\n1. Open McBot (get it at https://caspercrypto.github.io/mcbot/)\n2. Click Share, then "Join someone else's"\n3. Paste this link:\n\n${link}\n\nIt works for 24 hours, on the same network.`,
+    subject: `${from} invited you to McBot Studio`,
+    body: `${from} invited you to their McBot boards.\n\n1. Open McBot Studio (get it at https://mcbot.studio)\n2. Click Share, then "Join someone else's"\n3. Paste this link:\n\n${link}\n\nIt works for 24 hours, on the same network.`,
   };
 }
 

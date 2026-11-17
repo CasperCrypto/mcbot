@@ -211,7 +211,7 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
         {step === "welcome" && (
           <div className="setup-hero">
             <BrandMark size={64} />
-            <h1>Welcome to McBot</h1>
+            <h1>Welcome to McBot Studio</h1>
             <p>Build a team of AI agents that works on your computer.</p>
           </div>
         )}
@@ -318,7 +318,7 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
               ) : (
                 <div className="setup-key">
                   <Field label="API key" type="password" value={cloud.key} onChange={(v) => setCloud({ ...cloud, key: v, error: "" })} placeholder="Paste your key" error={cloud.error || null} testId="setup-key"
-                    note={provider.keysUrl ? <button className="link-btn" style={{ padding: 0 }} onClick={() => void openExternal(provider.keysUrl)}>Get a {provider.label} key ↗</button> : undefined} />
+                    note={provider.keysUrl ? <button className="link-btn" style={{ padding: 0 }} onClick={() => void openExternal(provider.keysUrl)}>Get your {provider.label} key ↗</button> : undefined} />
                   <button className="btn" disabled={!cloud.key.trim()} onClick={() => void saveKey()} data-testid="setup-save-key">Save</button>
                 </div>
               )}
@@ -369,7 +369,7 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
           <Dots index={index} />
           {step === "build" ? (
             <button className="btn primary lg" disabled={!result} onClick={() => result && onDone(result.boardId, result.agentNodeId)} data-testid="setup-finish">
-              {result?.agentNodeId ? "Start chatting" : "Open McBot"}
+              {result?.agentNodeId ? "Start chatting" : "Open McBot Studio"}
             </button>
           ) : (
             <div className="row">

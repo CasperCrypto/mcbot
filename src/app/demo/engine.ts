@@ -2,7 +2,7 @@
  * The browser demo's engine: the same API as engine/server.ts, served inside
  * the page. Compile is the real compiler writing to an in-memory disk; runs are
  * simulated (no Hermes, no model), clearly labelled as such in the UI.
- * Built only with VITE_MCBOT_DEMO=1 (`npm run build:demo`).
+ * Built only in demo mode (`npm run build:demo`, `vite build --mode demo`).
  */
 import { createTwoFilesPatch } from "diff";
 import * as Y from "yjs";
@@ -13,7 +13,7 @@ import { exportFileName } from "../../board/files";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
-import type { LibrarySkill, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { LibrarySkill, ProfileSkill, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
@@ -649,13 +649,21 @@ const api = <A extends unknown[], R>(f: (...a: A) => R | Promise<R>) => async (.
 
 const DEMO_LIBRARY: LibrarySkill[] = [{"id":"official/creative/concept-diagrams","name":"concept-diagrams","category":"creative","description":"Generate flat, minimal educational SVG visuals as HTML.","tags":["diagrams","svg","visualization"]},{"id":"official/creative/creative-ideation","name":"creative-ideation","category":"creative","description":"Generate ideas via named methods from creative practice.","tags":["Creative","Ideation","Brainstorming"]},{"id":"official/creative/meme-generation","name":"meme-generation","category":"creative","description":"Create meme PNGs from templates with Pillow text overlay.","tags":["creative","memes","images"]},{"id":"official/creative/social-media-content-calendar","name":"social-media-content-calendar","category":"creative","description":"Plan multi-platform social campaigns: briefs to posting.","tags":["Social-Media","Content-Calendar","Publishing"]},{"id":"official/productivity/decision-questionnaire","name":"decision-questionnaire","category":"productivity","description":"Turn an unanswerable decision into a questionnaire doc.","tags":["decision","async"]},{"id":"official/productivity/live-dashboard","name":"live-dashboard","category":"productivity","description":"Build self-updating dashboards from live sources.","tags":["dashboards","reporting"]}];
 const demoInstalled: Record<string, Set<string>> = {};
+/** In the demo every agent has taught itself one skill during an earlier (simulated) run. */
+const demoProfileSkills = (profile: string): ProfileSkill[] => [
+  { name: "read-link-lists", path: "skills/read-link-lists/SKILL.md", category: null, description: "Open each link in a pasted list and summarise it in one line.", origin: "learned", modified: new Date(Date.now() - 2 * 86_400_000).toISOString() },
+  ...[...(demoInstalled[profile] ?? [])].map((name): ProfileSkill => {
+    const lib = DEMO_LIBRARY.find((l) => l.name === name);
+    return { name, path: `skills/${lib?.category ?? "misc"}/${name}/SKILL.md`, category: lib?.category ?? null, description: lib?.description ?? "", origin: "library", modified: new Date().toISOString() };
+  }),
+];
 
 export const demoEngine = {
   health: api((): Health => ({ ok: true, version: "0.2.0", workspace: WORKSPACE, hermesHome: ROOT, managedRoot: true, hermes: { found: true, path: "simulated in this browser", kind: "bundled" } })),
   hermes: api((): HermesInfo => demoHermes()),
   diagnostics: api((): Diagnostics => ({
     text: [
-      "McBot 0.2.0 · browser demo",
+      "McBot Studio · browser demo",
       `System: ${navigator.userAgent}`,
       "Engine: simulated in this browser",
       `Boards: ${state.boards.length}`,
@@ -802,12 +810,17 @@ export const demoEngine = {
     return taskView(t, team);
   }),
   // Hermes' skill library: a few of its official skills; installs are simulated in this browser.
-  skills: api((profile?: string): SkillsView => ({ library: DEMO_LIBRARY, installed: profile ? [...(demoInstalled[profile] ?? [])] : [], seeded: !!profile, compiled: !!profile })),
+  skills: api((profile?: string): SkillsView => ({ library: DEMO_LIBRARY, installed: profile ? [...(demoInstalled[profile] ?? [])] : [], seeded: !!profile, compiled: !!profile, skills: profile ? demoProfileSkills(profile) : [] })),
   installSkill: api((profile: string, id: string): { installed: string[] } => {
     const set = (demoInstalled[profile] ??= new Set());
     set.add(id.split("/").pop()!);
     return { installed: [...set].sort() };
   }),
+  uninstallSkill: api((profile: string, name: string): { installed: string[]; skills: ProfileSkill[] } => {
+    demoInstalled[profile]?.delete(name);
+    return { installed: [...(demoInstalled[profile] ?? [])].sort(), skills: demoProfileSkills(profile) };
+  }),
+  updateSkill: api((profile: string, _name: string): { installed: string[]; skills: ProfileSkill[] } => ({ installed: [...(demoInstalled[profile] ?? [])].sort(), skills: demoProfileSkills(profile) })),
   signIn: api((_profile: string, _name: string): { started: boolean } => ({ started: true })),
   schedules: api((boardId: string): AgentSchedules[] => [...teamOf(requireBoard(boardId))].map(([profile, agentNodeId]) => ({ agentNodeId, profile, schedules: demoSchedules()[profile] ?? [] }))),
   createSchedule: api((boardId: string, input: { profile: string; when: string; prompt: string; name: string }): AgentSchedules => {

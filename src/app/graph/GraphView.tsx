@@ -33,6 +33,9 @@ import { LogoTile, nodeLogo } from "./Logo";
 import { MakerIcon, makerService, nodeTypes, type FlowNode } from "./nodes";
 import { freeSpot } from "./place";
 
+/** React Flow (MIT) is credited in the About screen's notices; its corner badge is not part of the board. */
+const PRO = { hideAttribution: true } as const;
+
 const PAIRS = new Set(["agent:model", "model:agent", "agent:tool", "tool:agent", "agent:media", "media:agent", "agent:channel", "channel:agent", "agent:agent"]);
 const MAKER_TOOLS: Record<string, MediaData["media"]> = { image_generate: "image", video_generate: "video" };
 
@@ -277,6 +280,7 @@ function Canvas() {
       {graph.nodes.length === 0 && <Welcome onStart={() => useApp.getState().setNewAgentOpen(true)} />}
 
       <ReactFlow
+        proOptions={PRO}
         nodes={rfNodes}
         edges={rfEdges}
         nodeTypes={nodeTypes}

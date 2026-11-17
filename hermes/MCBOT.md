@@ -15,6 +15,8 @@ can three-way merge every upstream release into them.
   file that had a patch no longer differs from upstream.
 - `.github/workflows/hermes-upstream.yml` opens an issue when upstream changes a
   file we patch.
+- `.github/workflows/hermes-sync.yml` merges upstream's newest stable release every
+  Monday and opens a PR with the test results.
 
 | File | Change | Why |
 |---|---|---|

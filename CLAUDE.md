@@ -20,6 +20,14 @@ view saves an agent's SOUL.md, config.yaml, profile.yaml and skills (`agentEdita
 watcher follows edits by the CLI or agents. Three-way against `<workspace>/hermes-seen.json`, so
 a board edit not compiled yet stays and McBot's own compile never echoes back.
 
+**Name:** people see **McBot Studio** (app, installers, window, About, website at
+https://mcbot.studio, README, setup, invites). Internal names stay `mcbot` and must not change:
+`mcbot.graph/v1`, `mcbot.compile/v1`, `.mcbot/`, `MCBOT_*`, `mcbot-<name>` providers,
+`--source mcbot`, `~/McBot`, the npm package, the repo, and the app identifier
+`dev.mcbot.desktop` (it names the data folder holding the 1.3 GB engine tools; changing it
+re-downloads them for everyone). The Windows MSI upgrade code is pinned in tauri.conf.json because
+Tauri derives it from the product name.
+
 ## Hard rules
 
 1. **Merge only code we may ship under MIT.** McBot is MIT. MIT, Apache-2.0 and
@@ -152,7 +160,10 @@ Change them additively; a breaking change bumps the version.
   folders); `npm run cli` does, so `hermes update` says updates come with McBot.
   Changes inside `hermes/` are listed in `hermes/MCBOT.md`; upstream releases come
   in with `npm run engine:sync`, which also lists upstream files Hermes'
-  `.gitignore` hides (add them with `git add -f`).
+  `.gitignore` hides (add them with `git add -f`). Every Monday
+  `.github/workflows/hermes-sync.yml` does that for upstream's newest stable tag, runs every
+  test and build, and opens a PR (a draft when the merge or a check needs a person). Engine
+  updates reach people only through a McBot release, never on their own.
 - First launch runs the setup assistant (`src/app/setup/`): its answers go into
   every agent's SOUL.md and their USER.md memory; `<workspace>/setup.json`
   records that it ran. Local model servers are found by asking the usual

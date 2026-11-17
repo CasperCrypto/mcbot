@@ -1,0 +1,119 @@
+# Weekly: bring the newest stable Hermes release into hermes/, keeping McBot's changes, and open
+# a pull request with the result. Nothing reaches people until that PR is merged and a McBot
+# release is made, so a Hermes update can never break an installed app by itself.
+#
+#   1. find upstream's newest stable tag (vX.Y.Z; release candidates and canaries are skipped)
+#   2. npm run engine:sync (three-way merge, McBot's patches re-made against the new release)
+#   3. regenerate the lists McBot builds from the engine (chat apps, connectors)
+#   4. run every test, the typecheck and both builds
+#   5. open (or update) one PR: green = ready to review, red or conflicts = draft with the reasons
+#
+# PRs opened with GITHUB_TOKEN do not start other workflows, so the checks run here and their
+# result is written into the PR.
+name: Engine update
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Upstream tag (default: newest stable)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: hermes-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Find the release
+        id: find
+        env:
+          WANT: ${{ inputs.tag }}
+        run: |
+          up=$(node -p "require('./hermes/UPSTREAM.json').upstream")
+          base=$(node -p "require('./hermes/UPSTREAM.json').commit")
+          tag="$WANT"
+          if [ -z "$tag" ]; then
+            tag=$(git ls-remote --tags --refs --sort=-version:refname "$up" | awk '{print $2}' | sed 's#refs/tags/##' | grep -E '^v[0-9]{1,3}\.[0-9]+\.[0-9]+$' | head -n1)
+          fi
+          mkdir -p "$RUNNER_TEMP/up" && cd "$RUNNER_TEMP/up"
+          git init -q && git remote add origin "$up"
+          git fetch -q --depth=1 origin "$base" "refs/tags/$tag:refs/tags/$tag"
+          next=$(git rev-parse "$tag^{commit}")
+          git checkout -q "$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "repo=$RUNNER_TEMP/up" >> "$GITHUB_OUTPUT"
+          if [ "$next" = "$base" ]; then echo "current=true" >> "$GITHUB_OUTPUT"; else echo "current=false" >> "$GITHUB_OUTPUT"; fi
+          echo "hermes/ is at ${base:0:12}; newest stable is $tag (${next:0:12})"
+      - name: Merge it into hermes/
+        if: steps.find.outputs.current == 'false'
+        id: sync
+        run: |
+          set +e
+          npx tsx scripts/hermes-sync.ts "${{ steps.find.outputs.repo }}" "${{ steps.find.outputs.tag }}" 2>&1 | grep -v "^warning: in the working copy" | tee sync.log
+          echo "code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+          npm run -s engine:platforms && npm run -s engine:connectors
+      - name: Check
+        if: steps.find.outputs.current == 'false'
+        id: check
+        run: |
+          set +e
+          ok=true
+          npm test > test.log 2>&1 || ok=false
+          npm run build > build.log 2>&1 || ok=false
+          npm run build:demo >> build.log 2>&1 || ok=false
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+      - name: Open or update the pull request
+        if: steps.find.outputs.current == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.find.outputs.tag }}
+          SYNC: ${{ steps.sync.outputs.code }}
+          OK: ${{ steps.check.outputs.ok }}
+        run: |
+          branch="engine/hermes-$TAG"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add -A hermes patches src/contracts
+          git commit -q -m "Engine: Hermes $TAG" -m "Merged by .github/workflows/hermes-sync.yml (npm run engine:sync)."
+          git push -f origin "$branch"
+          {
+            echo "Hermes **$TAG** merged into \`hermes/\` with McBot's changes kept."
+            echo
+            if [ "$SYNC" = "0" ]; then echo "- Merge: clean, every McBot patch still applied"; else echo "- Merge: **needs a person**, see below"; fi
+            if [ "$OK" = "true" ]; then echo "- Tests, typecheck and both builds: passed"; else echo "- Tests or builds: **failed**, see below"; fi
+            echo
+            echo "Before merging: run \`MCBOT_E2E=1 npm test\` once on a computer with the engine prepared (\`npm run engine:setup\`), and check \`docs/HERMES.md\` for settings this release renamed."
+            echo
+            echo "<details><summary>Merge log</summary>"; echo; echo '```'; tail -n 60 sync.log; echo '```'; echo "</details>"
+            if [ "$OK" != "true" ]; then
+              echo "<details><summary>Failures</summary>"; echo; echo '```'
+              grep -E "FAIL|✗|×|Error|error TS" test.log build.log | head -n 80
+              echo '```'; echo "</details>"
+            fi
+          } > body.md
+          n=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')
+          draft=""
+          if [ "$SYNC" != "0" ] || [ "$OK" != "true" ]; then draft="--draft"; fi
+          if [ -n "$n" ]; then
+            gh pr edit "$n" --body-file body.md
+          else
+            gh pr create --head "$branch" --base "${{ github.event.repository.default_branch }}" --title "Engine: Hermes $TAG" --body-file body.md $draft
+          fi

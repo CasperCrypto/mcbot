@@ -187,9 +187,9 @@ function Offline({ down }: { down: boolean }) {
     <div className="offline" style={{ gridRow: "1 / span 2" }} data-tauri-drag-region>
       <div className="empty" data-testid="offline">
         <BrandMark size={44} />
-        <h3>{stuck ? "McBot's engine didn't start" : "Starting McBot…"}</h3>
+        <h3>{stuck ? "McBot Studio's engine didn't start" : "Starting McBot Studio…"}</h3>
         {!stuck && <LoaderCircle size={18} className="spin-icon faint" />}
-        {stuck && (inApp() ? <p>Quit McBot and open it again. If it keeps happening, the engine log is in McBot's data folder (engine.log).</p>
+        {stuck && (inApp() ? <p>Quit McBot Studio and open it again. If it keeps happening, the engine log is in McBot's data folder (engine.log).</p>
           : <p>Start it with <code>npm run dev</code>.</p>)}
       </div>
     </div>

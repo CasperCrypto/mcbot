@@ -260,7 +260,7 @@ function AddModel({ saved, setSaved, onDone }: { saved: string[] | null; setSave
           ) : (
             <div className="key-entry">
               <Field label="API key" type="password" value={key} onChange={(v) => { setKey(v); setKeyProblem(null); }} placeholder="Paste your key" error={keyProblem} testId="settings-key"
-                note={provider ? <button className="link-btn" style={{ padding: 0 }} onClick={() => void openExternal(provider.keysUrl)}>Get a {provider.label} key ↗</button> : undefined} />
+                note={provider ? <button className="link-btn" style={{ padding: 0 }} onClick={() => void openExternal(provider.keysUrl)}>Get your {provider.label} key ↗</button> : undefined} />
               <button className="btn" disabled={!key.trim() || (!provider && !/^https?:\/\//.test(cloudBase))} onClick={() => void saveKey()} data-testid="settings-key-save">Save</button>
             </div>
           )}
@@ -496,7 +496,7 @@ function AboutSection() {
         <div className="settings-row"><span className="grow">Your boards stay as they are.</span>
           <button className="btn sm primary" onClick={() => app.setSetup({ completed: false, profile: app.setup?.profile ?? null })} data-testid="settings-rerun-setup"><Sparkles size={12} /> Run setup again</button></div>
       </Card>
-      <Card title="About McBot" sub={`Version ${health?.version ?? "…"} · free and open source (MIT)`}>
+      <Card title="About McBot Studio" sub={`Version ${health?.version ?? "…"} · free and open source (MIT)`}>
         <div className="settings-row"><span className="grow">Something not working?</span>
           <button className="btn sm" onClick={() => app.setReportOpen(true)}><LifeBuoy size={12} /> Report a problem</button>
           <button className="btn sm ghost" onClick={() => void openExternal("https://github.com/CasperCrypto/mcbot")}><ExternalLink size={12} /> GitHub</button></div>

@@ -1,11 +1,11 @@
 --- a/hermes/tui_gateway/methods_projects.py
 +++ b/hermes/tui_gateway/methods_projects.py
-@@ -318,7 +318,7 @@
- 
- 
- # Not user conversations; subagent/compression children are dropped by include_children=False.
--_PROJECT_TREE_EXCLUDED_SOURCES = ["cron", "kanban", "oneshot"]
-+_PROJECT_TREE_EXCLUDED_SOURCES = ["cron", "kanban", "oneshot", "mcbot"]  # McBot: its runs are not user conversations
+@@ -328,7 +328,7 @@
+     "photon", "homeassistant", "email", "sms", "webhook", "api_server", "weixin", "wecom", "qqbot",
+     "yuanbao", "dingtalk", "feishu",
+ )
+-_PROJECT_TREE_EXCLUDED_SOURCES = ["cron", "kanban", "oneshot", *_MESSAGING_SESSION_SOURCES]
++_PROJECT_TREE_EXCLUDED_SOURCES = ["cron", "kanban", "oneshot", "mcbot", *_MESSAGING_SESSION_SOURCES]  # McBot: its runs are not user conversations
  
  
  def _project_tree_row(r: dict) -> dict:

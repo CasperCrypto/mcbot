@@ -113,7 +113,7 @@ export function RunsView() {
 
   return (
     <>
-      <Sidebar title="Activity" testId="runs-sidebar">
+      <Sidebar title="Runs" testId="runs-sidebar">
         {list.length === 0 && <div className="faint" style={{ padding: "8px 10px" }}>Nothing yet.</div>}
         {list.map((r) => (
           <button key={r.runId} className="list-row" aria-selected={run?.runId === r.runId} onClick={() => selectRun(r.runId)} style={{ alignItems: "flex-start" }} data-testid="run-row">

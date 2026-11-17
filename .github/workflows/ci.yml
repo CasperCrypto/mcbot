@@ -32,3 +32,22 @@ jobs:
         run: npm run build
       - name: Browser demo build
         run: npm run build:demo
+
+  # Windows: the builds must pass (npm run build:demo broke there once and nobody saw). Some tests
+  # still assume POSIX paths and signals; they report here without blocking until they are fixed.
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck and UI build
+        run: npm run build
+      - name: Browser demo build
+        run: npm run build:demo
+      - name: Tests (not blocking yet)
+        continue-on-error: true
+        run: npm test

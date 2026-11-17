@@ -273,6 +273,7 @@
 .skills-page { max-width: 880px; }
 .skill-builtin { padding: 12px 14px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--bg-card); gap: 12px; }
 .skill-card-lib { align-items: flex-start; }
+.skill-read { margin: 0; padding: 12px 14px; max-height: 320px; overflow: auto; white-space: pre-wrap; font-size: 12px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--bg-card); color: var(--text-2); }
 .skill-card-lib .faint { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* An on/off switch, as on iOS. */

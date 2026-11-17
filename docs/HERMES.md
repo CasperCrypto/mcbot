@@ -63,6 +63,8 @@ env var name (`key_env`).
 | Bundled skills (44) are seeded into a home's `skills/<category>/` and recorded in `skills/.bundled_manifest`; a gateway seeds only its own home | `tools/skills_sync.py:38,72,402` |
 | `hermes -p <agent> skills opt-in --sync` removes the opt-out marker and seeds now ("Re-seeded N bundled skill(s)"). McBot runs it once per compiled profile without a `.bundled_manifest`, after a compile (`engine/skills.ts`) | `hermes_cli/subcommands/skills.py:129-133`; `hermes_cli/skills_hub.py:1257` |
 | `hermes -p <agent> skills install official/<category>/<name> --yes` installs one of `optional-skills/` (141) into `skills/<category>/<name>/` after Hermes' scan | `hermes_cli/subcommands/skills.py:54-63`; `--yes` from `hermes_cli/subcommands/_shared.py:19`; verified on Hermes' runtime |
+| `hermes -p <agent> skills uninstall <name> --yes` removes a hub-installed skill; `hermes -p <agent> skills update <name>` updates one (edited ones are skipped without `--force`). There is no `skills remove` | `hermes_cli/subcommands/skills.py:79-92`; dispatch `hermes_cli/skills_hub.py:1553-1555` |
+| Skills an agent writes (`skill_manage` create) land in `skills/[<category>/]<name>/SKILL.md`, or under `skills.create_dir`; bundled ones are listed in `skills/.bundled_manifest` (`name:hash`), hub installs in `skills/.hub/lock.json` → `installed`. McBot calls anything else "taught itself" (`profileSkills`) | `tools/skill_manager_tool.py:212-220` `_resolve_skill_dir`; `tools/skills_sync.py:2-6`; `tools/skills_hub.py:62-63,322` |
 
 `<profile>/skills/<name>/SKILL.md`, frontmatter `name, description, version,
 author, license, platforms, metadata.hermes.tags` (`skills/AGENTS.md`).

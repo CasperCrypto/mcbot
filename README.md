@@ -1,65 +1,59 @@
-# McBot
+# McBot Studio
 
-**Draw your AI agent harness. Compile it into a real one.**
+**Draw your AI team. Get real files. Watch it work.**
 
-McBot is a desktop app (macOS, Windows and Linux) where you draw a harness of AI
-agents as a graph — agents, the models they think with, the tools they can use —
-and that graph **compiles into a real, runnable agent setup on disk**. Then the same graph shows what every agent is doing, what it
-remembers, and what it costs — live, in every McBot window on this computer.
-Working on one board from several computers comes with the team server (M12).
+[mcbot.studio](https://mcbot.studio) · [Try it in your browser](https://mcbot.studio/demo/) · [Download](https://github.com/CasperCrypto/mcbot/releases/latest)
 
-Chat-only agent tools hide the system: you can't see which cron job runs which
-agent, what it remembers, or what it spends. McBot makes the harness the thing
-you look at and edit.
+McBot Studio is a free, open-source desktop app (macOS, Windows, Linux) for designing a team
+of AI agents the way an architect designs a building: agents, the models they think with, the
+tools and chat apps they use, their skills and budgets, drawn as one board. Press **Compile**
+and the board becomes a **real agent setup on disk** (Hermes Agent profiles: `SOUL.md`,
+`config.yaml`, skills) that runs on your computer. The same board then shows what every agent
+is doing, what it learned, what it remembers and what it costs.
 
-![McBot](docs/screenshots/graph.png)
+Chat apps hide the system: you can't see which schedule runs which agent, what it remembers,
+what it taught itself or what it spends. McBot Studio makes the harness the thing you look at,
+edit and own, as plain files.
 
-## What it does today
+![McBot Studio](docs/screenshots/graph.png)
 
-Seven views, one shared board, everything a graph:
+## What it does today (0.4)
 
-- **Graph** — agents, models and tools on a canvas. Add from the Dock or ⌘K,
-  wire them, press **Compile**: every agent becomes a real agent profile
-  (`SOUL.md`, `config.yaml`, `profile.yaml`, `skills/<name>/SKILL.md`), and the
-  Compile panel shows each file written with its SHA-256 and a diff.
-  - **Abilities** per agent: web search, browser, files, terminal, code, making
-    images and videos, speech, memory, helpers, schedules, the task board,
-    using the computer — switch each on or off.
-  - **Image and video makers**: wire one to an agent, pick the service (OpenAI,
-    OpenRouter, FAL, xAI, Krea, DeepInfra, Meta), paste the key once. What the
-    agent makes shows up in its chat.
-  - **Obsidian**: ⌘K → "Obsidian vault…" gives agents your notes — read, search
-    and write, only inside that folder.
-  - **Telegram**: give an agent its own Telegram bot (token from @BotFather) and
-    say who may talk to it; the agent answers there while your computer is on.
-- **Agents** — your agents as teammates. Message one and it runs;
-  tool calls, answer, time, tokens and cost land in the thread. Its face shows
-  what it is doing: thinking while it works, happy or sad after.
-- **Runs** — every run as a flow graph: prompt → tool calls → answer → cost.
-  Click a step for its inputs and outputs.
-- **Memory** — what each agent has learned, as a graph you can edit.
-- **Files** — each agent's profile, the shared folder, or **any folder you open**,
-  as a graph you expand in place.
-- **Cost** — spend by agent, model and day, from the engine's own session records.
-- **Team** — who is on the board and what they are looking at.
-
-The live **island** in the title bar shows which agent is working and for how
-long; **⌘K** does everything from the keyboard; a second window (⌘N) is the
-same board, live, with everyone's cursor.
+- **Board**: agents, local and cloud models (main + backups), tools (any MCP server, plus the engine's vetted connectors),
+  image and video makers, chat apps (Telegram, Slack, Discord… every platform the engine ships),
+  sticky notes. Wire them, press **Compile** (⌘S). A second view, **Hermes**, draws the whole
+  engine behind the board.
+- **Agents**: message an agent; tool calls, answer, time, tokens and cost land in the thread.
+  Risky commands stop and ask you (approval cards, also in the title-bar island).
+- **Skills**: per agent, what it **taught itself** during runs, its own skills, the engine's
+  44 built-in skills and the 140-skill library (install, update, remove).
+- **Tasks** and **schedules**: a shared task board agents pick up, and cron-style jobs.
+- **Runs**: every run as a flow graph: prompt → tool calls → answer → cost.
+- **Memory**, **Files**, **Code** (editor + terminal), **Browser**: what agents remember, wrote
+  and built, editable in place.
+- **Cost**: spend by agent, model and day, daily budgets that stop runs at the limit.
+- **Team**: share a board on your network, team chat, `@agent` from chat.
+- **Engine updates**: the engine (Hermes Agent, MIT) ships inside; a weekly job merges each
+  new stable release, runs every test and opens a pull request, so updates arrive tested.
 
 | Agents | Runs |
 |---|---|
 | ![Agents](docs/screenshots/agents.png) | ![Runs](docs/screenshots/runs.png) |
-| **Files — any folder as a graph** | **Memory** |
+| **Files: any folder as a graph** | **Memory** |
 | ![Files](docs/screenshots/files.png) | ![Memory](docs/screenshots/memory.png) |
 | **Compile** | **⌘K** |
 | ![Compile](docs/screenshots/compile.png) | ![Command palette](docs/screenshots/palette.png) |
 
 ## Install
 
-Download McBot for macOS, Windows or Linux from the
-[releases](https://github.com/CasperCrypto/mcbot/releases). Everything is inside:
-the first launch prepares its engine by itself (a few minutes, needs internet) and
+Download McBot Studio for macOS, Windows or Linux from the
+[releases](https://github.com/CasperCrypto/mcbot/releases), or on a Mac or Linux:
+
+```bash
+curl -fsSL https://mcbot.studio/install.sh | sh
+```
+Everything is inside:
+the first launch prepares its engine by itself (about 1.3 GB, a few minutes) and
 walks you through setup. McBot is free and not signed, so your computer asks
 once: on **macOS** open it, then System Settings → Privacy & Security → Open
 Anyway; on **Windows** choose More info → Run anyway.
@@ -104,7 +98,7 @@ Intel), Windows and Linux installers into a draft GitHub release.
 
 ## Website and browser demo
 
-`site/` is the McBot website (static HTML, no build step). `npm run build:demo`
+`site/` is the website at [mcbot.studio](https://mcbot.studio) (static HTML, no build step). `npm run build:demo`
 builds a browser-only McBot into `dist-demo/`: the real UI and compiler with an
 in-page engine and simulated runs, for trying McBot without installing
 anything. `.github/workflows/site.yml` publishes both to GitHub Pages (enable
