@@ -43,13 +43,20 @@ export function Rail() {
   return (
     <nav ref={nav} className={`rail${y !== null ? " has-indicator" : ""}`} aria-label="Views">
       {y !== null && <span className="rail-indicator" aria-hidden style={{ transform: `translateY(${y}px)`, transition: ready ? undefined : "none" }} />}
-      {VIEWS.filter((v) => !REMOTE || !HIDDEN_FOR_GUESTS.has(v.tab)).map((v, i) => (
-        <button key={v.tab} className="rail-btn" aria-current={tab === v.tab ? "page" : undefined} onClick={() => setTab(v.tab)}
-          data-tip={i < 9 ? `${v.label}  ⌘${i + 1}` : v.label} data-tip-side="right" data-testid={`tab-${v.tab}`} aria-label={v.label}>
-          {v.icon}
-          {v.tab === "agents" && live > 0 && <span className="badge">{live}</span>}
-        </button>
-      ))}
+      {VIEWS.filter((v) => !REMOTE || !HIDDEN_FOR_GUESTS.has(v.tab)).map((v, i, shown) => {
+        const key = VIEWS.indexOf(v);
+        const name = v.tip ? `${v.label} · ${v.tip}` : v.label;
+        return (
+          <div key={v.tab} style={{ display: "contents" }}>
+            {i > 0 && shown[i - 1]!.group !== v.group && <span className="rail-sep" aria-hidden />}
+            <button className="rail-btn" aria-current={tab === v.tab ? "page" : undefined} onClick={() => setTab(v.tab)}
+              data-tip={key < 9 ? `${name}  ⌘${key + 1}` : name} data-tip-side="right" data-testid={`tab-${v.tab}`} aria-label={v.label}>
+              {v.icon}
+              {v.tab === "agents" && live > 0 && <span className="badge">{live}</span>}
+            </button>
+          </div>
+        );
+      })}
       <div className="rail-foot">
         <button className="rail-btn" aria-current={tab === "settings" ? "page" : undefined} onClick={() => useApp.getState().openSettings()} data-tip="Settings  ⌘," data-tip-side="right" data-testid="tab-settings" aria-label="Settings"><Settings size={15} /></button>
         <button className="rail-btn" onClick={() => setPalette(true)} data-tip="Commands  ⌘K" data-tip-side="right" aria-label="Commands"><Command size={15} /></button>

@@ -15,6 +15,13 @@ export async function setAttention(count: number): Promise<void> {
   await invoke("set_attention", { count }).catch(() => undefined);
 }
 
+/** ⌘⇧Space / Ctrl+Shift+Space from anywhere (src-tauri `SUMMON`): the shell brings this window forward and says so. */
+export async function onSummon(run: () => void): Promise<() => void> {
+  if (!inApp()) return () => undefined;
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen("summon", () => run());
+}
+
 let allowed: boolean | null = null;
 /** A system notification, only while no McBot window is in front (the window itself shows everything). */
 export async function notify(title: string, body: string): Promise<void> {

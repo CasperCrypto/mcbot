@@ -304,6 +304,47 @@ export interface SkillsView {
   skills?: ProfileSkill[];
 }
 
+/** A skill found in the registries Hermes searches (`hermes skills search --json`). */
+export interface SkillSearchResult {
+  name: string;
+  /** What `hermes skills install` takes. */
+  identifier: string;
+  source: string;
+  trust: string;
+  description: string;
+}
+
+/** One entry of Hermes' curated plugin catalog (hermes/plugin-catalog/<name>.yaml). */
+export interface CatalogPlugin {
+  name: string;
+  title: string;
+  /** The description's first sentence. */
+  summary: string;
+  description: string;
+  category: string;
+  /** official, verified, community… */
+  tier: string;
+  maintainer: string;
+  repo: string;
+  version: string;
+  /** Empty = every platform. */
+  platforms: string[];
+  tools: number;
+  hooks: number;
+  /** Key variables it needs (save them in Settings → API keys). */
+  needsKeys: string[];
+}
+
+/** A plugin installed in an agent (`hermes -p <agent> plugins list --json`). */
+export interface InstalledPlugin {
+  name: string;
+  enabled: boolean;
+  version: string;
+  summary: string;
+  /** bundled, catalog:<tier>@<sha>, git… */
+  source: string;
+}
+
 /** A skill in an agent's profile. `learned`: written by the agent itself (or in Hermes), not by McBot's library or Hermes' seed. */
 export interface ProfileSkill {
   name: string;

@@ -1,10 +1,11 @@
 import {
-  BookOpen, Bot, History, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
+  BookOpen, Bot, FileCode2, History, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
 } from "lucide-react";
+import { redo, undo } from "../../board/undo";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
 import type { GraphNode } from "../../contracts/graph";
-import { compileBoard, exportBoardFile, importBoardFile, openHermesSetup } from "../actions";
+import { compileBoard, exportBoardFile, importBoardFile, openHermesSetup, runAgent } from "../actions";
 import { newChannel, newId, newModel, newTool, newVault } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { resetDemo } from "../demo/engine";
@@ -26,19 +27,23 @@ interface Command {
   ask?: { placeholder: string; submit: (value: string) => Promise<void> | void };
 }
 
-export const VIEWS: { tab: Tab; label: string; icon: ReactNode }[] = [
-  { tab: "home", label: "Home", icon: <House size={15} /> },
-  { tab: "graph", label: "Graph", icon: <Waypoints size={15} /> },
-  { tab: "agents", label: "Agents", icon: <MessagesSquare size={15} /> },
-  { tab: "tasks", label: "Tasks", icon: <ListChecks size={15} /> },
-  { tab: "code", label: "Code", icon: <Code2 size={15} /> },
-  { tab: "browser", label: "Browser", icon: <Globe size={15} /> },
-  { tab: "workflows", label: "Runs", icon: <History size={15} /> },
-  { tab: "memory", label: "Memory", icon: <Brain size={15} /> },
-  { tab: "skills", label: "Skills", icon: <Sparkles size={15} /> },
-  { tab: "files", label: "Files", icon: <FolderOpen size={15} /> },
-  { tab: "cost", label: "Cost", icon: <ChartColumnBig size={15} /> },
-  { tab: "team", label: "Team", icon: <Users size={15} /> },
+/**
+ * The rail, in four groups: core (Home, Board, Chat), the agents' work (Tasks, Runs, Skills),
+ * the workbench (Code, Browser, Files) and insight (Memory, Cost, Team). ⌘1–9 follow this order.
+ */
+export const VIEWS: { tab: Tab; label: string; icon: ReactNode; group: number; tip?: string }[] = [
+  { tab: "home", label: "Home", icon: <House size={15} />, group: 0 },
+  { tab: "graph", label: "Board", icon: <Waypoints size={15} />, group: 0, tip: "Design the harness" },
+  { tab: "agents", label: "Chat", icon: <MessagesSquare size={15} />, group: 0, tip: "Talk to your agents" },
+  { tab: "tasks", label: "Tasks", icon: <ListChecks size={15} />, group: 1 },
+  { tab: "workflows", label: "Runs", icon: <History size={15} />, group: 1 },
+  { tab: "skills", label: "Skills", icon: <Sparkles size={15} />, group: 1, tip: "Skills and plugins" },
+  { tab: "code", label: "Code", icon: <Code2 size={15} />, group: 2 },
+  { tab: "browser", label: "Browser", icon: <Globe size={15} />, group: 2 },
+  { tab: "files", label: "Files", icon: <FolderOpen size={15} />, group: 2 },
+  { tab: "memory", label: "Memory", icon: <Brain size={15} />, group: 3 },
+  { tab: "cost", label: "Cost", icon: <ChartColumnBig size={15} />, group: 3 },
+  { tab: "team", label: "Team", icon: <Users size={15} />, group: 3 },
 ];
 
 function useCommands(close: () => void): Command[] {
@@ -83,7 +88,10 @@ function useCommands(close: () => void): Command[] {
           },
         },
       },
+      { id: "undo", group: "Actions", label: "Undo", hint: "Your last change to the board", icon: <Undo2 size={15} />, keys: ["⌘", "Z"], run: () => { close(); if (!undo(doc)) app.toast({ kind: "ok", text: "Nothing to undo" }); } },
+      { id: "redo", group: "Actions", label: "Redo", icon: <Redo2 size={15} />, keys: ["⇧", "⌘", "Z"], run: () => { close(); if (!redo(doc)) app.toast({ kind: "ok", text: "Nothing to redo" }); } },
       { id: "compile", group: "Actions", label: "Compile", icon: <Hammer size={15} />, keys: ["⌘", "S"], run: () => { close(); void compileBoard(boardId); } },
+      { id: "live-files", group: "Actions", label: "Live files", hint: "Watch the files this board writes change as you edit", icon: <FileCode2 size={15} />, run: () => { close(); app.setTab("graph"); app.setLiveFilesOpen(!useApp.getState().liveFilesOpen); } },
       { id: "compile-files", group: "Actions", label: "Compiled files", hint: "What the last compile wrote, file by file", icon: <FolderOpen size={15} />, run: () => { close(); app.setTab("graph"); app.setCompile({ compileOpen: true }); } },
       { id: "open-folder", group: "Actions", label: "Open folder…", hint: "Pick a folder for agents and the editor", icon: <FolderPlus size={15} />, run: () => app.setFolderPickerOpen(true) },
       {
@@ -108,9 +116,23 @@ function useCommands(close: () => void): Command[] {
       { id: "report", group: "Actions", label: "Report a problem…", hint: "Details to paste into an issue", icon: <LifeBuoy size={15} />, run: () => app.setReportOpen(true) },
       { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Sparkles size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: app.setup?.profile ?? null }); } },
       ...(DEMO ? [{ id: "reset-demo", group: "Actions", label: "Reset demo", hint: "Start over with the sample board", icon: <RotateCcw size={15} />, run: resetDemo }] : []),
-      ...VIEWS.map((v, i) => ({ id: `go-${v.tab}`, group: "Go to", label: v.label, icon: v.icon, keys: ["⌘", String(i + 1)], run: () => { app.setTab(v.tab); close(); } })),
+      ...VIEWS.map((v, i) => ({ id: `go-${v.tab}`, group: "Go to", label: v.label, hint: v.tip, icon: v.icon, keys: i < 9 ? ["⌘", String(i + 1)] : undefined, run: () => { app.setTab(v.tab); close(); } })),
+      // Ask an agent straight from ⌘K (and so from anywhere, with the launcher shortcut).
+      ...graph.nodes.filter((n) => n.kind === "agent").map((n): Command => ({
+        id: `ask-${n.id}`, group: "Agents", label: `Ask ${n.data.displayName || n.data.name}…`, hint: `@${n.data.name}`,
+        icon: <AgentFace seed={n.data.name} size={22} />,
+        ask: {
+          placeholder: `What should ${n.data.displayName || n.data.name} do?`,
+          submit: async (prompt) => {
+            if (!prompt.trim()) return;
+            close();
+            app.openChat(n.id);
+            await runAgent(boardId, n.id, prompt.trim());
+          },
+        },
+      })),
       ...graph.nodes.filter((n) => n.kind === "agent").map((n) => ({
-        id: `chat-${n.id}`, group: "Agents", label: n.data.displayName || n.data.name, hint: `@${n.data.name}`,
+        id: `chat-${n.id}`, group: "Agents", label: n.data.displayName || n.data.name, hint: "Open the chat",
         icon: <AgentFace seed={n.data.name} size={22} />, run: () => { app.openChat(n.id); close(); },
       })),
       ...app.boards.filter((b) => b.id !== boardId).map((b) => ({ id: `board-${b.id}`, group: "Boards", label: b.name || b.id, icon: <Layers size={15} />, run: () => { app.setBoard(b.id); close(); } })),

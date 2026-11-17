@@ -4,10 +4,10 @@
  * skills (seeded after a compile unless turned off), and the official library (installed into the
  * compiled agent with `hermes skills install`). Host only: members don't reach the library.
  */
-import { Check, Download, Eye, Hammer, Pencil, Plus, RefreshCw, Search, Sparkles, Trash2, Users } from "lucide-react";
+import { Check, Download, Eye, Globe, Hammer, Link2, Pencil, Plus, RefreshCw, Search, Sparkles, Trash2, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { setNodeField } from "../../board/ydoc";
-import type { LibrarySkill, ProfileSkill, SkillsView as SkillsState } from "../../contracts/api";
+import type { LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView as SkillsState } from "../../contracts/api";
 import type { AgentNode } from "../../contracts/graph";
 import { readSkill } from "../../harness/read";
 import { compileBoard } from "../actions";
@@ -15,7 +15,11 @@ import { engine } from "../lib/engine";
 import { Sidebar } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
-import { AgentFace, Empty } from "../ui";
+import { AgentFace, Empty, Segmented } from "../ui";
+import { PluginsPanel } from "./PluginsPanel";
+
+/** A pasted link or identifier installs; plain words search. */
+const looksLikeSource = (t: string) => /^https:\/\//.test(t.trim()) || /^[\w.-]+(\/[\w.@-]+){2,}$/.test(t.trim());
 
 const pretty = (s: string) => s.replace(/[-_]/g, " ").replace(/^./, (c) => c.toUpperCase());
 const ago = (iso: string) => {
@@ -36,6 +40,9 @@ export function SkillsView() {
   const [cat, setCat] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [reading, setReading] = useState<{ name: string; text: string } | null>(null);
+  const [pane, setPane] = useState<"skills" | "plugins">("skills");
+  const [found, setFound] = useState<SkillSearchResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
 
   const profile = agent?.data.name ?? "";
   useEffect(() => {
@@ -52,7 +59,7 @@ export function SkillsView() {
   const installed = new Set(state?.installed ?? []);
   const library = state?.library ?? [];
   const cats = [...new Set(library.map((s) => s.category))].sort();
-  const words = q.trim().toLowerCase();
+  const words = looksLikeSource(q) ? "" : q.trim().toLowerCase();
   const shown = library.filter((s) => (!cat || s.category === cat) && (!words || `${s.name} ${s.category} ${s.description} ${s.tags.join(" ")}`.toLowerCase().includes(words)));
   const edit = () => { app.setTab("graph"); app.select(agent.id); };
   const install = async (s: LibrarySkill) => {
@@ -113,6 +120,33 @@ export function SkillsView() {
       setBusy(null);
     }
   };
+  /** Enter in the search box: a link installs, words search every registry Hermes knows. */
+  const go = async () => {
+    const t = q.trim();
+    if (!t) return;
+    if (looksLikeSource(t)) return void addFrom(t, t);
+    setSearching(true);
+    try {
+      setFound((await engine.searchSkills(t)).results);
+    } catch (e) {
+      app.toast({ kind: "fail", text: (e as Error).message });
+    } finally {
+      setSearching(false);
+    }
+  };
+  const addFrom = async (source: string, key: string) => {
+    setBusy(key);
+    try {
+      const r = await engine.addSkill(profile, source);
+      setState((prev) => (prev ? { ...prev, installed: r.installed, skills: r.skills } : prev));
+      app.toast({ kind: "ok", text: `Skill added to ${agent.data.displayName || profile}` });
+      if (looksLikeSource(q)) setQ("");
+    } catch (e) {
+      app.toast({ kind: "fail", text: (e as Error).message });
+    } finally {
+      setBusy(null);
+    }
+  };
   const compile = () => void compileBoard(boardId).then((ok) => { if (ok) void engine.skills(profile).then(setState); });
 
   return (
@@ -136,6 +170,38 @@ export function SkillsView() {
               <div className="grow"><h2 style={{ margin: 0 }}>{agent.data.displayName || profile}</h2><span className="faint mono">@{profile}</span></div>
               {state && !state.compiled && <button className="btn primary" onClick={compile} data-tip="Installing needs the agent on disk"><Hammer size={13} /> Compile</button>}
             </div>
+            <div style={{ maxWidth: 260 }} data-testid="skills-pane"><Segmented value={pane} onChange={setPane} options={[{ value: "skills", label: "Skills" }, { value: "plugins", label: "Plugins" }]} /></div>
+            {pane === "plugins" ? <PluginsPanel profile={profile} label={agent.data.displayName || profile} compiled={!!state?.compiled} onCompile={compile} /> : <>
+              <label className="catalog-search">
+                {looksLikeSource(q) ? <Link2 size={14} /> : <Search size={14} />}
+                <input value={q} onChange={(e) => { setQ(e.target.value); setFound(null); }} onKeyDown={(e) => { if (e.key === "Enter") void go(); }}
+                  placeholder="Search skills, or paste a GitHub link" aria-label="Search skills, or paste a GitHub link" data-testid="skills-search" />
+                {q.trim() && <button className="btn sm" disabled={busy !== null || searching || (looksLikeSource(q) && !state?.compiled)} onClick={() => void go()} data-testid="skills-go"
+                  data-tip={looksLikeSource(q) ? (state?.compiled ? "Hermes checks it before it goes in" : "Compile first") : "Search skills.sh, GitHub, ClawHub and more"}>
+                  {looksLikeSource(q) ? <><Download size={12} /> {busy === q.trim() ? "Adding…" : "Add"}</> : <><Globe size={12} /> {searching ? "Searching…" : "Search online"}</>}
+                </button>}
+              </label>
+              {found && (
+                <div className="stack" style={{ gap: 8 }} data-testid="skills-found">
+                  <span className="section-label">Online · {found.length}</span>
+                  {found.length === 0 ? <span className="faint">Nothing found. Try other words, or paste a link.</span> : (
+                    <div className="catalog-grid">
+                      {found.map((r) => (
+                        <div key={r.identifier} className="catalog-card skill-card-lib">
+                          <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                            <span className="row" style={{ gap: 6, minWidth: 0 }}><b className="ellipsis">{pretty(r.name)}</b><span className="chip" data-tip={r.identifier}>{r.source}</span></span>
+                            <span className="faint">{r.description}</span>
+                          </span>
+                          {installed.has(r.name) ? <span className="chip ok"><Check size={11} /> On</span>
+                            : <button className="btn sm" disabled={busy !== null || !state?.compiled} onClick={() => void addFrom(r.identifier, r.identifier)} data-tip={state?.compiled ? `${r.trust} · checked by Hermes before it goes in` : "Compile first"}>
+                              <Download size={12} /> {busy === r.identifier ? "Adding…" : "Add"}
+                            </button>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
             <div className="stack" style={{ gap: 8 }} data-testid="skills-learned">
               <div className="row"><span className="section-label grow"><Sparkles size={12} /> Taught itself{learned.length ? ` · ${learned.length}` : ""}</span></div>
@@ -158,6 +224,29 @@ export function SkillsView() {
               )}
               {reading && <pre className="mono skill-read" data-testid="skill-read">{reading.text}</pre>}
             </div>
+
+            {(() => {
+              const official = new Set(library.map((l) => l.name));
+              const added = libraryOn.filter((x) => !official.has(x.name));
+              if (!added.length) return null;
+              return (
+                <div className="stack" style={{ gap: 8 }} data-testid="skills-added">
+                  <span className="section-label">Added · {added.length}</span>
+                  <div className="catalog-grid">
+                    {added.map((sk) => (
+                      <div key={sk.path} className="catalog-card skill-card-lib">
+                        <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}><b className="ellipsis">{pretty(sk.name)}</b><span className="faint">{sk.description}</span></span>
+                        <span className="row" style={{ gap: 4 }}>
+                          <button className="btn ghost sm" aria-label="Read" data-tip="Read" onClick={() => void view(sk)}><Eye size={13} /></button>
+                          <button className="btn ghost sm" aria-label={`Update ${sk.name}`} data-tip="Update" disabled={busy !== null} onClick={() => void libraryAct(sk.name, "update")}><RefreshCw size={12} /></button>
+                          <button className="btn ghost sm" aria-label={`Remove ${sk.name}`} data-tip="Remove" disabled={busy !== null} onClick={() => void libraryAct(sk.name, "remove")}><Trash2 size={12} /></button>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="stack" style={{ gap: 8 }}>
               <div className="row"><span className="section-label grow">Its own</span><button className="btn ghost sm" onClick={edit}><Plus size={13} /> New</button></div>
@@ -187,7 +276,6 @@ export function SkillsView() {
                 <span className="section-label grow">Library{library.length ? ` · ${library.length}` : ""}</span>
                 {installed.size > 0 && <span className="chip">{installed.size} installed</span>}
               </div>
-              <label className="catalog-search"><Search size={14} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search skills" aria-label="Search skills" data-testid="skills-search" /></label>
               {cats.length > 0 && (
                 <div className="abilities">
                   <button type="button" className="ability" aria-pressed={!cat} onClick={() => setCat(null)}>All</button>
@@ -220,6 +308,7 @@ export function SkillsView() {
                 </div>
               )}
             </div>
+            </>}
           </div>
         </div>
       </section>

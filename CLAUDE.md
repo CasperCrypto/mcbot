@@ -130,7 +130,15 @@ Change them additively; a breaking change bumps the version.
   (`engine/skills.ts`). The official library (`hermes/optional-skills`) installs per agent with
   `hermes -p <agent> skills install official/<path> --yes` (host only). Both live in category
   folders, which the board reader skips: they are Hermes', not blocks. The Skills view
-  (`views/SkillsView.tsx`, host only) shows all three per agent; the Inspector links to it.
+  (`views/SkillsView.tsx`, host only) shows all three per agent plus what each agent taught itself
+  (`profileSkills`); the Inspector links to it. Its one box searches every registry Hermes knows
+  (`hermes skills search --json`) or, given a GitHub link or SKILL.md URL, installs it into the
+  `added` category after Hermes' scan (`skillSources`: a GitHub folder tries `owner/repo/path`, then
+  the raw SKILL.md). Its Plugins pane (`views/PluginsPanel.tsx`, `engine/plugins.ts`) lists the
+  agent's plugins with on/off and the curated catalog (`hermes/plugin-catalog`); every change goes
+  through `hermes -p <agent> plugins …`, which writes `plugins.enabled` itself (never compiled).
+- Computer use: the chat shows the agent's screen (`chat/screen.ts`: each `computer_use` capture's
+  `screenshot_path`), live while it runs and as a step slider after; Stop takes it back.
 - Memory edits: Hermes' `§` format byte for byte, refused while the profile is
   running, and only against the sha256 the editor read.
 - An agent's `dailyBudgetUsd` is McBot-side only (never compiled, no Hermes key): `buildCostReport` compares
@@ -184,6 +192,9 @@ Change them additively; a breaking change bumps the version.
   (`engine/bundle.ts`) and keeps tools in `<data>/hermes-runtime`; its log is
   `<data>/engine.log`. First launch: the setup assistant prepares Hermes in the
   background (`POST /api/hermes/prepare`), minutes, with progress.
+- **Launcher:** ⌘⇧Space / Ctrl+Shift+Space from anywhere (`SUMMON`, tauri-plugin-global-shortcut)
+  brings the front window forward with ⌘K open; ⌘K can "Ask <agent>…" directly. If another app
+  holds the combination, McBot only logs it.
 - The shell adds a menu bar (tray) icon whose count is Home's "Needs you" (`set_attention`,
   sent by the window) and system notifications when an agent finishes, fails, asks for a
   review or is blocked while no McBot window is in front (`src/app/state/signals.ts`).
@@ -257,6 +268,16 @@ Change them additively; a breaking change bumps the version.
   tools, makers, skills, memory, schedules, the shared task board, approvals. A click on a part
   opens what makes it (`hermesTarget.ts`): the block on the Board, or the Memory, Home, Tasks or
   engine view, so what you change is always what compiles.
+- **Undo** (`src/board/undo.ts`): Yjs' UndoManager over blocks, wires, notes and the board name
+  (never chat), tracking only origin `null`, i.e. this window's own edits, so ⌘Z / ⇧⌘Z never take
+  back a teammate's or the engine's change; edits within 600 ms are one step. Created with the doc
+  (`state/board.tsx`); text fields and the code editor keep their own undo.
+- **Live files** (`graph/LiveFiles.tsx`, the board's "Files" button, ⌘K): while you edit, the
+  engine's dry-run compile (`GET /api/compile`, the real writer and config.yaml merge) is shown
+  file by file, whole, with its changes against disk marked; selecting a block opens its agent's
+  config.yaml. Nothing is written until Compile. The board fits beside it (⌘0 fits too).
+- The canvas snaps to half the dot grid, Shift-drag selects a box, ⌘/Ctrl-click adds to a
+  selection, and a minimap shows from 8 blocks on.
 - **Compile** says how it went in a notice (with "Fix" on the first block with a problem); the
   compile sheet (files and diffs) opens only when asked (the notice's "Files", ⌘K → Compiled files).
 - **Rich answers** (`src/app/chat/rich.ts`, `RichText.tsx`): an agent's answer is drawn from
@@ -377,4 +398,4 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   Product shots (`site/assets/*.webp`) are taken from the demo at 1440×900 @2x
   without the Demo chip; re-shoot them when the UI they show changes.
 
-Shortcuts: ⌘K commands · ⌘1–9 views · ⌘S compile · ⌘N new window (desktop).
+Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Skills, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘0 fit the board · ⌘N new window (desktop).

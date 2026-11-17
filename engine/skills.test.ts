@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { SEED_ARGV, SKILL_ID_RE, SKILL_NAME_RE, bundledSeeded, installArgv, installedSkills, listLibrary, profileSkills, uninstallArgv, updateArgv } from "./skills";
+import { SEED_ARGV, SKILL_ID_RE, SKILL_NAME_RE, addSkillArgv, parseSkillSearch, skillSources, bundledSeeded, installArgv, installedSkills, listLibrary, profileSkills, uninstallArgv, updateArgv } from "./skills";
 
 const HERMES = join(import.meta.dirname, "../hermes");
 
@@ -45,6 +45,27 @@ describe("Hermes skills", () => {
     expect(by["decision-questionnaire"]!.origin).toBe("library");
     expect(by.obsidian!.origin).toBe("builtin");
     expect(profileSkills(join(dir, "missing"))).toEqual([]);
+  });
+
+  it("turns a pasted link into what `hermes skills install` takes", () => {
+    expect(skillSources("https://github.com/anthropics/skills/tree/main/skills/pdf")).toEqual([
+      "anthropics/skills/skills/pdf",
+      "https://raw.githubusercontent.com/anthropics/skills/main/skills/pdf/SKILL.md",
+    ]);
+    expect(skillSources("https://github.com/anthropics/skills/blob/main/skills/pdf/SKILL.md")).toEqual([
+      "anthropics/skills/skills/pdf",
+      "https://raw.githubusercontent.com/anthropics/skills/main/skills/pdf/SKILL.md",
+    ]);
+    expect(skillSources("https://raw.githubusercontent.com/anthropics/skills/main/skills/pdf/SKILL.md")).toEqual(["https://raw.githubusercontent.com/anthropics/skills/main/skills/pdf/SKILL.md"]);
+    expect(skillSources("openai/skills/skill-creator")).toEqual(["openai/skills/skill-creator"]);
+    expect(skillSources("rm -rf /")).toBeNull();
+    expect(skillSources("http://insecure.example/SKILL.md")).toBeNull();
+    expect(addSkillArgv("x/y/z")).toEqual(["skills", "install", "x/y/z", "--category", "added", "--yes"]);
+  });
+
+  it("parses `hermes skills search --json`", () => {
+    const out = '[{"name":"pdf","identifier":"skills-sh/anthropics/skills/pdf","source":"skills-sh","trust_level":"trusted","description":"Read  and\\nfill PDFs"}]';
+    expect(parseSkillSearch(out)).toEqual([{ name: "pdf", identifier: "skills-sh/anthropics/skills/pdf", source: "skills-sh", trust: "trusted", description: "Read and fill PDFs" }]);
   });
 
   it("runs Hermes' own commands", () => {

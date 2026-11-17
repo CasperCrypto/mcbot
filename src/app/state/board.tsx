@@ -4,6 +4,7 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { WebsocketProvider } from "y-websocket";
+import { redo, undo, undoManager } from "../../board/undo";
 import * as Y from "yjs";
 import { graphFromDoc } from "../../board/ydoc";
 import type { Graph } from "../../contracts/graph";
@@ -69,10 +70,12 @@ function Connected({ boardId, children }: { boardId: string; children: ReactNode
   const [conn, setConn] = useState<{ doc: Y.Doc; provider: Link } | null>(null);
   useEffect(() => {
     const doc = new Y.Doc();
+    undoManager(doc); // before any edit, so ⌘Z reaches the first one
     // disableBc: every edit must reach the relay, because compile reads the board from it.
     const provider: Link = DEMO ? connectDemoBoard(boardId, doc) : new WebsocketProvider(`${ENGINE_WS}/board`, boardId, doc, { disableBc: true, params: REMOTE ? { key: REMOTE.key } : {} });
     setConn({ doc, provider });
     return () => {
+      undoManager(doc).destroy();
       provider.destroy();
       doc.destroy();
     };
@@ -100,6 +103,24 @@ function Live({ boardId, doc, provider, children }: { boardId: string; doc: Y.Do
       provider.off("sync", onSync);
     };
   }, [provider]);
+
+  // ⌘Z / ⇧⌘Z (Ctrl+Z / Ctrl+Y elsewhere): this window's own board edits, anywhere but a text field
+  // (inputs and the code editor keep their own undo).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      const k = e.key.toLowerCase();
+      const isRedo = (k === "z" && e.shiftKey) || (k === "y" && !e.shiftKey);
+      if (k !== "z" && !isRedo) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.closest("input, textarea, select, [contenteditable=''], [contenteditable='true'], .monaco-editor, .xterm"))) return;
+      e.preventDefault();
+      const done = isRedo ? redo(doc) : undo(doc);
+      if (done) useApp.getState().toast({ kind: "ok", text: isRedo ? "Redone" : "Undone", action: isRedo ? undefined : { label: "Redo", run: () => void redo(doc) } });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [doc]);
 
   useEffect(() => {
     provider.awareness.setLocalStateField("user", identity);

@@ -27,7 +27,8 @@ import { FolderError, Folders, browseFolders } from "./folders";
 import { bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, setupHome, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
 import { JOB_ID_RE, createScheduleArgv, readSchedules, scheduleActionArgv } from "./schedules";
-import { SEED_ARGV, SKILL_ID_RE, SKILL_NAME_RE, bundledSeeded, installArgv, installedSkills, listLibrary, profileSkills, uninstallArgv, updateArgv } from "./skills";
+import { SEED_ARGV, SKILL_ID_RE, SKILL_NAME_RE, addSkillArgv, bundledSeeded, installArgv, installedSkills, listLibrary, parseSkillSearch, profileSkills, searchSkillsArgv, skillSources, uninstallArgv, updateArgv } from "./skills";
+import { PLUGIN_NAME_RE, disablePluginArgv, enablePluginArgv, installPluginArgv, listPluginCatalog, listPluginsArgv, parsePluginList, removePluginArgv } from "./plugins";
 import { TASK_ID_RE, actionArgv, boardTenant, createArgv, kanbanError, readTask, readTasks, runKanban } from "./kanban";
 import { envEntriesFor, hasLiveChannel, resolveEntries, writeProfileKeys } from "./profileEnv";
 import { MediaError, mediaFile } from "./media";
@@ -393,6 +394,60 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       await hermesCli(["-p", body.profile, ...updateArgv(body.name)]);
       if (cfg.managedRoot) runner.markGatewayStale();
       return { installed: installedSkills(dir), skills: profileSkills(dir) };
+    },
+    // Skills from anywhere: Hermes searches its registries (skills.sh, GitHub, ClawHub…), and a
+    // pasted GitHub link or SKILL.md URL installs after Hermes' own security scan.
+    "GET /api/skills/search": async (_req, url) => {
+      const q = (url.searchParams.get("q") ?? "").trim().slice(0, 100);
+      if (!q) return { results: [] };
+      return { results: parseSkillSearch(await hermesCli(searchSkillsArgv(q))) };
+    },
+    "POST /api/skills/add": async (req) => {
+      const body = parse(z.object({ profile: z.string().regex(PROFILE_RE), source: z.string().trim().min(3).max(500) }), await json(req));
+      const dir = join(cfg.hermesHome, "profiles", body.profile);
+      if (!existsSync(dir)) throw new HttpError(409, `Compile ${body.profile} first`);
+      const sources = skillSources(body.source);
+      if (!sources) throw new HttpError(400, "Paste a GitHub link, a link to a SKILL.md, or a skill's identifier");
+      const found = await findHermes();
+      if (!found) throw new HttpError(503, "The engine is not set up yet");
+      const bin = await prepareHermes(found, cfg.hermesHome);
+      let last = "";
+      for (const src of sources) {
+        const r = await runKanban(bin, cfg.hermesHome, ["-p", body.profile, ...addSkillArgv(src)], "", 3 * 60_000);
+        if (r.code === 0) {
+          if (cfg.managedRoot) runner.markGatewayStale();
+          return { installed: installedSkills(dir), skills: profileSkills(dir), from: src };
+        }
+        last = kanbanError(r);
+      }
+      throw new HttpError(409, last || "Hermes could not install that skill");
+    },
+
+    // ---- plugins: Hermes' curated catalog, and each agent's own (this computer only) ----
+    "GET /api/plugins/catalog": async () => {
+      const src = bundledSource();
+      // The long description stays in the engine; cards show the first sentence.
+      return { plugins: src ? listPluginCatalog(src.dir).map((p) => ({ ...p, description: "" })) : [] };
+    },
+    "GET /api/plugins": async (_req, url) => {
+      const profile = url.searchParams.get("profile") ?? "";
+      if (!PROFILE_RE.test(profile)) throw new HttpError(400, "profile?");
+      const dir = join(cfg.hermesHome, "profiles", profile);
+      if (!existsSync(dir)) return { compiled: false, installed: [] };
+      return { compiled: true, installed: parsePluginList(await hermesCli(["-p", profile, ...listPluginsArgv])) };
+    },
+    "POST /api/plugins/act": async (req) => {
+      const body = parse(z.object({ profile: z.string().regex(PROFILE_RE), name: z.string().regex(PLUGIN_NAME_RE), act: z.enum(["install", "enable", "disable", "remove"]) }), await json(req));
+      if (!existsSync(join(cfg.hermesHome, "profiles", body.profile))) throw new HttpError(409, `Compile ${body.profile} first`);
+      const argv = { install: installPluginArgv, enable: enablePluginArgv, disable: disablePluginArgv, remove: removePluginArgv }[body.act](body.name);
+      const found = await findHermes();
+      if (!found) throw new HttpError(503, "The engine is not set up yet");
+      // An install clones the pinned commit and scans it: minutes on a slow line.
+      const r = await runKanban(await prepareHermes(found, cfg.hermesHome), cfg.hermesHome, ["-p", body.profile, ...argv], "", body.act === "install" ? 5 * 60_000 : 60_000);
+      if (r.code !== 0) throw new HttpError(409, kanbanError(r));
+      // Plugins load when the gateway starts.
+      if (cfg.managedRoot) runner.markGatewayStale();
+      return { compiled: true, installed: parsePluginList(await hermesCli(["-p", body.profile, ...listPluginsArgv])) };
     },
     "POST /api/connectors/login": async (req) => {
       // Hermes opens the system browser and waits for the sign-in to come back (mcp_config.py

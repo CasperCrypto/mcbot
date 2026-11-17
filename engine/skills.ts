@@ -15,7 +15,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { parse } from "yaml";
-import type { LibrarySkill, ProfileSkill } from "../src/contracts/api";
+import type { LibrarySkill, ProfileSkill, SkillSearchResult } from "../src/contracts/api";
 
 const front = (text: string): Record<string, unknown> => {
   const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
@@ -127,3 +127,48 @@ export function profileSkills(profileDir: string): ProfileSkill[] {
 export const uninstallArgv = (name: string) => ["skills", "uninstall", name, "--yes"];
 export const updateArgv = (name: string) => ["skills", "update", name];
 export const SKILL_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+
+/**
+ * What a person pastes to add a skill → what `hermes skills install` takes, best first.
+ * A GitHub folder link becomes `owner/repo/path` (Hermes' GitHub source fetches the whole folder)
+ * and, as a fallback that needs no GitHub API, the raw SKILL.md link (only that file comes).
+ * Any other https link to a SKILL.md, and registry identifiers (`skills-sh/…`, `owner/repo/path`),
+ * go as they are (hermes_cli/subcommands/skills.py:54-63: "identifier … or a direct HTTP(S) URL").
+ */
+export function skillSources(input: string): string[] | null {
+  const t = input.trim().replace(/\/+$/, "");
+  const gh = /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)(?:\/(?:tree|blob)\/([\w.\/-]+?))?$/.exec(t);
+  if (gh) {
+    const [, owner, repo, rest] = gh;
+    if (!rest) return [`${owner}/${repo}`];
+    const [ref, ...parts] = rest.split("/");
+    const path = parts.join("/").replace(/\/?SKILL\.md$/i, "");
+    const raw = `https://raw.githubusercontent.com/${owner}/${repo}/${ref}/${path ? `${path}/` : ""}SKILL.md`;
+    return path ? [`${owner}/${repo}/${path}`, raw] : [`${owner}/${repo}`, raw];
+  }
+  if (/^https:\/\/[^\s]+$/.test(t)) return [t];
+  if (/^[A-Za-z0-9][\w.-]*(\/[\w.@-]+){1,6}$/.test(t)) return [t];
+  return null;
+}
+
+/** Skills added by link or search go into one category folder, so they stay Hermes', not board blocks. */
+export const ADDED_CATEGORY = "added";
+export const addSkillArgv = (source: string) => ["skills", "install", source, "--category", ADDED_CATEGORY, "--yes"];
+export const searchSkillsArgv = (q: string) => ["skills", "search", q, "--json", "--limit", "30"];
+
+export function parseSkillSearch(stdout: string): SkillSearchResult[] {
+  const at = stdout.indexOf("[");
+  if (at < 0) return [];
+  try {
+    const rows = JSON.parse(stdout.slice(at)) as Record<string, unknown>[];
+    return rows.filter((r) => typeof r.identifier === "string" && typeof r.name === "string").map((r) => ({
+      name: String(r.name),
+      identifier: String(r.identifier),
+      source: typeof r.source === "string" ? r.source : "",
+      trust: typeof r.trust_level === "string" ? r.trust_level : "",
+      description: typeof r.description === "string" ? r.description.replace(/\s+/g, " ").trim() : "",
+    }));
+  } catch {
+    return [];
+  }
+}
