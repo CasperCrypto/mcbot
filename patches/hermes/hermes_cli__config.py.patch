@@ -1,6 +1,6 @@
 --- a/hermes/hermes_cli/config.py
 +++ b/hermes/hermes_cli/config.py
-@@ -387,6 +387,9 @@
+@@ -389,6 +389,9 @@
  def format_managed_message(action: str = "modify this Hermes installation") -> str:
      """Build a user-facing error for managed installs."""
      managed_system = get_managed_system() or "a package manager"

@@ -152,7 +152,10 @@ Change them additively; a breaking change bumps the version.
   folders); `npm run cli` does, so `hermes update` says updates come with McBot.
   Changes inside `hermes/` are listed in `hermes/MCBOT.md`; upstream releases come
   in with `npm run engine:sync`, which also lists upstream files Hermes'
-  `.gitignore` hides (add them with `git add -f`).
+  `.gitignore` hides (add them with `git add -f`). Every Monday
+  `.github/workflows/hermes-sync.yml` does that for upstream's newest stable tag, runs every
+  test and build, and opens a PR (a draft when the merge or a check needs a person). Engine
+  updates reach people only through a McBot release, never on their own.
 - First launch runs the setup assistant (`src/app/setup/`): its answers go into
   every agent's SOUL.md and their USER.md memory; `<workspace>/setup.json`
   records that it ran. Local model servers are found by asking the usual

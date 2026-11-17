@@ -1,6 +1,6 @@
 --- a/hermes/plugins/platforms/telegram/adapter.py
 +++ b/hermes/plugins/platforms/telegram/adapter.py
-@@ -2800,7 +2800,13 @@
+@@ -2745,7 +2745,13 @@
      async def _build_ptb_requests(self) -> tuple:
          """Build the (general, getUpdates) HTTPXRequest pair: fallback-IP transport, explicit proxy, or
          direct DNS; the getUpdates request is instrumented for polling-progress tracking."""
@@ -13,5 +13,5 @@
 +        _own_api_host = urlsplit(_own_api_url if "//" in _own_api_url else f"//{_own_api_url}").hostname if _own_api_url else None
 +        disable_fallback = bool(_own_api_host) or os.getenv("HERMES_TELEGRAM_DISABLE_FALLBACK_IPS", "").strip().lower() in {"1", "true", "yes", "on"}
          fallback_ips = [] if disable_fallback else self._fallback_ips()
-         if not fallback_ips and not disable_fallback:
-             discovery_timeout = self._env_float_clamped("HERMES_TELEGRAM_FALLBACK_DISCOVERY_TIMEOUT", 5.0, min_value=0.0)
+         default_verify = platform_ssl_context()
+         verify = telegram_verify(self.config.extra, default_verify)
