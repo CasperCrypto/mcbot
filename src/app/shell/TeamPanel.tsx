@@ -15,7 +15,7 @@ import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, PersonFace } from "../ui";
 
-const VIEW: Record<string, string> = { home: "Home", graph: "Board", agents: "Chat", tasks: "Tasks", code: "Code", browser: "Browser", runs: "Activity", memory: "Memory", files: "Files", cost: "Cost" };
+const VIEW: Record<string, string> = { home: "Home", graph: "Board", agents: "Chat", tasks: "Tasks", code: "Code", browser: "Browser", runs: "Runs", workflows: "Runs", memory: "Memory", files: "Files", cost: "Cost" };
 const newId = () => `msg-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 function ago(ts: number): string {

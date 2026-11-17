@@ -260,7 +260,7 @@ function AddModel({ saved, setSaved, onDone }: { saved: string[] | null; setSave
           ) : (
             <div className="key-entry">
               <Field label="API key" type="password" value={key} onChange={(v) => { setKey(v); setKeyProblem(null); }} placeholder="Paste your key" error={keyProblem} testId="settings-key"
-                note={provider ? <button className="link-btn" style={{ padding: 0 }} onClick={() => void openExternal(provider.keysUrl)}>Get a {provider.label} key ↗</button> : undefined} />
+                note={provider ? <button className="link-btn" style={{ padding: 0 }} onClick={() => void openExternal(provider.keysUrl)}>Get your {provider.label} key ↗</button> : undefined} />
               <button className="btn" disabled={!key.trim() || (!provider && !/^https?:\/\//.test(cloudBase))} onClick={() => void saveKey()} data-testid="settings-key-save">Save</button>
             </div>
           )}

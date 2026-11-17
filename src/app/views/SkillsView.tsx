@@ -4,11 +4,12 @@
  * skills (seeded after a compile unless turned off), and the official library (installed into the
  * compiled agent with `hermes skills install`). Host only: members don't reach the library.
  */
-import { Check, Download, Hammer, Pencil, Plus, Search } from "lucide-react";
+import { Check, Download, Eye, Hammer, Pencil, Plus, RefreshCw, Search, Sparkles, Trash2, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { setNodeField } from "../../board/ydoc";
-import type { LibrarySkill, SkillsView as SkillsState } from "../../contracts/api";
+import type { LibrarySkill, ProfileSkill, SkillsView as SkillsState } from "../../contracts/api";
 import type { AgentNode } from "../../contracts/graph";
+import { readSkill } from "../../harness/read";
 import { compileBoard } from "../actions";
 import { engine } from "../lib/engine";
 import { Sidebar } from "../shell/Sidebar";
@@ -17,6 +18,12 @@ import { useApp } from "../state/store";
 import { AgentFace, Empty } from "../ui";
 
 const pretty = (s: string) => s.replace(/[-_]/g, " ").replace(/^./, (c) => c.toUpperCase());
+const ago = (iso: string) => {
+  const d = Math.max(0, Date.now() - Date.parse(iso));
+  if (!Number.isFinite(d)) return "";
+  const m = Math.round(d / 60_000);
+  return m < 60 ? `${m || 1} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`;
+};
 
 export function SkillsView() {
   const { graph, doc, boardId } = useBoard();
@@ -28,11 +35,13 @@ export function SkillsView() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [reading, setReading] = useState<{ name: string; text: string } | null>(null);
 
   const profile = agent?.data.name ?? "";
   useEffect(() => {
     let live = true;
     setState(null);
+    setReading(null);
     if (profile) engine.skills(profile).then((v) => { if (live) setState(v); }).catch(() => { if (live) setState({ library: [], installed: [], seeded: false, compiled: false }); });
     return () => { live = false; };
   }, [profile]);
@@ -52,6 +61,52 @@ export function SkillsView() {
       const r = await engine.installSkill(profile, s.id);
       setState((prev) => (prev ? { ...prev, installed: r.installed } : prev));
       app.toast({ kind: "ok", text: `${pretty(s.name)} installed for ${agent.data.displayName || profile}` });
+    } catch (e) {
+      app.toast({ kind: "fail", text: (e as Error).message });
+    } finally {
+      setBusy(null);
+    }
+  };
+  const onBoard = new Set(agent.data.skills.map((sk) => sk.name));
+  // What the agent taught itself: written by it (or in Hermes), not by the board, the library or Hermes' seed.
+  const learned = (state?.skills ?? []).filter((sk) => sk.origin === "learned" && !(sk.category === null && onBoard.has(sk.name)));
+  const libraryOn = (state?.skills ?? []).filter((sk) => sk.origin === "library");
+  const others = agents.filter((a) => a.id !== agent.id);
+  const view = async (sk: ProfileSkill) => {
+    if (reading?.name === sk.name) return setReading(null);
+    try {
+      const r = await engine.read(`profile:${profile}`, sk.path);
+      setReading({ name: sk.name, text: r.text ?? r.reason ?? "" });
+    } catch (e) {
+      app.toast({ kind: "fail", text: (e as Error).message });
+    }
+  };
+  /** Copy a learned skill onto every other agent's board skills (it compiles into each of them). */
+  const share = async (sk: ProfileSkill) => {
+    setBusy(sk.name);
+    try {
+      const r = await engine.read(`profile:${profile}`, sk.path);
+      const parsed = r.text ? readSkill(r.text) : null;
+      if (!parsed) throw new Error("This skill has a shape the board can't hold yet: open it in Code");
+      let n = 0;
+      for (const a of others) {
+        if (a.data.skills.some((x) => x.name === parsed.name)) continue;
+        setNodeField(doc, a.id, "skills", [...a.data.skills, parsed]);
+        n++;
+      }
+      app.toast({ kind: "ok", text: n ? `${pretty(parsed.name)} added to ${n} agent${n === 1 ? "" : "s"}. Compile to apply` : "Every agent has it already" });
+    } catch (e) {
+      app.toast({ kind: "fail", text: (e as Error).message });
+    } finally {
+      setBusy(null);
+    }
+  };
+  const libraryAct = async (name: string, act: "update" | "remove") => {
+    setBusy(name);
+    try {
+      const r = act === "update" ? await engine.updateSkill(profile, name) : await engine.uninstallSkill(profile, name);
+      setState((prev) => (prev ? { ...prev, installed: r.installed, skills: r.skills } : prev));
+      app.toast({ kind: "ok", text: `${pretty(name)} ${act === "update" ? "is up to date" : "removed"}` });
     } catch (e) {
       app.toast({ kind: "fail", text: (e as Error).message });
     } finally {
@@ -80,6 +135,28 @@ export function SkillsView() {
               <AgentFace seed={profile} size={40} />
               <div className="grow"><h2 style={{ margin: 0 }}>{agent.data.displayName || profile}</h2><span className="faint mono">@{profile}</span></div>
               {state && !state.compiled && <button className="btn primary" onClick={compile} data-tip="Installing needs the agent on disk"><Hammer size={13} /> Compile</button>}
+            </div>
+
+            <div className="stack" style={{ gap: 8 }} data-testid="skills-learned">
+              <div className="row"><span className="section-label grow"><Sparkles size={12} /> Taught itself{learned.length ? ` · ${learned.length}` : ""}</span></div>
+              {!state ? <span className="faint">Loading…</span> : learned.length === 0 ? <span className="faint">{state.compiled ? "Nothing yet. Skills it writes during runs show up here." : "Compile, then run it: skills it writes show up here."}</span> : (
+                <div className="catalog-grid">
+                  {learned.map((sk) => (
+                    <div key={sk.path} className="catalog-card skill-card-lib" data-testid={`learned-${sk.name}`}>
+                      <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                        <b className="ellipsis">{pretty(sk.name)}</b>
+                        <span className="faint">{sk.description}</span>
+                        <span className="faint mono" style={{ fontSize: 11 }}>{ago(sk.modified)}</span>
+                      </span>
+                      <span className="row" style={{ gap: 4 }}>
+                        <button className="btn ghost sm" aria-label="Read" data-tip="Read" onClick={() => void view(sk)}><Eye size={13} /></button>
+                        {others.length > 0 && <button className="btn ghost sm" aria-label="Give to the team" data-tip="Give to every agent" disabled={busy !== null} onClick={() => void share(sk)}><Users size={13} /></button>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {reading && <pre className="mono skill-read" data-testid="skill-read">{reading.text}</pre>}
             </div>
 
             <div className="stack" style={{ gap: 8 }}>
@@ -127,7 +204,13 @@ export function SkillsView() {
                           <b className="ellipsis">{pretty(s.name)}</b>
                           <span className="faint" data-tip={s.tags.join(", ") || undefined}>{s.description}</span>
                         </span>
-                        {has ? <span className="chip ok" aria-label="Installed"><Check size={11} /> On</span>
+                        {has ? <span className="row" style={{ gap: 4 }}>
+                            <span className="chip ok" aria-label="Installed"><Check size={11} /> On</span>
+                            {libraryOn.some((x) => x.name === s.name) && <>
+                              <button className="btn ghost sm" aria-label={`Update ${s.name}`} data-tip="Update" disabled={busy !== null} onClick={() => void libraryAct(s.name, "update")}><RefreshCw size={12} /></button>
+                              <button className="btn ghost sm" aria-label={`Remove ${s.name}`} data-tip="Remove" disabled={busy !== null} onClick={() => void libraryAct(s.name, "remove")}><Trash2 size={12} /></button>
+                            </>}
+                          </span>
                           : <button className="btn sm" disabled={busy !== null || !state.compiled} onClick={() => void install(s)} data-tip={state.compiled ? undefined : "Compile first"}>
                             <Download size={12} /> {busy === s.id ? "Installing…" : "Install"}
                           </button>}

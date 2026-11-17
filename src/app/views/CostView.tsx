@@ -95,7 +95,7 @@ function Rollup({ title, rows, face }: { title: string; rows: CostRow[]; face?: 
 }
 
 export function CostView() {
-  const { boardId } = useBoard();
+  const { boardId, graph } = useBoard();
   const runs = useApp((s) => s.runs);
   const [report, setReport] = useState<CostReport | null>(null);
   const finished = Object.values(runs).filter((r) => r.status !== "running").length;
@@ -115,6 +115,19 @@ export function CostView() {
             <div className="card kpi"><small>Per successful run</small><b>{report.costPerSuccessfulRun === null ? "—" : usd(report.costPerSuccessfulRun)}</b><span>{report.totals.successfulRuns} of {report.totals.runs} succeeded</span></div>
             <div className="card kpi"><small>Local compute</small><b>{report.localInferenceSeconds.toFixed(1)}s</b><span data-tip="Wall-clock time of runs on local models. GPU time is not reported." data-tip-side="top">wall-clock</span></div>
           </div>
+          {(() => {
+            // A custom or local endpoint has no provider price: say so once, and open its price fields.
+            const unpriced = report.sessions.filter((x) => x.source === "none");
+            const model = graph.nodes.find((n) => n.kind === "model" && !n.data.pricing);
+            if (!unpriced.length || !model) return null;
+            const t = unpriced.reduce((n, x) => n + x.inputTokens + x.outputTokens, 0);
+            return (
+              <div className="card row" style={{ marginBottom: 14, gap: 12 }} data-testid="cost-unpriced">
+                <span className="grow">{tokens(t)} tokens have no price, so they count as $0.</span>
+                <button className="btn sm primary" onClick={() => { useApp.getState().setTab("graph"); useApp.getState().select(model.id); }}>Set a price</button>
+              </div>
+            );
+          })()}
           {report.budgets.length > 0 && <Budgets rows={report.budgets} />}
           <Daily rows={report.byDay} />
           <div className="two-col">

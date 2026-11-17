@@ -15,7 +15,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { parse } from "yaml";
-import type { LibrarySkill } from "../src/contracts/api";
+import type { LibrarySkill, ProfileSkill } from "../src/contracts/api";
 
 const front = (text: string): Record<string, unknown> => {
   const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
@@ -78,3 +78,52 @@ export const bundledSeeded = (profileDir: string) => existsSync(join(profileDir,
 export const SEED_ARGV = ["skills", "opt-in", "--sync"] as const;
 export const installArgv = (id: string) => ["skills", "install", id, "--yes"];
 export const SKILL_ID_RE = /^official\/[a-z0-9][a-z0-9._-]*(\/[a-z0-9][a-z0-9._-]*){1,3}$/;
+
+/**
+ * Every skill in a profile, with where it came from, so the Skills view can show what an agent
+ * taught itself. Hermes' `skill_manage` writes new skills to `skills/[<category>/]<name>/`
+ * (tools/skill_manager_tool.py `_resolve_skill_dir`); bundled ones are listed in
+ * `skills/.bundled_manifest` as `name:hash` (tools/skills_sync.py), library installs in
+ * `skills/.hub/lock.json` under `installed` (tools/skills_hub.py `HubLockFile`). Anything else
+ * the agent (or a person in Hermes) wrote. Top-level skills may be the board's own: the view
+ * compares them with the agent's board skills.
+ */
+export function profileSkills(profileDir: string): ProfileSkill[] {
+  const base = join(profileDir, "skills");
+  if (!existsSync(base)) return [];
+  const bundled = new Set<string>();
+  try {
+    for (const line of readFileSync(join(base, ".bundled_manifest"), "utf8").split(/\r?\n/)) {
+      const name = line.split(":")[0]?.trim();
+      if (name) bundled.add(name);
+    }
+  } catch { /* not seeded */ }
+  let hub: Record<string, unknown> = {};
+  try {
+    const lock = JSON.parse(readFileSync(join(base, ".hub", "lock.json"), "utf8")) as { installed?: Record<string, unknown> };
+    if (lock.installed && typeof lock.installed === "object") hub = lock.installed;
+  } catch { /* nothing installed */ }
+  const out: ProfileSkill[] = [];
+  for (const file of skillFiles(base)) {
+    const dir = join(file, "..");
+    const rel = relative(base, dir).split("\\").join("/");
+    const fm = front(readFileSync(file, "utf8"));
+    const name = typeof fm.name === "string" && fm.name ? fm.name : rel.split("/").pop()!;
+    const folder = rel.split("/").pop()!;
+    const origin: ProfileSkill["origin"] = name in hub || folder in hub ? "library" : bundled.has(name) || bundled.has(folder) ? "builtin" : "learned";
+    out.push({
+      name,
+      path: `skills/${rel}/SKILL.md`,
+      category: rel.includes("/") ? rel.split("/")[0]! : null,
+      description: typeof fm.description === "string" ? fm.description.replace(/\s+/g, " ").trim() : "",
+      origin,
+      modified: statSync(file).mtime.toISOString(),
+    });
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** `hermes skills uninstall <name> --yes` / `skills update <name>` (hermes_cli/subcommands/skills.py:79-92). */
+export const uninstallArgv = (name: string) => ["skills", "uninstall", name, "--yes"];
+export const updateArgv = (name: string) => ["skills", "update", name];
+export const SKILL_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;

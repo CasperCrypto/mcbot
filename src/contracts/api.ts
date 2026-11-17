@@ -300,6 +300,20 @@ export interface SkillsView {
   seeded: boolean;
   /** The agent's profile exists on disk (installing needs it). */
   compiled: boolean;
+  /** Every skill on disk for this agent, with where it came from (added in 0.5; older engines omit it). */
+  skills?: ProfileSkill[];
+}
+
+/** A skill in an agent's profile. `learned`: written by the agent itself (or in Hermes), not by McBot's library or Hermes' seed. */
+export interface ProfileSkill {
+  name: string;
+  /** Relative to the profile, e.g. `skills/web/link-lists/SKILL.md`. */
+  path: string;
+  category: string | null;
+  description: string;
+  origin: "learned" | "library" | "builtin";
+  /** ISO time of the SKILL.md's last change. */
+  modified: string;
 }
 
 export interface TasksView {

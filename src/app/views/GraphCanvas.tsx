@@ -2,6 +2,9 @@ import { Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, R
 import "@xyflow/react/dist/style.css";
 import { memo, useEffect, useMemo, type ReactNode } from "react";
 
+/** React Flow (MIT) is credited in the About screen's notices; its corner badge is not part of the board. */
+const PRO = { hideAttribution: true } as const;
+
 export interface GNode {
   id: string;
   x: number;
@@ -63,6 +66,7 @@ export function GraphCanvas({ nodes, edges, dir = "LR", selected, onSelect, fitS
     <div className="canvas">
       <ReactFlowProvider>
         <ReactFlow
+          proOptions={PRO}
           nodes={rfNodes} edges={rfEdges} nodeTypes={nodeTypes} colorMode="dark" fitView fitViewOptions={{ padding: 0.14, maxZoom: 1.15 }}
           minZoom={0.15} maxZoom={1.6} nodesDraggable={false} nodesConnectable={false} elementsSelectable
           onNodeClick={(_, n) => onSelect?.(n.id)} onPaneClick={() => onSelect?.(null)} deleteKeyCode={null}

@@ -27,7 +27,7 @@ import { FolderError, Folders, browseFolders } from "./folders";
 import { bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, setupHome, stopGateway } from "./hermes";
 import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
 import { JOB_ID_RE, createScheduleArgv, readSchedules, scheduleActionArgv } from "./schedules";
-import { SEED_ARGV, SKILL_ID_RE, bundledSeeded, installArgv, installedSkills, listLibrary } from "./skills";
+import { SEED_ARGV, SKILL_ID_RE, SKILL_NAME_RE, bundledSeeded, installArgv, installedSkills, listLibrary, profileSkills, uninstallArgv, updateArgv } from "./skills";
 import { TASK_ID_RE, actionArgv, boardTenant, createArgv, kanbanError, readTask, readTasks, runKanban } from "./kanban";
 import { envEntriesFor, hasLiveChannel, resolveEntries, writeProfileKeys } from "./profileEnv";
 import { MediaError, mediaFile } from "./media";
@@ -368,6 +368,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
         installed: dir ? installedSkills(dir) : [],
         seeded: dir ? bundledSeeded(dir) : false,
         compiled: dir ? existsSync(dir) : false,
+        skills: dir ? profileSkills(dir) : [],
       };
     },
     "POST /api/skills/install": async (req) => {
@@ -376,6 +377,22 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       await hermesCli(["-p", body.profile, ...installArgv(body.id)]);
       if (cfg.managedRoot) runner.markGatewayStale();
       return { installed: installedSkills(join(cfg.hermesHome, "profiles", body.profile)) };
+    },
+    "POST /api/skills/uninstall": async (req) => {
+      const body = parse(z.object({ profile: z.string().regex(PROFILE_RE), name: z.string().regex(SKILL_NAME_RE) }), await json(req));
+      const dir = join(cfg.hermesHome, "profiles", body.profile);
+      if (!existsSync(dir)) throw new HttpError(409, `Compile ${body.profile} first`);
+      await hermesCli(["-p", body.profile, ...uninstallArgv(body.name)]);
+      if (cfg.managedRoot) runner.markGatewayStale();
+      return { installed: installedSkills(dir), skills: profileSkills(dir) };
+    },
+    "POST /api/skills/update": async (req) => {
+      const body = parse(z.object({ profile: z.string().regex(PROFILE_RE), name: z.string().regex(SKILL_NAME_RE) }), await json(req));
+      const dir = join(cfg.hermesHome, "profiles", body.profile);
+      if (!existsSync(dir)) throw new HttpError(409, `Compile ${body.profile} first`);
+      await hermesCli(["-p", body.profile, ...updateArgv(body.name)]);
+      if (cfg.managedRoot) runner.markGatewayStale();
+      return { installed: installedSkills(dir), skills: profileSkills(dir) };
     },
     "POST /api/connectors/login": async (req) => {
       // Hermes opens the system browser and waits for the sign-in to come back (mcp_config.py

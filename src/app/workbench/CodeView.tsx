@@ -257,7 +257,7 @@ export default function CodeView() {
         </div>
         <div className={`code-body${terminal ? " with-terminal" : ""}`}>
           <div className="code-editor">
-            {doc ? <div ref={host} className="monaco-host" data-testid="editor" /> : <Empty title="Open a file">Pick one on the left. <Kbd>⌘S</Kbd> saves.</Empty>}
+            {doc ? <div ref={host} className="monaco-host" data-testid="editor" /> : <Empty title="Open a file" action={<button className="btn light" onClick={() => useApp.getState().setFolderPickerOpen(true)}><FolderPlus size={13} /> Open a folder</button>}>Pick one on the left. <Kbd>⌘S</Kbd> saves.</Empty>}
           </div>
           {doc && agents.length > 0 && (
             <div className="code-ask">
