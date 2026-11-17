@@ -26,7 +26,7 @@ function fieldErrors(schema: { safeParse(v: unknown): { success: boolean; error?
   return out;
 }
 
-export function Inspector({ node, issues }: { node: GraphNode; issues: Issue[] }) {
+export function Inspector({ node, issues, closing = false }: { node: GraphNode; issues: Issue[]; closing?: boolean }) {
   const { doc } = useBoard();
   const select = useApp((s) => s.select);
   const runs = useApp((s) => s.runs);
@@ -34,7 +34,7 @@ export function Inspector({ node, issues }: { node: GraphNode; issues: Issue[] }
   // Esc puts it away (a click on the empty board already does).
   const panel = useRef<HTMLElement>(null);
   const deselect = useCallback(() => select(null), [select]);
-  useDismiss(true, deselect, panel, { outside: false });
+  useDismiss(!closing, deselect, panel, { outside: false });
   const status = node.kind === "agent" ? latestRunByAgent(runs).get(node.id)?.status : undefined;
 
   const titleField = node.kind === "agent" ? "displayName" : "label";
@@ -45,7 +45,7 @@ export function Inspector({ node, issues }: { node: GraphNode; issues: Issue[] }
     : node.kind === "channel" ? "Chat app" : "MCP server";
 
   return (
-    <aside ref={panel} className="inspector glass" aria-label="Inspector" data-testid="inspector">
+    <aside ref={panel} data-closing={closing || undefined} className="inspector glass" aria-label="Inspector" data-testid="inspector">
       <div className="inspector-head">
         {node.kind === "agent" ? <AgentFace seed={node.data.name} size={42} status={status} />
           : node.kind === "media" ? <LogoTile logo={nodeLogo(node)} kind="media"><MakerIcon media={node.data.media} size={16} /></LogoTile>

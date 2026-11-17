@@ -263,7 +263,10 @@ Change them additively; a breaking change bumps the version.
   sheet, task and run details close on outside clicks; the inspector and live files on Esc
   (a board click already deselects); forms with typing in progress never close on a stray click.
   Only one panel sits on the right: team chat and the inspector replace each other. Panels you
-  read in use `--mat-panel` (thicker glass), so board wires never cross their text.
+  read in use `--mat-panel` (thicker glass), so board wires never cross their text. Panels driven
+  by a value (the inspector's block, a task, a run step) use `useLingering`, which keeps showing
+  the last value while they animate out. Loading shows flat breathing placeholders
+  (`SkeletonCards`, `.skeleton`), never "Loading…".
 - **Less text.** No explanatory paragraphs in the UI. Labels are short; detail
   lives in tooltips (`data-tip`). Empty states are one line plus one action.
 - **Settings** (`views/SettingsView.tsx`, ⌘, and the gear in the rail): models (local servers

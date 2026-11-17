@@ -27,7 +27,7 @@ function CopyCommand({ text, label }: { text: string; label: string }) {
   );
 }
 
-export function CompileSheet({ wide }: { wide: boolean }) {
+export function CompileSheet({ wide, closing = false }: { wide: boolean; closing?: boolean }) {
   const res = useApp((s) => s.compile);
   const setCompile = useApp((s) => s.setCompile);
   const select = useApp((s) => s.select);
@@ -35,7 +35,7 @@ export function CompileSheet({ wide }: { wide: boolean }) {
   const changes = res?.ok ? res.report.changes : [];
   const sheet = useRef<HTMLElement>(null);
   const hide = useCallback(() => setCompile({ compileOpen: false }), [setCompile]);
-  useDismiss(true, hide, sheet);
+  useDismiss(!closing, hide, sheet);
 
   useEffect(() => {
     if (changes.some((c) => c.path === path)) return;
@@ -48,7 +48,7 @@ export function CompileSheet({ wide }: { wide: boolean }) {
   const changedCount = changes.filter((c) => c.status !== "unchanged").length;
 
   return (
-    <section ref={sheet} className={`sheet glass${wide ? " wide" : ""}`} aria-label="Compile output" data-testid="compile-sheet">
+    <section ref={sheet} data-closing={closing || undefined} className={`sheet glass${wide ? " wide" : ""}`} aria-label="Compile output" data-testid="compile-sheet">
       <div className="sheet-head">
         <h3>{res.ok ? `${changes.length} files` : "Can't compile yet"}</h3>
         {res.ok && <span className="faint">{changedCount ? `${changedCount} changed` : "up to date"}</span>}

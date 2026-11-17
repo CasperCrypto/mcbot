@@ -23,6 +23,24 @@ export function usePresence(open: boolean, ms = EXIT_MS): { mounted: boolean; cl
 }
 
 /**
+ * The same for a popup driven by a value (the inspector's node, a task, a run step): while it
+ * leaves, the last value stays on screen, so it can animate out showing what it showed.
+ */
+export function useLingering<T>(value: T | null | undefined, ms = EXIT_MS): { value: T | null; closing: boolean } {
+  const [last, setLast] = useState<T | null>(value ?? null);
+  const open = value !== null && value !== undefined;
+  useEffect(() => {
+    if (open) {
+      setLast(value as T);
+      return undefined;
+    }
+    const t = setTimeout(() => setLast(null), reduced() ? 0 : ms);
+    return () => clearTimeout(t);
+  }, [open, value, ms]);
+  return { value: open ? (value as T) : last, closing: !open && last !== null };
+}
+
+/**
  * Light dismiss, as on iOS and macOS: a click anywhere outside a popup, or Esc, closes it.
  * Esc closes only the popup opened last. Clicks on another floating layer (⌘K, a sheet, a toast,
  * a tooltip, a menu) or on anything marked `data-dismiss-ignore` (the button that toggles the

@@ -31,6 +31,7 @@ import { HermesView } from "./HermesView";
 import { newChannel, newId, newMaker, newModel, newTool } from "./defaults";
 import { Inspector } from "./Inspector";
 import { LiveFiles } from "./LiveFiles";
+import { useLingering, usePresence } from "../lib/presence";
 import { LogoTile, nodeLogo } from "./Logo";
 import { MakerIcon, makerService, nodeTypes, type FlowNode } from "./nodes";
 import { freeSpot } from "./place";
@@ -304,6 +305,10 @@ function Canvas() {
   const add = (kind: GraphNode["kind"], make: (pos: { x: number; y: number }) => GraphNode) => place(make(freeSpot(graph, kind, center(), selectedNodeId)));
 
   const selected = graph.nodes.find((n) => n.id === selectedNodeId) ?? null;
+  // Panels leave the way they came (lib/presence.ts): the inspector keeps showing its block while it goes.
+  const inspecting = useLingering(selected);
+  const live = usePresence(liveOpen && graph.nodes.length > 0);
+  const compiling = usePresence(compileOpen);
 
   return (
     <div className="canvas" ref={wrap} data-connecting={connecting ?? undefined}
@@ -374,9 +379,9 @@ function Canvas() {
           <FileCode2 size={13} /> Files{drift ? <span className="chip warn">{drift}</span> : null}
         </button>
       )}
-      {liveOpen && graph.nodes.length > 0 && <LiveFiles onClose={() => useApp.getState().setLiveFilesOpen(false)} />}
-      {selected && <Inspector key={selected.id} node={selected} issues={issuesByNode.get(selected.id) ?? []} />}
-      {compileOpen && <CompileSheet wide={!selected} />}
+      {live.mounted && <LiveFiles closing={live.closing} onClose={() => useApp.getState().setLiveFilesOpen(false)} />}
+      {inspecting.value && <Inspector key={inspecting.value.id} node={inspecting.value} closing={inspecting.closing} issues={issuesByNode.get(inspecting.value.id) ?? []} />}
+      {compiling.mounted && <CompileSheet wide={!selected} closing={compiling.closing} />}
     </div>
   );
 }

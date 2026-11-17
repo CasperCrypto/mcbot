@@ -40,24 +40,20 @@ h3 { letter-spacing: -0.012em; }
 .card { box-shadow: var(--highlight), var(--shadow-1); }
 .catalog-card, .task-card, .home-row-main { transition: background var(--t-fast) var(--ease), transform var(--t) var(--ease-out-spring), box-shadow var(--t) var(--ease); }
 .catalog-card:hover, .task-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
-.catalog-card:active, .task-card:active { transform: scale(0.985); }
 
 /* Buttons: springy press, crisp primary. */
 .btn { transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), transform var(--t) var(--ease-out-spring), box-shadow var(--t-fast); }
-.btn:active { transform: scale(0.96); }
 .btn.primary { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 0.5px 0 rgba(255, 255, 255, 0.25); }
 .icon-btn { transition: background var(--t-fast), color var(--t-fast), transform var(--t) var(--ease-out-spring); }
 .icon-btn:active { transform: scale(0.9); }
 
 /* The rail: the current view's tile springs in. */
 .rail-btn { transition: background var(--t) var(--ease), color var(--t-fast), transform var(--t) var(--ease-out-spring); }
-.rail-btn:active { transform: scale(0.92); }
 .rail-btn[aria-current="page"] { animation: rail-pick var(--t-slow) var(--ease-out-spring) both; }
 @keyframes rail-pick { from { transform: scale(0.86); background: rgba(255, 255, 255, 0.02); } to { transform: none; } }
 
 /* Sheets and panels arrive with a spring, from a little below. */
 .palette, .team-panel { animation: sheet-in var(--t-slow) var(--ease-out-spring) both; }
-@keyframes sheet-in { from { opacity: 0; transform: translateY(10px) scale(0.975); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
 .palette-scrim { background: rgba(0, 0, 0, 0.42); backdrop-filter: blur(6px) saturate(120%); -webkit-backdrop-filter: blur(6px) saturate(120%); }
 
 /* Lists cascade in when a view opens (the first dozen rows). */

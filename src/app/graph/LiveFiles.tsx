@@ -35,7 +35,7 @@ function useLivePreview(open: boolean): CompileResponse | null {
   return res;
 }
 
-export function LiveFiles({ onClose }: { onClose: () => void }) {
+export function LiveFiles({ onClose, closing = false }: { onClose: () => void; closing?: boolean }) {
   const { graph, boardId } = useBoard();
   const selectedNodeId = useApp((s) => s.selectedNodeId);
   const busy = useApp((s) => s.compileBusy);
@@ -46,7 +46,7 @@ export function LiveFiles({ onClose }: { onClose: () => void }) {
   const pinned = useRef(false);
   // A working panel: it stays open while you edit the board, and Esc puts it away.
   const panel = useRef<HTMLElement>(null);
-  useDismiss(true, onClose, panel, { outside: false });
+  useDismiss(!closing, onClose, panel, { outside: false });
 
   // A selected block opens the file it changes: its agent's config.yaml (a model, tool, maker or
   // chat app: the first agent it is wired to).
@@ -85,7 +85,7 @@ export function LiveFiles({ onClose }: { onClose: () => void }) {
   const errors = res && !res.ok ? res.issues.filter((i) => i.level === "error") : [];
 
   return (
-    <section ref={panel} className="live-files glass" aria-label="Live files" data-testid="live-files">
+    <section ref={panel} data-closing={closing || undefined} className="live-files glass" aria-label="Live files" data-testid="live-files">
       <div className="sheet-head">
         <FileCode2 size={14} />
         <h3>Files</h3>

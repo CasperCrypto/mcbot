@@ -5,7 +5,7 @@ import type { AgentNode } from "../../contracts/graph";
 import { engine } from "../lib/engine";
 import { ago } from "../lib/format";
 import { useBoard } from "../state/board";
-import { useDismiss } from "../lib/presence";
+import { useDismiss, useLingering } from "../lib/presence";
 import { useApp } from "../state/store";
 import { AgentFace, Empty, PersonFace } from "../ui";
 
@@ -117,7 +117,7 @@ function NewTask({ agents, onClose, onCreated }: { agents: AgentNode[]; onClose:
   );
 }
 
-function Detail({ id, agents, onClose, onChanged }: { id: string; agents: AgentNode[]; onClose: () => void; onChanged: () => void }) {
+function Detail({ id, agents, onClose, onChanged, closing = false }: { id: string; agents: AgentNode[]; onClose: () => void; onChanged: () => void; closing?: boolean }) {
   const { boardId } = useBoard();
   const identity = useApp((s) => s.identity);
   const toast = useApp((s) => s.toast);
@@ -152,12 +152,12 @@ function Detail({ id, agents, onClose, onChanged }: { id: string; agents: AgentN
 
   // A click on the board of tasks (or anywhere else) or Esc closes it; a comment being typed keeps it open.
   const panel = useRef<HTMLElement>(null);
-  useDismiss(true, onClose, panel, { outside: !text.trim() });
+  useDismiss(!closing, onClose, panel, { outside: !text.trim() });
 
-  if (!task) return <aside ref={panel} className="side-panel glass"><div className="side-panel-head"><b className="grow">Task</b><button className="icon-btn" aria-label="Close" onClick={onClose}><X size={15} /></button></div></aside>;
+  if (!task) return <aside ref={panel} data-closing={closing || undefined} className="side-panel glass"><div className="side-panel-head"><b className="grow">Task</b><button className="icon-btn" aria-label="Close" onClick={onClose}><X size={15} /></button></div></aside>;
   const lane = LANES.find((l) => l.status === task.status);
   return (
-    <aside ref={panel} className="side-panel glass" data-testid="task-detail">
+    <aside ref={panel} data-closing={closing || undefined} className="side-panel glass" data-testid="task-detail">
       <div className="side-panel-head">
         <b className="grow ellipsis">{task.title}</b>
         <span className={`chip ${STATE_CHIP[task.status] ?? ""}`}>{lane?.label ?? task.status}</span>
@@ -225,6 +225,8 @@ export function TasksView() {
   const agents = useAgents();
   const { tasks, gateway, refresh } = useTasks(boardId);
   const open = useApp((s) => s.openTask);
+  // A task's details keep their content while they slide away.
+  const detail = useLingering(open && open !== "new" ? open : null);
   const setOpen = (id: string | null) => useApp.getState().showTask(id, false);
 
   const lanes = useMemo(() => LANES.map((l) => ({ ...l, tasks: (tasks ?? []).filter((t) => t.status === l.status) })).filter((l) => l.always || l.tasks.length > 0), [tasks]);
@@ -258,7 +260,7 @@ export function TasksView() {
             </div>
           )}
           {open === "new" && <NewTask agents={agents} onClose={() => setOpen(null)} onCreated={(t) => { refresh(); setOpen(t.id); }} />}
-          {open && open !== "new" && <Detail key={open} id={open} agents={agents} onClose={() => setOpen(null)} onChanged={refresh} />}
+          {detail.value && <Detail key={detail.value} id={detail.value} closing={detail.closing} agents={agents} onClose={() => setOpen(null)} onChanged={refresh} />}
         </div>
       </div>
     </section>
