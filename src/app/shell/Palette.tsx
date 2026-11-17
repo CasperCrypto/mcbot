@@ -14,6 +14,7 @@ import { useBoard } from "../state/board";
 import { useApp, type Tab } from "../state/store";
 import { AgentFace, Kbd } from "../ui";
 import { searchRuns } from "../lib/search";
+import { frecency, fuzzyScore, loadRecent, recordUse } from "../lib/rank";
 import { usePresence } from "../lib/presence";
 
 interface Command {
@@ -24,6 +25,8 @@ interface Command {
   icon: ReactNode;
   keys?: string[];
   run?: () => void;
+  /** More things to do with it, in the actions panel (⌘K on a row, as in Raycast). */
+  actions?: { label: string; icon?: ReactNode; run: () => void }[];
   /** Selecting it asks for one line of input first (Raycast-style). */
   ask?: { placeholder: string; submit: (value: string) => Promise<void> | void };
 }
@@ -136,6 +139,10 @@ function useCommands(close: () => void): Command[] {
       ...graph.nodes.filter((n) => n.kind === "agent").map((n) => ({
         id: `chat-${n.id}`, group: "Agents", label: n.data.displayName || n.data.name, hint: "Open the chat",
         icon: <AgentFace seed={n.data.name} size={22} />, run: () => { app.openChat(n.id); close(); },
+        actions: [
+          { label: "Show on the board", icon: <Waypoints size={14} />, run: () => { app.setTab("graph"); app.select(n.id); close(); } },
+          { label: "Open its files", icon: <FolderOpen size={14} />, run: () => { app.setTab("files"); app.select(n.id); close(); } },
+        ],
       })),
       ...app.boards.filter((b) => b.id !== boardId).map((b) => ({ id: `board-${b.id}`, group: "Boards", label: b.name || b.id, icon: <Layers size={15} />, run: () => { app.setBoard(b.id); close(); } })),
     ];
@@ -143,9 +150,15 @@ function useCommands(close: () => void): Command[] {
   }, [graph, doc, boardId, app, close]);
 }
 
-function matches(c: Command, q: string): boolean {
-  const hay = `${c.label} ${c.hint ?? ""} ${c.group}`.toLowerCase();
-  return q.toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
+const TAGS: Record<string, string> = { Create: "Create", Actions: "Command", "Go to": "Go to", Agents: "Agent", Boards: "Board", Conversations: "Conversation", Ask: "Ask" };
+const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform || navigator.userAgent);
+const MOD = isMac ? "⌘" : "Ctrl";
+
+/** How well a command fits what was typed: its name counts most, then its hint and group. 0 = no match. */
+function score(c: Command, q: string): number {
+  const name = fuzzyScore(q, c.label);
+  const rest = fuzzyScore(q, `${c.label} ${c.hint ?? ""} ${c.group}`, false);
+  return name ? name * 3 + rest : rest;
 }
 
 export function Palette() {
@@ -160,19 +173,29 @@ export function Palette() {
 function PaletteBody({ close, closing }: { close: () => void; closing: boolean }) {
   const commands = useCommands(close);
   const runs = useApp((s) => s.runs);
-  const { graph } = useBoard();
+  const { graph, boardId } = useBoard();
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
   const [asking, setAsking] = useState<Command | null>(null);
+  const [panel, setPanel] = useState(false);
+  const [pi, setPi] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLDivElement>(null);
 
-  // Each group once, in the order it first appears (a command listed later still joins its group).
+  const recent = useMemo(() => loadRecent(), []);
+  const selectedId = useApp((s) => s.selectedNodeId);
+  // Typing ranks by fit and by how often you use a command; empty shows what you use most first.
+  // Each group is listed once, in the order its best hit appears.
   const shown = useMemo(() => {
     if (asking) return [];
-    const hits = commands.filter((c) => matches(c, query));
-    const order = [...new Set(hits.map((c) => c.group))];
-    // Past conversations on this board that mention every word, after the commands.
+    const q = query.trim();
+    const use = (c: Command) => frecency(recent[c.id]);
+    const ranked = q
+      ? commands.map((c) => ({ c, s: score(c, q) })).filter((x) => x.s > 0).sort((a, b) => b.s + use(b.c) * 8 - (a.s + use(a.c) * 8)).map((x) => x.c)
+      : commands;
+    const top = q ? [] : commands.filter((c) => use(c) > 0.6 && !c.id.startsWith("go-")).sort((a, b) => use(b) - use(a)).slice(0, 4).map((c) => ({ ...c, group: "Suggested" }));
+    const rest = q ? ranked : ranked.filter((c) => !top.some((t) => t.id === c.id));
+    const order = [...new Set(rest.map((c) => c.group))];
     const nameOf = (id: string) => {
       const a = graph.nodes.find((n) => n.id === id);
       return a?.kind === "agent" ? a.data.displayName || a.data.name : "";
@@ -181,13 +204,23 @@ function PaletteBody({ close, closing }: { close: () => void; closing: boolean }
       id: `run-${run.runId}`, group: "Conversations", label: run.prompt.split("\n")[0]!.slice(0, 80), hint: `${nameOf(run.agentNodeId) || run.profile} · ${snippet}`,
       icon: <AgentFace seed={run.profile} size={22} status={run.status} />,
       run: () => { useApp.getState().selectRun(run.runId); useApp.getState().openChat(run.agentNodeId); close(); },
+      actions: [{ label: "Show on the board", icon: <Waypoints size={14} />, run: () => { useApp.getState().setTab("graph"); useApp.getState().select(run.agentNodeId); close(); } }],
     }));
-    return [...order.flatMap((g) => hits.filter((c) => c.group === g)), ...said];
-  }, [commands, query, asking, runs, graph, close]);
+    // Nothing fits? Ask an agent, like Raycast's "Ask AI": the selected agent, else the first.
+    const agents = graph.nodes.filter((n) => n.kind === "agent");
+    const target = agents.find((n) => n.id === selectedId) ?? agents[0];
+    const fallback: Command[] = q.length >= 3 && target ? [{
+      id: `ask-fallback`, group: "Ask", label: `Ask ${target.data.displayName || target.data.name}`, hint: `“${q.slice(0, 80)}”`,
+      icon: <AgentFace seed={target.data.name} size={22} />,
+      run: () => { close(); useApp.getState().openChat(target.id); void runAgent(boardId, target.id, q); },
+    }] : [];
+    return [...top, ...order.flatMap((g) => rest.filter((c) => c.group === g)), ...said, ...fallback];
+  }, [commands, query, asking, runs, graph, close, recent, selectedId, boardId]);
   // Block bodies on purpose: scrollIntoView returns a Promise in current Chromium,
   // and an effect that returns a non-function crashes React on cleanup.
   useEffect(() => {
     setIndex(0);
+    setPanel(false);
   }, [query, asking]);
   useEffect(() => {
     input.current?.focus();
@@ -198,12 +231,29 @@ function PaletteBody({ close, closing }: { close: () => void; closing: boolean }
 
   const choose = (c: Command | undefined) => {
     if (!c) return;
+    if (c.id !== "ask-fallback") recordUse(c.id);
     if (c.ask) {
       setAsking(c);
       setQuery("");
     } else c.run?.();
   };
+  const current = shown[index];
+  const extras = current?.actions ?? [];
   const onKey = (e: React.KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      // ⌘K inside the palette opens what else you can do with the row (the window's ⌘K stays out of it).
+      e.preventDefault();
+      e.stopPropagation();
+      if (!asking && extras.length) { setPanel((v) => !v); setPi(0); }
+      return;
+    }
+    if (panel) {
+      if (e.key === "Escape") { e.preventDefault(); setPanel(false); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); setPi((i) => Math.min(extras.length - 1, i + 1)); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); setPi((i) => Math.max(0, i - 1)); }
+      else if (e.key === "Enter") { e.preventDefault(); if (current) recordUse(current.id); extras[pi]?.run(); }
+      return;
+    }
     if (e.key === "Escape") {
       e.preventDefault();
       if (asking) setAsking(null);
@@ -214,11 +264,14 @@ function PaletteBody({ close, closing }: { close: () => void; closing: boolean }
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setIndex((i) => Math.max(0, i - 1));
+    } else if (e.key === "Tab" && !asking && current?.ask) {
+      e.preventDefault();
+      choose(current);
     } else if (e.key === "Enter") {
       e.preventDefault();
       if (asking) {
         if (query.trim()) void asking.ask!.submit(query);
-      } else choose(shown[index]);
+      } else choose(current);
     }
   };
 
@@ -238,23 +291,35 @@ function PaletteBody({ close, closing }: { close: () => void; closing: boolean }
             {shown.map((c, i) => {
               const head = c.group !== lastGroup ? <div className="palette-group">{(lastGroup = c.group)}</div> : null;
               return (
-                <div key={c.id}>
+                <div key={`${c.group}-${c.id}`}>
                   {head}
-                  <button className="palette-row" role="option" aria-selected={i === index} onMouseMove={() => setIndex(i)} onClick={() => choose(c)}>
+                  <button className="palette-row" role="option" data-group={c.group} aria-selected={i === index} onMouseMove={() => setIndex(i)} onClick={() => choose(c)}>
                     <span className="tile">{c.icon}</span>
                     <span className="label">{c.label}</span>
                     {c.hint && <span className="hint">{c.hint}</span>}
-                    {c.keys && <span className="keys">{c.keys.map((k) => <Kbd key={k}>{k}</Kbd>)}</span>}
+                    {c.keys ? <span className="keys">{c.keys.map((k) => <Kbd key={k}>{k}</Kbd>)}</span> : <span className="tag">{TAGS[c.group] ?? c.group}</span>}
                   </button>
                 </div>
               );
             })}
           </div>
         )}
+        {panel && extras.length > 0 && (
+          <div className="palette-actions" role="menu" aria-label="Actions">
+            <div className="palette-group">{current?.label}</div>
+            {extras.map((x, i) => (
+              <button key={x.label} role="menuitem" className="palette-row sm" aria-selected={i === pi} onMouseMove={() => setPi(i)} onClick={() => { if (current) recordUse(current.id); x.run(); }}>
+                <span className="tile">{x.icon}</span><span className="label">{x.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <div className="palette-foot">
-          <span className="row"><Kbd><CornerDownLeft size={11} /></Kbd>{asking ? "Confirm" : "Open"}</span>
-          <span className="row"><Kbd>↑</Kbd><Kbd>↓</Kbd>Move</span>
-          <span className="row"><Kbd>esc</Kbd>{asking ? "Back" : "Close"}</span>
+          <span className="palette-brand"><span className="dot" />McBot</span>
+          <span className="grow" />
+          <span className="row">{asking ? "Confirm" : current?.ask || current?.id === "ask-fallback" ? "Ask" : "Open"}<Kbd><CornerDownLeft size={11} /></Kbd></span>
+          {!asking && extras.length > 0 && <span className="row">Actions<Kbd>{MOD}</Kbd><Kbd>K</Kbd></span>}
+          <span className="row">{asking || panel ? "Back" : "Close"}<Kbd>esc</Kbd></span>
         </div>
       </div>
     </>

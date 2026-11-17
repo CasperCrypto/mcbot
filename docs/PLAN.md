@@ -401,3 +401,14 @@ file transfer, per-agent queue (done), search across conversations (done).
 Account sign-in, WebRTC remote mode, mobile app: they conflict with "no auth, no cloud" until asked.
 
 Order: A1–A3 → B → C → D → A4–A5 → E.
+
+### Ideas from Raycast and vorssaint-utils (2026-11-17; features only)
+Raycast's app is closed; its repos `extensions`, `script-commands`, `ray-so` are MIT (ray-so's AI prompt
+library could seed starter prompts, with its LICENSE kept). vorssaint-utils is **GPL-3.0**: never copy, rebuild.
+Done: ranked palette with recents, Ask fallback, actions panel (⌘K on a row).
+Next, in order: **Quicklinks** (a name opens a URL or folder, or sends a prompt to an agent, with `{argument}`);
+**Snippets** (expand text by keyword; an agent can use them); **Clipboard history** as a source the person
+may hand an agent ("use what I copied"); **aliases and hotkeys per command**; **scratchpad** note in the
+island; **window-level launcher** (the floating island can host ⌘⇧Space's palette so it opens over any app);
+**script commands** (shell scripts with a header, as tools for agents).
+
