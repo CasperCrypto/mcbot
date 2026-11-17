@@ -300,7 +300,9 @@ Change them additively; a breaking change bumps the version.
   answer). Parsed to blocks and rendered as React elements, never HTML. New agents' souls carry
   three lines that teach the format (`withRichAnswers`: presets, starter teams, New agent).
 - Connections are agent-centred (Hermes' model): a model, tool, maker or chat app connects only to
-  an agent. While a connection is drawn the rest dims; a refused drop says why. Chains between
+  an agent. While a connection is drawn the rest dims; a refused drop says why. A selected block's
+  wires say what they mean ("thinks with", "falls back to", "uses", "talks on", "makes images
+  with", "hands work to"); unselected wires carry no label. Chains between
   them are workflows (M10).
 - **Type:** San Francisco on a Mac (`-apple-system`; SF may not be shipped elsewhere, so Windows
   and Linux fall back to Segoe UI or Inter). `src/app/styles/premium.css` (loaded last) holds the

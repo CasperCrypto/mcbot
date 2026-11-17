@@ -204,15 +204,20 @@ function Canvas() {
     const s = graph.nodes.find((n) => n.id === e.source);
     const t = graph.nodes.find((n) => n.id === e.target);
     if (!s || !t) return [];
+    // A selected block's wires say what they mean (thinks with, uses, talks on…); the rest stay quiet.
+    const said = (text: string) => (e.source === selectedNodeId || e.target === selectedNodeId ? { label: text, labelBgPadding: [7, 3] as [number, number], labelBgBorderRadius: 7 } : {});
     // agent → agent: the source hands work to the target, as tasks.
-    if (s.kind === "agent" && t.kind === "agent" && s.id !== t.id) return [{ id: e.id, source: s.id, target: t.id, sourceHandle: "down", targetHandle: "up", className: "handoff", markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14 } }];
+    if (s.kind === "agent" && t.kind === "agent" && s.id !== t.id) return [{ id: e.id, source: s.id, target: t.id, sourceHandle: "down", targetHandle: "up", className: "handoff", markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14 }, ...said("hands work to") }];
     const agent = s.kind === "agent" ? s : t.kind === "agent" ? t : null;
     const other = agent === s ? t : s;
     const running = agent ? latest.get(agent.id)?.status === "running" : false;
-    if (agent && other.kind === "model") return [{ id: e.id, source: other.id, target: agent.id, sourceHandle: "out", targetHandle: "in", className: running ? "live" : undefined }];
-    if (agent && (other.kind === "tool" || other.kind === "media" || other.kind === "channel")) return [{ id: e.id, source: agent.id, target: other.id, sourceHandle: "out", targetHandle: "in", className: activity.active.has(other.id) ? "live" : undefined }];
+    if (agent && other.kind === "model") return [{ id: e.id, source: other.id, target: agent.id, sourceHandle: "out", targetHandle: "in", className: running ? "live" : undefined, ...said(e.order > 0 ? "falls back to" : "thinks with") }];
+    if (agent && (other.kind === "tool" || other.kind === "media" || other.kind === "channel")) {
+      const verb = other.kind === "tool" ? "uses" : other.kind === "channel" ? "talks on" : (other.data as MediaData).media === "video" ? "makes videos with" : "makes images with";
+      return [{ id: e.id, source: agent.id, target: other.id, sourceHandle: "out", targetHandle: "in", className: activity.active.has(other.id) ? "live" : undefined, ...said(verb) }];
+    }
     return [{ id: e.id, source: e.source, target: e.target, className: "problem" }];
-  }), [graph, latest, activity]);
+  }), [graph, latest, activity, selectedNodeId]);
 
   const onNodesChange = useCallback((changes: NodeChange<FlowNode>[]) => {
     setRfNodes((nds) => applyNodeChanges(changes, nds));

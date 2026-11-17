@@ -378,3 +378,9 @@ input.input::placeholder { color: var(--text-4); }
 .menu button.danger { color: var(--fail); }
 .menu button.danger:hover { background: var(--fail); color: #fff; }
 .menu button:active { transform: scale(0.985); }
+
+/* Wire labels: a selected block's wires say what they mean (thinks with, uses, talks on…). */
+.react-flow__edge-textbg { fill: var(--bg-raised); stroke: var(--line-2); stroke-width: 0.5px; }
+.react-flow__edge-text { fill: var(--text-2); font-size: 10.5px; font-weight: 500; letter-spacing: 0.01em; }
+.react-flow__edge-textwrapper { animation: fade-in var(--t) var(--ease) both; }
+@media (prefers-reduced-motion: reduce) { .react-flow__edge-textwrapper { animation: none; } }
