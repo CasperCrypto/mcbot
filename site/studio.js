@@ -476,32 +476,10 @@
   for (const c of cards) io.observe(c);
 })();
 
-/* ---------- prism light, spotlight cards, reveals, the keys ---------- */
+/* ---------- reveals and the keys ---------- */
 (() => {
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const SPECTRUM = ["#ff3b30", "#ff9500", "#ffd60a", "#30d158", "#64d2ff", "#0a84ff", "#bf5af2"];
-  for (const el of $$("[data-prism]")) {
-    let h = '<i class="core"></i><i class="beam soft"></i><i class="beam"></i>';
-    SPECTRUM.forEach((c, i) => {
-      const a = 4 + i * 4.2;
-      const st = `--c:${c};--a:${a}deg;--d:${(-i * 1.3).toFixed(1)}s`;
-      h += `<i class="fan" style="${st}"></i><i class="fan thin" style="${st}"></i>`;
-    });
-    el.innerHTML = h;
-  }
-  // the prism leans a little toward the pointer
-  const hero = $$(".hero")[0]; const main = hero && $$(".prism", hero)[0];
-  if (main && !reduce) {
-    let tx = 0; let cx = 0;
-    addEventListener("pointermove", (e) => { tx = (e.clientX / innerWidth - 0.5) * 6; }, { passive: true });
-    const tick = () => { cx += (tx - cx) * 0.06; main.style.setProperty("--tilt", `${cx.toFixed(2)}deg`); requestAnimationFrame(tick); };
-    requestAnimationFrame(tick);
-  }
-  // spotlight on cards
-  for (const c of $$(".bc, .values > div, .os")) {
-    c.addEventListener("pointermove", (e) => { const r = c.getBoundingClientRect(); c.style.setProperty("--mx", `${e.clientX - r.left}px`); c.style.setProperty("--my", `${e.clientY - r.top}px`); }, { passive: true });
-  }
   // reveals
   const rv = $$("[data-reveal]");
   if (!("IntersectionObserver" in window) || reduce) rv.forEach((e) => e.classList.add("in"));
