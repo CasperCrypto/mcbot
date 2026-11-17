@@ -74,3 +74,16 @@ export function newChannel(g: Graph, platform: PlatformId, position: { x: number
   const name = uniqueName(platform.replace(/_/g, "-"), namesOf(g, "channel"));
   return { id: newId("chat"), kind: "channel", position, data: { name, label: PLATFORMS[platform].label, platform, tokenEnv: "", settings: {}, allowedUsers: [], apiBase: "" } };
 }
+
+/**
+ * A copy of a block beside the original (right-click → Duplicate, ⌘D): a new id, a free name of its
+ * kind, "copy" in its title, everything else the same. Wires are not copied: the copy starts alone.
+ */
+export function duplicateNode(g: Graph, node: GraphNode): GraphNode {
+  const data = structuredClone(node.data) as Record<string, unknown>;
+  const base = String(data.name ?? node.kind).replace(/-copy(-\d+)?$/, "");
+  data.name = uniqueName(`${base}-copy`, namesOf(g, node.kind));
+  if (node.kind === "agent" && typeof data.displayName === "string" && data.displayName) data.displayName = `${data.displayName} copy`;
+  if (node.kind !== "agent" && typeof data.label === "string" && data.label) data.label = `${data.label} copy`;
+  return { ...node, id: newId(node.kind), position: { x: node.position.x + 44, y: node.position.y + 44 }, data } as GraphNode;
+}

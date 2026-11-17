@@ -288,7 +288,10 @@ Change them additively; a breaking change bumps the version.
   file by file, whole, with its changes against disk marked; selecting a block opens its agent's
   config.yaml. Nothing is written until Compile. The board fits beside it (⌘0 fits too).
 - The canvas snaps to half the dot grid, Shift-drag selects a box, ⌘/Ctrl-click adds to a
-  selection, and a minimap shows from 8 blocks on.
+  selection, and a minimap shows from 8 blocks on. Right-click (`graph/ContextMenu.tsx`, portalled
+  to `body` because the view animates with a transform) adds a block where you clicked, or opens
+  a block's actions: Open, Chat, Its files, Duplicate (⌘D, `duplicateNode`: new id, free name,
+  no wires), Delete.
 - **Compile** says how it went in a notice (with "Fix" on the first block with a problem); the
   compile sheet (files and diffs) opens only when asked (the notice's "Files", ⌘K → Compiled files).
 - **Rich answers** (`src/app/chat/rich.ts`, `RichText.tsx`): an agent's answer is drawn from
@@ -409,4 +412,4 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   Product shots (`site/assets/*.webp`) are taken from the demo at 1440×900 @2x
   without the Demo chip; re-shoot them when the UI they show changes.
 
-Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Skills, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘0 fit the board · ⌘N new window (desktop).
+Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Skills, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘D duplicate · ⌘0 fit the board · right-click the board · ⌘N new window (desktop).
