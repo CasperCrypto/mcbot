@@ -5,6 +5,13 @@
   "windows": ["main", "board-*", "island"],
   "permissions": [
     "core:default",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-is-maximized",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging",
     { "identifier": "opener:allow-open-url", "allow": [{ "url": "https://*" }, { "url": "http://localhost*" }, { "url": "http://127.0.0.1*" }, { "url": "mailto:*" }] },
     "opener:allow-reveal-item-in-dir",
     "notification:default"

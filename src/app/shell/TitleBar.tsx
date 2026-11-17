@@ -1,7 +1,8 @@
-import { Check, ChevronDown, Download, FolderOpen, Hammer, LoaderCircle, MessagesSquare, Plus, Search, Stethoscope, Upload, Users } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, Copy, Download, FolderOpen, Hammer, LoaderCircle, Minus, MessagesSquare, Plus, Search, Square, Stethoscope, Upload, Users, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { resolveGraph } from "../../compile";
 import { compileBoard, exportBoardFile, importBoardFile, openHermesSetup } from "../actions";
+import { onMaximized, ownFrame, windowAct } from "../lib/desktop";
 import { DEMO, REMOTE } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
@@ -72,6 +73,24 @@ function DoctorButton() {
   );
 }
 
+/** Minimize, maximize and close, for the frameless window (Windows and Linux). */
+function WindowControls() {
+  const [max, setMax] = useState(false);
+  useEffect(() => {
+    let off: (() => void) | undefined;
+    let live = true;
+    void onMaximized(setMax).then((f) => { if (live) off = f; else f(); });
+    return () => { live = false; off?.(); };
+  }, []);
+  return (
+    <div className="win-controls" role="group" aria-label="Window">
+      <button type="button" aria-label="Minimize" onClick={() => void windowAct("min")}><Minus size={15} /></button>
+      <button type="button" aria-label={max ? "Restore" : "Maximize"} onClick={() => void windowAct("max")}>{max ? <Copy size={13} /> : <Square size={12} />}</button>
+      <button type="button" className="close" aria-label="Close" onClick={() => void windowAct("close")}><X size={16} /></button>
+    </div>
+  );
+}
+
 export function TitleBar() {
   const { graph, peers, boardId } = useBoard();
   const identity = useApp((s) => s.identity);
@@ -88,7 +107,7 @@ export function TitleBar() {
       <BrandMark />
       <BoardMenu />
       {DEMO && <span className="chip warn" data-tip="Browser demo: compile is real, runs are simulated" data-tip-side="bottom" data-testid="demo-chip">Demo</span>}
-      <div className="spacer" />
+      <div className="spacer" data-tauri-drag-region />
       <Island />
       <button className="presence" data-testid="presence" data-dismiss-ignore onClick={() => useApp.getState().setTeamOpen(!useApp.getState().teamOpen)}
         data-tip={`${people.length === 1 ? "Only you here" : `${people.length} here`} · team chat`} data-tip-side="bottom">
@@ -116,6 +135,7 @@ export function TitleBar() {
         {errors > 0 ? <span className="chip fail" style={{ height: 18, background: "rgba(0,0,0,.25)", color: "#fff" }}>{errors}</span>
           : drift ? <span className="chip" style={{ height: 18, background: "rgba(255,255,255,.22)", color: "#fff" }}>{drift}</span> : null}
       </button>
+      {ownFrame() && <WindowControls />}
     </header>
   );
 }

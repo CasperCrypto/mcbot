@@ -5,7 +5,7 @@ import { IslandPill } from "./shell/IslandPill";
 import "./styles/index.css";
 
 // In the macOS app the title bar is an overlay: leave room for the traffic lights.
-if ("__TAURI_INTERNALS__" in window && /Mac/.test(navigator.userAgent)) document.documentElement.dataset.shell = "mac";
+if ("__TAURI_INTERNALS__" in window) document.documentElement.dataset.shell = /Mac/.test(navigator.userAgent) ? "mac" : "win";
 
 // A tooltip steps aside once its control is clicked, until the pointer leaves it (as on macOS).
 document.addEventListener("pointerdown", (e) => {

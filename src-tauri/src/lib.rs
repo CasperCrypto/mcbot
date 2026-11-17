@@ -88,7 +88,7 @@ fn refresh_island_soon<R: Runtime>(app: &AppHandle<R>) {
 }
 
 fn build_island(app: &AppHandle<Wry>) -> tauri::Result<()> {
-    WebviewWindowBuilder::new(app, "island", WebviewUrl::App("index.html".into()))
+    let b = WebviewWindowBuilder::new(app, "island", WebviewUrl::App("index.html".into()))
         .title("McBot")
         .inner_size(240.0, 32.0)
         .decorations(false)
@@ -97,9 +97,14 @@ fn build_island(app: &AppHandle<Wry>) -> tauri::Result<()> {
         .skip_taskbar(true)
         .shadow(false)
         .focused(false)
-        .visible(false)
-        .background_color(tauri::window::Color(0, 0, 0, 255))
-        .build()?;
+        .visible(false);
+    // Windows can draw a see-through window, so the pill's bottom corners are round and it sits fused to the top edge.
+    // (macOS needs a private API for that: there it stays a black rectangle flush with the top.)
+    #[cfg(windows)]
+    let b = b.transparent(true).background_color(tauri::window::Color(0, 0, 0, 0));
+    #[cfg(not(windows))]
+    let b = b.background_color(tauri::window::Color(0, 0, 0, 255));
+    b.build()?;
     Ok(())
 }
 
@@ -266,6 +271,8 @@ fn new_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         .hidden_title(true)
         .traffic_light_position(tauri::LogicalPosition::new(18.0, 23.0));
+    #[cfg(not(target_os = "macos"))]
+    let builder = builder.decorations(false);
     builder.build()?;
     Ok(())
 }

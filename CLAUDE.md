@@ -351,12 +351,17 @@ Change them additively; a breaking change bumps the version.
   matching only on a command's name), then frecency (use counts, fading with age, kept in localStorage);
   empty shows "Suggested" (what you use most) first; a query nothing answers offers "Ask <agent>" as the
   last row; ⌘K / Ctrl+K on a row opens its actions (`Command.actions`); Tab on an "Ask…" row starts it.
+- **Frameless window:** on Windows and Linux the main window has no native frame (`src-tauri/tauri.windows.conf.json`,
+  `tauri.linux.conf.json`, and `new_window`); the title bar is the frame (drag region, `WindowControls` for
+  minimize, maximize and close). macOS keeps its overlay title bar and traffic lights. The in-app island hangs
+  from the top edge (flat on top, round underneath), like a notch.
 - **Floating island** (desktop only; `src-tauri/src/lib.rs` `island`, `shell/IslandPill.tsx`, `lib/islandBridge.ts`):
   a small always-on-top window at the top centre of the screen, shown while no McBot window is in
   front and an agent works or asks (or every window is hidden, so it is the way back). Click brings
   McBot forward, its arrow hides McBot's windows, Allow once / Deny answer an approval from anywhere.
   The `main` window owns the state and sends a summary by events; the pill holds no board, no keys.
-  Black and flush with the screen edge (no transparency: macOS needs a private API for it).
+  Flush with the top edge of the screen: on Windows the window is transparent so the pill is round underneath;
+  on macOS it stays a black rectangle (transparency needs a private API).
 - **New agent** (`shell/NewAgentSheet.tsx`): six one-click starting cards (`agentSuggestions.ts`) fill name, purpose and soul.
 - Views live behind an error boundary; a broken view must not blank the window.
 - **Links out of the app** go through `openExternal` (`src/app/lib/open.ts`): the
