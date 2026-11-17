@@ -357,3 +357,47 @@ Each new surface is designed in the app itself and reviewed in the browser
 demo, where changes are visible in minutes: Home, the Tasks view, the
 workbench panes (terminal, editor, browser), the app catalog, workflow nodes,
 teams and roles, settings, the light theme and the menu bar.
+
+## Catch-up plan vs nightly OpenBot (2026-11-17)
+
+Features only; their code is PolyForm Noncommercial and never comes in (hard rule 1). Done so far:
+starter cards in New agent, the floating island window, OpenCode Zen preset.
+
+### A. Browser the agent and the person share (the biggest gap) — M8
+Today the Browser view is a page to look at plus "Ask an agent"; the agent browses somewhere else
+(Hermes' own Chromium) and the person never sees it. OpenBot has one in-app browser the agent drives
+while you watch, and you can take over.
+1. **Tabs, history, bookmarks, find-in-page** in `BrowserView` (pure UI; native child webview per tab, one visible).
+2. **Watch**: the agent's browser shown live in the pane. Hermes takes a CDP endpoint
+   (`browser.cdp_url` / `BROWSER_CDP_URL`, `hermes/tools/browser_session_cdp.py`): McBot starts one
+   Chromium with a debugging port, writes that URL into the agent's config, streams its screencast
+   (CDP `Page.startScreencast`) into the pane, and clicks/typing in the pane go back over CDP.
+   Verify the config key in `hermes_cli/config.py` before compiling it (rule 2).
+3. **Take over / hand back**: a banner "Mapped is browsing — Take over"; while taken, the agent pauses.
+4. **Logins that persist**: a McBot browser profile (cookies kept), so the agent can use sites the
+   person signed in to; Hermes has `browser_session_real_profile.py` and a vault: check before building.
+5. **Point at the page** (Orca idea, already planned): click an element, send selector + HTML to chat.
+Windows' WebView2 can expose CDP itself; macOS WKWebView cannot, so Chromium + screencast is the common path.
+
+### B. Providers (Settings → Providers)
+Connected / Other list with status, one-click setup, "update required", and per row which agents use it
+and what it costs. Includes keyless free start **if** opencode.ai/zen answers without a key (unverified:
+`curl https://opencode.ai/zen/v1/models`).
+
+### C. Onboarding
+First launch → pick a model (free if verified, local if found, else key) → New agent with starter cards → first chat.
+Cut today's setup assistant to that path; the questions move into the agent's first message.
+
+### D. Mac feel and smoothness
+Window vibrancy on macOS (Tauri effects), springs on every sheet and toast (tokens exist), sidebar and
+rail selection slide, a "…" overflow menu in the rail with pinning, a dismissible product card, bouncy toasts.
+Test on a real Mac and Windows; screenshots at @2x for the site.
+
+### E. Chat details they have
+Context meter with compaction warning, branch a conversation from a message, agent-to-agent messages and
+file transfer, per-agent queue (done), search across conversations (done).
+
+### F. Not copying
+Account sign-in, WebRTC remote mode, mobile app: they conflict with "no auth, no cloud" until asked.
+
+Order: A1–A3 → B → C → D → A4–A5 → E.
