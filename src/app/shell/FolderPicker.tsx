@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import type { FsBrowse } from "../../contracts/api";
 import { engine } from "../lib/engine";
 import { useApp } from "../state/store";
+import { usePresence } from "../lib/presence";
 
 const LAST = "mcbot.picker.last";
 const lastPath = () => {
@@ -46,7 +47,9 @@ export function FolderPicker() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!open) return null;
+  // Stays a moment after closing, to leave the way it came (lib/presence.ts).
+  const presence = usePresence(open);
+  if (!presence.mounted) return null;
 
   const choose = async (path: string) => {
     setBusy(true);
@@ -76,8 +79,8 @@ export function FolderPicker() {
 
   return (
     <>
-      <div className="palette-scrim" onClick={() => setOpen(false)} />
-      <section className="palette hermes-sheet picker" role="dialog" aria-label="Open a folder" data-testid="folder-picker">
+      <div data-closing={presence.closing || undefined} className="palette-scrim" onClick={() => setOpen(false)} />
+      <section className="palette hermes-sheet picker" role="dialog" aria-modal="true" data-closing={presence.closing || undefined} aria-label="Open a folder" data-testid="folder-picker">
         <header>
           <span className="hermes-mark" aria-hidden><FolderOpen size={18} /></span>
           <div className="grow"><h2>Open a folder</h2><small>Agents and the editor can work in it</small></div>

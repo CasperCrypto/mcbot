@@ -1,7 +1,8 @@
 import { Check, CircleAlert, Copy, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FileChange } from "../../contracts/compile";
 import { bytes } from "../lib/format";
+import { useDismiss } from "../lib/presence";
 import { useApp } from "../state/store";
 
 const MARK: Record<FileChange["status"], string> = { added: "A", modified: "M", removed: "D", unchanged: "=" };
@@ -32,6 +33,9 @@ export function CompileSheet({ wide }: { wide: boolean }) {
   const select = useApp((s) => s.select);
   const [path, setPath] = useState<string | null>(null);
   const changes = res?.ok ? res.report.changes : [];
+  const sheet = useRef<HTMLElement>(null);
+  const hide = useCallback(() => setCompile({ compileOpen: false }), [setCompile]);
+  useDismiss(true, hide, sheet);
 
   useEffect(() => {
     if (changes.some((c) => c.path === path)) return;
@@ -44,7 +48,7 @@ export function CompileSheet({ wide }: { wide: boolean }) {
   const changedCount = changes.filter((c) => c.status !== "unchanged").length;
 
   return (
-    <section className={`sheet glass${wide ? " wide" : ""}`} aria-label="Compile output" data-testid="compile-sheet">
+    <section ref={sheet} className={`sheet glass${wide ? " wide" : ""}`} aria-label="Compile output" data-testid="compile-sheet">
       <div className="sheet-head">
         <h3>{res.ok ? `${changes.length} files` : "Can't compile yet"}</h3>
         {res.ok && <span className="faint">{changedCount ? `${changedCount} changed` : "up to date"}</span>}

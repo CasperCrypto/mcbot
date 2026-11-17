@@ -8,6 +8,7 @@ import { newChannel, newId } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
+import { usePresence } from "../lib/presence";
 
 /** The ones most people use first; the rest follow alphabetically. */
 const FIRST: PlatformId[] = ["telegram", "slack", "discord", "whatsapp_cloud", "teams", "email", "signal", "matrix"];
@@ -28,7 +29,9 @@ export function ChatAppCatalog() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, setOpen]);
-  if (!open) return null;
+  // Stays a moment after closing, to leave the way it came (lib/presence.ts).
+  const presence = usePresence(open);
+  if (!presence.mounted) return null;
 
   const add = (platform: PlatformId) => {
     const node = newChannel(graph, platform, freeSpot(graph, "channel", target?.position ?? null, target?.id ?? null));
@@ -53,8 +56,8 @@ export function ChatAppCatalog() {
 
   return (
     <>
-      <div className="palette-scrim" onClick={() => setOpen(false)} />
-      <section className="palette hermes-sheet catalog" role="dialog" aria-label="Add a chat app" data-testid="chat-catalog">
+      <div data-closing={presence.closing || undefined} className="palette-scrim" onClick={() => setOpen(false)} />
+      <section className="palette hermes-sheet catalog" role="dialog" aria-modal="true" data-closing={presence.closing || undefined} aria-label="Add a chat app" data-testid="chat-catalog">
         <header>
           <span className="hermes-mark" aria-hidden><MessagesSquare size={18} /></span>
           <div className="grow">

@@ -331,3 +331,31 @@ input.input::placeholder { color: var(--text-4); }
 .msg.agent .bubble:has(.rich) { white-space: normal; }
 /* The composer holds text: thick material, so the thread behind never competes with it. */
 .composer, .composer:focus-within { background: var(--mat-thick); }
+
+/* ── Leaving ─────────────────────────────────────────────────────────────────────────────
+   Popups go the way they came: lib/presence.ts keeps them mounted EXIT_MS (200 ms) with
+   data-closing. Exits are quicker than entrances and ease in, as on iOS. */
+[data-closing] { pointer-events: none; }
+.palette-scrim[data-closing] { animation: scrim-out 200ms var(--ease) both; }
+.palette[data-closing], [role="dialog"].palette[data-closing] { animation: sheet-out 190ms cubic-bezier(0.4, 0, 1, 1) both; }
+.team-panel[data-closing] { animation: panel-out 190ms cubic-bezier(0.4, 0, 1, 1) both; }
+@keyframes scrim-out { to { opacity: 0; } }
+@keyframes sheet-out { to { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(6px); } }
+@keyframes panel-out { to { opacity: 0; transform: translateX(16px) scale(0.985); filter: blur(4px); } }
+
+/* ── Touch ───────────────────────────────────────────────────────────────────────────────
+   Every row and small control answers a press, not only buttons. */
+.palette-row, .file-row, .tree-row, .home-row-main, .team-head .seg button, .link-btn, .step-chip, .live-toggle, .abilities .ability {
+  transition: background var(--t-fast) var(--ease), transform var(--t-spring) var(--spring-snappy), color var(--t-fast);
+}
+.palette-row:active, .file-row:active, .tree-row:active, .team-head .seg button:active, .live-toggle:active { transform: scale(0.985); background: var(--mat-press); }
+.link-btn:active, .step-chip:active { transform: scale(0.96); }
+.live-toggle:hover { background: var(--mat-regular); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-closing] { animation: none !important; }
+  .palette-row:active, .file-row:active, .tree-row:active, .team-head .seg button:active, .live-toggle:active, .link-btn:active, .step-chip:active { transform: none; }
+}
+
+/* Reading panels: thicker glass, so wires and blocks behind never cross their text. */
+.inspector.glass, .team-panel, .live-files.glass, .side-panel.glass { background: var(--mat-panel); }

@@ -256,6 +256,14 @@ Change them additively; a breaking change bumps the version.
   (controls), `--spring-bouncy` (things that arrive) and `--spring-smooth` (things that move):
   real springs via CSS `linear()` where supported, cubic fallbacks in tokens.css. The rail's
   selection and segmented controls' thumbs slide. Reduced motion turns it all off.
+- **Popups come and go like iOS** (`src/app/lib/presence.ts`): `usePresence` keeps a closed
+  sheet, palette or panel mounted 200 ms with `data-closing` so it leaves the way it came
+  (glass.css "Leaving"); `useDismiss` closes on a click anywhere outside and on Esc (the popup
+  opened last first; Esc in a text field only leaves the field). Team chat, the compiled-files
+  sheet, task and run details close on outside clicks; the inspector and live files on Esc
+  (a board click already deselects); forms with typing in progress never close on a stray click.
+  Only one panel sits on the right: team chat and the inspector replace each other. Panels you
+  read in use `--mat-panel` (thicker glass), so board wires never cross their text.
 - **Less text.** No explanatory paragraphs in the UI. Labels are short; detail
   lives in tooltips (`data-tip`). Empty states are one line plus one action.
 - **Settings** (`views/SettingsView.tsx`, ⌘, and the gear in the rail): models (local servers

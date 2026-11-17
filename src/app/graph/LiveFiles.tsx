@@ -6,6 +6,7 @@
  */
 import { FileCode2, Hammer, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDismiss } from "../lib/presence";
 import type { CompileResponse } from "../../contracts/api";
 import type { FileChange } from "../../contracts/compile";
 import { compileBoard } from "../actions";
@@ -43,6 +44,9 @@ export function LiveFiles({ onClose }: { onClose: () => void }) {
   const [path, setPath] = useState<string | null>(null);
   const [disk, setDisk] = useState<Record<string, string | null>>({});
   const pinned = useRef(false);
+  // A working panel: it stays open while you edit the board, and Esc puts it away.
+  const panel = useRef<HTMLElement>(null);
+  useDismiss(true, onClose, panel, { outside: false });
 
   // A selected block opens the file it changes: its agent's config.yaml (a model, tool, maker or
   // chat app: the first agent it is wired to).
@@ -81,7 +85,7 @@ export function LiveFiles({ onClose }: { onClose: () => void }) {
   const errors = res && !res.ok ? res.issues.filter((i) => i.level === "error") : [];
 
   return (
-    <section className="live-files glass" aria-label="Live files" data-testid="live-files">
+    <section ref={panel} className="live-files glass" aria-label="Live files" data-testid="live-files">
       <div className="sheet-head">
         <FileCode2 size={14} />
         <h3>Files</h3>

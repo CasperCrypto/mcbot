@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { HermesInfo } from "../../contracts/api";
 import { engine } from "../lib/engine";
 import { useApp } from "../state/store";
+import { usePresence } from "../lib/presence";
 
 export function HermesSheet() {
   const open = useApp((s) => s.hermesOpen);
@@ -28,12 +29,14 @@ export function HermesSheet() {
     };
   }, [open, setOpen]);
 
-  if (!open) return null;
+  // Stays a moment after closing, to leave the way it came (lib/presence.ts).
+  const presence = usePresence(open);
+  if (!presence.mounted) return null;
   const bundled = info?.kind === "bundled";
   return (
     <>
-      <div className="palette-scrim" onClick={() => setOpen(false)} />
-      <section className="palette hermes-sheet" role="dialog" aria-label="Engine" data-testid="hermes-sheet">
+      <div data-closing={presence.closing || undefined} className="palette-scrim" onClick={() => setOpen(false)} />
+      <section className="palette hermes-sheet" role="dialog" aria-modal="true" data-closing={presence.closing || undefined} aria-label="Engine" data-testid="hermes-sheet">
         <header>
           <span className="hermes-mark" aria-hidden><Cpu size={18} /></span>
           <div className="grow">

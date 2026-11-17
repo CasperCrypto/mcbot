@@ -152,7 +152,8 @@ export const useApp = create<State>((set, get) => ({
   shareOpen: false,
   teamOpen: false,
   setShareOpen: (shareOpen) => set({ shareOpen, paletteOpen: false }),
-  setTeamOpen: (teamOpen) => set({ teamOpen, paletteOpen: false }),
+  // One panel on the right at a time: team chat and the board's inspector never stack their glass.
+  setTeamOpen: (teamOpen) => set((s) => ({ teamOpen, paletteOpen: false, selectedNodeId: teamOpen && s.tab === "graph" ? null : s.selectedNodeId })),
   queue: {},
   starting: {},
   setStarting: (id, on) => set((s) => ({ starting: { ...s.starting, [id]: on } })),
@@ -206,7 +207,7 @@ export const useApp = create<State>((set, get) => ({
     saveIdentity(identity);
     set({ identity });
   },
-  select: (selectedNodeId) => set({ selectedNodeId }),
+  select: (selectedNodeId) => set((s) => ({ selectedNodeId, teamOpen: selectedNodeId && s.tab === "graph" ? false : s.teamOpen })),
   selectRun: (selectedRunId) => set({ selectedRunId }),
   setCompile: (patch) => set(patch),
   loadRuns: (list) => set((s) => ({ runs: { ...Object.fromEntries(list.map((r) => [r.runId, r])), ...liveOnly(s.runs, list) } })),
