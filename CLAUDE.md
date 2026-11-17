@@ -434,9 +434,9 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   background so the glass stays see-through); `site/site.js` moves its pupils
   (in the eye holes) toward the cursor, nothing more. The crew graph and the
   parade use `site/foods.js`. Clean and flat like a Mac page: system font, black
-  and gray surfaces, white buttons; no gradient text, and no scroll-jacking. One owner-approved exception: the prism light (a white beam
-  entering the glass burger, a spectrum fanning out; `.prism` in `site/studio.css`, built by `studio.js`) on
-  the hero, the command bar and the closing card, plus a soft spotlight that follows the pointer on cards;
+  and gray surfaces, white buttons; no gradient text, and no scroll-jacking. One owner-approved exception: the aura (soft holographic ribbons of
+  light drifting on the black, seen through the glass burger; `.aura` in `site/studio.css`, built by `studio.js`)
+  on the hero, the command bar and the closing card, plus a soft spotlight that follows the pointer on cards;
   the app itself stays flat. The live
   macOS windows (`site/studio.js`, `studio.css`: hero flow, How it works tabs, the ⌘K palette you can
   type in, the island) play only while on screen, pause under the pointer, hold their final state

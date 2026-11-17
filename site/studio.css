@@ -206,8 +206,8 @@
 .toastlet.in { opacity: 1; }
 
 /* the hero: a smaller burger so the first window peeks above the fold */
-.hero .bot { width: min(210px, 50vw); }
-.hero h1 { margin-top: 26px; }
+.hero .bot { width: min(420px, 78vw); }
+.hero h1 { margin-top: 10px; }
 
 /* ---------- section helpers ---------- */
 .sec-note { margin: 14px 0 0; color: var(--text-3); font-size: 14px; }
@@ -320,30 +320,33 @@ section.block { padding-top: 148px; }
 @media (max-width: 860px) { .values.wrap { margin-top: 48px; } }
 
 /* =====================================================================
-   Prism light. The burger is glass: a white beam enters it and a spectrum fans out, on black.
-   This is the one place the site uses light and gradients (hero, command bar, closing card).
-   The app itself stays flat. Everything is pointer-events: none and decorative.
+   Aura: soft holographic light washing across the black, like light through glass. A few big
+   blurred ribbons of colour that drift slowly. Decorative only (pointer-events: none). The one place the
+   site uses gradients; the app stays flat.
    ===================================================================== */
 .hero { position: relative; }
-.hero > *:not(.prism) { position: relative; z-index: 1; }
-.prism { --oy: 232px; --len: 58%; position: absolute; left: 0; right: 0; top: 0; height: 760px; z-index: 0; pointer-events: none; overflow: hidden; transform: rotate(var(--tilt, 0deg)); transform-origin: 50% var(--oy); }
-.prism .beam, .prism .core, .prism .fan { position: absolute; pointer-events: none; }
-/* the white beam arriving from the upper left */
-.prism .beam { right: 50%; top: calc(var(--oy) - 1px); width: 46%; height: 2px; transform-origin: 100% 50%; transform: rotate(17deg); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95)); }
-.prism .beam.soft { height: 26px; top: calc(var(--oy) - 13px); filter: blur(16px); opacity: 0.45; }
-/* the spectrum leaving it */
-.prism .fan { left: 50%; top: calc(var(--oy) - 10px); width: var(--len); height: 20px; transform-origin: 0 50%; transform: rotate(var(--a)); background: linear-gradient(90deg, var(--c) 0%, var(--c) 30%, transparent 100%); mix-blend-mode: screen; filter: blur(14px); opacity: 0.5; animation: spread 9s ease-in-out infinite alternate; animation-delay: var(--d); }
-.prism .fan.thin { height: 3px; top: calc(var(--oy) - 1.5px); filter: blur(1.5px); opacity: 0.8; }
-.prism .core { left: calc(50% - 90px); top: calc(var(--oy) - 90px); width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 255, 255, 0.28), transparent); filter: blur(10px); animation: pulse 6s ease-in-out infinite alternate; }
-@keyframes spread { from { transform: rotate(var(--a)); } to { transform: rotate(calc(var(--a) + 3deg)); } }
-@keyframes pulse { from { opacity: 0.6; transform: scale(0.9); } to { opacity: 1; transform: scale(1.15); } }
-.prism.sm { --oy: 50%; --len: 70%; height: 100%; top: 0; }
-.prism.sm .beam { transform: rotate(10deg); width: 40%; }
-.prism.soft { opacity: 0.55; }
+.hero > *:not(.aura) { position: relative; z-index: 1; }
+.aura { --px: 0px; position: absolute; left: 0; right: 0; top: 0; height: 980px; z-index: 0; pointer-events: none; overflow: hidden; }
+.aura i { position: absolute; display: block; pointer-events: none; will-change: transform; margin-left: var(--px); }
+.aura .rib { left: -15%; width: 130%; height: 300px; filter: blur(64px); opacity: 0.5; background: linear-gradient(90deg, transparent 0%, #ff7ad9 16%, #ffd479 34%, #86ffc2 52%, #7ad5ff 70%, #b49bff 86%, transparent 100%); animation: drift 22s ease-in-out infinite alternate; }
+.aura .rib.a { top: 90px; transform: rotate(-13deg); }
+.aura .rib.b { top: 470px; height: 240px; opacity: 0.34; transform: rotate(9deg); background: linear-gradient(90deg, transparent 0%, #7ad5ff 14%, #b49bff 32%, #ff7ad9 50%, #ffd479 68%, #86ffc2 84%, transparent 100%); animation-duration: 28s; animation-direction: alternate-reverse; }
+.aura .rib.c { top: 280px; height: 180px; opacity: 0.28; transform: rotate(-4deg); filter: blur(80px); background: linear-gradient(90deg, transparent, #ffffff 40%, #ffd9f3 60%, transparent); animation-duration: 34s; }
+.aura .blob { width: 560px; height: 560px; border-radius: 50%; filter: blur(110px); opacity: 0.3; animation: float 26s ease-in-out infinite alternate; }
+.aura .blob.l { left: -160px; top: 180px; background: #ff6bd0; }
+.aura .blob.r { right: -180px; top: 40px; background: #5ac8ff; animation-delay: -9s; }
+@keyframes drift { from { translate: -5% 0; } to { translate: 5% 3%; } }
+@keyframes float { from { translate: 0 -30px; } to { translate: 40px 50px; } }
+.aura.sm { height: 100%; }
+.aura.sm .rib { height: 150px; filter: blur(48px); }
+.aura.sm .rib.a { top: 8%; } .aura.sm .rib.b { top: 52%; height: 130px; } .aura.sm .rib.c { top: 30%; }
+.aura.sm .blob { width: 320px; height: 320px; filter: blur(80px); }
+.aura.sm .blob.l { top: 10%; left: -80px; } .aura.sm .blob.r { top: 20%; right: -90px; }
+.aura.soft { opacity: 0.6; }
 .closing, .pal-wrap { position: relative; overflow: hidden; }
-.closing > *:not(.prism):not(.parade), .pal-wrap > *:not(.prism) { position: relative; z-index: 1; }
+.closing > *:not(.aura):not(.parade), .pal-wrap > *:not(.aura) { position: relative; z-index: 1; }
 .closing { overflow: visible; }
-.closing .prism { border-radius: var(--r-lg); overflow: hidden; }
+.closing .aura { border-radius: var(--r-lg); overflow: hidden; }
 
 /* ---------- raycast-class finish: bigger type, glossy keys, spotlight cards ---------- */
 h1 { font-size: clamp(44px, 7.6vw, 90px); letter-spacing: -0.04em; line-height: 1.02; }
@@ -370,8 +373,20 @@ h2 { letter-spacing: -0.03em; }
 /* reveal: sections rise in once as they arrive */
 .js [data-reveal] { opacity: 0; transform: translateY(28px); transition: opacity 0.8s var(--smooth), transform 0.9s var(--smooth); }
 .js [data-reveal].in { opacity: 1; transform: none; }
-@media (max-width: 560px) { .keycap { width: 64px; height: 64px; border-radius: 16px; } .keycap.wide { width: 140px; } .keycap i { font-size: 24px; } .prism { height: 620px; } .prism .fan { --len: 80%; } }
+@media (max-width: 560px) { .keycap { width: 64px; height: 64px; border-radius: 16px; } .keycap.wide { width: 140px; } .keycap i { font-size: 24px; } .aura { height: 760px; } .aura .rib { height: 200px; } }
 @media (prefers-reduced-motion: reduce) {
-  .prism .fan, .prism .core { animation: none; }
+  .aura i { animation: none; }
   .js [data-reveal] { opacity: 1; transform: none; transition: none; }
 }
+
+/* burger size: big, but the buttons stay on the first screen */
+.hero { padding-top: calc(92px + env(safe-area-inset-top, 0px)); }
+.hero .bot { width: min(350px, 74vw); }
+.hero h1 { margin-top: 4px; }
+.hero .badge { margin-top: 14px; }
+.hero .lede { margin-top: 14px; }
+.hero .ctas { margin-top: 24px; }
+/* text on the closing card sits on light: brighter and a darker wash */
+.closing .aura { opacity: 0.8; }
+.closing .section-lede { color: rgba(255, 255, 255, 0.88); text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45); }
+.closing h2 { text-shadow: 0 1px 18px rgba(0, 0, 0, 0.35); }

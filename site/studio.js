@@ -476,26 +476,18 @@
   for (const c of cards) io.observe(c);
 })();
 
-/* ---------- prism light, spotlight cards, reveals, the keys ---------- */
+/* ---------- aura light, spotlight cards, reveals, the keys ---------- */
 (() => {
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const SPECTRUM = ["#ff3b30", "#ff9500", "#ffd60a", "#30d158", "#64d2ff", "#0a84ff", "#bf5af2"];
-  for (const el of $$("[data-prism]")) {
-    let h = '<i class="core"></i><i class="beam soft"></i><i class="beam"></i>';
-    SPECTRUM.forEach((c, i) => {
-      const a = 4 + i * 4.2;
-      const st = `--c:${c};--a:${a}deg;--d:${(-i * 1.3).toFixed(1)}s`;
-      h += `<i class="fan" style="${st}"></i><i class="fan thin" style="${st}"></i>`;
-    });
-    el.innerHTML = h;
-  }
-  // the prism leans a little toward the pointer
-  const hero = $$(".hero")[0]; const main = hero && $$(".prism", hero)[0];
-  if (main && !reduce) {
+  // the aura: soft holographic ribbons of light, built once for each [data-aura]
+  for (const el of $$("[data-aura]")) el.innerHTML = '<i class="blob l"></i><i class="blob r"></i><i class="rib a"></i><i class="rib b"></i><i class="rib c"></i>';
+  // and it leans a little toward the pointer
+  const heroAura = $$(".hero .aura")[0];
+  if (heroAura && !reduce) {
     let tx = 0; let cx = 0;
-    addEventListener("pointermove", (e) => { tx = (e.clientX / innerWidth - 0.5) * 6; }, { passive: true });
-    const tick = () => { cx += (tx - cx) * 0.06; main.style.setProperty("--tilt", `${cx.toFixed(2)}deg`); requestAnimationFrame(tick); };
+    addEventListener("pointermove", (e) => { tx = (e.clientX / innerWidth - 0.5) * 60; }, { passive: true });
+    const tick = () => { cx += (tx - cx) * 0.05; heroAura.style.setProperty("--px", `${cx.toFixed(1)}px`); requestAnimationFrame(tick); };
     requestAnimationFrame(tick);
   }
   // spotlight on cards
