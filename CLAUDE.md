@@ -448,7 +448,9 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   and gray surfaces, white buttons; near-black cards with hairline borders, a floating nav, big tight type
   (Raycast-class finish, never its look or trade dress). Owner's rule: no gradients, glows, dotted grids or status
   dots, and no scroll-jacking. The live
-  macOS windows (`site/studio.js`, `studio.css`: hero flow, How it works tabs, the ⌘K palette you can
+  macOS windows (`site/studio.js`, `studio.css`: the hero is a replica of the app as it opens (frameless window,
+  notch island, rail, agents, a chat that uses tools, answers and asks before acting; keep it in step with the
+  app), How it works tabs, the features grid, the ⌘K palette you can
   type in, the island) play only while on screen, pause under the pointer, hold their final state
   under `prefers-reduced-motion`, and use the page's flat colours; they are markup, not screenshots.
   Product shots (`site/assets/*.webp`) are taken from the demo at 1440×900 @2x

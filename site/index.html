@@ -240,6 +240,7 @@ footer .spacer { flex: 1; }
     </a>
     <nav class="nav-links" aria-label="Sections">
       <a href="#how">How it works</a>
+      <a href="#features">Features</a>
       <a href="#palette">Command bar</a>
       <a href="#island">Island</a>
       <a href="#graphs">Graphs</a>
@@ -279,37 +280,31 @@ footer .spacer { flex: 1; }
       </div>
     </div>
     <div class="hero-win">
-      <div class="mac" data-hero role="img" aria-label="Animated demo: nodes appear on the board, Compile writes the agent's files, then Researcher answers a question.">
-        <div class="mac-bar">
+      <div class="mac app" data-hero role="img" aria-label="Animated demo of McBot Studio: you ask Researcher which tickets need you, it searches your docs, answers, and asks before sending an email.">
+        <div class="app-bar">
           <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="app-board">Support desk</span>
+          <div class="notch" data-notch><span class="nt">Ready</span></div>
           <span class="grow"></span>
-          <div class="isl" data-s="rest"><span class="txt">Support desk</span></div>
-          <button class="tb primary" type="button" data-compile tabindex="-1">Compile</button>
+          <span class="app-search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>Search<kbd>⌘K</kbd></span>
         </div>
-        <div class="mac-body">
-          <div class="cv" data-cv>
-            <svg class="w" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-              <path pathLength="1" d="M14 26 C32 26 32 50 50 50"/><path pathLength="1" d="M14 74 C32 74 32 50 50 50"/>
-              <path pathLength="1" d="M50 50 C68 50 68 26 86 26"/><path pathLength="1" d="M50 50 C68 50 68 74 86 74"/>
-            </svg>
-            <div class="nd" style="left:14%;top:26%"><span class="t m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><span><b>Local model</b><small>qwen3:8b</small></span></div>
-            <div class="nd" style="left:14%;top:74%"><span class="t c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 0 0 4.5 12 3.5 3.5 0 0 0 6 19Z"/></svg></span><span><b>Cloud model</b><small>claude-sonnet</small></span></div>
-            <div class="nd agent" style="left:50%;top:50%"><span class="face" data-face="idle"></span><span><b>Researcher</b><small>@researcher</small></span></div>
-            <div class="nd" style="left:86%;top:26%"><span class="t o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0ZM12 18v4"/></svg></span><span><b>Shared files</b><small>files</small></span></div>
-            <div class="nd" style="left:86%;top:74%"><span class="t o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0ZM12 18v4"/></svg></span><span><b>Web search</b><small>exa</small></span></div>
-          </div>
-          <aside class="side" data-side aria-hidden="true">
-            <div data-files style="transition: opacity 0.3s">
-              <h4>Compiled · 5 files</h4>
-              <div class="frow"><span>researcher/SOUL.md</span><span>151 B</span></div>
-              <div class="frow"><span>researcher/config.yaml</span><span>734 B</span></div>
-              <div class="frow"><span>researcher/skills/search</span><span>309 B</span></div>
-              <div class="frow"><span>researcher/memories/USER.md</span><span>96 B</span></div>
-              <div class="frow"><span>.mcbot/manifest.json</span><span>1.2 KB</span></div>
-            </div>
-            <div class="chat" data-chat><div class="me">What needs me today?</div><div class="ai"></div></div>
+        <div class="app-body">
+          <nav class="app-rail" aria-hidden="true">
+            <i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg></i><i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 12h4l5-5M11.5 12l5 5"/></svg></i><i class="on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></i><i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11"/></svg></i><i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg></i><i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></i>
+            <span class="grow"></span><i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg></i>
+          </nav>
+          <aside class="app-list" aria-hidden="true">
+            <div class="al-head"><b>Agents</b><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="al-search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>Search</div>
+            <div class="al-row on"><span class="face" data-food="cup" data-tone="2"></span><span class="al-txt"><b>Researcher</b><small data-last>Finds sources and sums them up</small></span><em data-time></em></div>
+            <div class="al-row"><span class="face" data-food="onigiri" data-tone="4"></span><span class="al-txt"><b>Triage desk</b><small>Routes tickets to the right person</small></span><em>9:12</em></div>
+            <div class="al-row"><span class="face" data-food="cookie" data-tone="8"></span><span class="al-txt"><b>Writer</b><small>Drafts replies in your voice</small></span><em>Mon</em></div>
           </aside>
-          <button class="tb replay" type="button" data-replay>Replay</button>
+          <main class="app-chat">
+            <header class="ac-head"><span class="face" data-food="cup" data-tone="2" data-main></span><b>Researcher</b><span class="ac-model">qwen3:8b · on this computer</span></header>
+            <div class="ac-thread" data-thread></div>
+            <div class="ac-compose"><span class="ac-input" data-input>Message Researcher</span><span class="ac-send"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span></div>
+          </main>
         </div>
       </div>
     </div>
@@ -409,8 +404,26 @@ footer .spacer { flex: 1; }
         <div class="more"><div><code></code><div class="acts"><button type="button" class="a" data-act="once">Allow once</button><button type="button" data-act="deny">Deny</button></div></div></div>
       </div>
       <div class="win"><div class="mac-bar"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span><span class="mac-title">McBot Studio</span></div></div>
-      <div class="ctl"><button class="tb" type="button" data-do="work">Agent starts</button><button class="tb" type="button" data-do="ask">Agent asks</button><button class="tb" type="button" data-hide aria-pressed="false">Hide McBot</button></div>
       <div class="toastlet" aria-live="polite"></div>
+    </div>
+      <div class="ctl desk-ctl"><button class="tb" type="button" data-do="work">Agent starts</button><button class="tb" type="button" data-do="ask">Agent asks</button><button class="tb" type="button" data-hide aria-pressed="false">Hide McBot</button></div>
+  </section>
+
+  <section class="block wrap" id="features">
+    <div class="center" data-reveal>
+      <span class="eyebrow">Everything inside</span>
+      <h2>All your agents need, in one app.</h2>
+      <p class="section-lede">One download. The engine, the models, the tools and the safety rails come with it.</p>
+    </div>
+    <div class="feat">
+        <div class="ft" data-reveal style="--i:0"><span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><b>Local and cloud models</b><small>Ollama, LM Studio, vLLM or any OpenAI-compatible API, with a backup when one is down.</small></div>
+        <div class="ft" data-reveal style="--i:1"><span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 7.6 8 9 4.8-1.4 8-4.5 8-9V6Z"/><path d="M12 8v4M12 16h.01"/></svg></span><b>Asks before acting</b><small>Risky commands wait for your OK, in the app or on the island.</small></div>
+        <div class="ft" data-reveal style="--i:2"><span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4a3 3 0 0 0-3 3v1a3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V4.5A2.5 2.5 0 0 0 9 4Z"/><path d="M15 4a3 3 0 0 1 3 3v1a3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/></svg></span><b>Memory you can edit</b><small>What each agent learned, as plain notes. Change it in place.</small></div>
+        <div class="ft" data-reveal style="--i:3"><span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg></span><b>Skills built in</b><small>44 skills on from the start, plus the official library and any SKILL.md link.</small></div>
+        <div class="ft" data-reveal style="--i:4"><span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></span><b>Chat apps</b><small>Give an agent its own Telegram, Slack or Discord bot.</small></div>
+        <div class="ft" data-reveal style="--i:5"><span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><b>Tasks and schedules</b><small>A shared task board: agents pick up work and hand it on.</small></div>
+        <div class="ft" data-reveal style="--i:6"><span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M8 17V11M13 17V7M18 17v-4"/></svg></span><b>Cost and budgets</b><small>Spend per agent, model and day, with a daily cap.</small></div>
+        <div class="ft" data-reveal style="--i:7"><span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.4 3.2-5 6.5-5s5.9 1.6 6.5 5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20c-.4-2.4-1.8-3.9-3.8-4.6"/></svg></span><b>Share on your network</b><small>Teammates join with a link. No account, no cloud.</small></div>
     </div>
   </section>
 

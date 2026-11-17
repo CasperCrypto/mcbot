@@ -73,105 +73,106 @@
   };
 
   // ---------------------------------------------------------------- hero
+  // A replica of the app as it opens: ask an agent, watch it use its tools, answer, and ask before acting.
   const hero = $("[data-hero]");
   if (hero) {
-    const isl = island($(".isl", hero));
-    const cv = $("[data-cv]", hero);
-    const nodes = $$(".nd", hero);
-    const wires = $$("path", hero);
-    const side = $("[data-side]", hero);
-    const files = $("[data-files]", hero);
-    const chat = $("[data-chat]", hero);
-    const rows = $$(".frow", hero);
-    const me = $(".me", hero);
-    const ai = $(".ai", hero);
-    const agent = $(".nd.agent", hero);
-    const faceEl = $(".face", hero);
-    const compile = $("[data-compile]", hero);
+    const foodFace = (el, expr, uid) => {
+      if (!F) return;
+      el.innerHTML = F.foodSvg({ seed: el.dataset.food, food: el.dataset.food, tone: +el.dataset.tone, size: el.dataset.main !== undefined ? 26 : 34, expression: expr, uid, title: "" });
+    };
+    $$(".face[data-food]", hero).forEach((el, i) => foodFace(el, "idle", `hf${i}`));
+    const mainFaces = $$('.face[data-food="cup"]', hero);
+    const setFace = (expr) => mainFaces.forEach((el, i) => foodFace(el, expr, `hm${i}${expr}`));
+    const notch = $("[data-notch]", hero);
+    const thread = $("[data-thread]", hero);
+    const input = $("[data-input]", hero);
+    const last = $("[data-last]", hero);
+    const time = $("[data-time]", hero);
     const cur = pointer(hero);
     const run = runner();
-    const ANSWER = "Three tickets need you: the Acme invoice (billing → Sam), a login loop that looks urgent, and a refund waiting for your OK.";
+    let clock = 0;
+    const say = (text, kind = "") => {
+      clearInterval(clock);
+      notch.className = `notch ${kind}`;
+      notch.innerHTML = `<span class="nt">${esc(text)}</span>`;
+      if (kind === "work") {
+        const t0 = Date.now();
+        const tm = document.createElement("span"); tm.className = "tm"; notch.appendChild(tm);
+        const tick = () => { tm.textContent = `0:${String(Math.floor((Date.now() - t0) / 1000) % 60).padStart(2, "0")}`; };
+        tick(); clock = setInterval(tick, 500);
+      }
+    };
+    const add = (html, cls) => { const el = document.createElement("div"); el.className = cls; el.innerHTML = html; thread.appendChild(el); void el.offsetWidth; el.classList.add("in"); return el; };
+    const ASK = "Which tickets need me today?";
+    const LINES = ["Three need you today:", "1. Acme invoice, billing asks you to approve the refund", "2. Login loop for Northwind, marked urgent", "3. A data export request, due Friday"];
 
     const reset = () => {
-      cur.hide();
-      for (const n of nodes) n.classList.remove("in", "live");
-      for (const w of wires) w.classList.remove("on", "hot");
-      for (const r of rows) r.classList.remove("in", "hl");
-      side.classList.remove("in"); cv.classList.remove("shift");
-      files.style.opacity = "1"; chat.classList.remove("in"); me.classList.remove("in");
-      ai.textContent = ""; compile.classList.remove("press");
-      faceEl.innerHTML = face("idle", "hero-face");
-      isl("rest", "Support desk");
+      cur.hide(); thread.textContent = ""; input.textContent = "Message Researcher"; input.classList.remove("typed");
+      last.textContent = "Finds sources and sums them up"; time.textContent = ""; setFace("idle"); say("Ready");
     };
     const final = () => {
       reset();
-      for (const n of nodes) n.classList.add("in");
-      for (const w of wires) w.classList.add("on");
-      for (const r of rows) r.classList.add("in");
-      side.classList.add("in"); cv.classList.add("shift");
-      files.style.opacity = "0"; chat.classList.add("in"); me.classList.add("in");
-      ai.textContent = ANSWER;
-      faceEl.innerHTML = face("happy", "hero-face");
-      isl("rest", "Researcher answered");
+      add(esc(ASK), "msg me");
+      add('<span class="tool done">Docs · searched tickets</span><span class="tool done">Files · read sla.md</span>', "tools");
+      add(LINES.map((l) => `<p>${esc(l)}</p>`).join(""), "msg ai");
+      add('<div class="ask-h">Researcher asks before acting</div><code>Email Sam: "Please approve the Acme refund"</code><div class="ask-done">Allowed once · sent</div>', "askc done");
+      setFace("happy"); say("Researcher answered", "ok"); last.textContent = "Sent the email to Sam"; time.textContent = "9:41";
     };
 
     async function play(ctx) {
       reset();
-      await ctx.sleep(700);
-      for (const n of nodes) { n.classList.add("in"); await ctx.sleep(260); }
-      await ctx.sleep(300);
-      for (const w of wires) { w.classList.add("on"); await ctx.sleep(180); }
-      await ctx.sleep(700);
-      const [x0, y0] = cur.at(cv, 40, 60);
-      cur.show(x0, y0);
-      await ctx.sleep(200);
-      cur.to(compile);
-      await ctx.sleep(1100);
-      await cur.tap(ctx);
-      compile.classList.add("press");
-      isl("compile", "Compiling…");
-      await ctx.sleep(180);
-      compile.classList.remove("press");
-      await ctx.sleep(600);
-      isl("rest", "Compiled · 5 files");
-      cv.classList.add("shift"); side.classList.add("in");
+      await ctx.sleep(900);
+      // you type and send
+      input.classList.add("typed"); input.textContent = "";
+      for (const ch of ASK) { input.textContent += ch; await ctx.sleep(42); }
+      await ctx.sleep(350);
+      input.textContent = "Message Researcher"; input.classList.remove("typed");
+      add(esc(ASK), "msg me");
+      time.textContent = "9:41";
       await ctx.sleep(500);
-      for (const r of rows) { r.classList.add("in"); await ctx.sleep(170); }
-      rows[1]?.classList.add("hl");
-      await ctx.sleep(1100);
-      cur.to(agent);
-      await ctx.sleep(1000);
-      await cur.tap(ctx);
-      files.style.opacity = "0";
-      chat.classList.add("in");
-      await ctx.sleep(300);
-      me.classList.add("in");
-      await ctx.sleep(500);
-      cur.hide();
-      agent.classList.add("live");
-      faceEl.innerHTML = face("thinking", "hero-face");
-      wires[0].classList.add("hot"); wires[2].classList.add("hot");
-      isl("work", "Researcher is working");
+      // the agent works: its face thinks, the island counts, its tools show up
+      setFace("thinking"); say("Researcher is working", "work");
+      const tools = add('<span class="tool">Docs · searching tickets</span>', "tools");
       await ctx.sleep(1300);
-      await type(ctx, ai, ANSWER, 18);
-      wires[0].classList.remove("hot"); wires[2].classList.remove("hot");
-      agent.classList.remove("live");
-      faceEl.innerHTML = face("happy", "hero-face");
-      isl("rest", "Researcher answered");
-      await ctx.sleep(4200);
+      tools.firstElementChild.classList.add("done"); tools.firstElementChild.textContent = "Docs · searched tickets";
+      tools.insertAdjacentHTML("beforeend", '<span class="tool">Files · reading sla.md</span>');
+      await ctx.sleep(1100);
+      tools.lastElementChild.classList.add("done"); tools.lastElementChild.textContent = "Files · read sla.md";
+      await ctx.sleep(300);
+      // the answer streams in
+      const ans = add("", "msg ai");
+      for (const line of LINES) {
+        const p = document.createElement("p"); ans.appendChild(p);
+        p.classList.add("caret");
+        for (const word of line.split(" ")) { p.textContent += (p.textContent ? " " : "") + word; await ctx.sleep(38); }
+        p.classList.remove("caret");
+        await ctx.sleep(160);
+      }
+      last.textContent = "Three need you today";
+      await ctx.sleep(700);
+      // it asks before acting; the pointer answers
+      const card = add('<div class="ask-h">Researcher asks before acting</div><code>Email Sam: "Please approve the Acme refund"</code><div class="ask-row"><button class="tb a" type="button" tabindex="-1">Allow once</button><button class="tb" type="button" tabindex="-1">Deny</button></div><div class="ask-done">Allowed once · sent</div>', "askc");
+      say("Researcher asks before acting", "ask");
+      await ctx.sleep(1200);
+      const btn = $(".a", card);
+      const [x, y] = cur.at(btn, 60, 50); cur.show(x, y);
+      await ctx.sleep(120); cur.to(btn); await ctx.sleep(1000);
+      await cur.tap(ctx);
+      card.classList.add("done"); cur.hide();
+      setFace("happy"); say("Researcher answered", "ok");
+      last.textContent = "Sent the email to Sam";
+      await ctx.sleep(4800);
+      thread.classList.add("fade"); await ctx.sleep(450); thread.classList.remove("fade");
     }
-    async function loop() { for (;;) { await run.start(play); if (!hero.dataset.loop) return; } }
-
+    async function loop() { for (;;) await run.start(play); }
     if (reduce) final();
     else {
       reset();
-      hero.dataset.loop = "1";
       let started = false;
       whenVisible(hero, (v) => { run.pause(!v); if (v && !started) { started = true; void loop(); } });
       hero.addEventListener("pointerenter", () => run.pause(true));
       hero.addEventListener("pointerleave", () => run.pause(false));
     }
-    $("[data-replay]", hero)?.addEventListener("click", () => { run.stop(); hero.dataset.loop = "1"; void loop(); });
   }
 
   // ------------------------------------------------------------ how it works
@@ -190,7 +191,7 @@
     const S = {
       async draw(ctx) {
         const sc = scenes.draw;
-        const nd = $$(".nd", sc); const w = $$("path", sc); const lb = $$(".lbl", sc); const parts = $$(".part", sc);
+        const nd = $$(".nd", sc); const w = $$("svg.w path", sc); const lb = $$(".lbl", sc); const parts = $$(".part", sc);
         for (const e of [...nd.slice(1), ...lb]) e.classList.remove("in");
         for (const p of w) p.classList.remove("on");
         nd[0].classList.add("in");
@@ -411,7 +412,7 @@
     const top = $(".top", pill);
     const toast = $(".toastlet", desk);
     const cmd = $("code", pill);
-    const hideBtn = $("[data-hide]", desk);
+    const hideBtn = $("[data-hide]", desk.parentElement);
     const run = runner();
     let auto = !reduce;
     let t0 = 0; let timer = 0;
@@ -423,13 +424,15 @@
       if (s === "ask") top.innerHTML = '<span class="dot"></span><span>Researcher asks before acting</span>';
       if (s === "work") {
         t0 = Date.now();
-        const draw = () => { const n = Math.floor((Date.now() - t0) / 1000); top.innerHTML = `<span class="dot"></span><span>Researcher is working</span><span style="color:#8e8e93;font-variant-numeric:tabular-nums">0:${String(n % 60).padStart(2, "0")}</span>`; };
+        top.innerHTML = '<span>Researcher is working</span><span class="tm"></span>';
+        const tm = top.lastElementChild;
+        const draw = () => { tm.textContent = `0:${String(Math.floor((Date.now() - t0) / 1000) % 60).padStart(2, "0")}`; };
         draw(); timer = setInterval(draw, 500);
       }
     };
     const answer = (choice) => { say(choice === "once" ? "Allowed once. The agent carries on." : "Denied. The agent is told no."); state("rest"); };
     $$("[data-act]", pill).forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); auto = false; run.stop(); answer(b.dataset.act); }));
-    $$("[data-do]", desk).forEach((b) => b.addEventListener("click", () => { auto = false; run.stop(); const d = b.dataset.do; if (d === "work") state("work"); else if (d === "ask") { cmd.textContent = "rm -rf ~/Projects/site/build"; state("ask"); } else state("rest"); }));
+    $$("[data-do]", desk.parentElement).forEach((b) => b.addEventListener("click", () => { auto = false; run.stop(); const d = b.dataset.do; if (d === "work") state("work"); else if (d === "ask") { cmd.textContent = "rm -rf ~/Projects/site/build"; state("ask"); } else state("rest"); }));
     hideBtn?.addEventListener("click", () => { auto = false; run.stop(); const on = !desk.classList.contains("hidden"); desk.classList.toggle("hidden", on); hideBtn.setAttribute("aria-pressed", String(on)); hideBtn.textContent = on ? "Show McBot" : "Hide McBot"; if (on) { state("work"); say("McBot is hidden. The island stays."); } });
     pill.addEventListener("click", () => { if (desk.classList.contains("hidden")) { desk.classList.remove("hidden"); hideBtn.setAttribute("aria-pressed", "false"); hideBtn.textContent = "Hide McBot"; state("rest"); say("Back in McBot."); } });
     state("rest");
