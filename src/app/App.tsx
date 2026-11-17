@@ -7,6 +7,7 @@ import { engine, subscribeHarness, subscribeRunEvents } from "./lib/engine";
 import { Boundary } from "./shell/Boundary";
 import { HermesSheet } from "./shell/HermesSheet";
 import { ReportSheet } from "./shell/ReportSheet";
+import { DoctorSheet } from "./shell/DoctorSheet";
 import { NewAgentSheet } from "./shell/NewAgentSheet";
 import { ToolCatalog } from "./shell/ToolCatalog";
 import { ChatAppCatalog } from "./shell/ChatAppCatalog";
@@ -157,6 +158,7 @@ function Shell() {
       </Boundary>
       <Boundary>
         <ReportSheet />
+        <DoctorSheet />
       </Boundary>
       <Boundary>
         <NewAgentSheet />

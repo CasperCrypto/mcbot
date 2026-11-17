@@ -36,6 +36,8 @@ interface State {
   hermesOpen: boolean;
   /** Report a problem. */
   reportOpen: boolean;
+  /** Harness doctor (shell/DoctorSheet.tsx). */
+  doctorOpen: boolean;
   /** The New agent sheet. */
   newAgentOpen: boolean;
   /** The tool catalog. */
@@ -71,6 +73,7 @@ interface State {
   setPalette(open: boolean): void;
   setHermesOpen(open: boolean): void;
   setReportOpen(open: boolean): void;
+  setDoctorOpen(open: boolean): void;
   setNewAgentOpen(open: boolean): void;
   setCatalogOpen(open: boolean): void;
   setLiveFilesOpen(open: boolean): void;
@@ -142,7 +145,9 @@ export const useApp = create<State>((set, get) => ({
   hermesOpen: false,
   setHermesOpen: (hermesOpen) => set({ hermesOpen, paletteOpen: false }),
   reportOpen: false,
+  doctorOpen: false,
   setReportOpen: (reportOpen) => set({ reportOpen, paletteOpen: false }),
+  setDoctorOpen: (doctorOpen) => set({ doctorOpen, paletteOpen: false }),
   newAgentOpen: false,
   setNewAgentOpen: (newAgentOpen) => set({ newAgentOpen, paletteOpen: false }),
   catalogOpen: false,
