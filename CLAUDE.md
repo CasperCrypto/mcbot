@@ -347,6 +347,12 @@ Change them additively; a breaking change bumps the version.
   ~140 ms ahead, a fast sweep across the title bar does not count — leans in when the pointer is
   close, and closes once the pointer moves away; click or Enter pins it open until Esc or a click
   outside. One height (30px) for every title-bar control.
+- **Rail** (`shell/Rail.tsx`): a few pinned views (default Home, Board, Chat, Tasks, Runs) and "…", a menu of every
+  view with its shortcut and a pin toggle (pins kept per computer in localStorage); the view you are on shows even
+  when it is not pinned. The app opens on Chat. The title bar stays calm: Compile shows on the Board, or anywhere
+  when the agents' files are out of date or broken; the doctor appears only when it has findings; Share is an icon.
+- **Messages just go:** a run refused as stale (409) compiles quietly and is sent again once (`runAgent`); only a
+  compile that fails stops it, with its notice and "Fix".
 - **Command palette** (`shell/Palette.tsx`, `lib/rank.ts`): ranked like a launcher: fuzzy fit (loose letter
   matching only on a command's name), then frecency (use counts, fading with age, kept in localStorage);
   empty shows "Suggested" (what you use most) first; a query nothing answers offers "Ask <agent>" as the

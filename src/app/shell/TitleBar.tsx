@@ -1,8 +1,7 @@
-import { Check, ChevronDown, Copy, Download, FolderOpen, Hammer, LoaderCircle, Minus, MessagesSquare, Plus, Search, Square, Stethoscope, Upload, Users, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, Download, FolderOpen, Hammer, LoaderCircle, MessagesSquare, Plus, Search, Stethoscope, Upload, Users } from "lucide-react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { resolveGraph } from "../../compile";
 import { compileBoard, exportBoardFile, importBoardFile, openHermesSetup } from "../actions";
-import { onMaximized, ownFrame, windowAct } from "../lib/desktop";
 import { DEMO, REMOTE } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
@@ -12,6 +11,7 @@ import { Island } from "./Island";
 import { unreadCount } from "./TeamPanel";
 import { useDismiss } from "../lib/presence";
 import { useDoctor } from "./DoctorSheet";
+import { WindowControls } from "./WindowControls";
 
 /** The McBot logo: the gray glass burger. */
 export function BrandMark({ size = 22 }: { size?: number }) {
@@ -64,30 +64,14 @@ function DoctorButton() {
   const errors = findings.filter((f) => f.level === "error").length;
   const warns = findings.filter((f) => f.level === "warn").length;
   const n = errors || warns;
+  // Quiet when all is well: the stethoscope appears only when there is something to look at.
+  if (!findings.length) return null;
   return (
     <button className="icon-btn doctor-btn" onClick={() => useApp.getState().setDoctorOpen(true)} data-testid="doctor-open" aria-label="Check the harness"
       data-tip={findings.length ? `${findings.length} thing${findings.length > 1 ? "s" : ""} to look at` : "Harness checked: all good"} data-tip-side="bottom">
       <Stethoscope size={15} />
       {n > 0 && <span className={`doctor-count ${errors ? "fail" : "warn"}`} data-testid="doctor-count">{n}</span>}
     </button>
-  );
-}
-
-/** Minimize, maximize and close, for the frameless window (Windows and Linux). */
-function WindowControls() {
-  const [max, setMax] = useState(false);
-  useEffect(() => {
-    let off: (() => void) | undefined;
-    let live = true;
-    void onMaximized(setMax).then((f) => { if (live) off = f; else f(); });
-    return () => { live = false; off?.(); };
-  }, []);
-  return (
-    <div className="win-controls" role="group" aria-label="Window">
-      <button type="button" aria-label="Minimize" onClick={() => void windowAct("min")}><Minus size={15} /></button>
-      <button type="button" aria-label={max ? "Restore" : "Maximize"} onClick={() => void windowAct("max")}>{max ? <Copy size={13} /> : <Square size={12} />}</button>
-      <button type="button" className="close" aria-label="Close" onClick={() => void windowAct("close")}><X size={16} /></button>
-    </div>
   );
 }
 
@@ -101,6 +85,9 @@ export function TitleBar() {
   const people = [{ clientId: -1, name: identity.name, color: identity.color }, ...peers];
   const teamOpen = useApp((s) => s.teamOpen);
   const unread = teamOpen ? 0 : unreadCount(boardId, graph.messages, identity.name);
+  const tab = useApp((s) => s.tab);
+  // Compile belongs to the board; elsewhere it shows up only when the agents' files are out of date or broken.
+  const showCompile = tab === "graph" || errors > 0 || (drift ?? 0) > 0;
 
   return (
     <header className="titlebar" data-tauri-drag-region>
@@ -118,15 +105,15 @@ export function TitleBar() {
         <MessagesSquare size={14} className="faint" />
         {unread > 0 && <span className="unread" data-testid="team-unread">{unread}</span>}
       </button>
-      <button className={`btn sm share-btn${REMOTE ? " remote" : ""}`} onClick={() => useApp.getState().setShareOpen(true)} data-testid="share-open"
+      <button className={`icon-btn share-btn${REMOTE ? " remote" : ""}`} onClick={() => useApp.getState().setShareOpen(true)} data-testid="share-open" aria-label="Share"
         data-tip={REMOTE ? `On ${REMOTE.label}'s boards` : "Share on your network"} data-tip-side="bottom">
-        <Users size={13} /> {REMOTE ? REMOTE.label : "Share"}
+        <Users size={15} />{REMOTE && <span className="share-host">{REMOTE.label}</span>}
       </button>
       <button className="search-pill" onClick={() => setPalette(true)} data-testid="open-palette">
         <Search size={14} /> <span className="search-label">Search</span> <Kbd>⌘K</Kbd>
       </button>
       <DoctorButton />
-      <button
+      {showCompile && <button
         className="btn primary" onClick={() => void compileBoard(boardId)} disabled={busy || graph.nodes.length === 0} data-testid="compile"
         data-tip={errors ? `${errors} problem${errors > 1 ? "s" : ""} on the board` : drift ? `${drift} file${drift > 1 ? "s" : ""} out of date · ⌘S` : "Up to date · ⌘S"} data-tip-side="bottom"
       >
@@ -134,8 +121,8 @@ export function TitleBar() {
         Compile
         {errors > 0 ? <span className="chip fail" style={{ height: 18, background: "rgba(0,0,0,.25)", color: "#fff" }}>{errors}</span>
           : drift ? <span className="chip" style={{ height: 18, background: "rgba(255,255,255,.22)", color: "#fff" }}>{drift}</span> : null}
-      </button>
-      {ownFrame() && <WindowControls />}
+      </button>}
+      <WindowControls />
     </header>
   );
 }

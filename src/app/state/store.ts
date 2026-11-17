@@ -122,7 +122,7 @@ function savedBoard(): string | null {
 }
 
 export const useApp = create<State>((set, get) => ({
-  tab: "home",
+  tab: "agents",
   boardId: savedBoard(),
   boards: [],
   health: null,
