@@ -216,3 +216,9 @@ command ran, the run completed. McBot's own Hermes now runs every agent this way
 | Hermes' vetted MCP catalog: `optional-mcps/<name>/manifest.yaml` (`transport.type: http`, `url`, `auth.type: oauth\|none\|api_key`, optional `auth.oauth`). McBot generates its Connectors from the http + oauth/none entries (`npm run engine:connectors`) | `hermes_cli/mcp_catalog.py:43,198-213` |
 | An OAuth connector compiles to `mcp_servers.<name>: {url, auth: oauth, oauth: {…}}`, as Hermes' own catalog writes it; the MCP client reads `auth` case-insensitively | `hermes_cli/mcp_catalog.py:549-554`; `tools/mcp_tool_server_run.py:263` |
 | `hermes -p <agent> mcp login <name> --flow browser` signs in to an OAuth server (opens the system browser, waits for the callback); the tokens are read when the gateway next connects its MCP servers | `hermes_cli/subcommands/mcp.py:47-52`; `hermes_cli/mcp_config.py:972` |
+
+## Model providers McBot offers as presets
+
+| Fact | Source |
+|---|---|
+| OpenCode Zen: base `https://opencode.ai/zen/v1`, key variable `OPENCODE_ZEN_API_KEY`, base override `OPENCODE_ZEN_BASE_URL`. Hermes has no keyless mode for it. Whether Zen's free models answer without a key is **not verified** (the build sandbox could not reach opencode.ai). | `hermes_cli/auth.py:223`; `plugins/model-providers/opencode-zen/__init__.py:132` |
