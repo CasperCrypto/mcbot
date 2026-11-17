@@ -7,6 +7,7 @@
  *   edges  Y.Map  edgeId -> { id, source, target, order }
  *   notes  Y.Map  noteId -> Y.Map { text, color, position, pinned, author, at }  (sticky notes)
  *   messages Y.Map messageId -> { id, author, color, agent, text, at }  (team chat)
+ *   frames Y.Map  frameId -> Y.Map { title, color, position, size }  (areas grouping blocks)
  *
  * Everything is keyed by id (never a Y.Array), so a relay restarted from the
  * JSON file and a window still holding the old document merge without
@@ -14,7 +15,7 @@
  * editing different fields of one node both keep their change.
  */
 import * as Y from "yjs";
-import { GRAPH_SCHEMA, MESSAGES_KEPT, type Graph, type GraphEdge, type GraphNode, type Message, type Note } from "../contracts/graph";
+import { GRAPH_SCHEMA, MESSAGES_KEPT, type Frame, type Graph, type GraphEdge, type GraphNode, type Message, type Note } from "../contracts/graph";
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -25,6 +26,7 @@ export function boardMaps(doc: Y.Doc) {
     edges: doc.getMap<GraphEdge>("edges"),
     notes: doc.getMap<Y.Map<unknown>>("notes"),
     messages: doc.getMap<Message>("messages"),
+    frames: doc.getMap<Y.Map<unknown>>("frames"),
   };
 }
 
@@ -59,9 +61,20 @@ function noteFromY(id: string, m: Y.Map<unknown>): Note {
   return { id, text: j.text ?? "", color: j.color ?? "yellow", position: j.position ?? { x: 0, y: 0 }, pinned: j.pinned ?? false, author: j.author ?? "", at: j.at ?? 0 };
 }
 
+function frameToY(frame: Frame): Y.Map<unknown> {
+  const m = new Y.Map<unknown>();
+  for (const [k, v] of Object.entries(frame)) if (k !== "id") m.set(k, structuredClone(v));
+  return m;
+}
+
+function frameFromY(id: string, m: Y.Map<unknown>): Frame {
+  const j = m.toJSON() as Partial<Frame>;
+  return { id, title: j.title ?? "", color: j.color ?? "blue", position: j.position ?? { x: 0, y: 0 }, size: j.size ?? { width: 420, height: 300 } };
+}
+
 /** Read the graph out of the doc (unvalidated: the compiler validates). Sorted by id. */
 export function graphFromDoc(doc: Y.Doc): Graph {
-  const { meta, nodes, edges, notes, messages } = boardMaps(doc);
+  const { meta, nodes, edges, notes, messages, frames } = boardMaps(doc);
   const byId = <T extends { id: string }>(a: T, b: T) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const graph: Graph = {
     schema: GRAPH_SCHEMA,
@@ -72,14 +85,17 @@ export function graphFromDoc(doc: Y.Doc): Graph {
   };
   // Only boards that have notes carry the field, so every other board reads exactly as before.
   if (notes.size) graph.notes = [...notes.entries()].map(([id, m]) => noteFromY(id, m)).sort(byId);
+  if (frames.size) graph.frames = [...frames.entries()].map(([id, m]) => frameFromY(id, m)).sort(byId);
   if (messages.size) graph.messages = [...messages.values()].map((m) => ({ ...m })).sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : 1)).slice(-MESSAGES_KEPT);
   return graph;
 }
 
 /** Replace the doc's content with `graph` in one transaction. */
 export function loadGraphIntoDoc(doc: Y.Doc, graph: Graph): void {
-  const { meta, nodes, edges, notes, messages } = boardMaps(doc);
+  const { meta, nodes, edges, notes, messages, frames } = boardMaps(doc);
   doc.transact(() => {
+    for (const id of [...frames.keys()]) if (!(graph.frames ?? []).some((f) => f.id === id)) frames.delete(id);
+    for (const f of graph.frames ?? []) frames.set(f.id, frameToY(f));
     for (const id of [...messages.keys()]) if (!(graph.messages ?? []).some((m) => m.id === id)) messages.delete(id);
     for (const m of graph.messages ?? []) messages.set(m.id, { ...m });
     for (const id of [...notes.keys()]) if (!(graph.notes ?? []).some((n) => n.id === id)) notes.delete(id);
@@ -160,4 +176,18 @@ export function addMessage(doc: Y.Doc, message: Message): void {
       for (const m of old) messages.delete(m.id);
     }
   });
+}
+
+// ---- frames ----
+
+export function addFrame(doc: Y.Doc, frame: Frame): void {
+  boardMaps(doc).frames.set(frame.id, frameToY(frame));
+}
+
+export function setFrameField<K extends keyof Omit<Frame, "id">>(doc: Y.Doc, id: string, field: K, value: Frame[K]): void {
+  boardMaps(doc).frames.get(id)?.set(field, structuredClone(value));
+}
+
+export function removeFrame(doc: Y.Doc, id: string): void {
+  boardMaps(doc).frames.delete(id);
 }

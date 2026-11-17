@@ -2,10 +2,10 @@
  * Right-click on the board: on empty space, add a block right there; on a block, its actions.
  * A glass menu at the pointer; a click elsewhere or Esc closes it (lib/presence.ts).
  */
-import { Bot, Cloud, Copy, FileCode2, FolderOpen, HardDrive, Maximize, MessagesSquare, PanelRight, Plug, StickyNote, Trash2 } from "lucide-react";
+import { Bot, Cloud, Copy, FileCode2, FolderOpen, Frame, HardDrive, Maximize, MessagesSquare, PanelRight, Plug, StickyNote, Trash2 } from "lucide-react";
 import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { addNode, addNote, removeNodes } from "../../board/ydoc";
+import { addFrame, addNode, addNote, removeNodes } from "../../board/ydoc";
 import type { GraphNode } from "../../contracts/graph";
 import { useDismiss } from "../lib/presence";
 import { useBoard } from "../state/board";
@@ -13,6 +13,15 @@ import { useApp } from "../state/store";
 import { duplicateNode, newAgent, newId, newModel, newTool } from "./defaults";
 
 export type MenuAt = { x: number; y: number; flow: { x: number; y: number }; nodeId: string | null };
+/** Where the selected blocks sit (for "Put in a frame"). */
+export type Box = { x: number; y: number; width: number; height: number };
+
+/** A frame around boxes, with room for its title strip. */
+export function frameAround(boxes: readonly Box[], pad = 36, head = 34): { position: { x: number; y: number }; size: { width: number; height: number } } {
+  const x0 = Math.min(...boxes.map((b) => b.x)) - pad, y0 = Math.min(...boxes.map((b) => b.y)) - pad - head;
+  const x1 = Math.max(...boxes.map((b) => b.x + b.width)) + pad, y1 = Math.max(...boxes.map((b) => b.y + b.height)) + pad;
+  return { position: { x: Math.round(x0), y: Math.round(y0) }, size: { width: Math.round(x1 - x0), height: Math.round(y1 - y0) } };
+}
 
 function Item({ icon, label, keys, danger, onClick }: { icon: ReactNode; label: string; keys?: string; danger?: boolean; onClick: () => void }) {
   return (
@@ -22,7 +31,7 @@ function Item({ icon, label, keys, danger, onClick }: { icon: ReactNode; label: 
   );
 }
 
-export function ContextMenu({ at, onClose, onFit }: { at: MenuAt; onClose: () => void; onFit: () => void }) {
+export function ContextMenu({ at, onClose, onFit, selection }: { at: MenuAt; onClose: () => void; onFit: () => void; selection: Box[] }) {
   const { graph, doc } = useBoard();
   const app = useApp();
   const ref = useRef<HTMLDivElement>(null);
@@ -51,6 +60,9 @@ export function ContextMenu({ at, onClose, onFit }: { at: MenuAt; onClose: () =>
           {node.kind === "agent" && <Item icon={<MessagesSquare size={14} />} label="Chat" onClick={run(() => app.openChat(node.id))} />}
           {node.kind === "agent" && <Item icon={<FileCode2 size={14} />} label="Its files" onClick={run(() => { app.select(node.id); app.setLiveFilesOpen(true); })} />}
           <Item icon={<Copy size={14} />} label="Duplicate" keys="⌘D" onClick={run(() => place(duplicateNode(graph, node)))} />
+          <Item icon={<Frame size={14} />} label={selection.length > 1 ? `Put ${selection.length} in a frame` : "Put in a frame"} onClick={run(() => {
+            addFrame(doc, { id: newId("frame"), title: "", color: "blue", ...frameAround(selection.length ? selection : []) });
+          })} />
           <hr />
           <Item icon={<Trash2 size={14} />} label="Delete" keys="⌫" danger onClick={run(() => { removeNodes(doc, [node.id]); app.select(null); })} />
         </>
@@ -66,6 +78,7 @@ export function ContextMenu({ at, onClose, onFit }: { at: MenuAt; onClose: () =>
             addNote(doc, { id, text: "", color: "yellow", position: spot, pinned: false, author: app.identity.name, at: Date.now() });
             app.setFreshNote(id);
           })} />
+          <Item icon={<Frame size={14} />} label="Frame" onClick={run(() => addFrame(doc, { id: newId("frame"), title: "", color: "blue", position: spot, size: { width: 480, height: 320 } }))} />
           <hr />
           <Item icon={<Maximize size={14} />} label="Fit the board" keys="⌘0" onClick={run(onFit)} />
         </>

@@ -216,6 +216,11 @@ Change them additively; a breaking change bumps the version.
 - Sticky notes live in the board too (`notes`, optional in `mcbot.graph/v1`, keyed by id like
   everything else): on the canvas for everyone, pinned ones on Home. The compiler never reads them.
   Their paper colours (`--note-*`) are content, not UI chrome.
+- Frames live in the board too (`frames`, optional in `mcbot.graph/v1`, keyed by id): a titled,
+  tinted area (`graph/FrameNode.tsx`, class `board-frame`; `.frame` is the app's view container)
+  behind the blocks. Dragging one by its title moves the blocks and notes whose centre is inside
+  it; its own × removes it (never Backspace), its blocks stay. Right-click → Frame, or "Put in a
+  frame" around a selection. The compiler never reads them; undo covers them.
 - Team chat lives in the board too (`messages`, optional in `mcbot.graph/v1`, keyed by id, last
   500 kept): the faces in the title bar open the Team panel (`src/app/shell/TeamPanel.tsx`): who is
   here and in which view, who joined and is away, and the chat. "@agent …" runs that agent and posts

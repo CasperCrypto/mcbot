@@ -1,6 +1,6 @@
 /**
  * Undo and redo for the board: Yjs' own UndoManager over the parts the board draws (blocks,
- * wires, notes, the board's name), never team chat.
+ * wires, notes, frames, the board's name), never team chat.
  *
  * It tracks only this window's own edits: local transactions have no origin (`null`), while
  * edits from teammates, other windows and the engine arrive through the provider with the
@@ -16,8 +16,8 @@ const managers = new WeakMap<Y.Doc, Y.UndoManager>();
 export function undoManager(doc: Y.Doc): Y.UndoManager {
   let m = managers.get(doc);
   if (!m) {
-    const { meta, nodes, edges, notes } = boardMaps(doc);
-    m = new Y.UndoManager([meta, nodes, edges, notes], { captureTimeout: CAPTURE_MS, trackedOrigins: new Set([null]) });
+    const { meta, nodes, edges, notes, frames } = boardMaps(doc);
+    m = new Y.UndoManager([meta, nodes, edges, notes, frames], { captureTimeout: CAPTURE_MS, trackedOrigins: new Set([null]) });
     managers.set(doc, m);
   }
   return m;

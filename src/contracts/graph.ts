@@ -277,6 +277,20 @@ export const NoteSchema = z.object({
 export type Note = z.infer<typeof NoteSchema>;
 
 /**
+ * A frame on the board: a titled, coloured area that groups blocks ("Research", "Support").
+ * Dragging it moves what sits inside. For the people, never compiled; added to mcbot.graph/v1
+ * additively, like notes.
+ */
+export const FrameSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().max(120).default(""),
+  color: z.enum(NOTE_COLORS).default("blue"),
+  position: PositionSchema,
+  size: z.object({ width: z.number().min(120).max(20_000), height: z.number().min(80).max(20_000) }),
+});
+export type Frame = z.infer<typeof FrameSchema>;
+
+/**
  * Team chat on a board: people and agents talking, live for everyone on it. Never compiled; added
  * to mcbot.graph/v1 additively, like notes. A message from an agent names it (`agent`).
  */
@@ -304,6 +318,8 @@ export const GraphSchema = z.object({
   notes: z.array(NoteSchema).optional(),
   /** Team chat (optional, never compiled). */
   messages: z.array(MessageSchema).optional(),
+  /** Frames grouping blocks (optional, never compiled). */
+  frames: z.array(FrameSchema).optional(),
 });
 export type Graph = z.infer<typeof GraphSchema>;
 
