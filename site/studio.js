@@ -503,3 +503,16 @@
     }
   }
 })();
+
+/* ---------- the split download button: your OS, and a menu for the others ---------- */
+(() => {
+  const split = document.querySelector("[data-split]");
+  if (!split) return;
+  const more = split.querySelector(".split-more");
+  const menu = split.querySelector(".split-menu");
+  const set = (open) => { menu.hidden = !open; more.setAttribute("aria-expanded", String(open)); };
+  more.addEventListener("click", (e) => { e.stopPropagation(); set(menu.hidden); });
+  menu.addEventListener("click", () => set(false));
+  document.addEventListener("click", (e) => { if (!split.contains(e.target)) set(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") set(false); });
+})();
