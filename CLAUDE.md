@@ -453,6 +453,9 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   app), How it works tabs, the features grid, the ⌘K palette you can
   type in, the island) play only while on screen, pause under the pointer, hold their final state
   under `prefers-reduced-motion`, and use the page's flat colours; they are markup, not screenshots.
+  Page anatomy (as the product pages we compare with do it): a platform pill and a split Download button (your OS,
+  plus a menu) over the hero; cards whose bold title runs into the sentence; a two-column FAQ (`<details>`);
+  flat colour download cards with dark ink; a big footer with a one-paragraph pitch and link columns.
   Product shots (`site/assets/*.webp`) are taken from the demo at 1440×900 @2x
   without the Demo chip; re-shoot them when the UI they show changes.
 

@@ -476,3 +476,85 @@ body { background: #000; }
 @media (max-width: 560px) { .feat { grid-template-columns: minmax(0, 1fr); } .app-body { grid-template-columns: minmax(0, 1fr); } .app-rail { display: none; } .app-chat { margin: 0 8px 8px; } .app-body { height: 460px; } .ac-thread { padding: 16px; } .ac-compose { margin: 0 12px 12px; } .notch.work, .notch.ask, .notch.ok { min-width: 210px; } }
 @media (prefers-reduced-motion: reduce) { .ac-thread > * { opacity: 1 !important; transform: none !important; transition: none !important; } .tool { animation: none; } }
 @media (max-width: 560px) { .ac-model { display: none; } }
+
+/* =====================================================================
+   Page anatomy, as product pages do it: platform pill, split download, cards whose bold title
+   runs into the sentence, a two-column FAQ, colour download cards, a big footer.
+   Flat colours only (no gradients, glows or dots).
+   ===================================================================== */
+.avail { display: inline-flex; align-items: center; gap: 12px; height: 34px; padding: 0 14px 0 4px; margin-top: 18px; border-radius: 999px; background: #0e0e0f; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); color: var(--text-3); font-size: 13px; }
+.avail .new { height: 26px; display: inline-grid; place-items: center; padding: 0 10px; border-radius: 999px; background: #f5f5f7; color: #000; font-weight: 700; font-size: 11.5px; letter-spacing: 0.02em; text-transform: uppercase; }
+.avail span:not(.new) { display: inline-flex; align-items: center; gap: 5px; color: var(--text); font-weight: 500; }
+.hero h1 { margin-top: 18px; }
+
+.split { position: relative; display: inline-flex; }
+.split > .btn.primary:first-child { border-radius: 999px 0 0 999px; padding-right: 18px; }
+.split-more { border-radius: 0 999px 999px 0 !important; padding: 0 14px !important; margin-left: 1px; box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.12) !important; }
+.split-menu { position: absolute; top: calc(100% + 8px); left: 0; z-index: 20; min-width: 260px; padding: 6px; border-radius: 16px; background: #141415; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 24px 60px rgba(0, 0, 0, 0.6); text-align: left; animation: txt-in 0.25s var(--smooth) both; }
+.split-menu a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; font-size: 14.5px; font-weight: 500; }
+.split-menu a:hover { background: rgba(255, 255, 255, 0.07); }
+.split-menu small { margin-left: auto; color: var(--text-3); font-size: 12.5px; }
+
+/* cards: a bold title that runs into the sentence */
+.bc .lead { margin: 0; font-size: 17px; line-height: 1.5; color: var(--text-2); max-width: 520px; letter-spacing: -0.005em; }
+.bc .lead b { color: var(--text); font-weight: 600; }
+.bc { padding-top: 30px; }
+
+/* FAQ: title on the left, answers on the right */
+.faq { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 56px; align-items: start; }
+.faq h2 { font-size: clamp(40px, 5.4vw, 64px); }
+.more-link { display: inline-block; margin-top: 22px; font-weight: 600; color: var(--text); }
+.more-link:hover { text-decoration: underline; }
+.qas { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.qa { border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.qa summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 2px; font-size: 18px; font-weight: 500; letter-spacing: -0.01em; }
+.qa summary::-webkit-details-marker { display: none; }
+.qa .pm { position: relative; flex: none; width: 14px; height: 14px; }
+.qa .pm::before, .qa .pm::after { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 2px; border-radius: 2px; background: var(--text-2); transition: transform 0.35s var(--spring); }
+.qa .pm::after { transform: rotate(90deg); }
+.qa[open] .pm::after { transform: rotate(0deg); }
+.qa p { margin: -6px 0 22px; padding-right: 40px; color: var(--text-2); font-size: 16px; line-height: 1.6; animation: txt-in 0.3s var(--smooth) both; }
+
+/* download: flat colour cards with big marks, dark ink */
+.os[data-os] { color: #0b0b0c; box-shadow: none; min-height: 300px; padding: 28px; }
+.os[data-os="mac"] { background: #9db8ff; }
+.os[data-os="windows"] { background: #8fe0b8; }
+.os[data-os="linux"] { background: #ffd27f; }
+.os[data-os] .head { flex-direction: column; align-items: flex-start; gap: 18px; }
+.os[data-os] .head svg { width: 46px; height: 46px; color: #0b0b0c; }
+.os[data-os] h3 { font-size: 30px; letter-spacing: -0.03em; color: #0b0b0c; }
+.os[data-os] small, .os[data-os] .install small { color: rgba(0, 0, 0, 0.62); }
+.os[data-os] .links .btn { background: #0b0b0c; color: #fff; box-shadow: none; }
+.os[data-os] .links .btn:hover { background: #222; }
+.os[data-os] .links .btn span { color: rgba(255, 255, 255, 0.55); }
+.os[data-os] .links .btn.primary { background: #0b0b0c; color: #fff; }
+.os[data-os] .soon { background: rgba(0, 0, 0, 0.12); color: rgba(0, 0, 0, 0.7); }
+.os[data-os] .install .cmd { background: #0b0b0c; border-color: transparent; }
+.os[data-os] .install code { color: #f5f5f7; }
+.os[data-os].current { box-shadow: 0 0 0 2px #f5f5f7; }
+.os[data-os]::after { display: none; }
+
+/* the big footer */
+.big-foot { margin-top: 120px; padding: 72px 0 calc(40px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid rgba(255, 255, 255, 0.08); color: var(--text-2); font-size: 15px; }
+.big-foot .wrap { display: block; }
+.foot-top { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 56px; }
+.foot-pitch .brand { font-size: 20px; color: var(--text); gap: 12px; }
+.foot-pitch p { margin: 22px 0 26px; font: 500 clamp(22px, 2.4vw, 30px)/1.25 var(--display); letter-spacing: -0.02em; color: var(--text); max-width: 520px; }
+.foot-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot-cols h4 { margin: 0 0 14px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); }
+.foot-cols a, .foot-cols span { display: block; padding: 6px 0; color: var(--text); }
+.foot-cols span { color: var(--text-2); }
+.foot-cols a:hover { text-decoration: underline; }
+.foot-base { margin-top: 64px; padding-top: 22px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; color: var(--text-3); font-size: 13px; }
+
+@media (max-width: 860px) {
+  .faq, .foot-top { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .foot-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .avail { gap: 8px; font-size: 12px; padding-right: 10px; }
+  .split { width: 100%; } .split > .btn.primary:first-child { flex: 1; }
+  .qa summary { font-size: 16px; }
+}
+.os[data-os] .links .btn.primary span, .os[data-os] .links .btn span { color: rgba(255, 255, 255, 0.6) !important; }
+@media (max-width: 560px) { .split .split-more { width: 52px !important; flex: none; } }
