@@ -1,10 +1,10 @@
 import { LoaderCircle } from "lucide-react";
 import { FrameStrip } from "./shell/WindowControls";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, type ComponentType } from "react";
 import type { AgentNode } from "../contracts/graph";
 import { compileBoard, refreshDrift, runAgent } from "./actions";
-import { GraphView } from "./graph/GraphView";
-import { engine, subscribeHarness, subscribeRunEvents } from "./lib/engine";
+import { DEMO, engine, REMOTE, subscribeHarness, subscribeRunEvents } from "./lib/engine";
+import { openExternal } from "./lib/open";
 import { Boundary } from "./shell/Boundary";
 import { HermesSheet } from "./shell/HermesSheet";
 import { ReportSheet } from "./shell/ReportSheet";
@@ -26,29 +26,50 @@ import { inApp, onSummon } from "./lib/desktop";
 import { useApp } from "./state/store";
 import { useTasks } from "./views/TasksView";
 import { AgentsView } from "./views/AgentsView";
-import { CostView } from "./views/CostView";
-import { FilesView } from "./views/FilesView";
 import { HomeView } from "./views/HomeView";
-import { SkillsView } from "./views/SkillsView";
-import { MemoryView } from "./views/MemoryView";
-import { RunsView } from "./views/RunsView";
 import { TasksView } from "./views/TasksView";
-import { TeamView } from "./views/TeamView";
-import { SettingsView } from "./views/SettingsView";
 
 /** Shown while a view that loads on first use (Code, Browser) arrives. */
 const Loading = () => <section className="main flush-left view-loading" aria-busy="true"><LoaderCircle size={20} className="spin-icon" /></section>;
 
-/** Monaco and xterm are big: the Code view loads on first use. */
-const CodeView = lazy(() => import("./workbench/CodeView"));
-function CodeTab() {
-  return <Suspense fallback={<Loading />}><CodeView /></Suspense>;
+/**
+ * Views load on first use, so the window paints Chat without React Flow, Monaco or xterm. Right
+ * after the first paint the light ones are fetched in the background (`prefetchViews`), so
+ * switching to them later never shows the placeholder; Code (Monaco) waits until it is opened.
+ */
+function lazyView<M>(load: () => Promise<M>, pick: (m: M) => ComponentType, prefetch = true) {
+  let promise: Promise<{ default: ComponentType }> | null = null;
+  const get = () => (promise ??= load().then((m) => ({ default: pick(m) })));
+  if (prefetch) PREFETCH.push(get);
+  const View = lazy(get);
+  return function LazyView() {
+    return <Suspense fallback={<Loading />}><View /></Suspense>;
+  };
+}
+const PREFETCH: (() => Promise<unknown>)[] = [];
+let prefetched = false;
+/** Fetch the views not on screen yet, one after another, while the window is idle. */
+function prefetchViews() {
+  if (prefetched) return;
+  prefetched = true;
+  const idle = (f: () => void) => ("requestIdleCallback" in window ? window.requestIdleCallback(f, { timeout: 2000 }) : setTimeout(f, 300));
+  const next = (i: number) => {
+    if (i < PREFETCH.length) idle(() => void PREFETCH[i]!().catch(() => undefined).finally(() => next(i + 1)));
+  };
+  next(0);
 }
 
-const BrowserView = lazy(() => import("./workbench/BrowserView"));
-function BrowserTab() {
-  return <Suspense fallback={<Loading />}><BrowserView /></Suspense>;
-}
+const GraphView = lazyView(() => import("./graph/GraphView"), (m) => m.GraphView);
+const RunsView = lazyView(() => import("./views/RunsView"), (m) => m.RunsView);
+const MemoryView = lazyView(() => import("./views/MemoryView"), (m) => m.MemoryView);
+const SkillsView = lazyView(() => import("./views/SkillsView"), (m) => m.SkillsView);
+const FilesView = lazyView(() => import("./views/FilesView"), (m) => m.FilesView);
+const CostView = lazyView(() => import("./views/CostView"), (m) => m.CostView);
+const TeamView = lazyView(() => import("./views/TeamView"), (m) => m.TeamView);
+const SettingsView = lazyView(() => import("./views/SettingsView"), (m) => m.SettingsView);
+const BrowserTab = lazyView(() => import("./workbench/BrowserView"), (m) => m.default);
+/** Monaco and xterm are big: the Code view loads only when it is opened. */
+const CodeTab = lazyView(() => import("./workbench/CodeView"), (m) => m.default, false);
 
 const VIEW_COMPONENTS = {
   home: HomeView,
@@ -127,6 +148,17 @@ function BoardEffects() {
     return () => window.removeEventListener("keydown", onKey);
   }, [boardId]);
 
+  // A newer McBot is out: say so once per launch, a little after the window settles.
+  useEffect(() => {
+    if (REMOTE || DEMO) return;
+    const t = setTimeout(() => {
+      engine.update().then((u) => {
+        if (u.available && u.url) useApp.getState().toast({ kind: "ok", text: `McBot Studio ${u.latest} is out`, action: { label: "Download", run: () => void openExternal(u.url!) } });
+      }).catch(() => undefined);
+    }, 4000);
+    return () => clearTimeout(t);
+  }, []);
+
   // The launcher shortcut from anywhere: this window comes forward with ⌘K open.
   useEffect(() => {
     let off: (() => void) | null = null;
@@ -140,6 +172,9 @@ function BoardEffects() {
 function Shell() {
   const tab = useApp((s) => s.tab);
   const View = VIEW_COMPONENTS[tab];
+  useEffect(() => {
+    prefetchViews();
+  }, []);
   return (
     <>
       <TitleBar />
@@ -235,26 +270,31 @@ export function App() {
     }
   };
 
+  // Every 5 s once the engine answers; every 400 ms while it starts (the window opens first), so
+  // "Starting McBot Studio…" goes away the moment the engine is up, not up to 5 s later.
   useEffect(() => {
     let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const poll = async () => {
+      let up = false;
       try {
         const h = await engine.health();
         if (!alive) return;
         setHealth(h, true);
+        up = true;
         const list = await engine.boards();
         setBoards(list);
         const current = useApp.getState().boardId;
         if (!current || !list.some((b) => b.id === current)) setBoard(list[0]?.id ?? null);
       } catch {
-        if (alive) setHealth(null, false);
+        if (alive && !up) setHealth(null, false);
       }
+      if (alive) timer = setTimeout(poll, up ? 5000 : 400);
     };
     void poll();
-    const t = setInterval(poll, 5000);
     return () => {
       alive = false;
-      clearInterval(t);
+      clearTimeout(timer);
     };
   }, [setHealth, setBoards, setBoard]);
 

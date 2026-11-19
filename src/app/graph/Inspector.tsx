@@ -1,5 +1,6 @@
-import { ArrowUp, Check, CheckCheck, Cloud, HardDrive, LogIn, MessagesSquare, Plug, Plus, RotateCcw, Send, Sparkles, Square, Trash2, X } from "lucide-react";
+import { ArrowUp, Check, CheckCheck, Cloud, HardDrive, LoaderCircle, LogIn, MessagesSquare, Plug, Plus, RotateCcw, Send, Sparkles, Square, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { SignInView } from "../../contracts/api";
 import { removeNodes, setNodeField, updateEdge } from "../../board/ydoc";
 import type { Issue } from "../../compile";
 import {
@@ -434,9 +435,27 @@ function ToolFields({ nodeId, data, set }: { nodeId: string; data: ToolData; set
   const { graph } = useBoard();
   const agents = graph.edges.flatMap((e) => (e.source === nodeId ? [e.target] : e.target === nodeId ? [e.source] : []))
     .map((id) => graph.nodes.find((n) => n.id === id)).filter((n): n is Extract<GraphNode, { kind: "agent" }> => n?.kind === "agent");
+  // How each agent's sign-in went: asked when the block opens, then every 2 s while one waits.
+  const [signedIn, setSignedIn] = useState<Record<string, SignInView>>({});
+  const oauth = data.auth === "oauth" && !REMOTE;
+  const profiles = agents.map((a) => a.data.name).join(",");
+  const waiting = Object.values(signedIn).some((s) => s.state === "waiting");
+  useEffect(() => {
+    if (!oauth || !profiles) return;
+    let alive = true;
+    const check = () => void Promise.all(profiles.split(",").map(async (p) => [p, await engine.signInState(p, data.name).catch(() => null)] as const))
+      .then((all) => { if (alive) setSignedIn(Object.fromEntries(all.filter((e): e is readonly [string, SignInView] => !!e[1]))); });
+    check();
+    const t = waiting ? setInterval(check, 2000) : undefined;
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [oauth, profiles, data.name, waiting]);
   const signIn = async (profile: string) => {
     try {
       await engine.signIn(profile, data.name);
+      setSignedIn((s) => ({ ...s, [profile]: { state: "waiting", error: null, at: Date.now() } }));
       useApp.getState().toast({ kind: "ok", text: "Finish signing in in your browser" });
     } catch (e) {
       useApp.getState().toast({ kind: "fail", text: e instanceof Error ? e.message : String(e) });
@@ -462,11 +481,21 @@ function ToolFields({ nodeId, data, set }: { nodeId: string; data: ToolData; set
             <div className="stack" style={{ gap: 6 }} data-testid="tool-signin">
               <span className="section-label">Sign in</span>
               {agents.length === 0 ? <span className="faint">Connect it to an agent, then compile.</span>
-                : agents.map((a) => (
-                  <button key={a.id} className="btn" onClick={() => void signIn(a.data.name)} data-tip="Opens your browser to sign in for this agent" data-tip-side="top">
-                    <LogIn size={14} /> {agents.length > 1 ? `Sign in for ${a.data.displayName || a.data.name}` : "Sign in"}
-                  </button>
-                ))}
+                : agents.map((a) => {
+                  const st = signedIn[a.data.name];
+                  const who = agents.length > 1 ? ` for ${a.data.displayName || a.data.name}` : "";
+                  return (
+                    <div key={a.id} className="stack" style={{ gap: 4 }}>
+                      <button className="btn" disabled={st?.state === "waiting"} onClick={() => void signIn(a.data.name)}
+                        data-tip={st?.state === "done" ? "Sign in again" : "Opens your browser to sign in for this agent"} data-tip-side="top">
+                        {st?.state === "waiting" ? <><LoaderCircle size={14} className="spin-icon" /> Waiting for your browser…</>
+                          : st?.state === "done" ? <><Check size={14} /> Signed in{who}</>
+                          : <><LogIn size={14} /> Sign in{who}</>}
+                      </button>
+                      {st?.state === "failed" && <span className="chip fail ellipsis" data-tip={st.error ?? undefined} data-testid="signin-failed">Didn't sign in: {st.error ?? "try again"}</span>}
+                    </div>
+                  );
+                })}
             </div>
           )}
           <TextListField label="Headers" value={Object.entries(data.headers).map(([k, v]) => `${k}: ${v}`).join("\n")} onCommit={(t) => set("headers", parsePairs(t, ":"))} rows={2} placeholder="Authorization: Bearer ${env:TOKEN}" />

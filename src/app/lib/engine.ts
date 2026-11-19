@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
@@ -113,6 +113,8 @@ const http = {
   uninstallSkill: (profile: string, name: string) => call<{ installed: string[]; skills: ProfileSkill[] }>("POST", "/api/skills/uninstall", { profile, name }),
   updateSkill: (profile: string, name: string) => call<{ installed: string[]; skills: ProfileSkill[] }>("POST", "/api/skills/update", { profile, name }),
   signIn: (profile: string, name: string) => call<{ started: boolean }>("POST", "/api/connectors/login", { profile, name }),
+  update: () => call<UpdateView>("GET", "/api/update"),
+  signInState: (profile: string, name: string) => call<SignInView>("GET", `/api/connectors/login?profile=${encodeURIComponent(profile)}&name=${encodeURIComponent(name)}`),
   actOnTask: (boardId: string, id: string, by: string, a: TaskAction) => call<TaskDetail>("POST", "/api/tasks/act", { boardId, id, by, ...a }),
 };
 

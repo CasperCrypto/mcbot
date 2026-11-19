@@ -16,7 +16,8 @@ export interface FlowNodeData extends Record<string, unknown> {
   peer: Peer | null;
   run: RunSummary | null;
   chain: string[];
-  compiled: boolean;
+  /** The agent's files on disk: the same as the board, behind it, or none yet. */
+  compiled: "fresh" | "stale" | "none";
   active: boolean;
   errored: boolean;
 }
@@ -33,9 +34,10 @@ function Peer({ peer }: { peer: Peer | null }) {
   );
 }
 
-function status(run: RunSummary | null, compiled: boolean): { dot: string; text: string; cost: string } {
+function status(run: RunSummary | null, compiled: FlowNodeData["compiled"]): { dot: string; text: string; cost: string } {
   const cost = run && (run.reportedUsd || run.estimatedUsd) ? usd(run.reportedUsd || run.estimatedUsd) : "";
-  if (!run) return { dot: compiled ? "" : "warn", text: compiled ? "Ready" : "Not compiled", cost: "" };
+  if (!run) return compiled === "fresh" ? { dot: "", text: "Ready", cost: "" }
+    : { dot: "warn", text: compiled === "stale" ? "Changed · compile" : "Not compiled", cost: "" };
   if (run.status === "running") return { dot: "run", text: "Working…", cost: "" };
   if (run.status === "succeeded") return { dot: "ok", text: ago(run.finishedAt ?? run.startedAt), cost };
   if (run.status === "interrupted") return { dot: "warn", text: "Stopped", cost };

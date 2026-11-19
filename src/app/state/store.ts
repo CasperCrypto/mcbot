@@ -28,6 +28,9 @@ interface State {
   compile: CompileResponse | null;
   /** Files the board would change if compiled now (null = unknown). */
   drift: number | null;
+  /** Each compiled agent's files on disk, from the last dry-run compile: "fresh" = same as the board,
+   *  "stale" = the board changed since; an agent missing here has no files yet (null = unknown). */
+  onDisk: Record<string, "fresh" | "stale"> | null;
   events: Record<string, RunEvent[]>;
   runs: Record<string, RunSummary>;
   toasts: Toast[];
@@ -102,7 +105,7 @@ interface State {
   setIdentity(id: Identity): void;
   select(nodeId: string | null): void;
   selectRun(runId: string | null): void;
-  setCompile(patch: Partial<Pick<State, "compileOpen" | "compileBusy" | "compile" | "drift">>): void;
+  setCompile(patch: Partial<Pick<State, "compileOpen" | "compileBusy" | "compile" | "drift" | "onDisk">>): void;
   loadRuns(list: RunSummary[]): void;
   loadEvents(runId: string, events: RunEvent[]): void;
   applyEvent(e: RunEvent): void;
@@ -134,6 +137,7 @@ export const useApp = create<State>((set, get) => ({
   compileBusy: false,
   compile: null,
   drift: null,
+  onDisk: null,
   events: {},
   runs: {},
   toasts: [],
@@ -204,7 +208,7 @@ export const useApp = create<State>((set, get) => ({
     } catch {
       /* remembered for this session only */
     }
-    set({ boardId, selectedNodeId: null, selectedRunId: null, chatAgentId: null, openTask: null, compile: null, compileOpen: false, drift: null, events: {}, runs: {} });
+    set({ boardId, selectedNodeId: null, selectedRunId: null, chatAgentId: null, openTask: null, compile: null, compileOpen: false, drift: null, onDisk: null, events: {}, runs: {} });
   },
   setBoards: (boards) => set({ boards }),
   setHealth: (health, engineUp) => set({ health, engineUp }),

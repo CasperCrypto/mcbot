@@ -3,7 +3,20 @@ import { engine, EngineError } from "./lib/engine";
 import { canReveal, revealFile } from "./lib/open";
 import { useApp } from "./state/store";
 
-const changedCount = (r: Awaited<ReturnType<typeof engine.compile>>) => (r.ok ? r.report.changes.filter((c) => c.status !== "unchanged").length : 0);
+type Compiled = Awaited<ReturnType<typeof engine.compile>>;
+const changedCount = (r: Compiled) => (r.ok ? r.report.changes.filter((c) => c.status !== "unchanged").length : 0);
+
+/** Which agents have files on disk, and whether they match the board (see `onDisk` in the store). */
+export function diskState(r: Compiled): Record<string, "fresh" | "stale"> | null {
+  if (!r.ok) return null;
+  const out: Record<string, "fresh" | "stale"> = {};
+  for (const p of r.report.profiles) {
+    const mine = r.report.changes.filter((c) => c.path.startsWith(`${p.dir}/`) && c.status !== "removed");
+    if (mine.length === 0 || mine.every((c) => c.status === "added")) continue;
+    out[p.name] = mine.every((c) => c.status === "unchanged") ? "fresh" : "stale";
+  }
+  return out;
+}
 
 export async function compileBoard(boardId: string, opts: { quiet?: boolean } = {}): Promise<boolean> {
   const app = useApp.getState();
@@ -12,7 +25,7 @@ export async function compileBoard(boardId: string, opts: { quiet?: boolean } = 
     const res = await engine.compile(boardId);
     // The compile sheet (files and diffs) opens only when asked for; a compile says how it went in
     // a notice, and a board with problems points at the first block to fix.
-    app.setCompile({ compile: res, compileOpen: false, drift: res.ok ? 0 : null });
+    app.setCompile({ compile: res, compileOpen: false, drift: res.ok ? 0 : null, ...(res.ok ? { onDisk: Object.fromEntries(res.report.profiles.map((p) => [p.name, "fresh" as const])) } : {}) });
     const showFiles = { label: "Files", run: () => { const a = useApp.getState(); a.setTab("graph"); a.setCompile({ compileOpen: true }); } };
     if (res.ok) {
       const n = changedCount(res);
@@ -39,9 +52,9 @@ export async function compileBoard(boardId: string, opts: { quiet?: boolean } = 
 export async function refreshDrift(boardId: string): Promise<void> {
   try {
     const res = await engine.preview(boardId);
-    useApp.getState().setCompile({ drift: res.ok ? changedCount(res) : null });
+    useApp.getState().setCompile({ drift: res.ok ? changedCount(res) : null, onDisk: diskState(res) });
   } catch {
-    useApp.getState().setCompile({ drift: null });
+    useApp.getState().setCompile({ drift: null, onDisk: null });
   }
 }
 

@@ -7,7 +7,7 @@
 import { Check, Cloud, Cpu, ExternalLink, HardDrive, Info, KeyRound, LifeBuoy, LoaderCircle, Plus, RefreshCw, RotateCw, Sparkles, Trash2, User, Users, Waypoints } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { addEdge, addNode, removeNodes, updateEdge } from "../../board/ydoc";
-import type { HermesInfo, LocalServer, SharingView } from "../../contracts/api";
+import type { HermesInfo, LocalServer, SharingView, UpdateView } from "../../contracts/api";
 import type { Graph, GraphNode, ModelNode } from "../../contracts/graph";
 import { compileBoard } from "../actions";
 import { newId, uniqueName } from "../graph/defaults";
@@ -490,6 +490,10 @@ function EngineSection() {
 function AboutSection() {
   const app = useApp.getState();
   const health = useApp((s) => s.health);
+  const [update, setUpdate] = useState<UpdateView | null>(null);
+  useEffect(() => {
+    if (!REMOTE && !DEMO) engine.update().then(setUpdate).catch(() => undefined);
+  }, []);
   return (
     <>
       <Card title="Start over" sub="Answer a few questions and get a ready team on a new board." testId="settings-setup">
@@ -497,6 +501,10 @@ function AboutSection() {
           <button className="btn sm primary" onClick={() => app.setSetup({ completed: false, profile: app.setup?.profile ?? null })} data-testid="settings-rerun-setup"><Sparkles size={12} /> Run setup again</button></div>
       </Card>
       <Card title="About McBot Studio" sub={`Version ${health?.version ?? "…"} · free and open source (MIT)`}>
+        {update?.available && update.url && (
+          <div className="settings-row" data-testid="settings-update"><span className="grow"><b>McBot Studio {update.latest}</b> is out</span>
+            <button className="btn sm primary" onClick={() => void openExternal(update.url!)}><ExternalLink size={12} /> Download</button></div>
+        )}
         <div className="settings-row"><span className="grow">Something not working?</span>
           <button className="btn sm" onClick={() => app.setReportOpen(true)}><LifeBuoy size={12} /> Report a problem</button>
           <button className="btn sm ghost" onClick={() => void openExternal("https://github.com/CasperCrypto/mcbot")}><ExternalLink size={12} /> GitHub</button></div>

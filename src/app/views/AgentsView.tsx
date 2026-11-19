@@ -1,3 +1,4 @@
+import { starterPrompts } from "../chat/starters";
 import { ArrowUp, Download, Plug, Plus, Square, Waypoints, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode, ModelData } from "../../contracts/graph";
@@ -199,6 +200,11 @@ function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
               <AgentFace seed={agent.data.name} size={72} />
               <h3>{name}</h3>
               <p>{agent.data.description || "Ask anything."}</p>
+              <div className="rich-choices starters" data-testid="starters">
+                {starterPrompts(agent.data.displayName || agent.data.name, agent.data.description).map((q) => (
+                  <button key={q} className="rich-choice" onClick={() => void ask(q)}>{q}</button>
+                ))}
+              </div>
             </div>
           )}
           {thread.map((r) => {

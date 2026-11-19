@@ -48,6 +48,8 @@ async function main(): Promise<void> {
     host: "127.0.0.1",
     allowedOrigins: [...DEFAULT_ORIGINS, ...(process.env.MCBOT_ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean)],
     logFile: dataDir ? join(dataDir, "engine.log") : undefined,
+    // The installed app says when a newer release is out; MCBOT_NO_UPDATE_CHECK=1 turns that off.
+    checkUpdates: !!(bundle && dataDir) && process.env.MCBOT_NO_UPDATE_CHECK !== "1",
   });
 
   if ((await engine.relay.list()).length === 0) await engine.relay.create("main", "My first harness");
