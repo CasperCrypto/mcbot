@@ -11,3 +11,11 @@ describe("agent suggestions", () => {
     for (const s of AGENT_SUGGESTIONS) expect(s.name && s.about && s.soul).toBeTruthy();
   });
 });
+
+describe("agent suggestions' Hermes skills", () => {
+  it("name only skills Hermes' library ships", async () => {
+    const { LIBRARY } = await import("../../contracts/library.generated");
+    const ids = new Set(LIBRARY.map((s) => s.id));
+    for (const s of AGENT_SUGGESTIONS) for (const id of s.skills ?? []) expect(ids.has(id), `${s.name}: ${id}`).toBe(true);
+  });
+});

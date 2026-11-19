@@ -20,7 +20,9 @@ release notes when it ships.
 | ○ | Seeding the 44 built-in skills after a compile shows no progress | `engine/skills.ts` |
 | ● done | The inspector uses the thicker panel material (`--mat-panel`) | `styles/glass.css` |
 | ● done | ⌘1–9 follow the rail order (⌘9 is Files), in the shortcut list and ⌘K hints | `shell/Palette.tsx` |
-| ○ | The browser demo lists 6 library skills, not all 141 | `demo/engine.ts` |
+| ● fixed in 0.5.1 | The browser demo lists all 141 library skills (generated: `npm run engine:library`) | `demo/engine.ts` |
+| ● 0.5.1 | 19 starting agents (was 6) and 8 starter teams (was 4), each with fitting Hermes library skills installed after the first compile; the Skills view names Hermes' 44 built-in skills | `shell/agentSuggestions.ts`, `graph/teams.ts` |
+| ○ | Hermes' 14 personalities (`display.personality`) apply to chat apps and the terminal but not to runs McBot starts (the runs API takes `instructions` per request): expose them once runs can carry one | `hermes_cli/personality.py`, `gateway/platforms/api_server_runs.py:498` |
 | ○ | 30 brands have no logo (Slack, Canva, OpenAI, Microsoft, AWS, Amplitude, Twilio…): add SVGs to `design/logos/` | `design/logos/README.md` |
 | ○ | Asana's connector is left out (its OAuth client comes from `${ASANA_CLIENT_ID}`) | `scripts/hermes-connectors.ts` |
 | ○ | A daily budget stops runs McBot starts, not Hermes' own schedules or task-board runs | `engine/cost.ts` |

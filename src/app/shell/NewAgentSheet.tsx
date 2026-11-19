@@ -4,14 +4,15 @@ import { withRichAnswers } from "../chat/rich";
 import { useEffect, useMemo, useState } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
 import { RESERVED_PROFILE_NAMES, type GraphNode, type ModelNode } from "../../contracts/graph";
-import { compileBoard } from "../actions";
+import { compileBoard, learnSkills, skillName } from "../actions";
 import { newAgent, newId, newModel } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace } from "../ui";
 import { usePresence } from "../lib/presence";
-import { AGENT_SUGGESTIONS, agentIdFor } from "./agentSuggestions";
+import { AGENT_GROUPS, AGENT_SUGGESTIONS, agentIdFor } from "./agentSuggestions";
+import { REMOTE } from "../lib/engine";
 
 export { agentIdFor };
 
@@ -24,6 +25,8 @@ export function NewAgentSheet() {
   const [about, setAbout] = useState("");
   const [soul, setSoul] = useState("");
   const [model, setModel] = useState<string>("");
+  /** Hermes library skills the picked starting card comes with (installed after the first compile). */
+  const [skills, setSkills] = useState<readonly string[]>([]);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -31,6 +34,7 @@ export function NewAgentSheet() {
     setName("");
     setAbout("");
     setSoul("");
+    setSkills([]);
     setModel(models[0]?.id ?? "new-local");
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     window.addEventListener("keydown", onKey);
@@ -63,8 +67,10 @@ export function NewAgentSheet() {
     setBusy(false);
     app.select(agent.id);
     // Ready to talk to straight away when the board compiles; otherwise the graph shows what is missing.
-    if (await compileBoard(boardId, { quiet: true })) app.openChat(agent.id);
-    else app.setTab("graph");
+    if (await compileBoard(boardId, { quiet: true })) {
+      app.openChat(agent.id);
+      if (skills.length && !REMOTE) void learnSkills(id, name.trim(), skills);
+    } else app.setTab("graph");
   };
 
   return (
@@ -80,15 +86,34 @@ export function NewAgentSheet() {
           <button className="icon-btn" aria-label="Close" onClick={() => setOpen(false)}><X size={15} /></button>
         </header>
         <div className="new-agent-body">
-          <div className="suggest-row" role="group" aria-label="Suggestions">
-            {AGENT_SUGGESTIONS.map((s) => (
-              <button key={s.name} className="suggest-card" data-tip={s.about} data-testid="new-agent-suggestion"
-                onClick={() => { setName(s.name); setAbout(s.about); setSoul(s.soul); }}>
-                <AgentFace seed={agentIdFor(s.name, new Set())} size={26} />
-                <span className="ellipsis">{s.name}</span>
-              </button>
+          <div className="suggest-groups" role="group" aria-label="Suggestions">
+            {AGENT_GROUPS.map((g) => (
+              <div key={g} className="suggest-group">
+                <span className="suggest-label">{g}</span>
+                <div className="suggest-row">
+                  {AGENT_SUGGESTIONS.filter((s) => s.group === g).map((s) => (
+                    <button key={s.name} className="suggest-card" aria-pressed={name === s.name} data-testid="new-agent-suggestion"
+                      data-tip={s.skills?.length ? `${s.about} · Hermes skills: ${s.skills.map(skillName).join(", ")}` : s.about}
+                      onClick={() => { setName(s.name); setAbout(s.about); setSoul(s.soul); setSkills(s.skills ?? []); }}>
+                      <AgentFace seed={agentIdFor(s.name, new Set())} size={26} />
+                      <span className="ellipsis">{s.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
+          {skills.length > 0 && (
+            <div className="field" data-testid="new-agent-skills"><span>Starts with Hermes skills</span>
+              <div className="suggest-row">
+                {skills.map((k) => (
+                  <span key={k} className="chip">{skillName(k)}
+                    <button className="chip-x" aria-label={`Leave out ${skillName(k)}`} onClick={() => setSkills(skills.filter((x) => x !== k))}><X size={10} /></button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           <label className="field"><span>Name</span>
             <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Writer" maxLength={60} data-testid="new-agent-name"
               onKeyDown={(e) => { if (e.key === "Enter") void create(); }} />
@@ -97,7 +122,7 @@ export function NewAgentSheet() {
             <input value={about} onChange={(e) => setAbout(e.target.value)} placeholder="Writes our launch posts and newsletters" maxLength={200} data-testid="new-agent-about" />
           </label>
           <label className="field"><span>How it works <i className="faint">(optional)</i></span>
-            <textarea rows={4} value={soul} onChange={(e) => setSoul(e.target.value)} placeholder={"Friendly and short. Always ask before publishing.\nSign posts as the McBot team."} />
+            <textarea rows={3} value={soul} onChange={(e) => setSoul(e.target.value)} placeholder={"Friendly and short. Always ask before publishing.\nSign posts as the McBot team."} />
           </label>
           <div className="field"><span>Thinks with</span>
             <div className="assignees">
@@ -126,3 +151,4 @@ export function NewAgentSheet() {
     </>
   );
 }
+
