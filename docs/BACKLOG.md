@@ -25,6 +25,7 @@ release notes when it ships.
 | ● 0.6.0 | Ask McBot: describe the team, review the proposed harness, add it with one Undo (the board's own model plans it, else a quick plan) | `shell/BuilderSheet.tsx`, `engine/builder.ts`, `src/harness/plan.ts` |
 | ● 0.6.0 | Layers view: each agent's harness as Surfaces, Loop, Context, Model, Tools, Plugins, Guardrails; steps per message (`agent.max_turns`) | `graph/LayersView.tsx`, `graph/layers.ts` |
 | ● fixed in 0.6.1 | The Browser view showed the web engine's own error page when a page didn't load (Edge's on Windows): McBot's own "Can't reach" / "You're offline" screen now | `workbench/BrowserView.tsx`, `engine/web.ts` |
+| ● fixed in 0.6.2 | "The engine didn't start" gave no reason and pointed at a log people couldn't find: the screen now names the cause, shows the log's end, and has Copy details and Restart engine | `src-tauri/src/lib.rs` `engine_status`, `lib/engineHealth.ts` |
 | ○ | Hermes' 14 personalities (`display.personality`) apply to chat apps and the terminal but not to runs McBot starts (the runs API takes `instructions` per request): expose them once runs can carry one | `hermes_cli/personality.py`, `gateway/platforms/api_server_runs.py:498` |
 | ○ | 30 brands have no logo (Slack, Canva, OpenAI, Microsoft, AWS, Amplitude, Twilio…): add SVGs to `design/logos/` | `design/logos/README.md` |
 | ○ | Asana's connector is left out (its OAuth client comes from `${ASANA_CLIENT_ID}`) | `scripts/hermes-connectors.ts` |

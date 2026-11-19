@@ -23,7 +23,8 @@ import { SetupAssistant } from "./setup/SetupAssistant";
 import { BrandMark, TitleBar } from "./shell/TitleBar";
 import { BoardProvider, useBoard } from "./state/board";
 import { useSignals } from "./state/signals";
-import { inApp, onSummon } from "./lib/desktop";
+import { engineRestart, engineStatus, inApp, onSummon, type EngineStatus } from "./lib/desktop";
+import { engineDetails, engineVerdict } from "./lib/engineHealth";
 import { useApp } from "./state/store";
 import { useTasks } from "./views/TasksView";
 import { AgentsView } from "./views/AgentsView";
@@ -220,26 +221,54 @@ function Shell() {
 
 /** When the page opened: the installed app's engine needs a few seconds to start after the window. */
 const OPENED = Date.now();
-/** How long a starting engine may stay silent before McBot says something is wrong. */
-const PATIENCE_MS = 20_000;
 
 function Offline({ down }: { down: boolean }) {
   // The window opens before the engine answers: that is "starting", not a problem, for a while.
+  // In the app the shell says how its engine is doing, so a stopped or blocked engine is named at
+  // once, with its log's end, Copy and Restart (lib/engineHealth.ts).
   const [now, setNow] = useState(Date.now());
+  const [status, setStatus] = useState<EngineStatus | null>(null);
+  const [restarting, setRestarting] = useState(false);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
-  const stuck = down && now - OPENED > PATIENCE_MS;
+  useEffect(() => {
+    if (!down || !inApp()) return;
+    let alive = true;
+    const ask = () => void engineStatus().then((st) => { if (alive) setStatus(st); });
+    ask();
+    const t = setInterval(ask, 2000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [down]);
+  const verdict = down ? engineVerdict(status, now - OPENED) : { kind: "starting" as const };
+  const restart = async () => {
+    setRestarting(true);
+    setStatus(await engineRestart());
+    setRestarting(false);
+  };
+  const [copied, setCopied] = useState(false);
+  const copy = () => void navigator.clipboard?.writeText(engineDetails(verdict, status)).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }, () => undefined);
   return (
     <div className="offline" style={{ gridRow: "1 / span 2" }} data-tauri-drag-region>
       <FrameStrip />
       <div className="empty" data-testid="offline">
         <BrandMark size={44} />
-        <h3>{stuck ? "McBot Studio's engine didn't start" : "Starting McBot Studio…"}</h3>
-        {!stuck && <LoaderCircle size={18} className="spin-icon faint" />}
-        {stuck && (inApp() ? <p>Quit McBot Studio and open it again. If it keeps happening, the engine log is in McBot's data folder (engine.log).</p>
-          : <p>Start it with <code>npm run dev</code>.</p>)}
+        <h3>{verdict.kind === "starting" ? "Starting McBot Studio…" : verdict.title}</h3>
+        {(verdict.kind === "starting" || verdict.kind === "slow") && <LoaderCircle size={18} className="spin-icon faint" />}
+        {verdict.kind !== "starting" && <p>{verdict.hint}</p>}
+        {verdict.kind !== "starting" && verdict.kind !== "dev" && (
+          <>
+            {status?.log && <pre className="engine-log" data-testid="engine-log">{status.log}</pre>}
+            <div className="row" style={{ justifyContent: "center" }}>
+              <button className="btn light" disabled={restarting} onClick={() => void restart()} data-testid="engine-restart">{restarting ? "Restarting…" : "Restart engine"}</button>
+              <button className="btn" onClick={copy} data-tip={status?.logPath ?? undefined} data-testid="engine-copy">{copied ? "Copied" : "Copy details"}</button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
