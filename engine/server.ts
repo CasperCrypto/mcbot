@@ -14,7 +14,8 @@ import { homedir } from "node:os";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { compile, resolveGraph, type AgentBundle } from "../src/compile";
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, AgentSchedules, SetupDetect, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../src/contracts/api";
+import { updateChecker } from "./updates";
+import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, AgentSchedules, SignInView, UpdateView, SetupDetect, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../src/contracts/api";
 import { writeExport } from "./boardFiles";
 import { isHermesHome, readSetup } from "./harnessDisk";
 import { HermesSync } from "./hermesSync";
@@ -42,7 +43,7 @@ import { OwnershipError, readManifest, writeCompileResult } from "./writer";
 import { Sharing, guestAllowed, joinPage, type SharingView } from "./sharing";
 import { frameable } from "./web";
 
-export const ENGINE_VERSION = "0.4.4";
+export const ENGINE_VERSION = "0.5.0";
 
 export interface EngineConfig {
   workspace: string;
@@ -55,6 +56,8 @@ export interface EngineConfig {
   logFile?: string;
   /** Share on your network: the port teammates connect to while sharing is on (default 4318; 0 = any). */
   sharePort?: number;
+  /** Ask GitHub whether a newer McBot is out (the installed app only; never in tests or dev). */
+  checkUpdates?: boolean;
 }
 
 export const DEFAULT_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"];
@@ -121,6 +124,9 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   // McBot's own Hermes runs through the gateway's runs API, so runs can ask before risky actions.
   // An external Hermes (MCBOT_HERMES_BIN) keeps one-shot runs: it is not ours to reconfigure.
   const gateway = cfg.managedRoot ? await gatewayApi(join(cfg.workspace, "gateway.json")) : null;
+  /** Connector sign-ins this engine started, by "<profile>/<connector>" (kept until it quits). */
+  const signIns = new Map<string, SignInView>();
+  const updates = updateChecker(ENGINE_VERSION);
   const runner = new Runner({
     store, root: cfg.hermesHome, managedRoot: cfg.managedRoot, findHermes: () => findHermes(), secrets: () => secrets.env(),
     api: gateway ? { runs: new HermesRuns(gateway), env: apiEnv(gateway) } : undefined,
@@ -198,6 +204,8 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       return { ok: true, version: ENGINE_VERSION, workspace: cfg.workspace, hermesHome: cfg.hermesHome, managedRoot: cfg.managedRoot, hermes: { found: !!bin, path: bin?.path ?? null, kind: bin?.kind ?? null } };
     },
 
+    // Is a newer McBot out? Asked of GitHub at most every 6 h; tests and dev never ask.
+    "GET /api/update": async (): Promise<UpdateView> => (cfg.checkUpdates ? updates.get() : { current: ENGINE_VERSION, latest: null, url: null, available: false }),
     "GET /api/boards": async (): Promise<BoardInfo[]> => relay.list(),
     /** Save a board as a file in <workspace>/exports/ (never overwriting an earlier one). */
     "POST /api/boards/export": async (req): Promise<BoardExport> => {
@@ -449,6 +457,11 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       if (cfg.managedRoot) runner.markGatewayStale();
       return { compiled: true, installed: parsePluginList(await hermesCli(["-p", body.profile, ...listPluginsArgv])) };
     },
+    // How the last sign-in for each agent's connector went (POST starts one; the Inspector asks).
+    "GET /api/connectors/login": async (_req, url): Promise<SignInView> => {
+      const key = `${url.searchParams.get("profile") ?? ""}/${url.searchParams.get("name") ?? ""}`;
+      return signIns.get(key) ?? { state: "none", error: null, at: null };
+    },
     "POST /api/connectors/login": async (req) => {
       // Hermes opens the system browser and waits for the sign-in to come back (mcp_config.py
       // cmd_mcp_login); the tokens it saves are read when the gateway next starts its MCP servers.
@@ -457,10 +470,13 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const found = await findHermes();
       if (!found) throw new HttpError(503, "The engine is not set up yet");
       const bin = await prepareHermes(found, cfg.hermesHome);
+      const key = `${body.profile}/${body.name}`;
+      signIns.set(key, { state: "waiting", error: null, at: Date.now() });
       void runKanban(bin, cfg.hermesHome, ["-p", body.profile, "mcp", "login", body.name, "--flow", "browser"], "", 10 * 60_000).then((r) => {
         console.log(`[engine] ${body.profile}: sign-in to ${body.name} ${r.code === 0 ? "done" : `failed: ${kanbanError(r)}`}`);
+        signIns.set(key, r.code === 0 ? { state: "done", error: null, at: Date.now() } : { state: "failed", error: kanbanError(r), at: Date.now() });
         if (r.code === 0 && cfg.managedRoot) runner.markGatewayStale();
-      });
+      }, (err: unknown) => signIns.set(key, { state: "failed", error: err instanceof Error ? err.message : String(err), at: Date.now() }));
       return { started: true };
     },
 

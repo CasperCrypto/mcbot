@@ -407,3 +407,19 @@ export interface SharingView {
   /** The invite as a link teammates open or paste into Join (`http://<address>/join?code=…`). */
   link?: string | null;
 }
+
+/** How a connector's sign-in for one agent went (`GET /api/connectors/login`). */
+export interface SignInView {
+  state: "none" | "waiting" | "done" | "failed";
+  error: string | null;
+  at: number | null;
+}
+
+/** McBot's newest published release against this one (`GET /api/update`). */
+export interface UpdateView {
+  current: string;
+  latest: string | null;
+  /** The release page on github.com (null when unknown). */
+  url: string | null;
+  available: boolean;
+}

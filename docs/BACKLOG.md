@@ -1,4 +1,4 @@
-# Backlog (2026-11-14)
+# Backlog (2026-11-19)
 
 What is left, in the order to do it. Milestones (M5–M15) are in `docs/PLAN.md`; this list is the
 working view of them plus every bug and gap found while using McBot. Move a line to "Done" in the
@@ -10,11 +10,16 @@ release notes when it ships.
 |---|---|---|
 | ● fixed in 0.4.4 | Stop did nothing while a run was starting, while Hermes was mid-step (long answer, tool, approval), for a one-shot Hermes that ignores SIGINT, and for a run left "running" after McBot quit | `engine/runner.ts`, `engine/server.ts` |
 | ● fixed in 0.4.4 | After Stop, messages queued for that agent sent themselves: Stop now clears them and says how many | `actions.ts` `stopRun` |
-| ○ | A connector's Sign in gives no result in the app (only the engine log): show signed in / failed on the block | `POST /api/connectors/login` |
-| ○ | Installed skills cannot be removed or updated from the Skills view (`hermes skills uninstall`, `update`) | `views/SkillsView.tsx` |
+| ● fixed in 0.5.0 | A connector's Sign in gives no result in the app: the block says waiting, signed in or why it failed (`GET /api/connectors/login`) | `graph/Inspector.tsx`, `engine/server.ts` |
+| ● done | Installed skills can be removed or updated from the Skills view (`hermes skills uninstall`, `update`) | `views/SkillsView.tsx` |
+| ● fixed in 0.5.0 | Every agent that had not run said "Not compiled" after a restart, even with its files on disk: the dry-run compile now says Ready / Changed / Not compiled | `graph/GraphView.tsx`, `actions.ts` `diskState` |
+| ● fixed in 0.5.0 | The demo found Ollama in setup, then said on Home that it wasn't running | `demo/engine.ts` |
+| ● 0.5.0 | Faster start: the window paints Chat without React Flow and the other views (468 kB, was 797 kB; they load right after, while idle), and the engine is asked every 400 ms while it starts instead of every 5 s | `App.tsx` |
+| ● 0.5.0 | An empty chat offers three starter questions from what the agent is for | `chat/starters.ts` |
+| ● 0.5.0 | "McBot Studio x.y.z is out": the installed app asks GitHub's latest release (at start, then every 6 h) and offers Download | `engine/updates.ts`, Settings → About |
 | ○ | Seeding the 44 built-in skills after a compile shows no progress | `engine/skills.ts` |
-| ○ | The inspector's glass lets board blocks show through and compete with its text: thicker material | `styles/glass.css` |
-| ○ | ⌘9 moved from Files to Skills: check the shortcut list and the ⌘K hints | `shell/Palette.tsx` |
+| ● done | The inspector uses the thicker panel material (`--mat-panel`) | `styles/glass.css` |
+| ● done | ⌘1–9 follow the rail order (⌘9 is Files), in the shortcut list and ⌘K hints | `shell/Palette.tsx` |
 | ○ | The browser demo lists 6 library skills, not all 141 | `demo/engine.ts` |
 | ○ | 30 brands have no logo (Slack, Canva, OpenAI, Microsoft, AWS, Amplitude, Twilio…): add SVGs to `design/logos/` | `design/logos/README.md` |
 | ○ | Asana's connector is left out (its OAuth client comes from `${ASANA_CLIENT_ID}`) | `scripts/hermes-connectors.ts` |

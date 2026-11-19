@@ -160,7 +160,13 @@ function Canvas() {
     }
     return a;
   }, [events, runs, graph]);
-  const compiledProfiles = useMemo(() => new Set(compileRes?.ok ? compileRes.report.profiles.map((p) => p.name) : []), [compileRes]);
+  // Files on disk come from the background dry-run compile, so an agent compiled in an earlier
+  // session reads "Ready", not "Not compiled". Until that answers, the last compile here counts.
+  const onDisk = useApp((s) => s.onDisk);
+  const compiledProfiles = useMemo(() => {
+    if (onDisk) return new Map(Object.entries(onDisk));
+    return new Map((compileRes?.ok ? compileRes.report.profiles : []).map((p) => [p.name, "fresh" as const]));
+  }, [onDisk, compileRes]);
   const peerOnNode = useMemo(() => new Map(peers.filter((p) => p.selection).map((p) => [p.selection!, p])), [peers]);
 
   const [rfNodes, setRfNodes] = useState<FlowNode[]>([]);
@@ -204,7 +210,7 @@ function Canvas() {
             peer: peerOnNode.get(n.id) ?? null,
             run,
             chain: bundle ? bundle.models.map((m) => (m.data as ModelData).model || m.data.name) : [],
-            compiled: n.kind !== "agent" || compiledProfiles.has(String(n.data.name)) || !!run,
+            compiled: n.kind !== "agent" ? "fresh" : compiledProfiles.get(String(n.data.name)) ?? (run ? "fresh" : "none"),
             active: activity.active.has(n.id),
             errored: activity.errored.has(n.id),
           },

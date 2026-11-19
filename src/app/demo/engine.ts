@@ -13,7 +13,7 @@ import { exportFileName } from "../../board/files";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
-import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, TaskAction, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
@@ -26,6 +26,10 @@ import { EngineError } from "../lib/engineError";
 import { ROOT, SEED_BOARD, WORKSPACE, sampleProject, seedGraph, seedMemory, seedRuns, sharedFiles } from "./seed";
 
 type Target = "memory" | "user";
+/** The local model server the demo pretends to find (setup lists it, Home asks it). */
+const demoSignIns = new Map<string, SignInView>();
+const DEMO_OLLAMA = "http://127.0.0.1:11434/v1";
+const DEMO_OLLAMA_MODELS = ["gemma3:4b", "llama3.2:3b", "qwen3:8b"];
 const LIMITS: Record<Target, number> = { memory: 2200, user: 1375 };
 const DELIM = "\n§\n";
 const STATE_KEY = "mcbot.demo.v1";
@@ -851,7 +855,14 @@ export const demoEngine = {
     return { installed: [...(demoInstalled[profile] ?? [])].sort(), skills: demoProfileSkills(profile) };
   }),
   updateSkill: api((profile: string, _name: string): { installed: string[]; skills: ProfileSkill[] } => ({ installed: [...(demoInstalled[profile] ?? [])].sort(), skills: demoProfileSkills(profile) })),
-  signIn: api((_profile: string, _name: string): { started: boolean } => ({ started: true })),
+  // Simulated: the "browser" comes back signed in a moment later.
+  signIn: api((profile: string, name: string): { started: boolean } => {
+    demoSignIns.set(`${profile}/${name}`, { state: "waiting", error: null, at: Date.now() });
+    setTimeout(() => demoSignIns.set(`${profile}/${name}`, { state: "done", error: null, at: Date.now() }), 2500);
+    return { started: true };
+  }),
+  update: api((): UpdateView => ({ current: "demo", latest: null, url: null, available: false })),
+  signInState: api((profile: string, name: string): SignInView => demoSignIns.get(`${profile}/${name}`) ?? { state: "none", error: null, at: null }),
   schedules: api((boardId: string): AgentSchedules[] => [...teamOf(requireBoard(boardId))].map(([profile, agentNodeId]) => ({ agentNodeId, profile, schedules: demoSchedules()[profile] ?? [] }))),
   createSchedule: api((boardId: string, input: { profile: string; when: string; prompt: string; name: string }): AgentSchedules => {
     schedulesOf(requireBoard(boardId), input.profile);
@@ -915,9 +926,10 @@ export const demoEngine = {
   setupDetect: api(async (): Promise<SetupDetect> => {
     await sleep(700);
     // Simulated: a browser cannot see what runs on the visitor's computer.
-    return { hermes: { found: true, path: "simulated in this browser", kind: "bundled" }, local: [{ name: "Ollama", baseUrl: "http://127.0.0.1:11434/v1", models: ["gemma3:4b", "llama3.2:3b", "qwen3:8b"] }], secrets: [...secretNames] };
+    return { hermes: { found: true, path: "simulated in this browser", kind: "bundled" }, local: [{ name: "Ollama", baseUrl: DEMO_OLLAMA, models: DEMO_OLLAMA_MODELS }], secrets: [...secretNames] };
   }),
-  setupModels: api((_baseUrl: string, _keyName?: string) => ({ models: null as string[] | null })),
+  // The simulated Ollama answers like setup found it, so Home doesn't say it isn't running.
+  setupModels: api((baseUrl: string, _keyName?: string) => ({ models: baseUrl.replace(/\/+$/, "") === DEMO_OLLAMA ? [...DEMO_OLLAMA_MODELS] : null as string[] | null })),
   exportBoard: api((boardId: string): BoardExport => {
     const graph = graphOf(requireBoard(boardId));
     return { file: exportFileName(graph.name), path: null, shown: null, graph };

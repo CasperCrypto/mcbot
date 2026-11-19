@@ -172,6 +172,11 @@ Change them additively; a breaking change bumps the version.
   `.github/workflows/hermes-sync.yml` does that for upstream's newest stable tag, runs every
   test and build, and opens a PR (a draft when the merge or a check needs a person). Engine
   updates reach people only through a McBot release, never on their own.
+- **Update notice:** the installed app's engine (`checkUpdates`, off in tests and dev; `MCBOT_NO_UPDATE_CHECK=1`
+  turns it off) asks `api.github.com/repos/CasperCrypto/mcbot/releases/latest` at most every 6 h
+  (`engine/updates.ts`, `GET /api/update`, host only), sending nothing about the computer. A newer published
+  release shows once per launch as a notice and in Settings → About, with Download (the release page). Installing
+  stays manual until the signed Tauri updater (owner's key).
 - First launch runs the setup assistant (`src/app/setup/`): its answers go into
   every agent's SOUL.md and their USER.md memory; `<workspace>/setup.json`
   records that it ran. Local model servers are found by asking the usual
@@ -370,6 +375,12 @@ Change them additively; a breaking change bumps the version.
   on macOS it stays a black rectangle (transparency needs a private API).
 - **New agent** (`shell/NewAgentSheet.tsx`): six one-click starting cards (`agentSuggestions.ts`) fill name, purpose and soul.
 - Views live behind an error boundary; a broken view must not blank the window.
+- **Fast start:** only Home, Chat and Tasks are in the first bundle (`App.tsx` `lazyView`); the other views
+  (Board with React Flow, Runs, Memory, Skills, Files, Cost, Team, Settings, Browser) are fetched one by one while
+  the window is idle right after the first paint, so switching to them never waits; Code (Monaco) loads when opened.
+  While the engine starts, the window asks it every 400 ms (every 5 s once it answers).
+- An empty chat offers three starter questions picked from the agent's name, then its description
+  (`chat/starters.ts`); one click sends it.
 - **Links out of the app** go through `openExternal` (`src/app/lib/open.ts`): the
   Tauri opener plugin, https only. A plain `target="_blank"` link does nothing
   inside the app window.
