@@ -32,6 +32,16 @@ export function useDoctor(): Finding[] {
 
 const ICON = { error: <CircleX size={16} />, warn: <TriangleAlert size={16} />, tip: <Lightbulb size={16} /> };
 
+/** Do a finding's one fix (the doctor sheet and the island share it). */
+export function applyFix(f: Finding, boardId: string, doc: Parameters<typeof removeNodes>[0]): void {
+  const app = useApp.getState();
+  const x = f.fix;
+  if (x.kind === "select") { app.setDoctorOpen(false); app.setTab("graph"); app.select(x.nodeId); }
+  if (x.kind === "settings") { app.setDoctorOpen(false); app.openSettings(x.page); }
+  if (x.kind === "compile") void compileBoard(boardId);
+  if (x.kind === "delete") { removeNodes(doc, [x.nodeId]); app.toast({ kind: "ok", text: "Removed · ⌘Z brings it back" }); }
+}
+
 export function DoctorSheet() {
   const open = useApp((s) => s.doctorOpen);
   const setOpen = useApp((s) => s.setDoctorOpen);
@@ -46,14 +56,7 @@ export function DoctorSheet() {
   const presence = usePresence(open);
   if (!presence.mounted) return null;
 
-  const app = useApp.getState();
-  const fix = (f: Finding) => {
-    const x = f.fix;
-    if (x.kind === "select") { setOpen(false); app.setTab("graph"); app.select(x.nodeId); }
-    if (x.kind === "settings") { setOpen(false); app.openSettings(x.page); }
-    if (x.kind === "compile") void compileBoard(boardId);
-    if (x.kind === "delete") { removeNodes(doc, [x.nodeId]); app.toast({ kind: "ok", text: "Removed · ⌘Z brings it back" }); }
-  };
+  const fix = (f: Finding) => applyFix(f, boardId, doc);
   const errors = findings.filter((f) => f.level === "error").length;
 
   return (

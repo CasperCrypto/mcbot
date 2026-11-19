@@ -1,7 +1,7 @@
 {
   "name": "mcbot",
   "private": true,
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "Draw a harness of AI agents as a graph; compile it into a real, runnable Hermes Agent setup.",
   "license": "MIT",
   "type": "module",
@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@blobatar/react": "2.7.0",
+    "@excalidraw/excalidraw": "^0.18.1",
     "@fontsource-variable/inter": "5.3.0",
     "@noble/hashes": "2.4.0",
     "@tauri-apps/plugin-notification": "2.8.1",

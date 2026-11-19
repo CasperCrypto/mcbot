@@ -16,7 +16,7 @@ export function TerminalPanel({ cwd }: { cwd: string }) {
     const style = getComputedStyle(document.documentElement);
     const term = new Terminal({
       fontFamily: style.getPropertyValue("--mono").trim() || "monospace",
-      fontSize: 12.5,
+      fontSize: 13.5,
       cursorBlink: true,
       allowProposedApi: false,
       theme: { background: style.getPropertyValue("--bg-canvas").trim() || "#161618", foreground: style.getPropertyValue("--text").trim() || "#f5f5f7", cursor: style.getPropertyValue("--accent").trim() || "#0a84ff", selectionBackground: "#0a84ff55" },

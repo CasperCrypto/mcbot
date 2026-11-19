@@ -117,11 +117,11 @@ export function FolderPicker() {
                   </button>
                 ))}
             </div>
-            {problem && <span className="error" style={{ fontSize: 12 }}>{problem}</span>}
+            {problem && <span className="error" style={{ fontSize: 13 }}>{problem}</span>}
           </div>
         </div>
         <footer className="picker-foot">
-          <span className="grow mono ellipsis faint" style={{ fontSize: 12 }}>{at?.path}</span>
+          <span className="grow mono ellipsis faint" style={{ fontSize: 13 }}>{at?.path}</span>
           <button className="btn" onClick={() => setOpen(false)}>Cancel</button>
           <button className="btn primary" disabled={!at || busy} onClick={() => at && void choose(at.path)} data-testid="picker-open">
             Open {at ? (crumbs.at(-1) ?? at.path) : ""}

@@ -8,7 +8,9 @@ import { layoutTree, type TreeIn } from "../lib/tree";
 import { Sidebar, SidebarGroup } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
-import { AgentFace, Empty } from "../ui";
+import { AgentFace, Empty, SkeletonCards } from "../ui";
+import { DrawingBlock } from "../chat/DrawingSheet";
+import { isDrawingFile, parseDrawing } from "../chat/drawing";
 import { GraphCanvas, type GEdge, type GNode } from "./GraphCanvas";
 
 /** A folder shows this many entries until "+N more" is clicked, then up to ALL. */
@@ -23,6 +25,13 @@ const rank = (e: FsEntry, profile: boolean): number => {
   return e.kind === "dir" ? 2 : 3;
 };
 const ext = (name: string) => (name.includes(".") ? name.split(".").pop()!.toLowerCase().slice(0, 4) : "");
+
+const drawings = new Map<string, ReturnType<typeof parseDrawing>>();
+/** A `.excalidraw` file's scene, parsed once per text. */
+const drawingOf = (text: string) => {
+  if (!drawings.has(text)) { if (drawings.size > 20) drawings.clear(); drawings.set(text, parseDrawing(text)); }
+  return drawings.get(text) ?? null;
+};
 
 export function FilesView() {
   const { boardId } = useBoard();
@@ -176,7 +185,7 @@ export function FilesView() {
       {r.kind === "profile" ? <AgentFace seed={r.id.slice(8)} size={26} /> : <span className="tile sm folder"><Folder size={13} /></span>}
       <span className="grow" style={{ display: "grid" }}>
         <span className="title ellipsis">{r.name}</span>
-        <span className="sub ellipsis mono" style={{ fontSize: 10.5 }}>{r.path}</span>
+        <span className="sub ellipsis mono" style={{ fontSize: 11 }}>{r.path}</span>
       </span>
       {r.kind === "folder" && (
         <span className="icon-btn sm" role="button" aria-label="Close folder" onClick={async (e) => { e.stopPropagation(); await engine.closeFolder(r.id); const list = await loadRoots(); if (rootId === r.id) setRootId(list[0]?.id ?? null); }}><X size={12} /></span>
@@ -203,11 +212,13 @@ export function FilesView() {
               <aside className="side-panel glass" data-testid="file-preview">
                 <div className="side-panel-head">
                   <span className={`ext ${ext(file.path)}`}>{ext(file.path) || "·"}</span>
-                  <b className="grow ellipsis mono" style={{ fontSize: 12 }}>{file.path}</b>
+                  <b className="grow ellipsis mono" style={{ fontSize: 13 }}>{file.path}</b>
                   <button className="icon-btn" aria-label="Close" onClick={() => setFile(null)}><X size={15} /></button>
                 </div>
                 <div className="side-panel-body">
-                  {file.preview === null ? <span className="faint">Loading…</span> : file.preview.text !== null ? <pre className="code">{file.preview.text || " "}</pre> : <span className="faint">{file.preview.reason}</span>}
+                  {file.preview === null ? <SkeletonCards count={2} /> : file.preview.text !== null && isDrawingFile(file.path) && drawingOf(file.preview.text) ? (
+                    <DrawingBlock scene={drawingOf(file.preview.text)!} onOpen={() => useApp.getState().openDrawing({ scene: drawingOf(file.preview!.text!)!, title: file.path, file: { root: root.id, path: file.path, sha256: file.preview!.sha256 ?? null } })} />
+                  ) : file.preview.text !== null ? <pre className="code">{file.preview.text || " "}</pre> : <span className="faint">{file.preview.reason}</span>}
                 </div>
               </aside>
             )}

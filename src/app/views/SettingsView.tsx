@@ -482,7 +482,7 @@ function EngineSection() {
           {info.managedRoot && info.gateway.running && <button className="btn sm" disabled={busy} onClick={async () => { setBusy(true); setInfo(await engine.restartGateway().catch(() => info)); setBusy(false); }}>{busy ? <LoaderCircle size={12} className="spin-icon" /> : <RotateCw size={12} />} Restart</button>}
         </div>
       )}
-      {info && <div className="settings-row"><span className="faint grow">Agents live in</span><span className="mono ellipsis faint" style={{ fontSize: 12, maxWidth: 380 }} data-tip={info.root}>{info.root}</span></div>}
+      {info && <div className="settings-row"><span className="faint grow">Agents live in</span><span className="mono ellipsis faint" style={{ fontSize: 13, maxWidth: 380 }} data-tip={info.root}>{info.root}</span></div>}
     </Card>
   );
 }

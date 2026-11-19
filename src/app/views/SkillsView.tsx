@@ -214,7 +214,7 @@ export function SkillsView() {
                       <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}>
                         <b className="ellipsis">{pretty(sk.name)}</b>
                         <span className="faint">{sk.description}</span>
-                        <span className="faint mono" style={{ fontSize: 11 }}>{ago(sk.modified)}</span>
+                        <span className="faint mono" style={{ fontSize: 12 }}>{ago(sk.modified)}</span>
                       </span>
                       <span className="row" style={{ gap: 4 }}>
                         <button className="btn ghost sm" aria-label="Read" data-tip="Read" onClick={() => void view(sk)}><Eye size={13} /></button>

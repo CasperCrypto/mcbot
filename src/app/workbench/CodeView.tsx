@@ -156,7 +156,7 @@ export default function CodeView() {
   useEffect(() => {
     if (!host.current || editor.current) return;
     editor.current = monaco.editor.create(host.current, {
-      theme: "mcbot", automaticLayout: true, minimap: { enabled: false }, fontSize: 13, fontFamily: getComputedStyle(document.documentElement).getPropertyValue("--mono"),
+      theme: "mcbot", automaticLayout: true, minimap: { enabled: false }, fontSize: 14, fontFamily: getComputedStyle(document.documentElement).getPropertyValue("--mono"),
       scrollBeyondLastLine: false, padding: { top: 12 }, renderLineHighlight: "line", smoothScrolling: true,
     });
     return () => {

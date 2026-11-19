@@ -1,6 +1,7 @@
 import { Check, Copy } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { openExternal } from "../lib/open";
+import { DrawingBlock } from "./DrawingSheet";
 import { parseRich, type Chart, type Inline } from "./rich";
 
 /** Series colours: the agent palette, in a fixed order (tokens.css --food-*). */
@@ -133,6 +134,7 @@ export function RichText({ text, onChoose, image }: { text: string; onChoose?: (
           case "hr": return <hr key={i} />;
           case "code": return <CodeBlock key={i} lang={b.lang} v={b.v} />;
           case "chart": return <ChartView key={i} chart={b.chart} />;
+          case "drawing": return <DrawingBlock key={i} scene={b.scene} />;
           case "table": return (
             <div key={i} className="rich-table"><table>
               <thead><tr>{b.head.map((c, j) => <th key={j}><Inlines v={c} /></th>)}</tr></thead>

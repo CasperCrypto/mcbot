@@ -140,7 +140,7 @@ export function RunsView() {
               <h1>{nameOf(run.agentNodeId, run.profile)}</h1>
               <span className={`chip ${run.status === "succeeded" ? "ok" : run.status === "running" ? "run" : "fail"}`}>{run.status}</span>
               <span className="grow" />
-              <span className="faint num" style={{ fontSize: 12 }}>
+              <span className="faint num" style={{ fontSize: 13 }}>
                 {[run.finishedAt ? duration(run.finishedAt - run.startedAt) : null, run.tokens ? `${tokens(run.tokens.input)} in · ${tokens(run.tokens.output)} out` : null, run.toolCalls ? `${run.toolCalls} tool call${run.toolCalls > 1 ? "s" : ""}` : null].filter(Boolean).join("  ·  ")}
               </span>
               {run.status === "running" && <button className="btn sm" onClick={() => void stopRun(run.runId)}><Square size={11} /> Stop</button>}

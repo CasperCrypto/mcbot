@@ -226,6 +226,8 @@ Change them additively; a breaking change bumps the version.
   (a half-edited board is not compile-valid and must still load).
 - Sticky notes live in the board too (`notes`, optional in `mcbot.graph/v1`, keyed by id like
   everything else): on the canvas for everyone, pinned ones on Home. The compiler never reads them.
+  On the canvas a note moves by its grip (top) or footer, its text never drags; a new one goes to free
+  space (`noteSpot`), since notes sit behind blocks.
   Their paper colours (`--note-*`) are content, not UI chrome.
 - Frames live in the board too (`frames`, optional in `mcbot.graph/v1`, keyed by id): a titled,
   tinted area (`graph/FrameNode.tsx`, class `board-frame`; `.frame` is the app's view container)
@@ -337,7 +339,13 @@ Change them additively; a breaking change bumps the version.
   Markdown (headings, lists, tables, code with Copy, links through `openExternal`, images it made)
   plus ` ```chart ` (JSON → SVG bar, line or pie) and ` ```choices ` (reply buttons on the latest
   answer). Parsed to blocks and rendered as React elements, never HTML. New agents' souls carry
-  three lines that teach the format (`withRichAnswers`: presets, starter teams, New agent).
+  lines that teach the format (`withRichAnswers`: presets, starter teams, New agent).
+- **Drawings** (`chat/drawing.ts` pure, `chat/DrawingCanvas.tsx`, `chat/DrawingSheet.tsx`): an answer's
+  ` ```excalidraw ` block (Excalidraw's file or its skeleton form) and `.excalidraw` files in Files are
+  drawn with Excalidraw (MIT), its own lazy chunk, never in the first bundle. Inline is view only; Open
+  edits full size; Save writes back over the sha256 read, or a new `drawings/<name>.excalidraw` in the
+  shared files folder (never over an existing file). Its fonts are served by McBot
+  (`vite.config.ts` `excalidrawFonts`, CSP fonts are 'self'), the CJK one left out.
 - Connections are agent-centred (Hermes' model): a model, tool, maker or chat app connects only to
   an agent. While a connection is drawn the rest dims; a refused drop says why. A selected block's
   wires say what they mean ("thinks with", "falls back to", "uses", "talks on", "makes images
@@ -372,7 +380,9 @@ Change them additively; a breaking change bumps the version.
   everything at once plus quick actions as the pointer heads for it — its path is projected
   ~140 ms ahead, a fast sweep across the title bar does not count — leans in when the pointer is
   close, and closes once the pointer moves away; click or Enter pins it open until Esc or a click
-  outside. One height (30px) for every title-bar control.
+  outside. One height (30px) for every title-bar control. Opened, it also lists the last notices
+  (`notices` in the store, kept with each `toast`; Clear) and the doctor's findings with their fix
+  (`applyFix` in `shell/DoctorSheet.tsx`), so nothing it covers is lost.
 - **Rail** (`shell/Rail.tsx`): a few pinned views (default Home, Board, Chat, Tasks, Runs) and "…", a menu of every
   view with its shortcut and a pin toggle (pins kept per computer in localStorage); the view you are on shows even
   when it is not pinned. The app opens on Chat. The title bar stays calm: Compile shows on the Board, or anywhere

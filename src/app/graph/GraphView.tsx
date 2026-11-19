@@ -37,7 +37,7 @@ import { useLingering, usePresence } from "../lib/presence";
 import { LogoTile, nodeLogo } from "./Logo";
 import { MakerIcon, makerService, nodeTypes, type FlowNode } from "./nodes";
 import { FrameNodeView } from "./FrameNode";
-import { freeSpot } from "./place";
+import { freeSpot, noteSpot } from "./place";
 
 /** React Flow (MIT) is credited in the About screen's notices; its corner badge is not part of the board. */
 const PRO = { hideAttribution: true } as const;
@@ -95,7 +95,7 @@ function HarnessSidebar() {
                 </LogoTile>}
               <span className="grow">
                 <span className="title ellipsis" style={{ display: "block" }}>{n.kind === "agent" ? n.data.displayName || n.data.name : ("label" in n.data && n.data.label) || n.data.name}</span>
-                <span className="sub ellipsis mono" style={{ display: "block", fontSize: 11 }}>{n.kind === "model" ? (n.data as ModelData).model || "—" : n.kind === "media" ? makerService(n.data) || "—" : n.kind === "channel" ? `${n.data.allowedUsers.length} allowed` : n.data.name}</span>
+                <span className="sub ellipsis mono" style={{ display: "block", fontSize: 12 }}>{n.kind === "model" ? (n.data as ModelData).model || "—" : n.kind === "media" ? makerService(n.data) || "—" : n.kind === "channel" ? `${n.data.allowedUsers.length} allowed` : n.data.name}</span>
               </span>
             </button>
           ))}
@@ -423,6 +423,24 @@ function Canvas() {
   const add = (kind: GraphNode["kind"], make: (pos: { x: number; y: number }) => GraphNode) => place(make(freeSpot(graph, kind, center(), selectedNodeId)));
 
   const selected = graph.nodes.find((n) => n.id === selectedNodeId) ?? null;
+  // The dock shrinks to fit beside the inspector or live files instead of running off the board.
+  const dockRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const wrap = dockRef.current;
+    const board = wrap?.parentElement;
+    if (!wrap || !board) return;
+    const fit = () => {
+      const css = getComputedStyle(document.documentElement);
+      const side = (selected ? parseFloat(css.getPropertyValue("--inspector-w")) + 20 : 0) + (liveOpen ? parseFloat(css.getPropertyValue("--live-w")) + 10 : 0);
+      const room = board.clientWidth - side - 32;
+      const need = (wrap.firstElementChild as HTMLElement | null)?.scrollWidth ?? 0;
+      wrap.style.setProperty("--dock-fit", need > room && room > 0 ? String(Math.max(0.6, room / need)) : "1");
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(board);
+    return () => ro.disconnect();
+  }, [selected, liveOpen, graph.nodes.length > 0]);
   // Panels leave the way they came (lib/presence.ts): the inspector keeps showing its block while it goes.
   const inspecting = useLingering(selected);
   const live = usePresence(liveOpen && graph.nodes.length > 0);
@@ -473,7 +491,7 @@ function Canvas() {
       </ReactFlow>
 
       {graph.nodes.length > 0 && (
-        <div className={`dock-wrap${selected ? " shifted" : ""}${liveOpen ? " with-live" : ""}`}>
+        <div ref={dockRef} className={`dock-wrap${selected ? " shifted" : ""}${liveOpen ? " with-live" : ""}`}>
           <div className="dock glass" role="toolbar" aria-label="Add to the harness">
             <DockItem tile="agent" icon={<Sparkles size={19} />} label="Ask McBot to build" testId="add-builder" onClick={() => useApp.getState().setBuilder(true)} />
             <DockItem tile="agent" icon={<Bot size={20} />} label="New agent" testId="add-agent" onClick={() => useApp.getState().setNewAgentOpen(true)} />
@@ -489,9 +507,8 @@ function Canvas() {
             <DockItem tile="channel" icon={<Send size={18} />} label="Chat app" testId="add-chat-app" onClick={() => useApp.getState().setChatAppsOpen(true)} />
             <div className="dock-sep" />
             <DockItem tile="note" icon={<NoteIcon size={19} />} label="Sticky note" testId="add-note" onClick={() => {
-              const at = center();
               const id = newId("note");
-              addNote(doc, { id, text: "", color: "yellow", position: { x: Math.round(at.x - 110), y: Math.round(at.y - 75) }, pinned: false, author: useApp.getState().identity.name, at: Date.now() });
+              addNote(doc, { id, text: "", color: "yellow", position: noteSpot(graph, center()), pinned: false, author: useApp.getState().identity.name, at: Date.now() });
               useApp.getState().setFreshNote(id);
             }} />
             <DockItem tile="file" icon={<Command size={19} />} label="Commands ⌘K" testId="dock-palette" onClick={() => setPalette(true)} />

@@ -165,9 +165,9 @@ export function ShareSheet() {
                       <button className="btn sm primary" disabled={!to} onClick={email} data-testid="share-email">Send invite</button>
                     </div>
                     <div className="row" style={{ gap: 8 }}>
-                      <span className="faint" style={{ fontSize: 12 }}>Send from</span>
+                      <span className="faint" style={{ fontSize: 13 }}>Send from</span>
                       <div style={{ width: 240 }}><Segmented value={service} onChange={setService} options={MAIL_SERVICES} /></div>
-                      {emails.trim() && !to && <span className="error" style={{ fontSize: 12 }}>Check the address</span>}
+                      {emails.trim() && !to && <span className="error" style={{ fontSize: 13 }}>Check the address</span>}
                     </div>
                   </div>
                 )}
@@ -182,7 +182,7 @@ export function ShareSheet() {
                 <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
                   <button className="btn sm ghost" disabled={busy} onClick={() => void act(() => engine.newInvite())} data-tip="The old link stops working"><RefreshCw size={12} /> New link</button>
                   <span className="grow" />
-                  {link && <span className="faint" style={{ fontSize: 12 }}>Works {left}h · same network</span>}
+                  {link && <span className="faint" style={{ fontSize: 13 }}>Works {left}h · same network</span>}
                 </div>
                 <div className="stack" style={{ gap: 6 }}>
                   <span className="section-label">People</span>
@@ -198,7 +198,7 @@ export function ShareSheet() {
               </>
             )}
             <div className="row">
-              <span className="faint" style={{ fontSize: 12 }}>Your keys and files stay on this computer.</span>
+              <span className="faint" style={{ fontSize: 13 }}>Your keys and files stay on this computer.</span>
               <span className="grow" />
               {view?.on && <button className="btn ghost sm" disabled={busy} onClick={() => void act(() => engine.setShare(false))} data-testid="share-stop">Stop sharing</button>}
               <button className="btn ghost sm" onClick={() => setJoining(true)} data-testid="share-join">Join someone else's</button>

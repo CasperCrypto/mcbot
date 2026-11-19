@@ -1,3 +1,5 @@
+import { applyFix } from "./DoctorSheet";
+import type { Finding } from "../graph/doctor";
 import { Bot, Check, Hammer, LoaderCircle, MessagesSquare, Search, ShieldAlert, Square, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RunSummary } from "../../contracts/run";
@@ -16,7 +18,7 @@ import { AgentFace, PersonFace, clock, useNow } from "../ui";
  * everything at once, with quick actions, as the pointer heads for it (or on click / Enter); it
  * closes when the pointer moves away, or with Esc or a click outside.
  */
-type Mode = "rest" | "ask" | "run" | "compile" | "message" | "toast";
+type Mode = "rest" | "ask" | "run" | "compile" | "message" | "toast" | "problems";
 
 function useLatestMessage() {
   const { graph } = useBoard();
@@ -35,8 +37,12 @@ function useLatestMessage() {
   return { last, fresh: fresh && last?.id === fresh ? last : null };
 }
 
-export function Island() {
-  const { graph, boardId } = useBoard();
+export function Island({ findings = [] }: { findings?: Finding[] }) {
+  const { graph, boardId, doc } = useBoard();
+  const notices = useApp((s) => s.notices);
+  const clearNotices = useApp((s) => s.clearNotices);
+  const problems = findings.filter((f) => f.level !== "tip");
+  const problemErrors = problems.filter((f) => f.level === "error").length;
   const runs = useApp((s) => s.runs);
   const toasts = useApp((s) => s.toasts);
   const busy = useApp((s) => s.compileBusy);
@@ -58,7 +64,8 @@ export function Island() {
   };
   const agents = graph.nodes.filter((n) => n.kind === "agent").length;
 
-  const mode: Mode = asking.length ? "ask" : running.length ? "run" : busy ? "compile" : fresh ? "message" : toast ? "toast" : "rest";
+  // A notice (a compile that failed and its Fix) comes before a team message: it is what was just done.
+  const mode: Mode = asking.length ? "ask" : running.length ? "run" : busy ? "compile" : toast ? "toast" : fresh ? "message" : problemErrors ? "problems" : "rest";
 
   // Measure the content and animate the pill to it (the morph).
   useLayoutEffect(() => {
@@ -183,6 +190,31 @@ export function Island() {
             </div>
           </div>
         ))}
+        {problems.length > 0 && (
+          <div className="island-sec" data-testid="island-problems">
+            <span className="island-label">{problems.length === 1 ? "1 thing to fix" : `${problems.length} things to fix`}</span>
+            {problems.slice(0, 4).map((f) => (
+              <div key={f.id} className={`island-notice ${f.level === "error" ? "fail" : "warn"}`}>
+                {f.level === "error" ? <X size={14} className="bad" /> : <ShieldAlert size={14} className="warn-text" />}
+                <span className="grow island-notice-text">{f.title}</span>
+                <button className="pill" onClick={go(() => applyFix(f, boardId, doc))}>{f.fix.label}</button>
+              </div>
+            ))}
+            {problems.length > 4 && <button className="island-link faint" onClick={go(() => useApp.getState().setDoctorOpen(true))}>All {problems.length}…</button>}
+          </div>
+        )}
+        {notices.length > 0 && (
+          <div className="island-sec" data-testid="island-notices">
+            <div className="island-line"><span className="island-label grow">Notices</span><button className="island-link faint" onClick={() => clearNotices()}>Clear</button></div>
+            {notices.slice(0, 4).map((n) => (
+              <div key={n.id} className={`island-notice ${n.kind}`}>
+                {n.kind === "fail" ? <X size={14} className="bad" /> : <Check size={14} className="ok" />}
+                <span className="grow island-notice-text">{n.text}</span>
+                {n.action && <button className="pill" onClick={go(() => n.action!.run())}>{n.action.label}</button>}
+              </div>
+            ))}
+          </div>
+        )}
         <div className="island-sec">
           <span className="island-label">{running.length ? "Working now" : "All quiet"}</span>
           {running.length === 0 && <span className="faint island-sub">{agents ? `${agents} agent${agents > 1 ? "s" : ""} ready` : "No agents yet"}</span>}
@@ -250,6 +282,8 @@ export function Island() {
         {toast.action && <button className="pill" onClick={(e) => { e.stopPropagation(); toast.action!.run(); dismiss(toast.id); }}>{toast.action.label}</button>}
       </div>
     );
+  } else if (mode === "problems") {
+    body = <div className="island-bar"><X size={14} className="bad" /><span>{problemErrors === 1 ? "1 problem" : `${problemErrors} problems`}</span></div>;
   } else {
     body = <div className="island-bar rest"><span className={`island-dot${agents ? " ok" : ""}`} /></div>;
   }

@@ -35,6 +35,7 @@ export function StickyNote({ note, canvas = false }: { note: Note; canvas?: bool
   };
   return (
     <div className={`sticky note-${note.color}${canvas ? " on-canvas" : ""}`} data-testid="sticky-note">
+      {canvas && <div className="sticky-grip" data-tip="Drag to move" aria-hidden />}
       <textarea
         className="nodrag nowheel"
         ref={area}
@@ -53,9 +54,9 @@ export function StickyNote({ note, canvas = false }: { note: Note; canvas?: bool
           if (text !== note.text) setNoteField(doc, note.id, "text", text);
         }}
       />
-      <div className="sticky-foot nodrag">
+      <div className="sticky-foot">
         <span className="sticky-by">{[note.author, note.at ? ago(note.at) : ""].filter(Boolean).join(" · ")}</span>
-        <span className="sticky-tools">
+        <span className="sticky-tools nodrag">
           {NOTE_COLORS.map((c) => (
             <button key={c} className={`sticky-color note-${c}`} aria-label={`${c} note`} aria-pressed={note.color === c} onClick={() => setNoteField(doc, note.id, "color", c)} />
           ))}

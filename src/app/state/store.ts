@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Scene } from "../chat/drawing";
 import type { BoardInfo, CompileResponse, Health, SetupState } from "../../contracts/api";
 import { summarizeRun, type RunEvent, type RunSummary } from "../../contracts/run";
 import { loadIdentity, saveIdentity, type Identity } from "../lib/identity";
@@ -34,6 +35,9 @@ interface State {
   events: Record<string, RunEvent[]>;
   runs: Record<string, RunSummary>;
   toasts: Toast[];
+  /** The last notices, newest first, kept after they leave the island's bar (it lists them when open). */
+  notices: (Toast & { at: number })[];
+  clearNotices(): void;
   paletteOpen: boolean;
   /** The Hermes runtime sheet. */
   hermesOpen: boolean;
@@ -52,6 +56,8 @@ interface State {
   teamsOpen: boolean;
   /** Ask McBot (shell/BuilderSheet.tsx), with the words it opened with. */
   builder: { open: boolean; request: string };
+  /** The drawing open full size (chat/DrawingSheet.tsx): a scene, and where it saves when it came from a file. */
+  drawing: { scene: Scene; title: string; file?: { root: string; path: string; sha256: string | null } } | null;
   /** Bumped to ask the board to fit everything in view (after a team or a plan joins it). */
   fitRequest: number;
   /** Share on your network / join. */
@@ -87,6 +93,7 @@ interface State {
   setChatAppsOpen(open: boolean): void;
   setTeamsOpen(open: boolean): void;
   setBuilder(open: boolean, request?: string): void;
+  openDrawing(drawing: State["drawing"]): void;
   requestFit(): void;
   setShareOpen(open: boolean): void;
   setTeamOpen(open: boolean): void;
@@ -147,6 +154,7 @@ export const useApp = create<State>((set, get) => ({
   events: {},
   runs: {},
   toasts: [],
+  notices: [],
   paletteOpen: false,
   chatAgentId: null,
 
@@ -165,6 +173,7 @@ export const useApp = create<State>((set, get) => ({
   chatAppsOpen: false,
   teamsOpen: false,
   builder: { open: false, request: "" },
+  drawing: null,
   fitRequest: 0,
   shareOpen: false,
   teamOpen: false,
@@ -198,6 +207,7 @@ export const useApp = create<State>((set, get) => ({
   folderOpened: (id) => set({ openedFolder: { id, at: Date.now() }, folderPickerOpen: false }),
   setTeamsOpen: (teamsOpen) => set({ teamsOpen, paletteOpen: false, newAgentOpen: false }),
   requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),
+  openDrawing: (drawing) => set({ drawing, paletteOpen: false }),
   setBuilder: (open, request = "") => set((s) => ({ builder: { open, request: open ? request : s.builder.request }, paletteOpen: false, newAgentOpen: false, teamsOpen: false })),
   freshNote: null,
   setFreshNote: (freshNote) => set({ freshNote }),
@@ -244,9 +254,10 @@ export const useApp = create<State>((set, get) => ({
       return { events: { ...s.events, [e.runId]: list }, runs: summary ? { ...s.runs, [e.runId]: summary } : s.runs };
     });
   },
+  clearNotices: () => set({ notices: [] }),
   toast: (t) => {
     const id = ++toastId;
-    set((s) => ({ toasts: [...s.toasts, { ...t, id }] }));
+    set((s) => ({ toasts: [...s.toasts, { ...t, id }], notices: [{ ...t, id, at: Date.now() }, ...s.notices].slice(0, 8) }));
     setTimeout(() => get().dismiss(id), t.kind === "fail" ? 8000 : 3200);
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })),

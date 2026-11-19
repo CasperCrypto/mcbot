@@ -4,10 +4,13 @@
  *
  *   ```chart    {"type":"bar"|"line"|"pie","title":"…","labels":[…],"series":[{"name":"…","data":[…]}]}
  *   ```choices  one reply per line: buttons that answer the agent
+ *   ```excalidraw  an Excalidraw scene (chat/drawing.ts), drawn and editable in the chat
  *
  * Pure (text in, blocks out) and never HTML: the chat renders these as React elements, so an answer
  * can't run code in the app whatever it contains.
  */
+import { parseDrawing, type Scene } from "./drawing";
+
 export type Inline =
   | { t: "text"; v: string }
   | { t: "b"; v: Inline[] }
@@ -32,7 +35,8 @@ export type Block =
   | { t: "table"; head: Inline[][]; rows: Inline[][][] }
   | { t: "hr" }
   | { t: "chart"; chart: Chart }
-  | { t: "choices"; items: string[] };
+  | { t: "choices"; items: string[] }
+  | { t: "drawing"; scene: Scene };
 
 /** `**bold**`, `*italic*`/`_italic_`, `` `code` ``, `[text](url)`, `![alt](src)`. */
 export function inline(text: string): Inline[] {
@@ -89,7 +93,9 @@ export function parseRich(text: string): Block[] {
       for (i++; i < lines.length && !/^\s*```\s*$/.test(lines[i]!); i++) body.push(lines[i]!);
       const lang = fence[1]!.toLowerCase();
       const chart = lang === "chart" ? parseChart(body.join("\n")) : null;
+      const scene = lang === "excalidraw" ? parseDrawing(body.join("\n")) : null;
       if (chart) blocks.push({ t: "chart", chart });
+      else if (scene) blocks.push({ t: "drawing", scene });
       else if (lang === "choices") blocks.push({ t: "choices", items: body.map((l) => l.replace(/^\s*(?:[-*]|\d+[.)])\s*/, "").trim()).filter(Boolean).slice(0, 8) });
       else blocks.push({ t: "code", lang, v: body.join("\n") });
       continue;
@@ -151,6 +157,7 @@ export const RICH_ANSWERS = [
   "Format answers in Markdown: headings, lists, tables and code blocks.",
   'For numbers worth seeing, add a chart as a ```chart block of JSON: {"type":"bar"|"line"|"pie","title":"…","labels":[…],"series":[{"name":"…","data":[…]}]}.',
   "When the person should pick a next step, end with a ```choices block, one short reply per line.",
+  'To show how things connect (a flow, a plan, a system), draw it as an ```excalidraw block: a JSON array of shapes such as {"type":"rectangle","id":"a","x":0,"y":0,"width":160,"height":60,"label":{"text":"…"}} and arrows {"type":"arrow","x":160,"y":30,"start":{"id":"a"},"end":{"id":"b"}}.',
 ].join("\n");
 
 export const withRichAnswers = (soul: string): string => (soul.includes("```chart") ? soul : soul.trim() ? `${soul.trim()}\n\n${RICH_ANSWERS}` : RICH_ANSWERS);

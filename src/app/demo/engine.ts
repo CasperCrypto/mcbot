@@ -326,6 +326,13 @@ function script(prompt: string, bundle: AgentBundle): { steps: Step[]; text: str
     return { steps: [{ tool, input, output, toolNodeId }], text: tool.endsWith("list_directory") ? output : "Done." };
   }
   if (/\b2\s*\+\s*2\b/.test(prompt)) return { steps: [], text: "4" };
+  if (/\b(draw|diagram|sketch|map out)\b/i.test(prompt)) {
+    // A drawing, as an agent would answer with one (chat/drawing.ts, skeleton form).
+    const box = (id: string, x: number, y: number, text: string) => ({ type: "rectangle", id, x, y, width: 170, height: 64, roundness: { type: 3 }, label: { text } });
+    const arrow = (x: number, from: string, to: string) => ({ type: "arrow", x, y: 32, width: 70, height: 0, start: { id: from }, end: { id: to } });
+    const scene = [box("ask", 0, 0, "You ask"), arrow(170, "ask", "plan"), box("plan", 240, 0, "Agent plans"), arrow(410, "plan", "tools"), box("tools", 480, 0, "Uses tools"), arrow(650, "tools", "answer"), box("answer", 720, 0, "Answers you")];
+    return { steps: [], text: `Here's how a message flows through this harness:\n\n\`\`\`excalidraw\n${JSON.stringify(scene)}\n\`\`\`\n\nOpen it to move things around.` };
+  }
 
   const asked = words(prompt);
   const recalled = [...mem.memory, ...mem.user].find((e) => [...words(e)].some((w) => asked.has(w)));
