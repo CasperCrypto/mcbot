@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, ExternalLink, Globe, LoaderCircle, RotateCw, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink, Globe, LoaderCircle, RotateCw, Sparkles, WifiOff } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode } from "../../contracts/graph";
 import { runAgent } from "../actions";
@@ -16,6 +16,14 @@ export function toUrl(input: string): string {
   if (/^[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$/.test(v)) return `https://${v}`;
   return `https://duckduckgo.com/?q=${encodeURIComponent(v)}`;
 }
+
+const hostOf = (u: string) => {
+  try {
+    return new URL(u).host;
+  } catch {
+    return u;
+  }
+};
 
 const START = ["localhost:3000", "localhost:5173", "news.ycombinator.com", "en.wikipedia.org"];
 const isLocal = (u: string) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(u);
@@ -43,6 +51,11 @@ export default function BrowserView() {
   const [nativeFailed, setNativeFailed] = useState(false);
   /** Whether the site lets itself be framed (iframe mode only); null while asking. */
   const [frameOk, setFrameOk] = useState<Record<string, boolean>>({});
+  /** Whether each page answers (asked of the engine): false shows McBot's own "can't reach" screen. */
+  const [reach, setReach] = useState<Record<string, boolean>>({});
+  /** Where the native page is now (links clicked inside it move it). */
+  const [live, setLive] = useState<string | null>(null);
+  const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const area = useRef<HTMLDivElement>(null);
   const native = useMemo(() => nativePage(), []) && !nativeFailed;
   // A native page draws above the window's HTML, so it steps aside while a sheet or ⌘K is open.
@@ -50,7 +63,45 @@ export default function BrowserView() {
   const url = at >= 0 ? history[at] ?? null : null;
   useEffect(() => {
     remembered = { history, at };
+    setLive(null);
   }, [history, at]);
+  // The page on screen: where the native page went, else the address asked for.
+  const shown = (native ? live : null) ?? url;
+  // The window's own idea of being online, and whether the page answers: either one failing shows
+  // McBot's own screen instead of the web engine's error page (on Windows that page is Edge's).
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
+  useEffect(() => {
+    if (!shown || REMOTE || shown in reach) return;
+    let alive = true;
+    void engine.frameable(shown)
+      .then((r) => { if (alive) { setReach((m) => ({ ...m, [shown]: r.reachable !== false })); setFrameOk((m) => (shown in m ? m : { ...m, [shown]: r.frameable })); } })
+      // The engine didn't answer: let the page try (and the frame decide) rather than wait forever.
+      .catch(() => { if (alive) { setReach((m) => ({ ...m, [shown]: true })); setFrameOk((m) => (shown in m ? m : { ...m, [shown]: true })); } });
+    return () => {
+      alive = false;
+    };
+  }, [shown, reach]);
+  const unreachable = !!shown && (!online || reach[shown] === false);
+  const retry = () => {
+    if (!shown) return;
+    setOnline(navigator.onLine);
+    setReach((m) => {
+      const next = { ...m };
+      delete next[shown];
+      return next;
+    });
+    if (native) void page.go("reload");
+    else setReload((n) => n + 1);
+  };
 
   const box = (): PageBox | null => {
     const r = area.current?.getBoundingClientRect();
@@ -62,7 +113,7 @@ export default function BrowserView() {
   // again for a few frames; a failure falls back to the iframe for this window.
   useEffect(() => {
     if (!native || !url) return;
-    if (covered) {
+    if (covered || unreachable) {
       void page.hide();
       return;
     }
@@ -89,7 +140,7 @@ export default function BrowserView() {
       cancelAnimationFrame(raf);
       settle.forEach(clearTimeout);
     };
-  }, [native, url, reload, covered]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [native, url, reload, covered, unreachable]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!native || !area.current) return;
     const sync = () => {
@@ -114,7 +165,7 @@ export default function BrowserView() {
     let off: (() => void) | null = null;
     let alive = true;
     // Links clicked inside the page move the address bar too.
-    void page.onUrl((u) => setInput(u)).then((f) => {
+    void page.onUrl((u) => { setInput(u); setLive(u); }).then((f) => {
       if (alive) off = f;
       else f();
     });
@@ -125,15 +176,6 @@ export default function BrowserView() {
     };
   }, [native]);
 
-  // Iframe mode: ask once per address whether the site allows it (localhost always tries).
-  useEffect(() => {
-    if (native || !url || isLocal(url) || url in frameOk || REMOTE) return;
-    let alive = true;
-    void engine.frameable(url).then((r) => { if (alive) setFrameOk((m) => ({ ...m, [url]: r.frameable })); }).catch(() => { if (alive) setFrameOk((m) => ({ ...m, [url]: true })); });
-    return () => {
-      alive = false;
-    };
-  }, [native, url, frameOk]);
 
   const go = (raw: string) => {
     if (!raw.trim()) return;
@@ -178,7 +220,18 @@ export default function BrowserView() {
         <button className="icon-btn sm" aria-label="Open in your browser" data-tip="Open in your browser" disabled={!url} onClick={openOutside}><ExternalLink size={13} /></button>
       </div>
       <div className="browser-page">
-        {url && native ? (
+        {unreachable ? (
+          // McBot's own screen, never the web engine's error page.
+          <div className="browser-demo" data-testid="browser-unreachable">
+            {online ? <Globe size={28} className="faint" /> : <WifiOff size={28} className="faint" />}
+            <b>{online ? `Can't reach ${hostOf(shown!)}` : "You're offline"}</b>
+            <span className="faint">{online ? "Check the address, or try again in a moment." : "Pages open again when the connection is back."}</span>
+            <div className="row" style={{ justifyContent: "center" }}>
+              <button className="btn light" onClick={retry} data-testid="browser-retry"><RotateCw size={14} /> Try again</button>
+              {online && <button className="btn" onClick={openOutside}><ExternalLink size={14} /> Open in your browser</button>}
+            </div>
+          </div>
+        ) : url && native ? (
           <div ref={area} className="browser-native" data-testid="browser-native" />
         ) : url && verdict === undefined ? (
           <div className="browser-demo"><LoaderCircle size={22} className="spin-icon faint" /></div>

@@ -431,7 +431,11 @@ Change them additively; a breaking change bumps the version.
   command deadlocks on Windows.
   Remote pages get no IPC. Linux (GTK ignores child bounds) and the demo use an iframe: the engine
   first asks whether the site allows framing (`GET /api/web/frameable`), and one that refuses
-  gets "Open in a window" instead of a blank page.
+  gets "Open in a window" instead of a blank page. The same probe says whether the page answers at
+  all (`reachable`), for every page shown, including links followed inside the native page
+  (`browser:url`): a page that doesn't answer, or a window that is offline, gets McBot's own "Can't
+  reach …" / "You're offline" screen with Try again, and the native page is hidden, so the web
+  engine's own error page (on Windows, Edge's) is not what people see.
 
 ## Stack (do not substitute)
 

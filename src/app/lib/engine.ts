@@ -76,7 +76,7 @@ const http = {
   roots: (boardId: string) => call<FsRoot[]>("GET", `/api/fs/roots?boardId=${encodeURIComponent(boardId)}`),
   openFolder: (path: string) => call<FsRoot>("POST", "/api/fs/roots", { path }),
   browse: (path: string | null) => call<FsBrowse>("GET", `/api/fs/browse${path ? `?path=${encodeURIComponent(path)}` : ""}`),
-  frameable: (url: string) => call<{ frameable: boolean; url: string }>("GET", `/api/web/frameable?url=${encodeURIComponent(url)}`),
+  frameable: (url: string) => call<{ frameable: boolean; url: string; reachable?: boolean }>("GET", `/api/web/frameable?url=${encodeURIComponent(url)}`),
   closeFolder: (id: string) => call<{ ok: true }>("POST", "/api/fs/roots/close", { id }),
   list: (root: string, path: string) => call<FsListing>("GET", `/api/fs/list?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
   writeFile: (root: string, path: string, text: string, baseSha256: string | null) => call<{ path: string; bytes: number; sha256: string; followed?: string[] }>("PUT", "/api/fs/write", { root, path, text, baseSha256 }),
