@@ -1,6 +1,6 @@
 /**
  * Excalidraw (MIT), loaded only when a drawing is shown: it is the heaviest part of the app, so
- * this module is its own chunk (`lazy(() => import("./Drawing"))`). Its fonts are served by McBot
+ * this module is its own chunk (`lazy(() => import("./DrawingCanvas"))`). Its fonts are served by McBot
  * itself (vite.config.ts `excalidrawFonts`), so drawings look the same offline.
  */
 import "@excalidraw/excalidraw/index.css";

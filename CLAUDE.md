@@ -340,7 +340,7 @@ Change them additively; a breaking change bumps the version.
   plus ` ```chart ` (JSON → SVG bar, line or pie) and ` ```choices ` (reply buttons on the latest
   answer). Parsed to blocks and rendered as React elements, never HTML. New agents' souls carry
   lines that teach the format (`withRichAnswers`: presets, starter teams, New agent).
-- **Drawings** (`chat/drawing.ts` pure, `chat/Drawing.tsx`, `chat/DrawingSheet.tsx`): an answer's
+- **Drawings** (`chat/drawing.ts` pure, `chat/DrawingCanvas.tsx`, `chat/DrawingSheet.tsx`): an answer's
   ` ```excalidraw ` block (Excalidraw's file or its skeleton form) and `.excalidraw` files in Files are
   drawn with Excalidraw (MIT), its own lazy chunk, never in the first bundle. Inline is view only; Open
   edits full size; Save writes back over the sha256 read, or a new `drawings/<name>.excalidraw` in the

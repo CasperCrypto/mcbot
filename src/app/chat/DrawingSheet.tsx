@@ -8,10 +8,10 @@ import { lazy, Suspense, useRef, useState } from "react";
 import { DEMO, engine, REMOTE } from "../lib/engine";
 import { useLingering, usePresence } from "../lib/presence";
 import { useApp } from "../state/store";
-import type { DrawingHandle } from "./Drawing";
+import type { DrawingHandle } from "./DrawingCanvas";
 import { drawingFileName, type Scene } from "./drawing";
 
-const DrawingCanvas = lazy(() => import("./Drawing"));
+const DrawingCanvas = lazy(() => import("./DrawingCanvas"));
 
 const Placeholder = () => <div className="drawing-wait skeleton" aria-hidden />;
 

@@ -1,6 +1,6 @@
 /**
  * Drawings agents make: an Excalidraw scene, from a ```excalidraw block in an answer or a
- * `.excalidraw` file. Pure (text in, scene out); `chat/Drawing.tsx` draws it, loaded only when one
+ * `.excalidraw` file. Pure (text in, scene out); `chat/DrawingCanvas.tsx` draws it, loaded only when one
  * is shown.
  *
  * Accepted: Excalidraw's own file (`{"type":"excalidraw","elements":[…]}`), a bare array of
