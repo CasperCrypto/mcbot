@@ -907,7 +907,7 @@ export const demoEngine = {
     throw new EngineError(400, "The browser demo can't read your disk. The desktop app opens any folder.", {});
   }),
   /** The demo can't look at other sites' headers; it says so for every site but localhost (BrowserView). */
-  frameable: api((url: string) => ({ frameable: /^https?:\/\/(localhost|127\.0\.0\.1)/.test(url), url })),
+  frameable: api((url: string) => ({ frameable: /^https?:\/\/(localhost|127\.0\.0\.1)/.test(url), url, reachable: true })),
   /** A pretend disk: the demo can't see the visitor's folders, so the picker shows a sample home. */
   browse: api((path: string | null): FsBrowse => {
     const home = "/Users/you";
