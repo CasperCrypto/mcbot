@@ -25,4 +25,12 @@ describe("starter teams", () => {
     const g = { ...graph, nodes: [...graph.nodes, ...add.nodes], edges: [...graph.edges, ...add.edges] };
     expect(resolveGraph(g).issues.filter((i) => i.level === "error")).toEqual([]);
   });
+
+  it("members bring only skills Hermes' library ships, under the profile name they got", async () => {
+    const { LIBRARY } = await import("../../contracts/library.generated");
+    const ids = new Set(LIBRARY.map((s) => s.id));
+    for (const team of TEAMS) for (const m of team.members) for (const id of m.skills ?? []) expect(ids.has(id), `${team.id}/${m.name}: ${id}`).toBe(true);
+    const graph: Graph = { schema: GRAPH_SCHEMA, id: "b", name: "B", nodes: [model, { id: "a", kind: "agent", position: { x: 0, y: 0 }, data: { name: "researcher", displayName: "", description: "", soul: "", skills: [], capabilities: null } } as GraphNode], edges: [] };
+    expect(teamToAdd(graph, TEAMS[0]!, null, newModel).skills.map((s) => s.profile)).toEqual(["researcher-2"]);
+  });
 });

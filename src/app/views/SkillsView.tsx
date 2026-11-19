@@ -4,6 +4,7 @@
  * skills (seeded after a compile unless turned off), and the official library (installed into the
  * compiled agent with `hermes skills install`). Host only: members don't reach the library.
  */
+import { BUNDLED } from "../../contracts/library.generated";
 import { Check, Download, Eye, Globe, Hammer, Link2, Pencil, Plus, RefreshCw, Search, Sparkles, Trash2, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { setNodeField } from "../../board/ydoc";
@@ -38,6 +39,7 @@ export function SkillsView() {
   const [state, setState] = useState<SkillsState | null>(null);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string | null>(null);
+  const [showBundled, setShowBundled] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [reading, setReading] = useState<{ name: string; text: string } | null>(null);
   const [pane, setPane] = useState<"skills" | "plugins">("skills");
@@ -265,11 +267,25 @@ export function SkillsView() {
             <div className="row skill-builtin">
               <div className="grow" style={{ display: "grid", gap: 2 }}>
                 <b>Hermes' built-in skills</b>
-                <span className="faint">{builtin ? (state?.seeded ? "44 skills, on" : "On, added at the next compile") : "Off"}</span>
+                <span className="faint">{builtin ? (state?.seeded ? `${BUNDLED.length} skills, on` : "On, added at the next compile") : "Off"}</span>
               </div>
+              <button type="button" className="btn sm ghost" aria-expanded={showBundled} onClick={() => setShowBundled(!showBundled)} data-testid="skills-bundled-toggle">
+                {showBundled ? "Hide" : "Show all"}</button>
               <button type="button" className="switch" role="switch" aria-checked={builtin} aria-label="Hermes' built-in skills" data-testid="skills-builtin"
                 onClick={() => setNodeField(doc, agent.id, "builtinSkills", builtin ? false : null)}><span /></button>
             </div>
+            {showBundled && (
+              <div className="bundled-skills" data-testid="skills-bundled">
+                {[...new Set(BUNDLED.map((s) => s.category))].map((c) => (
+                  <div key={c} className="bundled-group">
+                    <span className="suggest-label">{pretty(c)}</span>
+                    <div className="suggest-row">
+                      {BUNDLED.filter((s) => s.category === c).map((s) => <span key={s.name} className="chip" data-tip={s.description}>{pretty(s.name)}</span>)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="stack" style={{ gap: 10 }}>
               <div className="row">

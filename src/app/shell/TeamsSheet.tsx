@@ -3,7 +3,8 @@ import { Users, X } from "lucide-react";
 import { useEffect } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
 import type { ModelNode } from "../../contracts/graph";
-import { compileBoard } from "../actions";
+import { compileBoard, learnSkills } from "../actions";
+import { REMOTE } from "../lib/engine";
 import { newModel } from "../graph/defaults";
 import { TEAMS, teamToAdd, type StarterTeam } from "../graph/teams";
 import { useBoard } from "../state/board";
@@ -29,7 +30,7 @@ export function TeamsSheet() {
     // The board's primary local model if it has one, else its first model, else a new local one.
     const models = graph.nodes.filter((n): n is ModelNode => n.kind === "model");
     const model = models.find((m) => m.data.endpoint === "local") ?? models[0] ?? null;
-    const { nodes, edges, lead } = teamToAdd(graph, team, model, (p) => newModel(graph, "local", p));
+    const { nodes, edges, lead, skills } = teamToAdd(graph, team, model, (p) => newModel(graph, "local", p));
     doc.transact(() => {
       for (const n of nodes) addNode(doc, n);
       for (const e of edges) addEdge(doc, e);
@@ -39,7 +40,21 @@ export function TeamsSheet() {
     app.setTab("graph");
     app.select(lead);
     app.toast({ kind: "ok", text: `${team.label} joined the board` });
-    await compileBoard(boardId, { quiet: true });
+    // Each member's Hermes library skills go in once its files exist (one after another, in the background).
+    if (await compileBoard(boardId, { quiet: true }) && !REMOTE) {
+      void (async () => {
+        let done = 0;
+        const failed: string[] = [];
+        for (const s of skills) {
+          const r = await learnSkills(s.profile, s.who, s.ids, true);
+          done += r.done.length;
+          failed.push(...r.failed.map((f) => `${s.who}: ${f}`));
+        }
+        const skillsTab = { label: "Skills", run: () => useApp.getState().setTab("skills") };
+        if (done) useApp.getState().toast({ kind: "ok", text: `${team.label} learned ${done} Hermes skill${done === 1 ? "" : "s"}`, action: skillsTab });
+        if (failed.length) useApp.getState().toast({ kind: "fail", text: `Couldn't add ${failed.join(", ")}`, action: skillsTab });
+      })();
+    }
   };
 
   return (

@@ -43,7 +43,12 @@ function skillFiles(dir: string, depth = 0): string[] {
 
 /** Hermes' official optional skills, from `<hermes>/optional-skills/**\/SKILL.md`. */
 export function listLibrary(hermesDir: string): LibrarySkill[] {
-  const base = join(hermesDir, "optional-skills");
+  return listSkills(join(hermesDir, "optional-skills"));
+}
+
+/** Every SKILL.md under `base` (category folders), read like the library: hermes/skills holds the bundled ones. */
+export function listSkills(base: string): LibrarySkill[] {
+  if (!existsSync(base)) return [];
   return skillFiles(base).map((file) => {
     const rel = relative(base, join(file, "..")).split("\\").join("/");
     const fm = front(readFileSync(file, "utf8"));

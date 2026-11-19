@@ -374,7 +374,13 @@ Change them additively; a breaking change bumps the version.
   The `main` window owns the state and sends a summary by events; the pill holds no board, no keys.
   Flush with the top edge of the screen: on Windows the window is transparent so the pill is round underneath;
   on macOS it stays a black rectangle (transparency needs a private API).
-- **New agent** (`shell/NewAgentSheet.tsx`): six one-click starting cards (`agentSuggestions.ts`) fill name, purpose and soul.
+- **New agent** (`shell/NewAgentSheet.tsx`): 19 one-click starting cards in five groups (`agentSuggestions.ts`) fill
+  name, purpose and soul, and name the Hermes library skills they start with; after the first compile those install
+  one by one (`learnSkills` in `actions.ts`, `POST /api/skills/install`, host only). Starter teams (`graph/teams.ts`, 8)
+  carry skills per member the same way, with one notice per team. Every skill id they name must be in
+  `src/contracts/library.generated.ts` (`npm run engine:library` from `hermes/optional-skills` and `hermes/skills`;
+  `npm test` fails while it is stale or a card names a skill Hermes doesn't ship). The demo's library is that list
+  (all 141), and the Skills view lists Hermes' 44 built-in skills by name ("Show all").
 - Views live behind an error boundary; a broken view must not blank the window.
 - **Fast start:** only Home, Chat and Tasks are in the first bundle (`App.tsx` `lazyView`); the other views
   (Board with React Flow, Runs, Memory, Skills, Files, Cost, Team, Settings, Browser) are fetched one by one while

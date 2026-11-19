@@ -166,3 +166,25 @@ export async function stopRun(runId: string): Promise<void> {
     app.toast({ kind: "fail", text: (e as Error).message });
   }
 }
+
+/** "official/research/rss-feeds" → "rss-feeds". */
+export const skillName = (id: string) => id.split("/").pop() ?? id;
+
+/** Install Hermes library skills into an agent, one by one, then say so (unless `quiet`). */
+export async function learnSkills(profile: string, who: string, ids: readonly string[], quiet = false): Promise<{ done: string[]; failed: string[] }> {
+  const done: string[] = [];
+  const failed: string[] = [];
+  for (const id of ids) {
+    try {
+      await engine.installSkill(profile, id);
+      done.push(skillName(id));
+    } catch {
+      failed.push(skillName(id));
+    }
+  }
+  if (quiet) return { done, failed };
+  const app = useApp.getState();
+  if (done.length) app.toast({ kind: "ok", text: `${who} learned ${done.length} Hermes skill${done.length === 1 ? "" : "s"}: ${done.join(", ")}`, action: { label: "Skills", run: () => useApp.getState().setTab("skills") } });
+  if (failed.length) app.toast({ kind: "fail", text: `${who} couldn't add ${failed.join(", ")}`, action: { label: "Skills", run: () => useApp.getState().setTab("skills") } });
+  return { done, failed };
+}
