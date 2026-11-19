@@ -21,8 +21,91 @@ use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, Runtime, WebviewUrl, WebviewWindowBuilder, WindowEvent, Wry};
 
-/// The engine this app started, stopped when the app quits.
+/// The engine this app started, stopped when the app quits, and why it could not start (if so).
 struct Engine(Mutex<Option<Child>>);
+struct EngineError(Mutex<Option<String>>);
+
+/// What the "engine didn't start" screen shows: whether it runs, how it ended, and its log's end.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EngineStatus {
+    /// This app starts the engine itself (false in `tauri dev`, where `npm run dev` does).
+    bundled: bool,
+    running: bool,
+    /// How it ended, when it did: "exit code 1", "killed".
+    exit: Option<String>,
+    /// Why it could not be started at all (missing file, blocked, no data folder).
+    error: Option<String>,
+    /// The last lines of engine.log, with the home folder shown as ~.
+    log: String,
+    log_path: Option<String>,
+}
+
+fn engine_log_path<R: Runtime>(app: &AppHandle<R>) -> Option<std::path::PathBuf> {
+    app.path().app_data_dir().ok().map(|d| d.join("engine.log"))
+}
+
+/// The last `lines` lines of the engine's log (at most 16 KB read), home folder as ~.
+fn log_tail(path: &std::path::Path, lines: usize) -> String {
+    use std::io::{Read, Seek, SeekFrom};
+    let Ok(mut f) = std::fs::File::open(path) else { return String::new() };
+    let len = f.metadata().map(|m| m.len()).unwrap_or(0);
+    let _ = f.seek(SeekFrom::Start(len.saturating_sub(16 * 1024)));
+    let mut buf = Vec::new();
+    let _ = f.read_to_end(&mut buf);
+    let text = String::from_utf8_lossy(&buf).to_string();
+    let all: Vec<&str> = text.lines().collect();
+    let tail = all[all.len().saturating_sub(lines)..].join("\n");
+    match std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
+        Ok(home) if !home.is_empty() => tail.replace(&home, "~"),
+        _ => tail,
+    }
+}
+
+fn engine_status_of<R: Runtime>(app: &AppHandle<R>) -> EngineStatus {
+    let engine = app.state::<Engine>();
+    let mut guard = engine.0.lock().unwrap();
+    let (running, exit) = match guard.as_mut() {
+        None => (false, None),
+        Some(child) => match child.try_wait() {
+            Ok(None) => (true, None),
+            Ok(Some(status)) => (false, Some(status.code().map(|c| format!("exit code {c}")).unwrap_or_else(|| "killed".into()))),
+            Err(e) => (false, Some(e.to_string())),
+        },
+    };
+    drop(guard);
+    let path = engine_log_path(app);
+    EngineStatus {
+        bundled: !cfg!(debug_assertions),
+        running,
+        exit,
+        error: app.state::<EngineError>().0.lock().unwrap().clone(),
+        log: path.as_deref().map(|p| log_tail(p, 40)).unwrap_or_default(),
+        log_path: path.map(|p| p.display().to_string()),
+    }
+}
+
+/// How the engine is doing, for the window that can't reach it.
+#[tauri::command]
+fn engine_status(app: AppHandle<Wry>) -> EngineStatus {
+    engine_status_of(&app)
+}
+
+/// Stop the engine this app started (if it still runs) and start it again.
+#[tauri::command]
+fn engine_restart(app: AppHandle<Wry>) -> EngineStatus {
+    if let Some(mut child) = app.state::<Engine>().0.lock().unwrap().take() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    let started = start_engine(&app);
+    let error = started.as_ref().err().cloned();
+    if let Ok(child) = started {
+        *app.state::<Engine>().0.lock().unwrap() = child;
+    }
+    *app.state::<EngineError>().0.lock().unwrap() = error;
+    engine_status_of(&app)
+}
 
 /// Start the bundled engine: Hermes from the resources, McBot's data folder for everything it writes.
 fn start_engine<R: Runtime>(app: &AppHandle<R>) -> Result<Option<Child>, String> {
@@ -321,10 +404,13 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(summon_plugin())
         .manage(Engine(Mutex::new(None)))
+        .manage(EngineError(Mutex::new(None)))
         .manage(Attention(Mutex::new(None)))
         .manage(Island(Mutex::new(false)))
         .manage(terminal::Terminals::default())
         .invoke_handler(tauri::generate_handler![
+            engine_status,
+            engine_restart,
             set_attention,
             island_resize,
             island_active,
@@ -344,7 +430,10 @@ pub fn run() {
             let handle = app.handle();
             match start_engine(handle) {
                 Ok(child) => *app.state::<Engine>().0.lock().unwrap() = child,
-                Err(err) => eprintln!("mcbot: could not start the engine: {err}"),
+                Err(err) => {
+                    eprintln!("mcbot: could not start the engine: {err}");
+                    *app.state::<EngineError>().0.lock().unwrap() = Some(err);
+                }
             }
             handle.set_menu(menu(handle)?)?;
             if let Err(err) = tray(handle) {

@@ -189,8 +189,12 @@ Change them additively; a breaking change bumps the version.
   executable, `scripts/build-engine.mjs`, Tauri `externalBin`) and Hermes as a
   resource (`scripts/stage-hermes.mjs`: only git-tracked files of `hermes/`).
   `tauri build` runs all three (`beforeBuildCommand`).
-- The window opens a few seconds before the engine answers: it says "Starting McBot…" and only
-  after 20 s says the engine didn't start (the `npm run dev` hint only outside the app).
+- The window opens a few seconds before the engine answers: it says "Starting McBot…". In the app it
+  asks the shell how its engine is doing (`engine_status` in `src-tauri/src/lib.rs`: running, how it
+  ended, why it couldn't be launched, the last 40 lines of engine.log with the home folder as ~) and
+  `lib/engineHealth.ts` names it at once: stopped (exit code), blocked (antivirus or a missing file),
+  McBot's port taken, or still starting after 20 s; the screen shows the log's end, Copy details and
+  Restart engine (`engine_restart`). Outside the app it keeps the `npm run dev` hint after 20 s.
 - In release builds the shell starts the engine with `MCBOT_HERMES_BUNDLE` and
   `MCBOT_DATA_DIR` and kills it on quit; `tauri dev` runs `npm run dev` instead.
   The engine copies the read-only Hermes to `<data>/hermes-<stamp>`

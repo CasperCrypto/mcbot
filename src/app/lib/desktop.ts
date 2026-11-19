@@ -117,3 +117,26 @@ export async function onMaximized(cb: (max: boolean) => void): Promise<() => voi
   check();
   return w.onResized(check);
 }
+
+/** How the engine the app started is doing (src-tauri `engine_status`); null outside the app. */
+export interface EngineStatus {
+  bundled: boolean;
+  running: boolean;
+  exit: string | null;
+  error: string | null;
+  log: string;
+  logPath: string | null;
+}
+
+export async function engineStatus(): Promise<EngineStatus | null> {
+  if (!inApp()) return null;
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<EngineStatus>("engine_status").catch(() => null);
+}
+
+/** Stop the engine the app started and start it again. */
+export async function engineRestart(): Promise<EngineStatus | null> {
+  if (!inApp()) return null;
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<EngineStatus>("engine_restart").catch(() => null);
+}
