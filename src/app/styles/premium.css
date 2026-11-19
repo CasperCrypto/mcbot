@@ -5,11 +5,11 @@
  */
 :root {
   /* SF tracking: text tightens as it grows (Apple's dynamic tracking, approximated). */
-  --fs-caption: 11px;
-  --fs-footnote: 12px;
-  --fs-body: 13px;
-  --fs-callout: 14px;
-  --fs-headline: 15px;
+  --fs-caption: 12px;
+  --fs-footnote: 13px;
+  --fs-body: 14px;
+  --fs-callout: 15px;
+  --fs-headline: 16px;
   --fs-title3: 17px;
   --fs-title2: 20px;
   --fs-title1: 24px;
@@ -88,28 +88,28 @@ h3 { letter-spacing: -0.012em; }
 .msg { gap: 8px; }
 .msg.agent { max-width: 100%; width: 100%; }
 .msg.user { max-width: 78%; }
-.msg .bubble { font-size: 15px; line-height: 1.62; letter-spacing: -0.012em; }
+.msg .bubble { font-size: 16px; line-height: 1.62; letter-spacing: -0.012em; }
 .msg.agent .bubble { background: none; border: 0; padding: 0 2px; color: var(--text); }
 .msg.user .bubble { background: rgba(255, 255, 255, 0.085); border: 0; border-radius: 20px; padding: 9px 16px; }
 .msg.agent.failed .bubble { background: none; color: #ff8c84; }
-.from { gap: 8px; font-size: 13px; }
+.from { gap: 8px; font-size: 14px; }
 .from b { color: var(--text); font-weight: 600; letter-spacing: -0.01em; }
 /* Tool steps: a quiet line of what the agent used, not a row of boxes. */
 .steps { gap: 4px 12px; }
-.step-chip { height: auto; padding: 0; border: 0; background: none; color: var(--text-3); font-size: 12px; gap: 5px; }
-.step-chip .mono { font-family: var(--font); font-size: 12px; }
+.step-chip { height: auto; padding: 0; border: 0; background: none; color: var(--text-3); font-size: 13px; gap: 5px; }
+.step-chip .mono { font-family: var(--font); font-size: 13px; }
 .step-chip.fail { color: #ff8c84; }
 /* Details (time, tokens, cost) only when you look at a message. */
 .msg .meta { padding: 0 2px; opacity: 0; transition: opacity var(--t) var(--ease); }
 .msg:hover .meta { opacity: 1; }
-.day { font-size: 11.5px; font-weight: 600; color: var(--text-4); letter-spacing: 0.01em; padding: 2px 0; }
+.day { font-size: 12.5px; font-weight: 600; color: var(--text-4); letter-spacing: 0.01em; padding: 2px 0; }
 .typing { padding: 4px 2px; }
 /* Composer: a calm pill; focus brightens its edge, no blue ring. */
 .composer { border-radius: 24px; padding: 8px 8px 8px 18px; background: #232326; border: var(--hairline) solid var(--line-2); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.25); }
 .composer:focus-within { border-color: var(--line-3); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.25); }
-.composer textarea { font-size: 15px; letter-spacing: -0.012em; }
+.composer textarea { font-size: 16px; letter-spacing: -0.012em; }
 .thread-head { height: 56px; border-bottom-color: transparent; background: linear-gradient(var(--bg-main), var(--bg-main)) padding-box; }
-.thread-head .name { font-size: 15px; }
+.thread-head .name { font-size: 16px; }
 
 /* Team chat: name and time over plain text; one person's run of messages shares one header. */
 .team-scroll { gap: 16px; padding: 16px; }
@@ -117,12 +117,12 @@ h3 { letter-spacing: -0.012em; }
 .team-msg.cont { margin-top: -12px; }
 .team-msg.cont .team-meta { display: none; }
 .team-msg.cont > :first-child { visibility: hidden; height: 0; }
-.team-meta { gap: 8px; font-size: 13px; }
+.team-meta { gap: 8px; font-size: 14px; }
 .team-meta b { font-weight: 600; letter-spacing: -0.01em; }
-.team-meta .faint { font-size: 11.5px; }
-.team-text, .team-msg.mine .team-text, .team-msg.agent .team-text { background: none; border: 0; padding: 0; margin-top: 2px; font-size: 14px; line-height: 1.55; letter-spacing: -0.01em; }
+.team-meta .faint { font-size: 12.5px; }
+.team-text, .team-msg.mine .team-text, .team-msg.agent .team-text { background: none; border: 0; padding: 0; margin-top: 2px; font-size: 15px; line-height: 1.55; letter-spacing: -0.01em; }
 .team-compose { padding: 12px; }
-.team-compose textarea { border-radius: 20px; padding: 9px 14px; background: #232326; border: var(--hairline) solid var(--line-2); font-size: 14px; }
+.team-compose textarea { border-radius: 20px; padding: 9px 14px; background: #232326; border: var(--hairline) solid var(--line-2); font-size: 15px; }
 .team-compose textarea:focus { outline: none; border-color: var(--line-3); box-shadow: none; }
 
 /* Fields: focus is a brighter edge, not a blue glow (keyboard focus keeps the ring on buttons). */
@@ -136,10 +136,10 @@ input:focus, textarea:focus { outline: none; }
 /* Inspector: a solid sheet (the canvas never reads through), calm choices, no blue outlines. */
 .inspector, .inspector.glass, .side-panel.glass, .sheet.glass { background: #1f1f22; }
 .inspector { border: var(--hairline) solid var(--line-2); }
-.ability { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 12px; border: 0; background: rgba(255, 255, 255, 0.045); color: var(--text-3); font-size: 12.5px; font-weight: 500; transition: background var(--t-fast) var(--ease), color var(--t-fast), transform var(--t) var(--ease-out-spring); }
+.ability { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 12px; border: 0; background: rgba(255, 255, 255, 0.045); color: var(--text-3); font-size: 13.5px; font-weight: 500; transition: background var(--t-fast) var(--ease), color var(--t-fast), transform var(--t) var(--ease-out-spring); }
 .ability:hover { background: rgba(255, 255, 255, 0.08); color: var(--text-2); }
 .ability:active { transform: scale(0.95); }
 .ability[aria-pressed="true"] { background: rgba(255, 255, 255, 0.14); border: 0; color: var(--text); }
 .abilities { gap: 6px; }
-.field textarea { font-family: var(--font); font-size: 13.5px; line-height: 1.55; }
+.field textarea { font-family: var(--font); font-size: 14.5px; line-height: 1.55; }
 .field textarea.mono, .field .mono textarea { font-family: var(--mono); }

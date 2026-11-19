@@ -43,7 +43,7 @@ function Editor({ agent, sel, onClose, onSaved }: { agent: AgentMemoryView; sel:
       <div className="side-panel-body stack" style={{ gap: 12 }}>
         <label className="field"><textarea rows={8} value={text} autoFocus onChange={(e) => setText(e.target.value)} aria-label="Memory entry" /></label>
         <div className="row">
-          <span className={`num ${used > file.limit ? "" : "faint"}`} style={{ fontSize: 12, color: used > file.limit ? "var(--fail)" : undefined }}>{used} / {file.limit}</span>
+          <span className={`num ${used > file.limit ? "" : "faint"}`} style={{ fontSize: 13, color: used > file.limit ? "var(--fail)" : undefined }}>{used} / {file.limit}</span>
           <span className="grow" />
           {sel.index !== null && <button className="btn danger" disabled={busy || agent.busy} onClick={() => save(file.entries.filter((_, i) => i !== sel.index))}><Trash2 size={13} /> Delete</button>}
           <button className="btn primary" disabled={busy || agent.busy || !text.trim() || used > file.limit} onClick={() => save(next)}>Save</button>

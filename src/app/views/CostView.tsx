@@ -23,7 +23,7 @@ function Daily({ rows }: { rows: CostRow[] }) {
   return (
     <div className="card chart-card">
       <h3>{byTokens ? "Tokens per day" : "Spend per day"}</h3>
-      <span className="faint" style={{ fontSize: 12 }}>UTC</span>
+      <span className="faint" style={{ fontSize: 13 }}>UTC</span>
       <div className="bars" role="img" aria-label={days.map((d) => `${d.key}: ${byTokens ? tokens(value(d)) : usd(d.usd)}`).join(", ")}>
         {days.map((d) => (
           <div key={d.key} className="bar" onMouseEnter={() => setHover(d.key)} onMouseLeave={() => setHover(null)}>
@@ -40,8 +40,8 @@ function Daily({ rows }: { rows: CostRow[] }) {
         ))}
       </div>
       <div className="row" style={{ justifyContent: "space-between", marginTop: 8 }}>
-        <span className="faint" style={{ fontSize: 11 }}>{days[0]?.key}</span>
-        {days.length > 1 && <span className="faint" style={{ fontSize: 11 }}>{days.at(-1)?.key}</span>}
+        <span className="faint" style={{ fontSize: 12 }}>{days[0]?.key}</span>
+        {days.length > 1 && <span className="faint" style={{ fontSize: 12 }}>{days.at(-1)?.key}</span>}
       </div>
     </div>
   );

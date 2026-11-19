@@ -237,7 +237,7 @@ export function TasksView() {
       <div className="view">
         <div className="view-head">
           <h1>Tasks</h1>
-          {tasks && <span className="faint num" style={{ fontSize: 12 }}>{tasks.filter((t) => t.status !== "done").length} open</span>}
+          {tasks && <span className="faint num" style={{ fontSize: 13 }}>{tasks.filter((t) => t.status !== "done").length} open</span>}
           {waiting && !gateway && <span className="chip" data-tip="Ready tasks start when the engine's gateway is up">Starting the engine…</span>}
           <span className="grow" />
           <button className="btn sm primary" onClick={() => setOpen("new")} data-testid="task-add"><Plus size={13} /> New task</button>

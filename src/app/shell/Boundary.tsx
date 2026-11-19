@@ -18,7 +18,7 @@ export class Boundary extends Component<{ children: ReactNode; resetKey?: string
       <section className="main flush-left">
         <div className="empty">
           <h3>Something broke here</h3>
-          <p className="mono" style={{ fontSize: 12 }}>{this.state.error.message}</p>
+          <p className="mono" style={{ fontSize: 13 }}>{this.state.error.message}</p>
           <button className="btn" onClick={() => this.setState({ error: null })}>Try again</button>
         </div>
       </section>

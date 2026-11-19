@@ -1,5 +1,31 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { defineConfig, type Plugin } from "vite";
+
+/**
+ * Excalidraw's hand-drawn fonts, served from McBot itself as `excalidraw/fonts/…` (the app's CSP
+ * allows fonts from 'self' only, and a desktop app must draw offline). Its CJK font (13 MB) is left
+ * to Excalidraw's own fallback.
+ */
+function excalidrawFonts(): Plugin {
+  const dir = join("node_modules", "@excalidraw", "excalidraw", "dist", "prod", "fonts");
+  const files = (): string[] => !existsSync(dir) ? [] : readdirSync(dir).filter((f) => f !== "Xiaolai").flatMap((f) => statSync(join(dir, f)).isDirectory() ? readdirSync(join(dir, f)).map((x) => `${f}/${x}`) : []);
+  return {
+    name: "mcbot-excalidraw-fonts",
+    configureServer(server) {
+      server.middlewares.use("/excalidraw/fonts/", (req, res, next) => {
+        const name = decodeURIComponent((req.url ?? "").split("?")[0]!.replace(/^\/+/, ""));
+        if (!files().includes(name)) return next();
+        res.setHeader("Content-Type", "font/woff2");
+        res.end(readFileSync(join(dir, name)));
+      });
+    },
+    generateBundle() {
+      for (const f of files()) this.emitFile({ type: "asset", fileName: `excalidraw/fonts/${f}`, source: readFileSync(join(dir, f)) });
+    },
+  };
+}
 
 const engine = `http://127.0.0.1:${process.env.MCBOT_PORT ?? 4317}`;
 /**
@@ -10,7 +36,7 @@ const engine = `http://127.0.0.1:${process.env.MCBOT_PORT ?? 4317}`;
 export default defineConfig(({ mode }) => {
   const demo = mode === "demo" || process.env.VITE_MCBOT_DEMO === "1";
   return {
-  plugins: [react()],
+  plugins: [react(), excalidrawFonts()],
   clearScreen: false,
   server: {
     port: 5173,

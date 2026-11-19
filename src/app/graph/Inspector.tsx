@@ -350,7 +350,7 @@ function RunBox({ agentNodeId, profile }: { agentNodeId: string; profile: string
       </div>
       {latest && (
         <div className="stack" data-testid="run-result">
-          <div className="row" style={{ flexWrap: "wrap", gap: "4px 10px", fontSize: 12 }}>
+          <div className="row" style={{ flexWrap: "wrap", gap: "4px 10px", fontSize: 13 }}>
             <span className={`chip ${latest.status === "succeeded" ? "ok" : latest.status === "running" ? "run" : "fail"}`}>{latest.status}</span>
             {latest.tokens && <span className="faint num">{fmtTokens(latest.tokens.input)} in · {fmtTokens(latest.tokens.output)} out</span>}
             {latest.finishedAt && <span className="faint num">{duration(latest.finishedAt - latest.startedAt)}</span>}

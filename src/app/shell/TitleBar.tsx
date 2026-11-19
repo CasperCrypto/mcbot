@@ -11,6 +11,7 @@ import { Island } from "./Island";
 import { unreadCount } from "./TeamPanel";
 import { useDismiss } from "../lib/presence";
 import { useDoctor } from "./DoctorSheet";
+import type { Finding } from "../graph/doctor";
 import { WindowControls } from "./WindowControls";
 
 /** The McBot logo: the gray glass burger. */
@@ -59,8 +60,7 @@ function BoardMenu() {
 }
 
 /** The harness doctor: a stethoscope that counts what is wrong (red: it won't run, yellow: worth fixing). */
-function DoctorButton() {
-  const findings = useDoctor();
+function DoctorButton({ findings }: { findings: Finding[] }) {
   const errors = findings.filter((f) => f.level === "error").length;
   const warns = findings.filter((f) => f.level === "warn").length;
   const n = errors || warns;
@@ -86,6 +86,8 @@ export function TitleBar() {
   const teamOpen = useApp((s) => s.teamOpen);
   const unread = teamOpen ? 0 : unreadCount(boardId, graph.messages, identity.name);
   const tab = useApp((s) => s.tab);
+  // One check of the harness, shown twice: the doctor's count and the island's Problems.
+  const findings = useDoctor();
   // Compile belongs to the board; elsewhere it shows up only when the agents' files are out of date or broken.
   const showCompile = tab === "graph" || errors > 0 || (drift ?? 0) > 0;
 
@@ -95,7 +97,7 @@ export function TitleBar() {
       <BoardMenu />
       {DEMO && <span className="chip warn" data-tip="Browser demo: compile is real, runs are simulated" data-tip-side="bottom" data-testid="demo-chip">Demo</span>}
       <div className="spacer" data-tauri-drag-region />
-      <Island />
+      <Island findings={findings} />
       <button className="presence" data-testid="presence" data-dismiss-ignore onClick={() => useApp.getState().setTeamOpen(!useApp.getState().teamOpen)}
         data-tip={`${people.length === 1 ? "Only you here" : `${people.length} here`} · team chat`} data-tip-side="bottom">
         {people.slice(0, 5).map((p) => (
@@ -112,7 +114,7 @@ export function TitleBar() {
       <button className="search-pill" onClick={() => setPalette(true)} data-testid="open-palette">
         <Search size={14} /> <span className="search-label">Search</span> <Kbd>⌘K</Kbd>
       </button>
-      <DoctorButton />
+      <DoctorButton findings={findings} />
       {showCompile && <button
         className="btn primary" onClick={() => void compileBoard(boardId)} disabled={busy || graph.nodes.length === 0} data-testid="compile"
         data-tip={errors ? `${errors} problem${errors > 1 ? "s" : ""} on the board` : drift ? `${drift} file${drift > 1 ? "s" : ""} out of date · ⌘S` : "Up to date · ⌘S"} data-tip-side="bottom"

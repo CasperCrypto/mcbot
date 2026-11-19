@@ -231,7 +231,7 @@
 /* ---------- Home: a large title, as in iOS ---------- */
 .home-hello { display: grid; gap: 2px; padding: 4px 4px 2px; animation: view-in var(--t-spring-long) var(--spring-smooth) both; }
 .home-hello h1 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.1; }
-.home-hello span { color: var(--text-3); font-size: 13.5px; font-weight: 500; }
+.home-hello span { color: var(--text-3); font-size: 14.5px; font-weight: 500; }
 
 /* A bare input (the inspector's budget) looks like every other field. */
 input.input { height: 30px; width: 120px; padding: 0 10px; border: 0; border-radius: var(--r-sm); background: rgba(0, 0, 0, 0.26); box-shadow: inset 0 0 0 0.5px var(--line-2); color: var(--text); outline: none; user-select: text; transition: box-shadow var(--t) var(--ease); }
@@ -268,20 +268,20 @@ input.input::placeholder { color: var(--text-4); }
   background: var(--mat-regular); backdrop-filter: var(--mat-blur-strong); -webkit-backdrop-filter: var(--mat-blur-strong);
   box-shadow: var(--shadow-2), var(--mat-edge); animation: sheet-in var(--t-spring) var(--spring-bouncy) both;
 }
-.queue-item { display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 6px 0 8px; border-radius: 12px; font-size: 13px; color: var(--text-2); animation: row-in var(--t) var(--ease) both; }
+.queue-item { display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 6px 0 8px; border-radius: 12px; font-size: 14px; color: var(--text-2); animation: row-in var(--t) var(--ease) both; }
 .queue-item:hover { background: var(--mat-hover); }
-.queue-n { width: 18px; height: 18px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 10.5px; font-weight: 650; background: rgba(255, 255, 255, 0.1); color: var(--text-2); }
-.queue-paused { display: flex; align-items: center; gap: 8px; padding: 4px 6px 2px 8px; font-size: 12px; color: var(--warn); }
+.queue-n { width: 18px; height: 18px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 650; background: rgba(255, 255, 255, 0.1); color: var(--text-2); }
+.queue-paused { display: flex; align-items: center; gap: 8px; padding: 4px 6px 2px 8px; font-size: 13px; color: var(--warn); }
 .composer .send + .send { margin-left: -2px; }
 
 /* ---------- share: invite by email ---------- */
 .share-email { display: grid; gap: 8px; }
 .share-email-row { display: flex; align-items: center; gap: 8px; padding: 5px 5px 5px 12px; border-radius: var(--r-md); background: rgba(0, 0, 0, 0.26); box-shadow: inset 0 0 0 0.5px var(--line-2); }
 .share-email-row:focus-within { box-shadow: inset 0 0 0 0.5px var(--line-3), 0 0 0 3.5px rgba(255, 255, 255, 0.055); }
-.share-email-row input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 13px; user-select: text; }
+.share-email-row input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 14px; user-select: text; }
 .hermes-view .react-flow__node { cursor: pointer; }
 .hermes-view .react-flow__node:hover .hx, .hermes-view .react-flow__node:hover > div { box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.24), var(--shadow-2); }
-.hermes-hint { position: absolute; left: 50%; bottom: 18px; translate: -50% 0; z-index: 5; padding: 6px 12px; border-radius: var(--r-pill); font-size: 12px; color: var(--text-2); background: var(--mat-thin); backdrop-filter: var(--mat-blur); -webkit-backdrop-filter: var(--mat-blur); box-shadow: var(--shadow-2), var(--mat-edge); pointer-events: none; }
+.hermes-hint { position: absolute; left: 50%; bottom: 18px; translate: -50% 0; z-index: 5; padding: 6px 12px; border-radius: var(--r-pill); font-size: 13px; color: var(--text-2); background: var(--mat-thin); backdrop-filter: var(--mat-blur); -webkit-backdrop-filter: var(--mat-blur); box-shadow: var(--shadow-2), var(--mat-edge); pointer-events: none; }
 
 /* ---------- rich answers: Markdown, tables, code, charts, reply buttons (chat/RichText.tsx) ---------- */
 .rich { display: grid; gap: 10px; white-space: normal; min-width: 0; }
@@ -289,7 +289,7 @@ input.input::placeholder { color: var(--text-4); }
 .rich h3, .rich h4, .rich h5 { margin: 6px 0 0; letter-spacing: -0.015em; }
 .rich h3 { font-size: 18px; font-weight: 700; }
 .rich h4 { font-size: 16px; font-weight: 650; }
-.rich h5 { font-size: 14px; font-weight: 650; }
+.rich h5 { font-size: 15px; font-weight: 650; }
 .rich ul, .rich ol { margin: 0; padding-left: 22px; display: grid; gap: 4px; }
 .rich blockquote { margin: 0; padding: 2px 0 2px 14px; border-left: 2px solid var(--line-3); color: var(--text-2); white-space: pre-wrap; }
 .rich hr { width: 100%; border: 0; border-top: var(--hairline) solid var(--line-2); margin: 4px 0; }
@@ -297,30 +297,30 @@ input.input::placeholder { color: var(--text-4); }
 .rich a:hover { text-decoration: underline; }
 .rich-code-inline { padding: 1px 5px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); font-size: 0.88em; }
 .rich-code { border-radius: var(--r-md); background: rgba(0, 0, 0, 0.32); box-shadow: inset 0 0 0 0.5px var(--line-2); overflow: hidden; }
-.rich-code-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 4px 12px; font-size: 11px; color: var(--text-3); border-bottom: var(--hairline) solid var(--line); }
-.rich-code pre { margin: 0; padding: 12px 14px; overflow: auto; font: 12.5px/1.55 var(--mono); color: var(--text); user-select: text; }
+.rich-code-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 4px 12px; font-size: 12px; color: var(--text-3); border-bottom: var(--hairline) solid var(--line); }
+.rich-code pre { margin: 0; padding: 12px 14px; overflow: auto; font: 13.5px/1.55 var(--mono); color: var(--text); user-select: text; }
 .rich-table { overflow: auto; border-radius: var(--r-md); box-shadow: inset 0 0 0 0.5px var(--line-2); }
-.rich-table table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.rich-table table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
 .rich-table th, .rich-table td { padding: 8px 12px; text-align: left; border-bottom: var(--hairline) solid var(--line); vertical-align: top; }
 .rich-table th { font-weight: 600; color: var(--text-2); background: rgba(255, 255, 255, 0.04); }
 .rich-table tr:last-child td { border-bottom: 0; }
 .rich-chart { margin: 0; padding: 14px 16px 12px; border-radius: var(--r-lg); background: rgba(255, 255, 255, 0.035); box-shadow: inset 0 0 0 0.5px var(--line-2); display: grid; gap: 8px; }
-.rich-chart figcaption { font-size: 13px; font-weight: 650; }
+.rich-chart figcaption { font-size: 14px; font-weight: 650; }
 .rich-chart-body { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .rich-chart svg { flex: 1; min-width: 0; max-height: 260px; overflow: visible; }
 .rich-chart-grid { stroke: var(--line); stroke-width: 1; }
-.rich-chart-tick { fill: var(--text-3); font-size: 10.5px; font-family: var(--font); }
+.rich-chart-tick { fill: var(--text-3); font-size: 11px; font-family: var(--font); }
 .rich-chart-mark { transition: opacity var(--t-fast); animation: chart-in var(--t-spring) var(--spring-smooth) both; transform-box: fill-box; transform-origin: 50% 100%; }
 .rich-chart svg:hover .rich-chart-mark { opacity: 0.55; }
 .rich-chart svg .rich-chart-mark:hover { opacity: 1; }
 @keyframes chart-in { from { opacity: 0; transform: scaleY(0.4); } to { opacity: 1; transform: none; } }
-.rich-chart-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 12px; color: var(--text-2); flex: none; max-width: 40%; }
+.rich-chart-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; color: var(--text-2); flex: none; max-width: 40%; }
 .rich-chart-legend li { display: flex; align-items: center; gap: 7px; }
 .rich-chart-legend i { width: 9px; height: 9px; border-radius: 3px; flex: none; }
 .rich-chart-legend b { margin-left: auto; padding-left: 10px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
 .rich-choices { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; }
 .rich-choice {
-  height: 32px; padding: 0 14px; border: 0; border-radius: var(--r-pill); font-size: 13px; font-weight: 550; color: var(--text);
+  height: 32px; padding: 0 14px; border: 0; border-radius: var(--r-pill); font-size: 14px; font-weight: 550; color: var(--text);
   background: var(--mat-thin); box-shadow: var(--mat-edge); transition: background var(--t-fast), transform var(--t-spring) var(--spring-bouncy);
   animation: row-in var(--t-slow) var(--ease) both;
 }
@@ -373,7 +373,7 @@ input.input::placeholder { color: var(--text-4); }
 
 /* Right-click menu on the board (graph/ContextMenu.tsx): a macOS menu at the pointer. */
 .context-menu { min-width: 210px; transform-origin: 0 0; }
-.menu .menu-keys { color: var(--text-4); font-size: 11.5px; letter-spacing: 0.04em; }
+.menu .menu-keys { color: var(--text-4); font-size: 12.5px; letter-spacing: 0.04em; }
 .menu button:hover .menu-keys { color: rgba(255, 255, 255, 0.75); }
 .menu button.danger { color: var(--fail); }
 .menu button.danger:hover { background: var(--fail); color: #fff; }
@@ -381,19 +381,19 @@ input.input::placeholder { color: var(--text-4); }
 
 /* Wire labels: a selected block's wires say what they mean (thinks with, uses, talks on…). */
 .react-flow__edge-textbg { fill: var(--bg-raised); stroke: var(--line-2); stroke-width: 0.5px; }
-.react-flow__edge-text { fill: var(--text-2); font-size: 10.5px; font-weight: 500; letter-spacing: 0.01em; }
+.react-flow__edge-text { fill: var(--text-2); font-size: 11px; font-weight: 500; letter-spacing: 0.01em; }
 .react-flow__edge-textwrapper { animation: fade-in var(--t) var(--ease) both; }
 @media (prefers-reduced-motion: reduce) { .react-flow__edge-textwrapper { animation: none; } }
 
 /* Harness doctor (shell/DoctorSheet.tsx). */
 .doctor-btn { position: relative; width: 30px; height: 30px; }
-.doctor-count { position: absolute; top: 1px; right: 0; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px; font-size: 9.5px; font-weight: 700; display: grid; place-items: center; color: #fff; box-shadow: 0 0 0 2px var(--bg-chrome); animation: tick-in var(--t-spring) var(--spring-bouncy) both; }
+.doctor-count { position: absolute; top: 1px; right: 0; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px; font-size: 10px; font-weight: 700; display: grid; place-items: center; color: #fff; box-shadow: 0 0 0 2px var(--bg-chrome); animation: tick-in var(--t-spring) var(--spring-bouncy) both; }
 .doctor-count.fail { background: var(--fail); }
 .doctor-count.warn { background: var(--warn); color: #000; }
 .doctor-list { display: grid; gap: 2px; padding: 6px; overflow: auto; max-height: min(60vh, 520px); }
 .doctor-row { display: flex; align-items: center; gap: 12px; padding: 10px 10px; border-radius: var(--r-md); animation: row-in var(--t-slow) var(--ease) both; }
 .doctor-row:hover { background: var(--mat-hover); }
-.doctor-row small { font-size: 12px; }
+.doctor-row small { font-size: 13px; }
 .doctor-icon { display: grid; place-items: center; flex: none; }
 .doctor-row.error .doctor-icon { color: var(--fail); }
 .doctor-row.warn .doctor-icon { color: var(--warn); }
@@ -402,7 +402,7 @@ input.input::placeholder { color: var(--text-4); }
 .doctor-ok svg { color: var(--ok); }
 
 /* The floating island window (shell `island`): flush with the top of the screen, black like the notch. */
-.pill-island { display: inline-flex; flex-direction: column; gap: 6px; min-width: 200px; max-width: 420px; padding: 4px 10px 8px; background: #000; color: #fff; font-size: 12px; user-select: none; animation: island-content 360ms var(--spring-smooth) both; }
+.pill-island { display: inline-flex; flex-direction: column; gap: 6px; min-width: 200px; max-width: 420px; padding: 4px 10px 8px; background: #000; color: #fff; font-size: 13px; user-select: none; animation: island-content 360ms var(--spring-smooth) both; }
 .pill-row { display: flex; align-items: center; gap: 8px; height: 24px; cursor: pointer; }
 .pill-row b { font-weight: 600; flex: 1; min-width: 0; }
 .pill-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent, #0a84ff); margin: 0 7px; }
@@ -417,15 +417,34 @@ input.input::placeholder { color: var(--text-4); }
 .layers-stack { display: grid; gap: 8px; width: min(760px, 100%); }
 .layer { display: grid; grid-template-columns: 132px 1fr; gap: 12px; align-items: start; padding: 12px 14px; border-radius: var(--r-lg); background: var(--bg-raised); border: 1px solid var(--line); }
 .layer-head { display: flex; align-items: center; gap: 8px; padding-top: 6px; color: var(--text-2); }
-.layer-head b { color: var(--text); font-size: 13px; }
+.layer-head b { color: var(--text); font-size: 14px; }
 .layer-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
 .layer-item { display: grid; gap: 2px; text-align: left; padding: 7px 10px; border-radius: var(--r-md, 8px); border: 1px solid var(--line); background: transparent; color: inherit; font: inherit; cursor: pointer; transition: background var(--t-fast); }
 .layer-item:hover { background: var(--hover, rgba(255,255,255,.06)); }
 .layer-item[data-state="missing"] { border-color: var(--fail); }
 .layer-item[data-state="default"] .layer-label { color: var(--text-2); }
-.layer-label { font-size: 12.5px; font-weight: 600; }
-.layer-detail { font-size: 12px; color: var(--text-3); }
+.layer-label { font-size: 13.5px; font-weight: 600; }
+.layer-detail { font-size: 13px; color: var(--text-3); }
 @media (max-width: 720px) { .layer { grid-template-columns: 1fr; } }
 
 /* The engine's log on the "engine didn't start" screen (App.tsx Offline). */
-.engine-log { width: min(640px, 90vw); max-height: 220px; overflow: auto; margin: 4px 0 8px; padding: 10px 12px; text-align: left; white-space: pre-wrap; word-break: break-word; font: 11.5px/1.5 var(--mono, ui-monospace, monospace); color: var(--text-2); background: var(--bg-raised); border: 1px solid var(--line); border-radius: var(--r-md); }
+.engine-log { width: min(640px, 90vw); max-height: 220px; overflow: auto; margin: 4px 0 8px; padding: 10px 12px; text-align: left; white-space: pre-wrap; word-break: break-word; font: 12.5px/1.5 var(--mono, ui-monospace, monospace); color: var(--text-2); background: var(--bg-raised); border: 1px solid var(--line); border-radius: var(--r-md); }
+
+/* Island: problems and notices in the open panel (Island.tsx). Text wraps, never cut. */
+.island-notice { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; }
+.island-notice svg { flex: none; margin-top: 2px; }
+.island-notice-text { white-space: normal; overflow-wrap: anywhere; line-height: 1.4; font-size: 14px; }
+.island-notice .pill { flex: none; }
+
+/* Drawings (chat/DrawingSheet.tsx): Excalidraw inside an answer, in Files, and full size to edit. */
+.rich-drawing { position: relative; margin: 10px 0; border-radius: var(--r-lg); border: var(--hairline) solid var(--line-2); background: var(--bg-raised); overflow: hidden; }
+.rich-drawing-canvas { height: 300px; }
+.rich-drawing-open { position: absolute; top: 8px; right: 8px; z-index: 5; }
+.drawing-wait { width: 100%; height: 100%; min-height: 200px; border-radius: 0; }
+.drawing-sheet { position: fixed; inset: 48px 32px 32px; z-index: 81; display: flex; flex-direction: column; border-radius: var(--r-xl); background: var(--mat-panel, var(--bg-raised)); box-shadow: var(--shadow-3), var(--mat-edge); overflow: hidden; animation: pop-in var(--t) var(--spring-bouncy) both; }
+.drawing-sheet[data-closing] { opacity: 0; transition: opacity var(--t-fast); }
+.drawing-sheet header { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-bottom: var(--hairline) solid var(--line); }
+.drawing-sheet-canvas { flex: 1; min-height: 0; position: relative; background: var(--bg-raised); }
+.rich-drawing .excalidraw, .drawing-sheet .excalidraw { --color-primary: var(--accent); --ui-font: var(--font); }
+.rich-drawing .excalidraw .layer-ui__wrapper, .rich-drawing .excalidraw .App-menu, .rich-drawing .excalidraw .App-bottom-bar { display: none; }
+.drawing-sheet { background: var(--bg-raised); }

@@ -426,7 +426,7 @@ export function HomeView() {
                       <span className="title ellipsis">{r.title}</span>
                       <span className="sub ellipsis">{r.sub}</span>
                     </span>
-                    <span className="faint" style={{ fontSize: 11 }}>{ago(r.at)}</span>
+                    <span className="faint" style={{ fontSize: 12 }}>{ago(r.at)}</span>
                   </button>
                 ))}
               </section>
