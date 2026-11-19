@@ -183,3 +183,22 @@ describe("chat apps", () => {
     expect(board({ allowedUsers: ["@me"] }).issues.some((i) => i.level === "error" && i.nodeId === "n-tg")).toBe(true);
   });
 });
+
+describe("config.yaml: the loop layer", () => {
+  it("caps steps per message with agent.max_turns only when the board sets it", async () => {
+    const { resolveGraph } = await import("./validate");
+    const g = {
+      schema: "mcbot.graph/v1", id: "b", name: "B",
+      nodes: [
+        { id: "m", kind: "model", position: { x: 0, y: 0 }, data: { name: "local", endpoint: "local", baseUrl: "http://127.0.0.1:11434/v1", model: "qwen3:8b" } },
+        { id: "a", kind: "agent", position: { x: 0, y: 0 }, data: { name: "a", maxSteps: 25 } },
+        { id: "c", kind: "agent", position: { x: 0, y: 0 }, data: { name: "c" } },
+      ],
+      edges: [{ id: "e1", source: "m", target: "a" }, { id: "e2", source: "m", target: "c" }],
+    };
+    const { graph, bundles } = resolveGraph(g);
+    const capped = renderConfig(graph!, bundles.find((b) => b.agent.data.name === "a")!);
+    expect(capped).toContain("\nagent:\n  max_turns: 25\n");
+    expect(renderConfig(graph!, bundles.find((b) => b.agent.data.name === "c")!)).not.toContain("max_turns");
+  });
+});

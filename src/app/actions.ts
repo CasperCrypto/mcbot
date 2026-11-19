@@ -188,3 +188,17 @@ export async function learnSkills(profile: string, who: string, ids: readonly st
   if (failed.length) app.toast({ kind: "fail", text: `${who} couldn't add ${failed.join(", ")}`, action: { label: "Skills", run: () => useApp.getState().setTab("skills") } });
   return { done, failed };
 }
+
+/** Several agents' Hermes skills, one after another in the background, with one notice for all. */
+export async function learnTeamSkills(label: string, skills: readonly { profile: string; who: string; ids: readonly string[] }[]): Promise<void> {
+  let done = 0;
+  const failed: string[] = [];
+  for (const s of skills) {
+    const r = await learnSkills(s.profile, s.who, s.ids, true);
+    done += r.done.length;
+    failed.push(...r.failed.map((f) => `${s.who}: ${f}`));
+  }
+  const skillsTab = { label: "Skills", run: () => useApp.getState().setTab("skills") };
+  if (done) useApp.getState().toast({ kind: "ok", text: `${label} learned ${done} Hermes skill${done === 1 ? "" : "s"}`, action: skillsTab });
+  if (failed.length) useApp.getState().toast({ kind: "fail", text: `Couldn't add ${failed.join(", ")}`, action: skillsTab });
+}
