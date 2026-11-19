@@ -198,7 +198,8 @@ Change them additively; a breaking change bumps the version.
 - In release builds the shell starts the engine with `MCBOT_HERMES_BUNDLE` and
   `MCBOT_DATA_DIR` and kills it on quit; `tauri dev` runs `npm run dev` instead.
   The engine copies the read-only Hermes to `<data>/hermes-<stamp>`
-  (`engine/bundle.ts`) and keeps tools in `<data>/hermes-runtime`; its log is
+  (`engine/bundle.ts`; when an unfinished copy there is locked, as Windows does while a process holds
+  a file in it, it uses `hermes-<stamp>-2` … instead of failing the start) and keeps tools in `<data>/hermes-runtime`; its log is
   `<data>/engine.log`. First launch: the setup assistant prepares Hermes in the
   background (`POST /api/hermes/prepare`), minutes, with progress.
 - **Launcher:** ⌘⇧Space / Ctrl+Shift+Space from anywhere (`SUMMON`, tauri-plugin-global-shortcut)
