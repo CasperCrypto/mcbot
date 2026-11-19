@@ -15,7 +15,7 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Bot, StickyNote as NoteIcon, Clapperboard, Cloud, Command, FileCode2, FolderOpen, HardDrive, Image, Plug, Plus, Send, Server } from "lucide-react";
+import { Bot, Sparkles, StickyNote as NoteIcon, Clapperboard, Cloud, Command, FileCode2, FolderOpen, HardDrive, Image, Plug, Plus, Send, Server } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode, addNote, moveNode, removeEdges, removeNodes, setFrameField, setNoteField } from "../../board/ydoc";
 import { resolveGraph } from "../../compile";
@@ -28,6 +28,7 @@ import { AgentFace } from "../ui";
 import { CompileSheet } from "./CompileSheet";
 import { Cursors } from "./Cursors";
 import { HermesView } from "./HermesView";
+import { LayersView } from "./LayersView";
 import { duplicateNode, newChannel, newId, newMaker, newModel, newTool } from "./defaults";
 import { ContextMenu, type MenuAt } from "./ContextMenu";
 import { Inspector } from "./Inspector";
@@ -113,7 +114,8 @@ function Welcome({ onStart }: { onStart: () => void }) {
         <h2>Build your harness</h2>
         <p>Agents, the models they think with, the tools they use.</p>
         <div className="row" style={{ marginTop: 6 }}>
-          <button className="btn light lg" onClick={() => useApp.getState().setTeamsOpen(true)} data-testid="welcome-team">Start with a team</button>
+          <button className="btn light lg" onClick={() => useApp.getState().setBuilder(true)} data-testid="welcome-builder"><Sparkles size={15} /> Describe it to McBot</button>
+          <button className="btn lg" onClick={() => useApp.getState().setTeamsOpen(true)} data-testid="welcome-team">Start with a team</button>
           <button className="btn lg" onClick={onStart} data-testid="welcome-add-agent"><Plus size={15} /> Add an agent</button>
         </div>
       </div>
@@ -385,6 +387,14 @@ function Canvas() {
 
   // Fit the whole board into the room left beside the live files panel (⌘0, and when it opens or closes).
   const fit = useCallback(() => void flow.fitView({ padding: liveOpen ? { left: "470px", top: "70px", right: "50px", bottom: "110px" } : 0.25, maxZoom: 1, duration: 400 }), [flow, liveOpen]);
+  // A team or a plan just joined the board: show all of it once its blocks have rendered.
+  const fitRequest = useApp((s) => s.fitRequest);
+  useEffect(() => {
+    if (!fitRequest) return;
+    // The inspector opens on the new lead: leave it room on the right.
+    const t = setTimeout(() => void flow.fitView({ padding: { left: "60px", top: "80px", right: useApp.getState().selectedNodeId ? "440px" : "60px", bottom: "120px" }, maxZoom: 1, duration: 400 }), 250);
+    return () => clearTimeout(t);
+  }, [fitRequest]); // eslint-disable-line react-hooks/exhaustive-deps
   const firstFit = useRef(true);
   useEffect(() => {
     if (firstFit.current) { firstFit.current = false; if (!liveOpen) return; }
@@ -465,6 +475,7 @@ function Canvas() {
       {graph.nodes.length > 0 && (
         <div className={`dock-wrap${selected ? " shifted" : ""}${liveOpen ? " with-live" : ""}`}>
           <div className="dock glass" role="toolbar" aria-label="Add to the harness">
+            <DockItem tile="agent" icon={<Sparkles size={19} />} label="Ask McBot to build" testId="add-builder" onClick={() => useApp.getState().setBuilder(true)} />
             <DockItem tile="agent" icon={<Bot size={20} />} label="New agent" testId="add-agent" onClick={() => useApp.getState().setNewAgentOpen(true)} />
             <div className="dock-sep" />
             <DockItem tile="model" icon={<HardDrive size={19} />} label="Local model" testId="add-model-local" onClick={() => add("model", (p) => newModel(graph, "local", p))} />
@@ -506,7 +517,7 @@ function Canvas() {
 export function GraphView() {
   // Board: the parts you edit. Hermes: the whole harness behind them; a click on a part opens the
   // block that makes it, on the Board.
-  const [mode, setMode] = useState<"board" | "hermes">("board");
+  const [mode, setMode] = useState<"board" | "layers" | "hermes">("board");
   return (
     <ReactFlowProvider>
       <HarnessSidebar />
@@ -514,9 +525,12 @@ export function GraphView() {
         <div className="view page-enter">
           <div className="seg-float" role="tablist" aria-label="View">
             <button role="tab" aria-selected={mode === "board"} onClick={() => setMode("board")} data-testid="mode-board">Board</button>
+            <button role="tab" aria-selected={mode === "layers"} onClick={() => setMode("layers")} data-testid="mode-layers" data-tip="Each agent's harness, layer by layer" data-tip-side="bottom">Layers</button>
             <button role="tab" aria-selected={mode === "hermes"} onClick={() => setMode("hermes")} data-testid="mode-hermes" data-tip="Everything Hermes runs, live. Click a part to change it" data-tip-side="bottom">Hermes</button>
           </div>
-          {mode === "board" ? <Canvas /> : <HermesView onEdit={(nodeId) => { setMode("board"); useApp.getState().select(nodeId); }} />}
+          {mode === "board" ? <Canvas />
+            : mode === "layers" ? <LayersView onEdit={(nodeId) => { setMode("board"); useApp.getState().select(nodeId); }} />
+            : <HermesView onEdit={(nodeId) => { setMode("board"); useApp.getState().select(nodeId); }} />}
         </div>
       </section>
     </ReactFlowProvider>

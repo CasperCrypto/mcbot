@@ -14,6 +14,7 @@ import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
 import { LIBRARY } from "../../contracts/library.generated";
+import type { HarnessPlan, PlanChoices } from "../../harness/plan";
 import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
@@ -862,6 +863,10 @@ export const demoEngine = {
     demoSignIns.set(`${profile}/${name}`, { state: "waiting", error: null, at: Date.now() });
     setTimeout(() => demoSignIns.set(`${profile}/${name}`, { state: "done", error: null, at: Date.now() }), 2500);
     return { started: true };
+  }),
+  // The demo has no model to ask: the app makes the plan itself (graph/builder.ts quickPlan).
+  builderPlan: api((_boardId: string, _request: string, _choices: PlanChoices): { plan: HarnessPlan; by: string } => {
+    throw new EngineError(409, "The demo plans in the browser", {});
   }),
   update: api((): UpdateView => ({ current: "demo", latest: null, url: null, available: false })),
   signInState: api((profile: string, name: string): SignInView => demoSignIns.get(`${profile}/${name}`) ?? { state: "none", error: null, at: null }),

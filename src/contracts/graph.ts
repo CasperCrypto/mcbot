@@ -113,6 +113,12 @@ export const AgentDataSchema = z.object({
    * Unset/true = on; false = only Hermes' essential skill (compile writes `.no-bundled-skills`).
    */
   builtinSkills: z.boolean().nullish(),
+  /**
+   * The loop layer: how many tool-calling steps one message may take before Hermes stops
+   * (`agent.max_turns`, re-read every turn: hermes/gateway/run.py `_current_max_iterations`).
+   * null/unset = Hermes' default (no limit).
+   */
+  maxSteps: z.number().int().min(1).max(10_000).nullish(),
   /** How its browser runs (Hermes' `browser:` settings); null = Hermes' defaults. */
   browser: z.object({
     /** A visible window you can watch (`browser.headed`). */

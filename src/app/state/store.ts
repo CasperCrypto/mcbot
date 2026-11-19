@@ -50,6 +50,10 @@ interface State {
   chatAppsOpen: boolean;
   /** Starter teams. */
   teamsOpen: boolean;
+  /** Ask McBot (shell/BuilderSheet.tsx), with the words it opened with. */
+  builder: { open: boolean; request: string };
+  /** Bumped to ask the board to fit everything in view (after a team or a plan joins it). */
+  fitRequest: number;
   /** Share on your network / join. */
   shareOpen: boolean;
   teamOpen: boolean;
@@ -82,6 +86,8 @@ interface State {
   setLiveFilesOpen(open: boolean): void;
   setChatAppsOpen(open: boolean): void;
   setTeamsOpen(open: boolean): void;
+  setBuilder(open: boolean, request?: string): void;
+  requestFit(): void;
   setShareOpen(open: boolean): void;
   setTeamOpen(open: boolean): void;
   setFolderPickerOpen(open: boolean): void;
@@ -158,6 +164,8 @@ export const useApp = create<State>((set, get) => ({
   liveFilesOpen: (() => { try { return localStorage.getItem("mcbot.liveFiles") === "1"; } catch { return false; } })(),
   chatAppsOpen: false,
   teamsOpen: false,
+  builder: { open: false, request: "" },
+  fitRequest: 0,
   shareOpen: false,
   teamOpen: false,
   setShareOpen: (shareOpen) => set({ shareOpen, paletteOpen: false }),
@@ -189,6 +197,8 @@ export const useApp = create<State>((set, get) => ({
   setFolderPickerOpen: (folderPickerOpen) => set({ folderPickerOpen, paletteOpen: false }),
   folderOpened: (id) => set({ openedFolder: { id, at: Date.now() }, folderPickerOpen: false }),
   setTeamsOpen: (teamsOpen) => set({ teamsOpen, paletteOpen: false, newAgentOpen: false }),
+  requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),
+  setBuilder: (open, request = "") => set((s) => ({ builder: { open, request: open ? request : s.builder.request }, paletteOpen: false, newAgentOpen: false, teamsOpen: false })),
   freshNote: null,
   setFreshNote: (freshNote) => set({ freshNote }),
   setCatalogOpen: (catalogOpen) => set({ catalogOpen, paletteOpen: false }),

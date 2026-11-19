@@ -3,7 +3,7 @@ import { Users, X } from "lucide-react";
 import { useEffect } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
 import type { ModelNode } from "../../contracts/graph";
-import { compileBoard, learnSkills } from "../actions";
+import { compileBoard, learnTeamSkills } from "../actions";
 import { REMOTE } from "../lib/engine";
 import { newModel } from "../graph/defaults";
 import { TEAMS, teamToAdd, type StarterTeam } from "../graph/teams";
@@ -39,21 +39,11 @@ export function TeamsSheet() {
     const app = useApp.getState();
     app.setTab("graph");
     app.select(lead);
+    app.requestFit();
     app.toast({ kind: "ok", text: `${team.label} joined the board` });
     // Each member's Hermes library skills go in once its files exist (one after another, in the background).
     if (await compileBoard(boardId, { quiet: true }) && !REMOTE) {
-      void (async () => {
-        let done = 0;
-        const failed: string[] = [];
-        for (const s of skills) {
-          const r = await learnSkills(s.profile, s.who, s.ids, true);
-          done += r.done.length;
-          failed.push(...r.failed.map((f) => `${s.who}: ${f}`));
-        }
-        const skillsTab = { label: "Skills", run: () => useApp.getState().setTab("skills") };
-        if (done) useApp.getState().toast({ kind: "ok", text: `${team.label} learned ${done} Hermes skill${done === 1 ? "" : "s"}`, action: skillsTab });
-        if (failed.length) useApp.getState().toast({ kind: "fail", text: `Couldn't add ${failed.join(", ")}`, action: skillsTab });
-      })();
+      void learnTeamSkills(team.label, skills);
     }
   };
 

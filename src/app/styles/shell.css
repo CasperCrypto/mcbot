@@ -245,3 +245,11 @@ button.presence:hover { background: var(--bg-hover); border-color: var(--line); 
 .chip-x:hover { opacity: 1; }
 .bundled-skills { display: grid; gap: 10px; padding: 2px 0 6px; }
 .bundled-group { display: grid; gap: 5px; }
+/* Ask McBot (shell/BuilderSheet.tsx) */
+.builder { width: min(680px, calc(100vw - 32px)); top: 10vh; }
+.builder-body { display: grid; gap: 12px; padding: 16px 18px 6px; max-height: calc(80vh - 140px); overflow-y: auto; }
+.builder-body textarea { width: 100%; resize: vertical; }
+.builder-summary { margin: 0; color: var(--text-2); }
+.builder-agents { display: grid; gap: 8px; }
+.builder-agent { display: grid; gap: 8px; padding: 10px 12px; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--bg-raised); }
+.builder-layers { display: flex; flex-wrap: wrap; gap: 5px; }

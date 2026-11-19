@@ -139,6 +139,7 @@ function AgentSetup({ node, set }: { node: Extract<GraphNode, { kind: "agent" }>
         </div>
       )}
       <Budget data={a} set={set} />
+      <Loop data={a} set={set} />
       <Abilities data={a} set={set} forced={new Set(makers.map((m): Capability => (m.other.data.media === "video" ? "video_gen" : "image_gen")))} />
     </>
   );
@@ -153,6 +154,19 @@ function Budget({ data, set }: { data: AgentData; set: (f: string, v: unknown) =
         <span className="faint">$</span>
         <input className="input mono" type="number" min={0} step={0.5} placeholder="No limit" data-testid="budget-input"
           value={data.dailyBudgetUsd ?? ""} onChange={(e) => { const n = parseFloat(e.target.value); set("dailyBudgetUsd", Number.isFinite(n) && n > 0 ? n : null); }} />
+      </label>
+    </div>
+  );
+}
+
+/** The loop layer: a cap on tool-calling steps per message (compiles to `agent.max_turns`). */
+function Loop({ data, set }: { data: AgentData; set: (f: string, v: unknown) => void }) {
+  return (
+    <div className="stack" style={{ gap: 6 }} data-testid="loop">
+      <span className="section-label">Steps per message</span>
+      <label className="row" style={{ gap: 6 }} data-tip="How many tool steps one message may take before Hermes stops. Empty = no limit." data-tip-side="top">
+        <input className="input mono" type="number" min={1} max={10000} step={5} placeholder="No limit" data-testid="loop-input"
+          value={data.maxSteps ?? ""} onChange={(e) => { const n = parseInt(e.target.value, 10); set("maxSteps", Number.isFinite(n) && n > 0 ? Math.min(n, 10000) : null); }} />
       </label>
     </div>
   );

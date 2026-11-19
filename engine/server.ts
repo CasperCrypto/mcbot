@@ -15,6 +15,8 @@ import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { compile, resolveGraph, type AgentBundle } from "../src/compile";
 import { updateChecker } from "./updates";
+import { askForPlan, plannerModel } from "./builder";
+import { PlanChoicesSchema, type HarnessPlan } from "../src/harness/plan";
 import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, AgentSchedules, SignInView, UpdateView, SetupDetect, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../src/contracts/api";
 import { writeExport } from "./boardFiles";
 import { isHermesHome, readSetup } from "./harnessDisk";
@@ -43,7 +45,7 @@ import { OwnershipError, readManifest, writeCompileResult } from "./writer";
 import { Sharing, guestAllowed, joinPage, type SharingView } from "./sharing";
 import { frameable } from "./web";
 
-export const ENGINE_VERSION = "0.5.1";
+export const ENGINE_VERSION = "0.6.0";
 
 export interface EngineConfig {
   workspace: string;
@@ -281,6 +283,19 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     "GET /api/setup/detect": async (): Promise<SetupDetect> => {
       const [bin, local, names] = await Promise.all([findHermes(), detectLocal(), secrets.names()]);
       return { hermes: { found: !!bin, path: bin?.path ?? null, kind: bin?.kind ?? null, source: !!bundledSource() }, local, secrets: names };
+    },
+    // Ask McBot: the board's own model proposes a harness (engine/builder.ts). 409 when the board
+    // has no model it can ask; the app then makes the plan itself.
+    "POST /api/builder/plan": async (req): Promise<{ plan: HarnessPlan; by: string }> => {
+      const body = parse(z.object({ boardId: z.string(), request: z.string().trim().min(3).max(2000), choices: PlanChoicesSchema }), await json(req));
+      const model = plannerModel(await relay.graph(await requireBoard(body.boardId)));
+      if (!model) throw new HttpError(409, "No model on this board to ask");
+      const key = model.data.apiKeyEnv ? (await secrets.env())[model.data.apiKeyEnv] : undefined;
+      try {
+        return { plan: await askForPlan(model, key, body.request, body.choices), by: model.data.label || model.data.name };
+      } catch (err) {
+        throw new HttpError(409, err instanceof Error ? err.message : String(err));
+      }
     },
     "POST /api/setup/models": async (req) => {
       const body = parse(z.object({ baseUrl: z.string().url(), keyName: z.string().optional() }), await json(req));

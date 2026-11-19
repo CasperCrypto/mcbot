@@ -24,6 +24,8 @@ platform_toolsets:
 browser:
   headed: true
   engine: lightpanda
+agent:
+  max_turns: 40
 image_gen:
   provider: openrouter
 platforms:

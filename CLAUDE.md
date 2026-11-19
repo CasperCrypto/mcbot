@@ -285,6 +285,21 @@ Change them additively; a breaking change bumps the version.
   places a model block and wires it to the agents picked, main or backup), API keys (names only,
   replace or remove), your name, team, engine, run setup again. Home's "Get started" and "Needs
   you" point there when an agent has no model, a key is missing or a local server isn't answering.
+- **Ask McBot** (`shell/BuilderSheet.tsx`; ⌘K "Ask McBot to build…", the dock's first button, the empty board, New
+  agent, and ⌘K's "Ask McBot to build this" for any typed request): the person describes the agents they need; a plan
+  (`src/harness/plan.ts`: agents with soul, tools, chat apps, Hermes skills and steps per message, plus hand-offs) is
+  shown for review, and "Add to board" places it in one transaction (one ⌘Z takes it back), compiles, installs the
+  skills (`learnTeamSkills`) and fits the board. The board's own model plans it when it can (`POST /api/builder/plan`,
+  host only, `engine/builder.ts`: the first agent's model, else the first model block, on its OpenAI-compatible
+  `/chat/completions`, the key read in the engine; hard rule 4), given only the app's catalog ids (`PLAN_CHOICES`);
+  otherwise (no model, a teammate's window, the demo, a failed answer) `quickPlan` makes it from the words. Every plan
+  is cut to known ids twice (`restrictPlan` in the engine and in `planToBoard`). Nothing changes until accepted.
+- **Layers** (third mode of the board, `graph/LayersView.tsx`, pure `graph/layers.ts`): one agent's harness outside in:
+  Surfaces (McBot chat, chat apps), Loop (steps per message, hand-offs, helpers, schedules), Context (SOUL.md, memory,
+  skills, Hermes' compaction), Model (main and backups), Tools (abilities, connectors, makers), Plugins, Guardrails
+  (approvals, daily budget). Each row says whether the board sets it, Hermes defaults it or it is missing, and opens
+  where it is changed. The loop's **steps per message** is the agent's `maxSteps`, compiled to `agent.max_turns`
+  (only when set; `OWNED` `agent.max_turns`; read back by `src/harness/read.ts`).
 - **Board | Hermes** (top of the board): Board is what you edit; Hermes (`src/app/graph/HermesView.tsx`)
   draws the whole harness behind it: gateway, chat apps, each agent's model chain, abilities,
   tools, makers, skills, memory, schedules, the shared task board, approvals. A click on a part

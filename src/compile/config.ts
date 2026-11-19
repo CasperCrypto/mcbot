@@ -106,6 +106,9 @@ export function renderConfig(graph: Graph, bundle: AgentBundle): string {
   if (b?.engine === "lightpanda") browser.engine = "lightpanda";
   if (b?.myLogins) browser.use_real_profile = true;
   if (Object.keys(browser).length) doc.browser = browser;
+  // The loop layer: a cap on tool-calling steps per message (hermes_cli/config_defaults.py
+  // `agent.max_turns`; unset = no cap). Only written when the board sets one.
+  if (bundle.agent.data.maxSteps) doc.agent = { max_turns: bundle.agent.data.maxSteps };
   if (bundle.image) doc.image_gen = makerEntry(bundle.image);
   if (bundle.video) doc.video_gen = makerEntry(bundle.video);
   // A chat app's token and allowed users live in the agent's .env (written by the engine, never

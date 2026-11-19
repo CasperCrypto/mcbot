@@ -68,6 +68,7 @@ function useCommands(close: () => void): Command[] {
       { id: "add-cloud", group: "Create", label: "Cloud model", hint: "Any OpenAI-compatible API", icon: <Cloud size={15} />, run: () => place(newModel(graph, "cloud", at("model"))) },
       { id: "add-files", group: "Create", label: "Files tool", icon: <Plug size={15} />, run: () => place(newTool(graph, "filesystem", at("tool"), app.health?.workspace ?? null)) },
       { id: "share", group: "Actions", label: "Invite teammates…", hint: "Copy a link, email it", icon: <Users size={15} />, run: () => app.setShareOpen(true) },
+      { id: "ask-mcbot", group: "Create", label: "Ask McBot to build…", hint: "Describe the agents you need; review, then add", icon: <Sparkles size={15} />, run: () => app.setBuilder(true) },
       { id: "add-team", group: "Create", label: "Team…", hint: "Research & write, Support desk, Dev team…", icon: <Users size={15} />, run: () => app.setTeamsOpen(true) },
       { id: "add-tool-catalog", group: "Create", label: "Tool…", hint: "Browser, web search, Notion…", icon: <Plug size={15} />, run: () => app.setCatalogOpen(true) },
       { id: "add-mcp", group: "Create", label: "MCP server", icon: <Server size={15} />, run: () => place(newTool(graph, "stdio", at("tool"), null)) },
@@ -214,6 +215,8 @@ function PaletteBody({ close, closing }: { close: () => void; closing: boolean }
       icon: <AgentFace seed={target.data.name} size={22} />,
       run: () => { close(); useApp.getState().openChat(target.id); void runAgent(boardId, target.id, q); },
     }] : [];
+    // …or have McBot design agents for it.
+    if (q.length >= 8) fallback.push({ id: "build-fallback", group: "Ask", label: "Ask McBot to build this", hint: `“${q.slice(0, 80)}”`, icon: <Sparkles size={15} />, run: () => { close(); useApp.getState().setBuilder(true, q); } });
     return [...top, ...order.flatMap((g) => rest.filter((c) => c.group === g)), ...said, ...fallback];
   }, [commands, query, asking, runs, graph, close, recent, selectedId, boardId]);
   // Block bodies on purpose: scrollIntoView returns a Promise in current Chromium,
@@ -231,7 +234,7 @@ function PaletteBody({ close, closing }: { close: () => void; closing: boolean }
 
   const choose = (c: Command | undefined) => {
     if (!c) return;
-    if (c.id !== "ask-fallback") recordUse(c.id);
+    if (c.id !== "ask-fallback" && c.id !== "build-fallback") recordUse(c.id);
     if (c.ask) {
       setAsking(c);
       setQuery("");

@@ -143,6 +143,7 @@ export function NewAgentSheet() {
         </div>
         <footer className="new-agent-foot">
           <button className="btn ghost sm" onClick={() => useApp.getState().setTeamsOpen(true)} data-testid="new-agent-team">Or start with a team</button>
+          <button className="btn ghost sm" onClick={() => useApp.getState().setBuilder(true)} data-testid="new-agent-builder">Describe it to McBot</button>
           <span className="grow" />
           <button className="btn" onClick={() => setOpen(false)}>Cancel</button>
           <button className="btn primary" disabled={!name.trim() || busy} onClick={() => void create()} data-testid="new-agent-create">Create agent</button>

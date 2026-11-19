@@ -14,6 +14,7 @@ import { ToolCatalog } from "./shell/ToolCatalog";
 import { ChatAppCatalog } from "./shell/ChatAppCatalog";
 import { TeamPanel } from "./shell/TeamPanel";
 import { TeamsSheet } from "./shell/TeamsSheet";
+import { BuilderSheet } from "./shell/BuilderSheet";
 import { ShareSheet } from "./shell/ShareSheet";
 import { FolderPicker } from "./shell/FolderPicker";
 import { Palette, VIEWS } from "./shell/Palette";
@@ -206,6 +207,7 @@ function Shell() {
       </Boundary>
       <Boundary>
         <TeamsSheet />
+        <BuilderSheet />
       </Boundary>
       <Boundary>
         <ShareSheet />

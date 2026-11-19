@@ -14,6 +14,7 @@ export const ENGINE_WS = REMOTE ? REMOTE.url.replace(/^http/, "ws") : direct ? "
 /** A member key goes with every request to a shared engine. */
 const auth = (): Record<string, string> => (REMOTE ? { authorization: `Bearer ${REMOTE.key}` } : {});
 
+import type { HarnessPlan, PlanChoices } from "../../harness/plan";
 import { demoEngine, subscribeDemoEvents } from "../demo/engine";
 import { EngineError } from "./engineError";
 
@@ -114,6 +115,7 @@ const http = {
   updateSkill: (profile: string, name: string) => call<{ installed: string[]; skills: ProfileSkill[] }>("POST", "/api/skills/update", { profile, name }),
   signIn: (profile: string, name: string) => call<{ started: boolean }>("POST", "/api/connectors/login", { profile, name }),
   update: () => call<UpdateView>("GET", "/api/update"),
+  builderPlan: (boardId: string, request: string, choices: PlanChoices) => call<{ plan: HarnessPlan; by: string }>("POST", "/api/builder/plan", { boardId, request, choices }),
   signInState: (profile: string, name: string) => call<SignInView>("GET", `/api/connectors/login?profile=${encodeURIComponent(profile)}&name=${encodeURIComponent(name)}`),
   actOnTask: (boardId: string, id: string, by: string, a: TaskAction) => call<TaskDetail>("POST", "/api/tasks/act", { boardId, id, by, ...a }),
 };

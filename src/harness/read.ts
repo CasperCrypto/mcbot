@@ -53,7 +53,7 @@ export interface ReadResult {
 }
 
 /** Keys of config.yaml the board shows (src/compile/config.ts writes exactly these). */
-const SHOWN_KEYS = new Set(["model", "providers", "fallback_providers", "mcp_servers", "platform_toolsets", "browser", "image_gen", "video_gen", "platforms"]);
+const SHOWN_KEYS = new Set(["model", "providers", "fallback_providers", "mcp_servers", "platform_toolsets", "browser", "image_gen", "video_gen", "platforms", "agent"]);
 const CAP_KEYS = new Set<string>(CAPABILITIES.map((c) => c.key));
 const TEAM_HEAD = "## Team";
 const TEAM_LINE = /^- `([a-z0-9][a-z0-9_-]{0,63})`/;
@@ -284,6 +284,13 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
       ? { show: b.headed === true, engine: (b.engine === "lightpanda" ? "lightpanda" : "chromium") as "chromium" | "lightpanda", myLogins: b.use_real_profile === true }
       : null;
 
+    // The loop layer: agent.max_turns as a positive whole number; Hermes' other agent.* keys stay in Hermes.
+    const agentCfg = isObj(cfg.agent) ? cfg.agent : {};
+    const maxSteps = typeof agentCfg.max_turns === "number" && Number.isInteger(agentCfg.max_turns) && agentCfg.max_turns > 0 ? agentCfg.max_turns : null;
+    for (const k of Object.keys(agentCfg)) {
+      if (k !== "max_turns" || maxSteps === null) unshown.push({ profile: p.name, what: `config.yaml: agent.${k}`, why: "kept in Hermes; not on the board yet" });
+    }
+
     const data: AgentData = {
       name: p.name,
       displayName: str(meta.display_name),
@@ -292,6 +299,7 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
       skills,
       capabilities,
       browser,
+      ...(maxSteps ? { maxSteps } : {}),
     };
     nodes.push({ id: agentId, kind: "agent", position: { x: AGENT_X, y }, data });
   });
