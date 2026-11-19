@@ -1,0 +1,40 @@
+# Publish a draft release that release.yml built: it checks every installer is there, puts the notes
+# from docs/releases/<tag>.md above the download instructions, and publishes it (which creates the tag
+# on the commit it was built from). The website's download buttons and the app's update notice then
+# offer it. Run it by hand: Actions → Publish release → tag, e.g. v0.5.0.
+name: Publish release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The draft's tag, e.g. v0.5.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Publish the draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Not a version tag: $TAG"; exit 1; }
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq "[.[] | select(.draft and .tag_name == \"$TAG\")][0].id")
+          [ -n "$id" ] && [ "$id" != "null" ] || { echo "No draft release for $TAG"; exit 1; }
+          assets=$(gh api "repos/$GITHUB_REPOSITORY/releases/$id/assets" --paginate --jq '.[].name')
+          echo "$assets"
+          # One installer per computer: Apple silicon and Intel Macs, Windows, and the AppImage site/install.sh fetches.
+          for want in '_aarch64\.dmg$' '_x64\.dmg$' '\.(msi|exe)$' '_amd64\.AppImage$'; do
+            grep -Eq "$want" <<<"$assets" || { echo "Missing an installer matching $want"; exit 1; }
+          done
+          body=$(gh api "repos/$GITHUB_REPOSITORY/releases/$id" --jq .body)
+          notes="docs/releases/$TAG.md"
+          if [ -f "$notes" ]; then body="$(cat "$notes")"$'\n\n'"$body"; fi
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$id" -F draft=false -f make_latest=true -f body="$body" --jq .html_url
