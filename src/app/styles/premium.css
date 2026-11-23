@@ -22,7 +22,7 @@
 }
 /* Retina: half-pixel hairlines, as macOS draws them. */
 @media (min-resolution: 2dppx) {
-  :root { --hairline: 0.5px; --line: rgb(var(--tint-rgb) / 0.085); --line-2: rgb(var(--tint-rgb) / 0.13); --line-3: rgb(var(--tint-rgb) / 0.19); }
+  :root { --hairline: 0.5px; --line: rgb(var(--tint-rgb) / 0.1); --line-2: rgb(var(--tint-rgb) / 0.14); --line-3: rgb(var(--tint-rgb) / 0.2); }
 }
 
 body { font-feature-settings: normal; letter-spacing: -0.006em; text-rendering: optimizeLegibility; }

@@ -1,4 +1,4 @@
-import { ArrowUp, Check, CircleDashed, Clock, Cpu, Hammer, KeyRound, ListChecks, Pause, Play, Plus, RotateCcw, Sparkles, Square, Trash2, X } from "lucide-react";
+import { ArrowUp, Check, CircleDashed, Clock, Cpu, Hammer, KeyRound, ListChecks, Pause, Play, Plus, RotateCcw, Square, Trash2, X, StickyNote as StickyNoteIcon } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AgentSchedules, CostReport, TaskView } from "../../contracts/api";
 import type { AgentNode } from "../../contracts/graph";
@@ -22,7 +22,6 @@ import { REMOTE } from "../lib/engine";
 
 const DAY = 86_400_000;
 
-const greeting = (h = new Date().getHours()) => (h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
 
 /** What a running agent is doing right now, from its live events. */
 function stepOf(events: RunEvent[] | undefined): string {
@@ -229,7 +228,9 @@ function GettingStarted({ agents, keys, runs, silent }: { agents: AgentNode[]; k
   return (
     <section className="card home-card start-card" data-testid="getting-started">
       <div className="home-card-head">
-        <h2>Get started</h2><span className="chip num">{done}/{steps.length}</span><span className="grow" />
+        <h2>Get started</h2>
+        <span className="start-progress" role="progressbar" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={done} aria-label={`${done} of ${steps.length} done`}><i style={{ width: `${(done / steps.length) * 100}%` }} /></span>
+        <span className="faint num" style={{ fontSize: 12 }}>{done} of {steps.length}</span><span className="grow" />
         <button className="icon-btn sm" aria-label="Hide" data-tip="Hide" onClick={() => { try { localStorage.setItem(STARTED, "1"); } catch { /* this session */ } setHidden(true); }}><X size={13} /></button>
       </div>
       <ol className="start-steps">
@@ -245,29 +246,34 @@ function GettingStarted({ agents, keys, runs, silent }: { agents: AgentNode[]; k
   );
 }
 
-/** Pinned sticky notes from the board, and a card to add one (also placed on the canvas). */
-function Notes() {
+/** Pin a note for the team: on Home and on the board (left of everything, never over an agent). */
+function useAddNote(): () => void {
   const { doc, graph } = useBoard();
   const identity = useApp((s) => s.identity);
-  const pinned = (graph.notes ?? []).filter((n) => n.pinned).sort((a, b) => b.at - a.at);
-  const add = () => {
-    // On the canvas, notes from Home stack in a column left of everything, never over an agent.
+  return () => {
     const left = Math.min(0, ...graph.nodes.map((n) => n.position.x)) - 300;
     const fromHome = (graph.notes ?? []).filter((n) => n.position.x === left).length;
     const note: Note = { id: newId("note"), text: "", color: NOTE_COLORS[(graph.notes?.length ?? 0) % 4]!, position: { x: Math.round(left), y: fromHome * 200 }, pinned: true, author: identity.name, at: Date.now() };
     addNote(doc, note);
     useApp.getState().setFreshNote(note.id);
   };
+}
+
+/** The board's pinned sticky notes (none: nothing shown). */
+function Notes() {
+  const { graph } = useBoard();
+  const pinned = (graph.notes ?? []).filter((n) => n.pinned).sort((a, b) => b.at - a.at);
+  if (!pinned.length) return null;
   return (
     <section className="notes-grid" data-testid="home-notes" aria-label="Notes">
       {pinned.map((n) => <StickyNote key={n.id} note={n} />)}
-      <button className="sticky-add" onClick={add} data-testid="note-add"><span className="row" style={{ gap: 6 }}><Plus size={14} /> {pinned.length ? "Note" : "Pin a note for the team"}</span></button>
     </section>
   );
 }
 
 export function HomeView() {
   const { boardId, graph } = useBoard();
+  const addNoteNow = useAddNote();
   const identity = useApp((s) => s.identity);
   const runs = useApp((s) => s.runs);
   const events = useApp((s) => s.events);
@@ -319,15 +325,15 @@ export function HomeView() {
       action: { label: "Prepare", icon: <Cpu size={12} />, run: () => app.openSettings("engine") }, open: () => app.openSettings("engine"),
     }] : []),
     ...(noModel.length ? [{
-      key: "no-model", at: Date.now(), face: <span className="tile sm model"><Sparkles size={14} /></span>,
+      key: "no-model", at: Date.now(), face: <span className="tile sm model"><Cpu size={14} /></span>,
       title: `${noModel.map((a) => a.data.displayName || a.data.name).slice(0, 3).join(", ")}${noModel.length > 3 ? ` and ${noModel.length - 3} more` : ""} ${noModel.length > 1 ? "have" : "has"} no model`, sub: "Agents need a model to think with", tone: "warn" as const,
       action: { label: "Add model", icon: <Plus size={12} />, run: () => app.openSettings("models") }, open: () => app.openSettings("models"),
     }] : []),
     ...silent.map((m): Item => ({
-      key: `model-${m.id}`, at: Date.now(), face: <span className="tile sm model"><Sparkles size={14} /></span>,
+      key: `model-${m.id}`, at: Date.now(), face: <span className="tile sm model"><Cpu size={14} /></span>,
       title: modelHealth[m.id] === "down" ? `${m.data.label || m.data.name} isn't running` : `${m.data.label || m.data.name} doesn't have ${m.data.model}`,
       sub: modelHealth[m.id] === "down" ? `Nothing answers at ${m.data.baseUrl}` : "Pull the model, or pick one it has", tone: "warn",
-      action: { label: "Fix", icon: <Sparkles size={12} />, run: () => app.openSettings("models") }, open: () => app.openSettings("models"),
+      action: { label: "Fix", icon: <Cpu size={12} />, run: () => app.openSettings("models") }, open: () => app.openSettings("models"),
     })),
     ...missingKeys.map((k): Item => ({
       key: `key-${k}`, at: Date.now(), face: <span className="tile sm file"><KeyRound size={14} /></span>, title: `${k} isn't saved`, sub: "A cloud model needs this key", tone: "warn",
@@ -375,8 +381,16 @@ export function HomeView() {
       <div className="scroll-page home" data-testid="home">
         <div className="home-inner">
           <header className="home-hello" data-testid="home-hello">
-            <h1>{greeting()}{nameChosen(identity) ? `, ${identity.name.split(" ")[0]}` : ""}</h1>
-            <span>{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}{live.length ? ` · ${live.length} at work` : ""}</span>
+            <div>
+              <h1>Today</h1>
+              <span className="home-date">{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}{live.length ? ` · ${live.length} at work` : ""}</span>
+            </div>
+            <div className="home-stats" data-testid="home-today">
+              <div><b className="num">{today ? usd(today.usd) : "$0.00"}</b><small data-tip={today?.source === "estimate" ? "Includes McBot estimates" : "As Hermes priced it"}>Spent{today?.source === "estimate" ? " (est.)" : ""}</small></div>
+              <div><b className="num">{runsToday}</b><small>Runs</small></div>
+              <div><b className="num">{doneToday}</b><small>Tasks done</small></div>
+            </div>
+            <button className="btn sm ghost note-btn" onClick={addNoteNow} data-testid="note-add" data-tip="Pin a note for the team"><StickyNoteIcon size={13} /> Note</button>
           </header>
           {agents.length === 0 ? (
             // An empty board: the first thing to do is the only thing shown big.
@@ -464,15 +478,6 @@ export function HomeView() {
                     ))}
                   </>
                 )}
-              </section>
-
-              <section className="card home-card">
-                <div className="home-card-head"><h2>Today</h2></div>
-                <div className="home-kpis">
-                  <div><b className="num">{today ? usd(today.usd) : "$0.00"}</b><small data-tip={today?.source === "estimate" ? "Includes McBot estimates" : "As Hermes priced it"}>Spent{today?.source === "estimate" ? " (est.)" : ""}</small></div>
-                  <div><b className="num">{runsToday}</b><small>Runs</small></div>
-                  <div><b className="num">{doneToday}</b><small>Tasks done</small></div>
-                </div>
               </section>
 
               <Schedules agents={agents} />

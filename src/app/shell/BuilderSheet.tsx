@@ -4,7 +4,8 @@
  * back). The board's own model plans it when it can (engine/builder.ts); otherwise the plan is made
  * here from the words (graph/builder.ts). Nothing changes until the person accepts.
  */
-import { ArrowLeft, Sparkles, X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
+import { Logo } from "../faces/FoodFace";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
 import type { ModelNode } from "../../contracts/graph";
@@ -101,7 +102,7 @@ export function BuilderSheet() {
       <div data-closing={presence.closing || undefined} className="palette-scrim" onClick={() => { if (!busy && !request.trim()) close(); }} />
       <section className="palette hermes-sheet builder" role="dialog" aria-modal="true" data-closing={presence.closing || undefined} aria-label="Ask McBot" data-testid="builder">
         <header>
-          <span className="hermes-mark" aria-hidden><Sparkles size={18} /></span>
+          <span className="hermes-mark" aria-hidden><Logo size={22} /></span>
           <div className="grow">
             <h2>{plan ? "Here's a harness" : "Ask McBot to build it"}</h2>
             <small>{plan ? (by ? `Designed by ${by}` : "Quick plan") + " · nothing changes until you add it" : "Describe the agents you need"}</small>

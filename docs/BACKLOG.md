@@ -31,7 +31,7 @@ release notes when it ships.
 | ● fixed in 0.6.4 | The inspector cut off its fields when a model id was long (the grid column sized to it) | `styles/graph.css` `.inspector-body` |
 | ● fixed in 0.6.4 | Sticky notes on the board could not be moved (the text filled them, and new ones landed under blocks): a grip on top, and new notes go to free space | `notes/StickyNote.tsx`, `graph/place.ts` `noteSpot` |
 | ● fixed in 0.6.4 | The dock ran off the board beside the inspector; it now shrinks to fit | `graph/GraphView.tsx` |
-| ● 0.7.0 | Light, dark or the system's appearance and macOS's eight accent colours (Settings → Appearance, ⌘K); every literal colour in the style sheets goes through tokens, and `styles/tokens.test.ts` keeps it that way | `lib/appearance.ts`, `styles/tokens.css` |
+| ● 0.7.0 | The dark design (dark, always: the owner dropped the light theme) with macOS's eight accent colours (Settings → Appearance, ⌘K); every literal colour in the style sheets goes through tokens, and `styles/tokens.test.ts` keeps it that way; `styles/pro.css` finishes every shared element | `lib/appearance.ts`, `styles/tokens.css`, `styles/pro.css` |
 | ● 0.7.0 | GitHub in the tool catalog (GitHub's hosted MCP server, token in the header); "Suggested for <agent>" skills; the doctor asks for a tool's missing key | `graph/catalog.ts`, `lib/suggestSkills.ts`, `graph/doctor.ts` |
 | ● fixed in 0.7.0 | After saving a key, the doctor (title bar, island) and Home kept saying it was missing until a reload | `lib/engine.ts` `onKeysChanged` |
 | ● fixed in 0.7.0 | Cost: the price notice had no padding; the daily chart skipped empty days and crowded its bars to the left; agents showed by profile id | `views/CostView.tsx`, `lib/series.ts` |
@@ -70,7 +70,7 @@ release notes when it ships.
 14. **Packs (M13).** Starter teams as installable packs ("Social media team", "Dev team",
     "Support desk"), and import from other agent tools.
 15. **Phones (M14).** Approve an action and read answers from a phone.
-16. **Polish (M15).** ● Light theme (0.7.0); layouts, accessibility, languages.
+16. **Polish (M15).** ● The dark design and accent colours (0.7.0; no light theme, owner's call); layouts, accessibility, languages.
 
 ## Ideas parked (from other products, feature references only)
 

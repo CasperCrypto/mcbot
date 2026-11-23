@@ -15,7 +15,8 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Bot, Sparkles, StickyNote as NoteIcon, Clapperboard, Cloud, Command, FileCode2, FolderOpen, HardDrive, Image, Plug, Plus, Send, Server } from "lucide-react";
+import { Bot, StickyNote as NoteIcon, Clapperboard, Cloud, Command, FileCode2, FolderOpen, HardDrive, Image, Plug, Plus, Send, Server } from "lucide-react";
+import { Logo } from "../faces/FoodFace";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode, addNote, moveNode, removeEdges, removeNodes, setFrameField, setNoteField } from "../../board/ydoc";
 import { resolveGraph } from "../../compile";
@@ -114,7 +115,7 @@ function Welcome({ onStart }: { onStart: () => void }) {
         <h2>Build your harness</h2>
         <p>Agents, the models they think with, the tools they use.</p>
         <div className="row" style={{ marginTop: 6 }}>
-          <button className="btn light lg" onClick={() => useApp.getState().setBuilder(true)} data-testid="welcome-builder"><Sparkles size={15} /> Describe it to McBot</button>
+          <button className="btn light lg" onClick={() => useApp.getState().setBuilder(true)} data-testid="welcome-builder"><Logo size={17} /> Describe it to McBot</button>
           <button className="btn lg" onClick={() => useApp.getState().setTeamsOpen(true)} data-testid="welcome-team">Start with a team</button>
           <button className="btn lg" onClick={onStart} data-testid="welcome-add-agent"><Plus size={15} /> Add an agent</button>
         </div>
@@ -125,7 +126,6 @@ function Welcome({ onStart }: { onStart: () => void }) {
 
 function Canvas() {
   const { graph, doc, peers, setCursor } = useBoard();
-  const theme = useApp((s) => s.theme);
   const selectedNodeId = useApp((s) => s.selectedNodeId);
   const select = useApp((s) => s.select);
   const runs = useApp((s) => s.runs);
@@ -483,7 +483,7 @@ function Canvas() {
         snapGrid={SNAP}
         selectionKeyCode="Shift"
         multiSelectionKeyCode={["Meta", "Control"]}
-        colorMode={theme}
+        colorMode="dark"
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1.1} color="var(--grid-dot)" />
         <Controls position="bottom-left" showInteractive={false} />
@@ -494,7 +494,7 @@ function Canvas() {
       {graph.nodes.length > 0 && (
         <div ref={dockRef} className={`dock-wrap${selected ? " shifted" : ""}${liveOpen ? " with-live" : ""}`}>
           <div className="dock glass" role="toolbar" aria-label="Add to the harness">
-            <DockItem tile="agent" icon={<Sparkles size={19} />} label="Ask McBot to build" testId="add-builder" onClick={() => useApp.getState().setBuilder(true)} />
+            <DockItem tile="agent" icon={<Logo size={20} />} label="Ask McBot to build" testId="add-builder" onClick={() => useApp.getState().setBuilder(true)} />
             <DockItem tile="agent" icon={<Bot size={20} />} label="New agent" testId="add-agent" onClick={() => useApp.getState().setNewAgentOpen(true)} />
             <div className="dock-sep" />
             <DockItem tile="model" icon={<HardDrive size={19} />} label="Local model" testId="add-model-local" onClick={() => add("model", (p) => newModel(graph, "local", p))} />

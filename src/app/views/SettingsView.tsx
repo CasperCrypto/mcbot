@@ -4,7 +4,7 @@
  * Models are blocks on the board (so they compile); adding one here places it and wires it to the
  * agents picked. Keys never leave this computer: the board only names them.
  */
-import { Check, Cloud, Cpu, ExternalLink, HardDrive, Info, KeyRound, LifeBuoy, LoaderCircle, Palette, Plus, RefreshCw, RotateCw, Sparkles, Trash2, User, Users, Waypoints } from "lucide-react";
+import { Check, Cloud, Cpu, ExternalLink, HardDrive, Info, KeyRound, LifeBuoy, LoaderCircle, Palette, Plus, RefreshCw, RotateCw, Trash2, User, Users, Waypoints, Server, Compass } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { addEdge, addNode, removeNodes, updateEdge } from "../../board/ydoc";
 import type { HermesInfo, LocalServer, SharingView, UpdateView } from "../../contracts/api";
@@ -22,15 +22,15 @@ import { Sidebar } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
 import { useApp, type SettingsSection } from "../state/store";
 import { AgentFace, Field, PersonFace, Segmented } from "../ui";
-import { ACCENTS, ACCENT_SWATCH, type Accent, type ThemePref } from "../lib/appearance";
+import { ACCENTS, ACCENT_SWATCH, type Accent } from "../lib/appearance";
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode; host?: boolean }[] = [
-  { id: "models", label: "Models", icon: <Sparkles size={14} /> },
+  { id: "models", label: "Models", icon: <Cpu size={14} /> },
   { id: "keys", label: "API keys", icon: <KeyRound size={14} />, host: true },
   { id: "appearance", label: "Appearance", icon: <Palette size={14} /> },
   { id: "you", label: "You", icon: <User size={14} /> },
   { id: "team", label: "Team", icon: <Users size={14} /> },
-  { id: "engine", label: "Engine", icon: <Cpu size={14} />, host: true },
+  { id: "engine", label: "Engine", icon: <Server size={14} />, host: true },
   { id: "about", label: "About", icon: <Info size={14} /> },
 ];
 
@@ -410,42 +410,20 @@ function KeysSection() {
 
 // ---------------------------------------------------------------- appearance
 
-const THEMES: { value: ThemePref; label: string }[] = [{ value: "light", label: "Light" }, { value: "dark", label: "Dark" }, { value: "system", label: "Auto" }];
 const accentName = (a: Accent) => a.charAt(0).toUpperCase() + a.slice(1);
-
-/** A small window drawn in one appearance, as macOS draws its appearance choices. */
-function MiniWindow({ look }: { look: "light" | "dark" }) {
-  return (
-    <span className={`ap-window ${look}`} aria-hidden>
-      <i className="ap-lights" />
-      <i className="ap-side" />
-      <i className="ap-main"><i className="ap-line" /><i className="ap-line short" /><i className="ap-accent" /></i>
-    </span>
-  );
-}
 
 function AppearanceSection() {
   const appearance = useApp((s) => s.appearance);
   const setAppearance = useApp((s) => s.setAppearance);
   return (
-    <Card title="Appearance" sub="On this computer. Auto follows your system." testId="settings-appearance">
-      <div className="appearance-options" role="radiogroup" aria-label="Appearance">
-        {THEMES.map((t) => (
-          <button key={t.value} role="radio" aria-checked={appearance.theme === t.value} className="appearance-option" data-testid={`appearance-${t.value}`}
-            onClick={() => setAppearance({ ...appearance, theme: t.value })}>
-            <span className="ap-preview">
-              {t.value === "system" ? <><MiniWindow look="light" /><span className="ap-half"><MiniWindow look="dark" /></span></> : <MiniWindow look={t.value} />}
-            </span>
-            <span>{t.label}</span>
-          </button>
-        ))}
-      </div>
-      <div className="settings-row" style={{ marginTop: 6 }}>
+    <Card title="Appearance" sub="The colour of selections, buttons and focus. On this computer." testId="settings-appearance">
+      <div className="settings-row">
         <span className="grow">Accent colour</span>
+        <span className="faint" style={{ fontSize: 13 }}>{accentName(appearance.accent)}</span>
         <span className="accent-row" role="radiogroup" aria-label="Accent colour">
           {ACCENTS.map((a) => (
             <button key={a} role="radio" aria-checked={appearance.accent === a} aria-label={accentName(a)} data-tip={accentName(a)} className="accent-swatch"
-              style={{ background: ACCENT_SWATCH[a] }} data-testid={`accent-${a}`} onClick={() => setAppearance({ ...appearance, accent: a })} />
+              style={{ background: ACCENT_SWATCH[a] }} data-testid={`accent-${a}`} onClick={() => setAppearance({ accent: a })} />
           ))}
         </span>
       </div>
@@ -545,7 +523,7 @@ function AboutSection() {
     <>
       <Card title="Start over" sub="Answer a few questions and get a ready team on a new board." testId="settings-setup">
         <div className="settings-row"><span className="grow">Your boards stay as they are.</span>
-          <button className="btn sm primary" onClick={() => app.setSetup({ completed: false, profile: app.setup?.profile ?? null })} data-testid="settings-rerun-setup"><Sparkles size={12} /> Run setup again</button></div>
+          <button className="btn sm primary" onClick={() => app.setSetup({ completed: false, profile: app.setup?.profile ?? null })} data-testid="settings-rerun-setup"><Compass size={12} /> Run setup again</button></div>
       </Card>
       <Card title="About McBot Studio" sub={`Version ${health?.version ?? "…"} · free and open source (MIT)`}>
         {update?.available && update.url && (

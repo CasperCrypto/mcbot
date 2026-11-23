@@ -1,6 +1,7 @@
 import {
-  BookOpen, Bot, FileCode2, History, Moon, Palette as PaletteIcon, Stethoscope, Sun, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
+  BookOpen, Bot, FileCode2, History, Palette as PaletteIcon, Stethoscope, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Upload, Users, Waypoints, Workflow, GraduationCap, Compass,
 } from "lucide-react";
+import { Logo } from "../faces/FoodFace";
 import { redo, undo } from "../../board/undo";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
@@ -41,7 +42,7 @@ export const VIEWS: { tab: Tab; label: string; icon: ReactNode; group: number; t
   { tab: "agents", label: "Chat", icon: <MessagesSquare size={15} />, group: 0, tip: "Talk to your agents" },
   { tab: "tasks", label: "Tasks", icon: <ListChecks size={15} />, group: 1 },
   { tab: "workflows", label: "Runs", icon: <History size={15} />, group: 1 },
-  { tab: "skills", label: "Skills", icon: <Sparkles size={15} />, group: 1, tip: "Skills and plugins" },
+  { tab: "skills", label: "Skills", icon: <GraduationCap size={15} />, group: 1, tip: "Skills and plugins" },
   { tab: "code", label: "Code", icon: <Code2 size={15} />, group: 2 },
   { tab: "browser", label: "Browser", icon: <Globe size={15} />, group: 2 },
   { tab: "files", label: "Files", icon: <FolderOpen size={15} />, group: 2 },
@@ -68,7 +69,7 @@ function useCommands(close: () => void): Command[] {
       { id: "add-cloud", group: "Create", label: "Cloud model", hint: "Any OpenAI-compatible API", icon: <Cloud size={15} />, run: () => place(newModel(graph, "cloud", at("model"))) },
       { id: "add-files", group: "Create", label: "Files tool", icon: <Plug size={15} />, run: () => place(newTool(graph, "filesystem", at("tool"), app.health?.workspace ?? null)) },
       { id: "share", group: "Actions", label: "Invite teammates…", hint: "Copy a link, email it", icon: <Users size={15} />, run: () => app.setShareOpen(true) },
-      { id: "ask-mcbot", group: "Create", label: "Ask McBot to build…", hint: "Describe the agents you need; review, then add", icon: <Sparkles size={15} />, run: () => app.setBuilder(true) },
+      { id: "ask-mcbot", group: "Create", label: "Ask McBot to build…", hint: "Describe the agents you need; review, then add", icon: <Logo size={17} />, run: () => app.setBuilder(true) },
       { id: "add-team", group: "Create", label: "Team…", hint: "Research & write, Support desk, Dev team…", icon: <Users size={15} />, run: () => app.setTeamsOpen(true) },
       { id: "add-tool-catalog", group: "Create", label: "Tool…", hint: "Browser, web search, Notion…", icon: <Plug size={15} />, run: () => app.setCatalogOpen(true) },
       { id: "add-mcp", group: "Create", label: "MCP server", icon: <Server size={15} />, run: () => place(newTool(graph, "stdio", at("tool"), null)) },
@@ -116,16 +117,12 @@ function useCommands(close: () => void): Command[] {
       { id: "open-hermes", group: "Actions", label: "Open my Hermes setup", hint: "Draw ~/.hermes as a board", icon: <FolderOpen size={15} />, run: () => { close(); void openHermesSetup(); } },
       { id: "import-board", group: "Actions", label: "Import board…", hint: "Open a board file", icon: <Upload size={15} />, run: () => { close(); importBoardFile(); } },
       { id: "settings", group: "Actions", label: "Settings", hint: "Models, API keys, your name, team", icon: <Settings size={15} />, keys: ["⌘", ","], run: () => app.openSettings() },
-      { id: "models", group: "Actions", label: "Add a model…", hint: "Ollama, LM Studio, OpenAI, OpenRouter…", icon: <Sparkles size={15} />, run: () => app.openSettings("models") },
+      { id: "models", group: "Actions", label: "Add a model…", hint: "Ollama, LM Studio, OpenAI, OpenRouter…", icon: <Cpu size={15} />, run: () => app.openSettings("models") },
       { id: "keys", group: "Actions", label: "API keys", icon: <KeyRound size={15} />, run: () => app.openSettings("keys") },
-      { id: "appearance", group: "Actions", label: "Appearance…", hint: "Light, dark or your system's; accent colour", icon: <PaletteIcon size={15} />, run: () => app.openSettings("appearance") },
-      {
-        id: "theme-toggle", group: "Actions", label: app.theme === "dark" ? "Light appearance" : "Dark appearance", hint: "On this computer", icon: app.theme === "dark" ? <Sun size={15} /> : <Moon size={15} />,
-        run: () => { close(); app.setAppearance({ ...app.appearance, theme: app.theme === "dark" ? "light" : "dark" }); },
-      },
+      { id: "appearance", group: "Actions", label: "Accent colour…", hint: "Blue, purple, pink, red, orange, yellow, green or graphite", icon: <PaletteIcon size={15} />, run: () => app.openSettings("appearance") },
       { id: "hermes", group: "Actions", label: "Engine", hint: "Status and restart", icon: <Cpu size={15} />, run: () => app.setHermesOpen(true) },
       { id: "report", group: "Actions", label: "Report a problem…", hint: "Details to paste into an issue", icon: <LifeBuoy size={15} />, run: () => app.setReportOpen(true) },
-      { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Sparkles size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: app.setup?.profile ?? null }); } },
+      { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Compass size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: app.setup?.profile ?? null }); } },
       ...(DEMO ? [{ id: "reset-demo", group: "Actions", label: "Reset demo", hint: "Start over with the sample board", icon: <RotateCcw size={15} />, run: resetDemo }] : []),
       ...VIEWS.map((v, i) => ({ id: `go-${v.tab}`, group: "Go to", label: v.label, hint: v.tip, icon: v.icon, keys: i < 9 ? ["⌘", String(i + 1)] : undefined, run: () => { app.setTab(v.tab); close(); } })),
       // Ask an agent straight from ⌘K (and so from anywhere, with the launcher shortcut).
@@ -221,7 +218,7 @@ function PaletteBody({ close, closing }: { close: () => void; closing: boolean }
       run: () => { close(); useApp.getState().openChat(target.id); void runAgent(boardId, target.id, q); },
     }] : [];
     // …or have McBot design agents for it.
-    if (q.length >= 8) fallback.push({ id: "build-fallback", group: "Ask", label: "Ask McBot to build this", hint: `“${q.slice(0, 80)}”`, icon: <Sparkles size={15} />, run: () => { close(); useApp.getState().setBuilder(true, q); } });
+    if (q.length >= 8) fallback.push({ id: "build-fallback", group: "Ask", label: "Ask McBot to build this", hint: `“${q.slice(0, 80)}”`, icon: <Logo size={17} />, run: () => { close(); useApp.getState().setBuilder(true, q); } });
     return [...top, ...order.flatMap((g) => rest.filter((c) => c.group === g)), ...said, ...fallback];
   }, [commands, query, asking, runs, graph, close, recent, selectedId, boardId]);
   // Block bodies on purpose: scrollIntoView returns a Promise in current Chromium,

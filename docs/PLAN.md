@@ -212,8 +212,8 @@ the team server).
 
 ### 15. Design and polish ◐ (M15)
 
-● design system in dark and light (the system's appearance and macOS's accent colours), flat
-macOS look, rail, ⌘K, graphs everywhere, the logo and agent faces. ○ panes you resize, pin and
+● design system: dark, always (the owner dropped the light theme), with macOS's accent colours; a flat
+pro macOS look, rail, ⌘K, graphs everywhere, the logo and agent faces. ○ panes you resize, pin and
 rearrange (centre, right and bottom), tabs in the centre, layouts saved per person, keyboard
 shortcuts for every action, accessibility, languages.
 
@@ -239,7 +239,7 @@ whether setup works.
 | **M12** ◐ | Teams: share on your network (M12a) ●, the Team panel (who is here, team chat with @agent) ●, then the Buzz team server (M12b); roles, audit; McBot Cloud | Two people on two computers edit and run one board |
 | **M13** ○ | Packs and starter teams; import from other agents | A "Dev team" pack installs into a new space and runs |
 | **M14** ○ | Phones | Approve an agent's action from an iPhone |
-| **M15** ◐ | Polish: light theme ● (light, dark or the system's, with macOS's accent colours), layouts, shortcuts, accessibility, languages (brand and agent icons ● done) | Each person arranges McBot their way, and it remembers |
+| **M15** ◐ | Polish: the dark design ● (macOS's accent colours; the light theme dropped by the owner), layouts, shortcuts, accessibility, languages (brand and agent icons ● done) | Each person arranges McBot their way, and it remembers |
 
 "Now" runs before and alongside M6. Hermes upstream syncs happen whenever the
 daily watchdog opens an issue.
@@ -356,7 +356,7 @@ Not taken: git commit and PR drafting (git beyond status and diffs is out of sco
 Each new surface is designed in the app itself and reviewed in the browser
 demo, where changes are visible in minutes: Home, the Tasks view, the
 workbench panes (terminal, editor, browser), the app catalog, workflow nodes,
-teams and roles, settings, the light theme and the menu bar.
+teams and roles, settings and the menu bar.
 
 ## Catch-up plan vs nightly OpenBot (2026-11-17)
 

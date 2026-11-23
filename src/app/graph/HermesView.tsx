@@ -4,7 +4,8 @@
  * schedules, plus the shared task board agents hand work through. Read-only: the board is where
  * you change it (and it follows Hermes, decision 9).
  */
-import { Bot, Brain, CalendarClock, Cpu, Image, ListChecks, MessagesSquare, Plug, Server, ShieldCheck, Sparkles, Wrench } from "lucide-react";
+import { Bot, Brain, CalendarClock, Cpu, Image, ListChecks, MessagesSquare, Plug, Server, ShieldCheck, Wrench } from "lucide-react";
+import { Logo } from "../faces/FoodFace";
 import { useEffect, useMemo, useState } from "react";
 import { compiledToolsets } from "../../compile/config";
 import { resolveGraph } from "../../compile";
@@ -58,7 +59,7 @@ export function HermesView({ onEdit }: { onEdit?: (nodeId: string) => void }) {
     const midY = Math.max(0, ((bundles.length - 1) * ROW) / 2);
 
     // Who reaches the agents: McBot itself (the runs API) and every chat app, through the gateway.
-    nodes.push({ id: "in:mcbot", x: 0, y: midY - 60, content: <Box icon={<Sparkles size={14} />} title="McBot" sub="Chat, Home, Tasks · runs API" /> });
+    nodes.push({ id: "in:mcbot", x: 0, y: midY - 60, content: <Box icon={<Logo size={16} />} title="McBot" sub="Chat, Home, Tasks · runs API" /> });
     channels.forEach(({ c }, i) => nodes.push({ id: `in:${c.id}`, x: 0, y: midY + 40 + i * 90, content: <Box icon={<MessagesSquare size={14} />} title={c.data.label || PLATFORMS[c.data.platform].label} sub={`${c.data.allowedUsers.length} allowed`} tone="channel" /> }));
     nodes.push({
       id: "gateway", x: 320, y: midY - 20,

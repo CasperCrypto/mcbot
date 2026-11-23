@@ -266,22 +266,29 @@ Change them additively; a breaking change bumps the version.
 
 ## UI invariants
 
-- **Look:** quiet, Apple-native; dark by default, light or the system's in Settings → Appearance
-  (`lib/appearance.ts`: `data-theme` and `data-accent` on `<html>`, kept per computer, applied
-  before the first paint; every window, the native window, Monaco, the terminal, React Flow and
-  Excalidraw follow). All colours, radii, shadows and motion are tokens in
-  `src/app/styles/tokens.css` (a light block, and macOS's eight accent colours with a dark and a
-  light value each); components use tokens, not literals: overlays are `rgb(var(--tint-rgb) / a)`,
-  shadows and recessed fills scale with `--shadow-k` / `--sink-k`, state colours as text use
-  `--*-text` (`styles/tokens.test.ts` fails on a theme-blind literal). Fixed-colour surfaces are
-  the exceptions: the island (black in both), colour tiles, swatches, note paper.
-  Colour means identity (agents, node kinds) or state (running, ok, failed).
-  macOS system colours, flat: the accent is the person's (system blue by default); no gradients,
-  glows or gradient text (the website follows the same rule).
-- **Glass and springs** (`src/app/styles/glass.css`, loaded last): whatever floats over content
+- **Look:** quiet, pro, Apple-native, and **dark, always** (owner's decision: no light or system
+  appearance). Settings → Appearance (and ⌘K) picks one of macOS's eight accent colours
+  (`lib/appearance.ts`: `data-accent` on `<html>`, kept per computer, applied before the first
+  paint; every window follows at once). Deep neutral blacks; hairline edges (`--line*`), not
+  shadows, for anything that sits in the page; shadows only for what floats; tight radii (controls
+  7–8, cards 10–12, sheets 14). A kind's colour is a tint behind its coloured glyph (`--k-*-rgb`,
+  `--k-*-ink`), a brand logo sits on its own colour (`brandTint` in `graph/Logo.tsx`), never a
+  candy block; the dock and rail are monochrome glyphs. McBot's own mark (the burger, `Logo`)
+  stands for what McBot itself does (Ask McBot); no sparkles or other stock "AI" icons. All
+  colours, radii, shadows and motion are tokens in `src/app/styles/tokens.css` (macOS's eight
+  accent colours as `--accent-rgb` / `--accent` / `--accent-text`); components use tokens, not
+  literals: overlays are `rgb(var(--tint-rgb) / a)`, state colours as text use `--*-text`
+  (`styles/tokens.test.ts` fails on a literal colour). Fixed-colour surfaces are the exceptions:
+  the island, colour tiles, swatches, note paper. `src/app/styles/pro.css` (loaded last) is the
+  finish of every shared element (buttons, fields, chips, cards, tiles, nodes, dock, composer,
+  Home). Colour means identity (agents, node kinds) or state (running, ok, failed). macOS system
+  colours, flat: the accent is the person's (system blue by default); no gradients, glows or
+  gradient text (the website follows the same rule).
+- **Glass and springs** (`src/app/styles/glass.css`, before `pro.css`): whatever floats over content
   (sheets, menus, tooltips, the dock, board blocks, the inspector, the chat header and composer)
   is a material — `--mat-*` fill, `--mat-blur`, a hairline edge and specular top line
-  (`--mat-edge`) — never a gradient; content surfaces stay solid. Motion uses `--spring-snappy`
+  (`--mat-edge`) — never a gradient; content surfaces stay solid. The palette, menus and sheets
+  are nearly opaque (`--mat-regular`, `--mat-thick`), so nothing behind them reads through. Motion uses `--spring-snappy`
   (controls), `--spring-bouncy` (things that arrive) and `--spring-smooth` (things that move):
   real springs via CSS `linear()` where supported, cubic fallbacks in tokens.css. The rail's
   selection and segmented controls' thumbs slide. Reduced motion turns it all off.
@@ -364,7 +371,7 @@ Change them additively; a breaking change bumps the version.
   with", "hands work to"); unselected wires carry no label. Chains between
   them are workflows (M10).
 - **Type:** San Francisco on a Mac (`-apple-system`; SF may not be shipped elsewhere, so Windows
-  and Linux fall back to Segoe UI or Inter). `src/app/styles/premium.css` (loaded last) holds the
+  and Linux fall back to Segoe UI or Inter). `src/app/styles/premium.css` (before `glass.css` and `pro.css`) holds the
   type scale, hairlines, layered shadows and spring motion; reduced motion turns it off.
 - **Everything structural is a graph.** The harness is the editable React Flow
   canvas; runs, memory and folders use the read-only `views/GraphCanvas.tsx`.

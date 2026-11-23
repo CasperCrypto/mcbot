@@ -1,38 +1,39 @@
-/* McBot design tokens. Neutral, quiet chrome in dark (the default) and light; colour is reserved
-   for identity (agents, kinds) and state (running, ok, failed). The person picks the appearance
-   and the accent in Settings → Appearance (lib/appearance.ts sets data-theme and data-accent on
-   <html>); components use these tokens only, so every view follows both. */
+/* McBot design tokens. Dark, neutral, quiet chrome (McBot is dark, always); colour is reserved
+   for identity (agents, kinds) and state (running, ok, failed). The person picks the accent in
+   Settings → Appearance (lib/appearance.ts sets data-accent on <html>); components use these
+   tokens only. */
 :root {
   color-scheme: dark;
 
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Inter Variable", system-ui, sans-serif;
   --mono: "SF Mono", ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
 
-  /* surfaces, darkest to lightest */
-  --bg-window: #111112;
-  --bg-chrome: #151516;
-  --bg-sidebar: #18181a;
-  --bg-main: #1c1c1e;
-  --bg-canvas: #161618;
-  --bg-raised: #222225;
-  --bg-card: #232326;
-  --bg-hover: #2a2a2e;
-  --bg-active: #303035;
-  --bg-input: #121214;
-  --bg-glass: rgba(34, 34, 38, 0.72);
+  /* surfaces, darkest to lightest: a deep, neutral black for the chrome, one step up for content,
+     cards and fields a step above that; edges come from hairlines, not shadows */
+  --bg-window: #0c0c0d;
+  --bg-chrome: #0f0f11;
+  --bg-sidebar: #0c0c0d;
+  --bg-main: #131315;
+  --bg-canvas: #101012;
+  --bg-raised: #1c1c1f;
+  --bg-card: #18181b;
+  --bg-hover: #212125;
+  --bg-active: #2a2a2f;
+  --bg-input: #0e0e10;
+  --bg-glass: rgba(24, 24, 27, 0.78);
   /* Panels that hold text (inspector, sheets): nearly opaque, so the canvas never reads through. */
-  --bg-panel: rgba(31, 31, 34, 0.96);
+  --bg-panel: rgba(23, 23, 26, 0.97);
 
   /* lines */
-  --line: rgba(255, 255, 255, 0.055);
-  --line-2: rgba(255, 255, 255, 0.09);
-  --line-3: rgba(255, 255, 255, 0.14);
+  --line: rgba(255, 255, 255, 0.065);
+  --line-2: rgba(255, 255, 255, 0.095);
+  --line-3: rgba(255, 255, 255, 0.15);
 
   /* text */
-  --text: #f5f5f7;
-  --text-2: #b4b4ba;
-  --text-3: #808088;
-  --text-4: #5c5c64;
+  --text: #ededf0;
+  --text-2: #a6a6af;
+  --text-3: #75757e;
+  --text-4: #50505a;
 
   /* brand + state */
   /* macOS system colours (dark): flat, no gradients. The accent is the person's (blue by default):
@@ -71,17 +72,33 @@
   --sink-k: 1;
 
   /* surfaces with one job */
-  --bg-tooltip: #2c2c30;
-  --bg-bubble: #2c2c30;
-  --bg-composer: #232326;
-  --bg-node: rgba(38, 38, 42, 0.66);
-  --grid-dot: rgba(255, 255, 255, 0.075);
+  --bg-tooltip: #232327;
+  --bg-bubble: #222226;
+  --bg-composer: #18181b;
+  --bg-node: rgba(27, 27, 30, 0.92);
+  --grid-dot: rgba(255, 255, 255, 0.065);
   /* the high-contrast neutral button (Ask, Get started, send): white on dark */
   --btn-light-bg: #f5f5f7;
   --btn-light-fg: #111111;
   --btn-light-hover: #ffffff;
 
-  /* node kinds (the tiles in graph.css) */
+  /* node kinds (the tiles in graph.css): the colour of a kind's glyph, and its channels for the
+     tile's tint behind it */
+  --k-agent-rgb: 142 142 147;
+  --k-model-rgb: 255 159 10;
+  --k-model-cloud-rgb: 10 132 255;
+  --k-tool-rgb: 48 176 199;
+  --k-media-rgb: 255 55 95;
+  --k-channel-rgb: 48 209 88;
+  --k-folder-rgb: 172 142 104;
+  /* a kind's glyph on its tint: the kind colour, lifted a little where it would sink into the dark */
+  --k-agent-ink: #c7c7cc;
+  --k-model-ink: #ffab2e;
+  --k-cloud-ink: #4ca2ff;
+  --k-tool-ink: #4fc6da;
+  --k-media-ink: #ff6482;
+  --k-channel-ink: #4cd471;
+  --k-folder-ink: #c9a77b;
   --k-agent: #8e8e93;
   --k-model: #ff9f0a;
   --k-model-cloud: #0a84ff;
@@ -127,19 +144,20 @@
   --logo-glow: rgba(190, 190, 210, 0.22);
 
   /* shape */
-  --r-xs: 6px;
-  --r-sm: 8px;
-  --r: 10px;
-  --r-md: 12px;
-  --r-lg: 16px;
-  --r-xl: 20px;
+  /* tight, as pro tools draw them: controls 7–8, cards 10–12, sheets 14 */
+  --r-xs: 5px;
+  --r-sm: 7px;
+  --r: 8px;
+  --r-md: 10px;
+  --r-lg: 12px;
+  --r-xl: 14px;
   --r-pill: 999px;
 
   /* depth */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.38), 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
-  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 
   /* motion */
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -155,23 +173,25 @@
    * Materials: Apple-style glass for anything that floats over content (sheets, menus, the dock,
    * the inspector, sticky headers, the composer). Translucent fill + strong blur + saturation, a
    * hairline edge and a specular top line. Thin < regular < thick: the more text a surface holds,
-   * the thicker its material, so what is behind never hurts reading.
+   * the thicker its material, so what is behind never hurts reading (the palette, menus and sheets
+   * are nearly opaque: their blur only softens the edge of what lies behind).
    */
-  --mat-ultrathin: rgba(44, 44, 48, 0.42);
-  --mat-thin: rgba(40, 40, 44, 0.58);
-  --mat-regular: rgba(34, 34, 38, 0.72);
-  --mat-thick: rgba(30, 30, 33, 0.86);
+  --mat-ultrathin: rgba(34, 34, 38, 0.5);
+  --mat-thin: rgba(28, 28, 32, 0.7);
+  --mat-regular: rgba(26, 26, 29, 0.985);
+  --mat-thick: rgba(22, 22, 25, 0.985);
   /* Panels you read and type in (inspector, team chat, side panels): solid, so the board never shows through their text. */
-  --mat-panel: #1f1f22;
-  --mat-chrome: rgba(28, 28, 30, 0.78);
-  --mat-blur: blur(28px) saturate(185%);
-  --mat-blur-strong: blur(44px) saturate(200%);
-  --mat-edge: inset 0 0 0 0.5px rgba(255, 255, 255, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.09);
-  --mat-edge-strong: inset 0 0 0 0.5px rgba(255, 255, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  --mat-hover: rgba(255, 255, 255, 0.07);
-  --mat-press: rgba(255, 255, 255, 0.11);
-  --mat-select: rgba(255, 255, 255, 0.1);
-  --scrim: rgba(0, 0, 0, 0.32);
+  --mat-panel: #161619;
+  --mat-chrome: rgba(15, 15, 17, 0.84);
+  --mat-blur: blur(24px) saturate(150%);
+  --mat-blur-strong: blur(36px) saturate(160%);
+  /* a hairline edge and the faintest top light: depth without shine */
+  --mat-edge: inset 0 0 0 0.5px rgba(255, 255, 255, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --mat-edge-strong: inset 0 0 0 0.5px rgba(255, 255, 255, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --mat-hover: rgba(255, 255, 255, 0.06);
+  --mat-press: rgba(255, 255, 255, 0.09);
+  --mat-select: rgba(255, 255, 255, 0.08);
+  --scrim: rgba(0, 0, 0, 0.45);
   /* the island is black in both appearances, like the iPhone's */
   --island-bg: #000;
   --island-fg: #f5f5f7;
@@ -195,103 +215,8 @@
 }
 
 /* ======================================================================
-   Light appearance: macOS light, the same hierarchy (chrome gray, content
-   white, cards on soft gray), hairlines and shadows a little lighter.
-   ====================================================================== */
-:root[data-theme="light"] {
-  color-scheme: light;
-
-  --bg-window: #e8e8ec;
-  --bg-chrome: #e2e2e7;
-  --bg-sidebar: #ededf1;
-  --bg-main: #f7f7f9;
-  --bg-canvas: #f1f1f4;
-  --bg-raised: #ffffff;
-  --bg-card: #ffffff;
-  --bg-hover: #ebebef;
-  --bg-active: #e1e1e6;
-  --bg-input: #ffffff;
-  --bg-glass: rgba(255, 255, 255, 0.74);
-  --bg-panel: rgba(255, 255, 255, 0.97);
-  --bg-tooltip: #ffffff;
-  --bg-bubble: #e9e9ee;
-  --bg-composer: #ffffff;
-  --bg-node: rgba(255, 255, 255, 0.86);
-  --grid-dot: rgba(0, 0, 0, 0.13);
-
-  --line: rgba(0, 0, 0, 0.08);
-  --line-2: rgba(0, 0, 0, 0.12);
-  --line-3: rgba(0, 0, 0, 0.18);
-
-  --text: #1d1d1f;
-  --text-2: #424245;
-  --text-3: #6e6e73;
-  --text-4: #a1a1a6;
-
-  --accent-rgb: 0 122 255;
-  --accent: #007aff;
-  --accent-text: #0066cc;
-
-  --ok: #34c759;
-  --ok-soft: rgba(52, 199, 89, 0.14);
-  --run: #007aff;
-  --run-soft: rgba(0, 122, 255, 0.1);
-  --fail: #ff3b30;
-  --fail-soft: rgba(255, 59, 48, 0.1);
-  --warn: #ffcc00;
-  --warn-soft: rgba(255, 204, 0, 0.2);
-  --ok-text: #1f7a36;
-  --run-text: #0066cc;
-  --fail-text: #c4181f;
-  --warn-text: #8a5a00;
-  --tone-orange: #b35c00;
-  --tone-yellow: #8a6a00;
-  --tone-teal: #0b7a6b;
-
-  --k-model: #ff9500;
-  --k-model-cloud: #007aff;
-  --k-media: #ff2d55;
-  --k-channel: #34c759;
-  --k-folder: #a2845e;
-
-  --tint-rgb: 0 0 0;
-  --shadow-k: 0.42;
-  --sink-k: 0.2;
-
-  --btn-light-bg: #1d1d1f;
-  --btn-light-fg: #ffffff;
-  --btn-light-hover: #000000;
-
-  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  --shadow-1: 0 0.5px 1px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.06);
-
-  --mat-ultrathin: rgba(255, 255, 255, 0.45);
-  --mat-thin: rgba(252, 252, 253, 0.64);
-  --mat-regular: rgba(250, 250, 252, 0.78);
-  --mat-thick: rgba(248, 248, 250, 0.92);
-  --mat-panel: #ffffff;
-  --mat-chrome: rgba(240, 240, 244, 0.84);
-  --mat-edge: inset 0 0 0 0.5px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  --mat-edge-strong: inset 0 0 0 0.5px rgba(0, 0, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  --mat-hover: rgba(0, 0, 0, 0.05);
-  --mat-press: rgba(0, 0, 0, 0.08);
-  --mat-select: rgba(0, 0, 0, 0.07);
-  --scrim: rgba(0, 0, 0, 0.18);
-
-  /* iOS system fills (light) */
-  --fill-1: rgba(120, 120, 128, 0.2);
-  --fill-2: rgba(120, 120, 128, 0.16);
-  --fill-3: rgba(120, 120, 128, 0.12);
-  --fill-4: rgba(120, 120, 128, 0.08);
-
-  --food-shadow: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.16));
-  --logo-glow: rgba(120, 120, 140, 0.16);
-}
-
-/* ======================================================================
    Accent colours, as macOS offers them (System Settings → Appearance).
-   Each has its dark and light value; text in the accent is lighter on
-   dark and deeper on light, so it always reads.
+   Text in the accent is a lighter shade, so it reads on dark.
    ====================================================================== */
 :root[data-accent="purple"] { --accent-rgb: 191 90 242; --accent: #bf5af2; --accent-text: #d28ef6; }
 :root[data-accent="pink"] { --accent-rgb: 255 55 95; --accent: #ff375f; --accent-text: #ff6f8c; }
@@ -300,10 +225,3 @@
 :root[data-accent="yellow"] { --accent-rgb: 255 214 10; --accent: #ffd60a; --accent-text: #ffd60a; --on-accent: #1d1d1f; }
 :root[data-accent="green"] { --accent-rgb: 48 209 88; --accent: #30d158; --accent-text: #5edb7d; }
 :root[data-accent="graphite"] { --accent-rgb: 152 152 157; --accent: #98989d; --accent-text: #c2c2c7; }
-:root[data-theme="light"][data-accent="purple"] { --accent-rgb: 175 82 222; --accent: #af52de; --accent-text: #8e3ab8; }
-:root[data-theme="light"][data-accent="pink"] { --accent-rgb: 255 45 85; --accent: #ff2d55; --accent-text: #d1173f; }
-:root[data-theme="light"][data-accent="red"] { --accent-rgb: 255 59 48; --accent: #ff3b30; --accent-text: #c4181f; }
-:root[data-theme="light"][data-accent="orange"] { --accent-rgb: 255 149 0; --accent: #ff9500; --accent-text: #b35c00; }
-:root[data-theme="light"][data-accent="yellow"] { --accent-rgb: 255 204 0; --accent: #ffcc00; --accent-text: #8a5a00; }
-:root[data-theme="light"][data-accent="green"] { --accent-rgb: 52 199 89; --accent: #34c759; --accent-text: #1f7a36; }
-:root[data-theme="light"][data-accent="graphite"] { --accent-rgb: 142 142 147; --accent: #8e8e93; --accent-text: #57575c; }

@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, ExternalLink, Globe, LoaderCircle, RotateCw, Sparkles, WifiOff } from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink, Globe, LoaderCircle, RotateCw, WifiOff, MessageSquare } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode } from "../../contracts/graph";
 import { runAgent } from "../actions";
@@ -258,7 +258,7 @@ export default function BrowserView() {
       </div>
       {url && agents.length > 0 && (
         <div className="code-ask browser-ask">
-          <Sparkles size={13} className="faint" />
+          <MessageSquare size={13} className="faint" />
           <select value={agentId || agents[0]!.id} onChange={(e) => setAgentId(e.target.value)} aria-label="Agent">
             {agents.map((a) => <option key={a.id} value={a.id}>{a.data.displayName || a.data.name}</option>)}
           </select>

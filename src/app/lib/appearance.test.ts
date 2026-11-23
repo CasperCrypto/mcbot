@@ -1,26 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { ACCENTS, ACCENT_SWATCH, DEFAULT_APPEARANCE, parseAppearance, resolveTheme } from "./appearance";
+import { ACCENTS, ACCENT_SWATCH, DEFAULT_APPEARANCE, parseAppearance } from "./appearance";
 
 describe("parseAppearance", () => {
-  it("is McBot's dark look with the blue accent when nothing is stored", () => {
+  it("is the blue accent when nothing is stored", () => {
     expect(parseAppearance(null)).toEqual(DEFAULT_APPEARANCE);
-    expect(DEFAULT_APPEARANCE).toEqual({ theme: "dark", accent: "blue" });
+    expect(DEFAULT_APPEARANCE).toEqual({ accent: "blue" });
   });
 
-  it("keeps a valid choice and drops what it does not know, field by field", () => {
-    expect(parseAppearance(JSON.stringify({ theme: "light", accent: "purple" }))).toEqual({ theme: "light", accent: "purple" });
-    expect(parseAppearance(JSON.stringify({ theme: "sepia", accent: "green" }))).toEqual({ theme: "dark", accent: "green" });
-    expect(parseAppearance(JSON.stringify({ theme: "system", accent: "magenta" }))).toEqual({ theme: "system", accent: "blue" });
+  it("keeps a valid accent, drops what it does not know (an old light/dark choice included)", () => {
+    expect(parseAppearance(JSON.stringify({ accent: "purple" }))).toEqual({ accent: "purple" });
+    expect(parseAppearance(JSON.stringify({ theme: "light", accent: "green" }))).toEqual({ accent: "green" });
+    expect(parseAppearance(JSON.stringify({ accent: "magenta" }))).toEqual({ accent: "blue" });
     expect(parseAppearance("{not json")).toEqual(DEFAULT_APPEARANCE);
-  });
-});
-
-describe("resolveTheme", () => {
-  it("follows the system only when asked to", () => {
-    expect(resolveTheme("system", true)).toBe("dark");
-    expect(resolveTheme("system", false)).toBe("light");
-    expect(resolveTheme("light", true)).toBe("light");
-    expect(resolveTheme("dark", false)).toBe("dark");
   });
 });
 
