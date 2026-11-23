@@ -19,6 +19,21 @@ describe("the tool catalog", () => {
   });
 });
 
+describe("connector names", () => {
+  it("spell brands their own way", async () => {
+    const { titled } = await import("./catalog");
+    expect(["gitlab", "deepwiki", "circleci", "n8n-official", "aws-knowledge", "microsoft-learn"].map(titled)).toEqual(["GitLab", "DeepWiki", "CircleCI", "n8n", "AWS Knowledge", "Microsoft Learn"]);
+  });
+});
+
+describe("GitHub", () => {
+  it("is GitHub's hosted server with the token in its header, by name only", () => {
+    const node = catalogNode(CATALOG.find((t) => t.id === "github")!, new Set(), { x: 0, y: 0 });
+    const data = ToolDataSchema.parse(node.data);
+    expect(mcpServerEntry(data)).toEqual({ url: "https://api.githubcopilot.com/mcp/", headers: { Authorization: "Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}" } });
+  });
+});
+
 describe("connectors from Hermes' catalog", () => {
   it("make an http tool that signs in through Hermes", async () => {
     const { CONNECTOR_TOOLS, catalogNode: make } = await import("./catalog");

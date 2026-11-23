@@ -31,7 +31,7 @@ const ALIASES: Record<string, string> = {
 
 /** Every key the app may ask for: connectors, catalog tools, chat apps, cloud and local model services, makers. */
 function keys(): string[] {
-  const catalog = ["exa", "parallel", "brave", "tavily", "firecrawl", "context7", "notion", "knowledge", "thinking", "browser"];
+  const catalog = ["exa", "parallel", "brave", "tavily", "firecrawl", "context7", "github", "notion", "knowledge", "thinking", "browser"];
   const services = ["openrouter", "openai", "anthropic", "gemini", "groq", "deepseek", "mistral", "together", "ollama", "lmstudio", "vllm", "jan", "fal", "xai", "krea", "deepinfra"];
   return [...new Set([...CONNECTORS.map((c) => c.name), ...catalog, ...Object.keys(PLATFORMS), ...services])].sort();
 }

@@ -34,6 +34,7 @@ export interface DoctorContext {
 
 const title = (n: GraphNode) => String(("displayName" in n.data && n.data.displayName) || ("label" in n.data && n.data.label) || n.data.name || n.kind);
 const RANK = { error: 0, warn: 1, tip: 2 } as const;
+const ENV_REF = /\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g;
 
 export function checkHarness(g: Graph, ctx: DoctorContext): Finding[] {
   const out: Finding[] = [];
@@ -64,6 +65,22 @@ export function checkHarness(g: Graph, ctx: DoctorContext): Finding[] {
     if (n.kind === "agent") continue;
     if (!wired.has(n.id) || !toAgent(n.id)) out.push({ id: `alone-${n.id}`, level: "tip", title: `${title(n)} isn't wired to an agent`, sub: "It compiles into nothing", nodeId: n.id, fix: { kind: "delete", nodeId: n.id, label: "Remove" } });
     if (n.kind === "channel" && n.data.allowedUsers.length === 0 && toAgent(n.id)) out.push({ id: `nobody-${n.id}`, level: "warn", title: `Nobody may message ${title(n)}`, sub: "Hermes refuses senders it doesn't know", nodeId: n.id, fix: { kind: "select", nodeId: n.id, label: "Add people" } });
+  }
+
+  // A tool's keys (`${env:NAME}` in its env or headers). A hosted server without its key can't
+  // connect (Hermes fails closed); a local one starts without it, and may not work.
+  if (ctx.keys) {
+    for (const n of g.nodes) {
+      if (n.kind !== "tool" || !toAgent(n.id)) continue;
+      const refs = (vals: string[]) => vals.flatMap((v) => [...v.matchAll(ENV_REF)].map((m) => m[1]!));
+      const remote = new Set(n.data.transport === "http" ? refs([n.data.url, ...Object.values(n.data.headers)]) : []);
+      for (const k of new Set([...remote, ...refs(Object.values(n.data.env))])) {
+        if (ctx.keys.includes(k)) continue;
+        out.push(remote.has(k)
+          ? { id: `tool-key-${n.id}-${k}`, level: "error", title: `${k} isn't saved`, sub: `${title(n)} can't connect without it`, nodeId: n.id, fix: { kind: "select", nodeId: n.id, label: "Add key" } }
+          : { id: `tool-key-${n.id}-${k}`, level: "warn", title: `${k} isn't saved`, sub: `${title(n)} starts without it, and may not work`, nodeId: n.id, fix: { kind: "select", nodeId: n.id, label: "Add key" } });
+      }
+    }
   }
 
   // Spending with no cap: agents on a paid model with no daily budget.

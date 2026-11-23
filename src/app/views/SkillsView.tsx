@@ -19,6 +19,7 @@ import { useApp } from "../state/store";
 import { AgentFace, Empty, Segmented, SkeletonCards } from "../ui";
 import { PluginsPanel } from "./PluginsPanel";
 import { categoryName, prettyName } from "../lib/names";
+import { suggestSkills } from "../lib/suggestSkills";
 
 /** A pasted link or identifier installs; plain words search. */
 const looksLikeSource = (t: string) => /^https:\/\//.test(t.trim()) || /^[\w.-]+(\/[\w.@-]+){2,}$/.test(t.trim());
@@ -64,6 +65,8 @@ export function SkillsView() {
   const words = looksLikeSource(q) ? "" : q.trim().toLowerCase();
   const shown = library.filter((s) => (!cat || s.category === cat) && (!words || `${s.name} ${prettyName(s.name)} ${categoryName(s.category)} ${s.description} ${s.tags.join(" ")}`.toLowerCase().includes(words)));
   const edit = () => { app.setTab("graph"); app.select(agent.id); };
+  // What fits this agent, from what it is for: shown above the whole library, one click each.
+  const suggested = state && !q.trim() ? suggestSkills({ name: agent.data.displayName || agent.data.name, description: agent.data.description, soul: agent.data.soul }, library, installed) : [];
   const install = async (s: LibrarySkill) => {
     setBusy(s.id);
     try {
@@ -284,6 +287,25 @@ export function SkillsView() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {suggested.length > 0 && (
+              <div className="stack" style={{ gap: 8 }} data-testid="skills-suggested">
+                <span className="section-label"><Sparkles size={12} /> Suggested for {agent.data.displayName || profile}</span>
+                <div className="catalog-grid">
+                  {suggested.map((s) => (
+                    <div key={s.id} className="catalog-card skill-card-lib">
+                      <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                        <b className="ellipsis">{prettyName(s.name)}</b>
+                        <span className="faint">{s.description}</span>
+                      </span>
+                      <button className="btn sm" disabled={busy !== null || !state?.compiled} onClick={() => void install(s)} data-tip={state?.compiled ? categoryName(s.category) : "Compile first"}>
+                        <Download size={12} /> {busy === s.id ? "Installing…" : "Install"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

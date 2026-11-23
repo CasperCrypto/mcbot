@@ -22,9 +22,10 @@ export interface CatalogTool {
   name: string;
   /** npx arguments for a local server; empty for a remote one. */
   args: string[];
-  /** A hosted MCP server's address (streamable HTTP): no install, no key. */
+  /** A hosted MCP server's address (streamable HTTP): no install. */
   url?: string;
-  /** The key it needs, by the variable the server reads (from its README). */
+  /** The key it needs, by the variable the server reads (from its README). A hosted server gets it
+   *  as `Authorization: Bearer ${env:NAME}` (Hermes renders `${env:…}` in headers too). */
   key?: { env: string; where: string; optional?: boolean };
   /** Signs in through Hermes (`hermes mcp login <name>`) instead of a key. */
   oauth?: Record<string, string | number> | true;
@@ -38,13 +39,21 @@ export const CATALOG: readonly CatalogTool[] = [
   { id: "tavily", label: "Tavily", does: "Web search and page extraction made for agents", group: "Web", name: "tavily", args: ["-y", "tavily-mcp"], key: { env: "TAVILY_API_KEY", where: "app.tavily.com" } },
   { id: "firecrawl", label: "Firecrawl", does: "Turns websites into clean text, crawls whole sites", group: "Web", name: "firecrawl", args: ["-y", "firecrawl-mcp"], key: { env: "FIRECRAWL_API_KEY", where: "firecrawl.dev" } },
   { id: "context7", label: "Context7", does: "Up-to-date docs for any code library", group: "Web", name: "context7", args: ["-y", "@upstash/context7-mcp"], key: { env: "CONTEXT7_API_KEY", where: "context7.com", optional: true } },
+  // GitHub's own hosted server (github/github-mcp-server, docs/remote-server.md): a token in the header.
+  { id: "github", label: "GitHub", does: "Repos, issues, pull requests and code search", group: "Work apps", name: "github", args: [], url: "https://api.githubcopilot.com/mcp/", key: { env: "GITHUB_PERSONAL_ACCESS_TOKEN", where: "github.com/settings/personal-access-tokens" } },
   { id: "notion", label: "Notion", does: "Reads and writes your Notion pages and databases", group: "Work apps", name: "notion", args: ["-y", "@notionhq/notion-mcp-server"], key: { env: "NOTION_TOKEN", where: "notion.so/my-integrations" } },
   { id: "memory", label: "Knowledge graph", does: "A shared memory of people, things and how they relate", group: "Thinking", name: "knowledge", args: ["-y", "@modelcontextprotocol/server-memory"] },
   { id: "thinking", label: "Step-by-step thinking", does: "Plans hard problems one step at a time", group: "Thinking", name: "thinking", args: ["-y", "@modelcontextprotocol/server-sequential-thinking"] },
 ];
 
 const ACRONYMS = new Set(["aws", "ai", "api", "crm", "hr", "mcp", "ui"]);
-const titled = (name: string) => name.split(/[-_]/).map((w) => (ACRONYMS.has(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");
+/** Connectors whose brand is not spelled like its key. */
+const BRANDS: Record<string, string> = {
+  alltrails: "AllTrails", betterstack: "Better Stack", circleci: "CircleCI", clickup: "ClickUp", deepwiki: "DeepWiki", gitlab: "GitLab",
+  hugging_face: "Hugging Face", motherduck: "MotherDuck", "n8n-official": "n8n", paypal: "PayPal", "prisma-postgres": "Prisma Postgres",
+  rentahuman: "RentAHuman", "wordpress-com": "WordPress.com", monday: "monday.com", "comfy-cloud": "Comfy Cloud",
+};
+export const titled = (name: string) => BRANDS[name] ?? name.split(/[-_]/).map((w) => (ACRONYMS.has(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");
 
 /**
  * Hermes' own vetted connectors (hermes/optional-mcps, generated): hosted MCP servers, most of them
@@ -61,7 +70,7 @@ export function catalogNode(t: CatalogTool, taken: ReadonlySet<string>, position
   return {
     id: newId("tool"), kind: "tool", position,
     data: t.url
-      ? { name, label: t.label, transport: "http", command: "", args: [], env: {}, url: t.url, headers: {}, ...(t.oauth ? { auth: "oauth" as const, ...(t.oauth === true ? {} : { oauth: { ...t.oauth } }) } : {}) }
+      ? { name, label: t.label, transport: "http", command: "", args: [], env: {}, url: t.url, headers: t.key ? { Authorization: `Bearer \${env:${t.key.env}}` } : {}, ...(t.oauth ? { auth: "oauth" as const, ...(t.oauth === true ? {} : { oauth: { ...t.oauth } }) } : {}) }
       : { name, label: t.label, transport: "stdio", command: "npx", args: [...t.args], env: t.key ? { [t.key.env]: `\${env:${t.key.env}}` } : {}, url: "", headers: {} },
   };
 }
