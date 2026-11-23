@@ -30,7 +30,7 @@
 .node.running { border-color: var(--run); box-shadow: 0 0 0 3px var(--run-soft), var(--shadow-2), var(--highlight); }
 .node.calling { border-color: var(--k-tool); box-shadow: 0 0 0 3px rgba(48, 176, 199, 0.16), var(--shadow-2); }
 
-.node-agent { width: 236px; padding: 14px; display: grid; gap: 12px; }
+.node-agent { width: 236px; padding: 14px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .node-agent .meta .chip.mono { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; line-height: 20px; }
 .node-agent .meta .chip:not(.mono) { flex: none; }
 .node-agent .head { display: flex; align-items: center; gap: 12px; }
@@ -168,7 +168,7 @@
 .canvas .react-flow__node { transition: opacity var(--t) var(--ease); }
 
 /* Board | Hermes switch, floating at the top of the canvas */
-.seg-float { position: absolute; top: 12px; left: 50%; translate: -50% 0; z-index: 8; display: flex; gap: 2px; padding: 3px; border-radius: var(--r-pill); background: var(--bg-glass); backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%); border: var(--hairline, 1px) solid var(--line-2); box-shadow: var(--shadow-2); }
+.seg-float { position: absolute; top: 12px; left: 50%; translate: -50% 0; z-index: 8; transition: left var(--t-spring) var(--spring-smooth); display: flex; gap: 2px; padding: 3px; border-radius: var(--r-pill); background: var(--bg-glass); backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%); border: var(--hairline, 1px) solid var(--line-2); box-shadow: var(--shadow-2); }
 .seg-float button { height: 26px; padding: 0 14px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--text-3); font-size: 13.5px; font-weight: 600; transition: background var(--t) var(--ease), color var(--t-fast); }
 .seg-float button:hover { color: var(--text); }
 .seg-float button[aria-selected="true"] { background: var(--bg-active); color: var(--text); box-shadow: var(--highlight), var(--shadow-1); }
@@ -247,3 +247,7 @@
 .react-flow__node-frame .frame-resize-line { pointer-events: all; border-color: transparent; }
 /* With the inspector or live files open the dock moves left, so the zoom buttons sit above it. */
 :has(> .dock-wrap.shifted) > .react-flow .react-flow__panel.bottom.left { bottom: 74px; }
+/* The Board | Layers | Hermes switch stays over the free part of the canvas, like the dock. */
+.view:has(.inspector) > .seg-float { left: max(calc(50% - var(--inspector-w) / 2 - 10px), 212px); }
+.view:has(.live-files) > .seg-float { left: calc(50% + var(--live-w) / 2 + 5px); }
+.view:has(.inspector):has(.live-files) > .seg-float { left: calc(50% + var(--live-w) / 2 - var(--inspector-w) / 2); }

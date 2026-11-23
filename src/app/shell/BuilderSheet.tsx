@@ -111,9 +111,11 @@ export function BuilderSheet() {
 
         {!plan ? (
           <div className="builder-body">
-            <textarea autoFocus rows={3} value={request} onChange={(e) => setRequest(e.target.value)} data-testid="builder-request"
-              placeholder="A team that researches our market every week, writes a short report and posts it to Slack"
-              onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey || !e.shiftKey)) { e.preventDefault(); void design(); } }} />
+            <div className="field builder-request">
+              <textarea autoFocus rows={3} value={request} onChange={(e) => setRequest(e.target.value)} data-testid="builder-request" aria-label="Describe the agents you need"
+                placeholder="A team that researches our market every week, writes a short report and posts it to Slack"
+                onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey || !e.shiftKey)) { e.preventDefault(); void design(); } }} />
+            </div>
             {busy ? <SkeletonCards count={3} /> : (
               <div className="rich-choices">
                 {EXAMPLES.map((x) => <button key={x} className="rich-choice" onClick={() => void design(x)}>{x}</button>)}

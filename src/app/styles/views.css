@@ -52,10 +52,14 @@
 .kpi b { display: block; margin-top: 6px; font-size: 26px; font-weight: 650; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .kpi span { display: block; margin-top: 2px; font-size: 12.5px; color: var(--text-4); }
 .chart-card { padding: 18px 20px 14px; }
-.chart-card h3 { margin: 0 0 2px; font-size: 14px; font-weight: 600; }
-.bars { position: relative; display: flex; align-items: flex-end; gap: 8px; height: 160px; padding-top: 22px; border-bottom: 1px solid var(--line-2); }
-.bar { position: relative; flex: 1; max-width: 48px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
-.bar i { display: block; width: 100%; max-width: 24px; border-radius: 4px 4px 0 0; background: var(--accent); min-height: 2px; transition: opacity var(--t-fast); }
+.chart-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.chart-head h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.chart-head .faint { font-size: 12.5px; }
+.bars { position: relative; display: flex; align-items: flex-end; gap: 6px; height: 168px; padding-top: 24px; border-bottom: var(--hairline, 1px) solid var(--line-2); }
+.bar { position: relative; flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.bar i { display: block; width: 100%; max-width: 28px; height: 2px; border-radius: 5px 5px 1px 1px; background: var(--accent); transition: opacity var(--t-fast), height var(--t-spring) var(--spring-smooth); }
+.bar.zero i { background: var(--line-3); border-radius: 1px; }
+.chart-axis { justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--text-4); }
 .bar .peak { position: absolute; top: 0; font-size: 12px; color: var(--text-2); white-space: nowrap; }
 .bar .tip { position: absolute; bottom: calc(100% + 6px); left: 50%; translate: -50% 0; z-index: 3; min-width: 150px; padding: 8px 10px; border-radius: var(--r); background: #2c2c30; border: 1px solid var(--line-2); box-shadow: var(--shadow-2); font-size: 13px; pointer-events: none; }
 .table-card { overflow: hidden; }
@@ -297,3 +301,5 @@
 .screen .made img { width: 100%; height: auto; border-radius: var(--r-md); }
 .screen input[type="range"] { width: 100%; accent-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .screen-live i { animation: none; } }
+/* A one-line notice inside a page (Cost's unpriced tokens): a quiet card with its action at the end. */
+.notice-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; margin-bottom: 14px; font-size: 13.5px; color: var(--text-2); }

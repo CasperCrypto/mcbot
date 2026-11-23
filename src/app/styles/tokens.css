@@ -129,8 +129,8 @@
   --mat-thin: rgba(40, 40, 44, 0.58);
   --mat-regular: rgba(34, 34, 38, 0.72);
   --mat-thick: rgba(30, 30, 33, 0.86);
-  /* Panels you read and type in (inspector, team chat, side panels): glass, but the board never competes with their text. */
-  --mat-panel: rgba(29, 29, 32, 0.95);
+  /* Panels you read and type in (inspector, team chat, side panels): solid, so the board never shows through their text. */
+  --mat-panel: #1f1f22;
   --mat-chrome: rgba(28, 28, 30, 0.78);
   --mat-blur: blur(28px) saturate(185%);
   --mat-blur-strong: blur(44px) saturate(200%);
