@@ -120,6 +120,8 @@ Change them additively; a breaking change bumps the version.
   loopback API from a terminal; runs it starts show live in every window.
 - The tool catalog (`src/app/graph/catalog.ts`) also has hosted MCP servers that need no key
   (Exa, Parallel: `transport: http`, `url` only), so agents can search the web from minute one,
+  GitHub on GitHub's own hosted server (a hosted entry with a key sends it as
+  `Authorization: Bearer ${env:NAME}`; Hermes renders `${env:…}` in `url` and `headers`),
   and Hermes' own vetted connectors (`hermes/optional-mcps`, generated: `npm run engine:connectors`
   → `src/contracts/connectors.generated.ts`; `npm test` fails while it is stale). An OAuth one
   compiles to `auth: oauth` (+ its pinned `oauth` block) and signs in with `hermes -p <agent> mcp
@@ -131,7 +133,9 @@ Change them additively; a breaking change bumps the version.
   `hermes -p <agent> skills install official/<path> --yes` (host only). Both live in category
   folders, which the board reader skips: they are Hermes', not blocks. The Skills view
   (`views/SkillsView.tsx`, host only) shows all three per agent plus what each agent taught itself
-  (`profileSkills`); the Inspector links to it. Its one box searches every registry Hermes knows
+  (`profileSkills`) and "Suggested for <agent>" (`lib/suggestSkills.ts`, pure: what the agent is for
+  against each library skill, a starter card's own picks first); names read through `lib/names.ts`
+  (Antigravity CLI, MLOps, MCP servers); the Inspector links to it. Its one box searches every registry Hermes knows
   (`hermes skills search --json`) or, given a GitHub link or SKILL.md URL, installs it into the
   `added` category after Hermes' scan (`skillSources`: a GitHub folder tries `owner/repo/path`, then
   the raw SKILL.md). Its Plugins pane (`views/PluginsPanel.tsx`, `engine/plugins.ts`) lists the
@@ -335,7 +339,8 @@ Change them additively; a breaking change bumps the version.
 - **Harness doctor** (`graph/doctor.ts`, pure and tested; `shell/DoctorSheet.tsx`): the stethoscope
   in the title bar counts what is wrong (red: it won't run, yellow: runs badly or unseen) and its
   sheet lists every finding with one fix: compile errors, agents without a model, unsaved keys of
-  models in use, silent local servers, chat apps nobody may message, blocks wired to no agent
+  models and tools in use (a hosted tool's is an error, a local one's a warning; saved key names are
+  asked again whenever a key is saved or removed, `onKeysChanged` in `lib/engine.ts`), silent local servers, chat apps nobody may message, blocks wired to no agent
   (Remove, undoable), unpriced cloud models, paid agents with no daily budget, files that differ
   from disk, an engine not ready. ⌘K "Check the harness".
 - **Keyboard:** Tab / ⇧Tab walk the blocks (the focused block is selected), arrows nudge, F2 or
