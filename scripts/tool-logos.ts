@@ -45,6 +45,40 @@ function lum(hex: string): number {
   return 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
 }
 
+/** A key's Simple Icons mark (null when there is none): the brand's tile colour (null = near-black) and the glyph's ink. */
+function markFor(key: string): { title: string; path: string; tile: string | null; ink: string } | null {
+  const icon = bySlug.get(ALIASES[key] ?? key.replace(/[^a-z0-9]/g, ""));
+  if (!icon) return null;
+  const l = lum(icon.hex);
+  const tile = l < 0.03 ? null : `#${icon.hex}`;
+  return { title: icon.title, path: icon.path, tile, ink: tile && l > 0.5 ? "#000" : "#fff" };
+}
+
+export const SITE = join(ROOT, "site/index.html");
+/** The website's "works with" wall: popular marks per group, between `<!-- logos:<group> -->` markers. */
+export const SITE_GROUPS: Record<string, string[]> = {
+  tools: ["github", "notion", "linear", "atlassian", "figma", "stripe", "supabase", "vercel", "sentry", "gitlab", "airtable", "todoist", "dropbox", "hugging_face", "cloudflare", "postman"],
+  chat: ["telegram", "discord", "whatsapp", "signal", "matrix", "google_chat", "line", "mattermost"],
+  models: ["ollama", "lmstudio", "vllm", "openrouter", "anthropic", "gemini", "mistral", "deepseek"],
+};
+
+/** site/index.html with each logo group drawn from the marks above (inline SVG: no requests, no script). */
+export function renderSiteLogos(html: string): string {
+  let out = html;
+  for (const [group, keys] of Object.entries(SITE_GROUPS)) {
+    const items = keys.map((k) => {
+      const m = markFor(k);
+      if (!m) throw new Error(`no mark for ${k}`);
+      const tile = m.tile ? ` style="background:${m.tile}"` : "";
+      return `<li><span class="lg${m.tile ? "" : " plain"}"${tile}><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="${m.tile ? m.ink : "currentColor"}" d="${m.path}"/></svg></span><span>${m.title}</span></li>`;
+    });
+    const re = new RegExp(`(<!-- logos:${group} -->)[\\s\\S]*?(<!-- /logos:${group} -->)`);
+    if (!re.test(out)) continue;
+    out = out.replace(re, (_m, a: string, b: string) => `${a}\n${items.join("\n")}\n${b}`);
+  }
+  return out;
+}
+
 export function renderLogos(): string {
   const dropped = existsSync(DROP) ? new Set(readdirSync(DROP).filter((f) => f.endsWith(".svg")).map((f) => f.slice(0, -4))) : new Set<string>();
   const rows: string[] = [];
@@ -79,4 +113,6 @@ export function renderLogos(): string {
 if (process.argv[1] && /tool-logos\.ts$/.test(process.argv[1])) {
   writeFileSync(OUT, renderLogos());
   console.log(`wrote ${OUT}`);
+  writeFileSync(SITE, renderSiteLogos(readFileSync(SITE, "utf8")));
+  console.log(`wrote the logo wall in ${SITE}`);
 }

@@ -269,6 +269,11 @@
       for (const el of members) look(el.firstChild, target);
     });
   }
+
+  /* ---------- faces by name (Ask McBot's plan): the same bot the app draws for that name ---------- */
+  if (F) document.querySelectorAll("[data-agent]").forEach((el, i) => {
+    el.innerHTML = F.foodSvg({ seed: el.dataset.agent, size: Number(el.dataset.size || 32), expression: "idle", uid: `ag${i}`, title: "" });
+  });
 })();
 
 // Copy the install command.

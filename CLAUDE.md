@@ -515,7 +515,10 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   Page anatomy (as the product pages we compare with do it): a platform pill and a split Download button (your OS,
   plus a menu) over the hero; cards whose bold title runs into the sentence; a two-column FAQ (`<details>`);
   flat colour download cards with dark ink; a big footer with a one-paragraph pitch and link columns.
-  Product shots (`site/assets/*.webp`) are taken from the demo at 1440×900 @2x
-  without the Demo chip; re-shoot them when the UI they show changes.
+  The page has no product screenshots (its windows are markup); its share card `site/assets/og.jpg`
+  (1200×630: the burger, the headline, the platforms) is rendered from HTML; render it again when
+  the hero's words change. "Ask McBot" and "Connect" show the builder and what plugs in; the Connect
+  logo wall is generated into `site/index.html` by `npm run site:logos` from the app's own marks
+  (`npm test` fails while it is stale).
 
 Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Skills, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘D duplicate · ⌘0 fit the board · right-click the board · ⌘N new window (desktop).
