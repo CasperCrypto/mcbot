@@ -19,22 +19,31 @@ self.MonacoEnvironment = {
   },
 };
 
-/** McBot's dark look, from the same values as tokens.css (Monaco needs hex, not CSS variables). */
+/**
+ * McBot's look in Monaco, from tokens.css (Monaco needs colours, not CSS variables). Defined again,
+ * and every open editor repainted, when the appearance or the accent changes.
+ */
 const css = (name: string, fallback: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
-monaco.editor.defineTheme("mcbot", {
-  base: "vs-dark",
-  inherit: true,
-  rules: [],
-  colors: {
-    "editor.background": css("--bg-main", "#1c1c1e"),
-    "editor.lineHighlightBackground": "#ffffff08",
-    "editorLineNumber.foreground": css("--text-4", "#5c5c64"),
-    "editorLineNumber.activeForeground": css("--text-2", "#b4b4ba"),
-    "editor.selectionBackground": "#0a84ff55",
-    "editorCursor.foreground": css("--accent", "#0a84ff"),
-    "editorWidget.background": css("--bg-raised", "#222225"),
-  },
-});
+export function applyMonacoTheme(): void {
+  const light = document.documentElement.dataset.theme === "light";
+  const accent = css("--accent", light ? "#007aff" : "#0a84ff");
+  monaco.editor.defineTheme("mcbot", {
+    base: light ? "vs" : "vs-dark",
+    inherit: true,
+    rules: [],
+    colors: {
+      "editor.background": css("--bg-main", light ? "#f7f7f9" : "#1c1c1e"),
+      "editor.lineHighlightBackground": light ? "#00000008" : "#ffffff08",
+      "editorLineNumber.foreground": css("--text-4", light ? "#a1a1a6" : "#5c5c64"),
+      "editorLineNumber.activeForeground": css("--text-2", light ? "#424245" : "#b4b4ba"),
+      "editor.selectionBackground": /^#[0-9a-f]{6}$/i.test(accent) ? `${accent}44` : "#0a84ff44",
+      "editorCursor.foreground": accent,
+      "editorWidget.background": css("--bg-raised", light ? "#ffffff" : "#222225"),
+    },
+  });
+  monaco.editor.setTheme("mcbot");
+}
+applyMonacoTheme();
 
 /** Monaco's language for a file name. */
 export function languageOf(path: string): string {

@@ -4,7 +4,7 @@ import type { AgentSchedules, CostReport, TaskView } from "../../contracts/api";
 import type { AgentNode } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 import { compileBoard, openHermesSetup, runAgent, stopRun } from "../actions";
-import { engine } from "../lib/engine";
+import { engine, onKeysChanged } from "../lib/engine";
 import { ago, usd } from "../lib/format";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
@@ -285,9 +285,13 @@ export function HomeView() {
   useEffect(() => {
     engine.cost(boardId).then(setCost).catch(() => undefined);
   }, [boardId, finished]);
+  const [keysRev, setKeysRev] = useState(0);
+  useEffect(() => {
+    return onKeysChanged(() => setKeysRev((n) => n + 1));
+  }, []);
   useEffect(() => {
     engine.secrets().then((r) => setKeys(r.names)).catch(() => setKeys(null));
-  }, [boardId, graph]);
+  }, [boardId, graph, keysRev]);
   const noModel = agentsWithoutModel(graph);
   const modelHealth = useModelHealth(modelsOf(graph));
   const silent = modelsOf(graph).filter((m) => modelHealth[m.id] === "down" || modelHealth[m.id] === "missing");

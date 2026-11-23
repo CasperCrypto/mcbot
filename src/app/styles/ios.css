@@ -15,7 +15,7 @@
   --fill-4: rgba(120, 120, 128, 0.18);
   --r-card: 18px;
 }
-::selection { background: rgba(10, 132, 255, 0.38); color: inherit; }
+::selection { background: rgb(var(--accent-rgb) / 0.38); color: inherit; }
 img, svg { -webkit-user-drag: none; }
 
 /* Fields: filled, borderless, soft; focus lifts the fill (iOS text fields, macOS search fields). */
@@ -75,7 +75,7 @@ img, svg { -webkit-user-drag: none; }
 .palette-row[data-group="Create"] .tile { background: var(--accent-soft); color: var(--accent-text); }
 .palette-row[data-group="Ask"] .tile, .palette-row[data-group="Suggested"] .tile { background: var(--accent-soft); color: var(--accent-text); }
 .palette-row[data-group="Agents"] .tile, .palette-row[data-group="Ask"] .tile:has(svg[class*="face"]) { background: none; box-shadow: none; }
-.palette-foot { height: 44px; padding: 0 16px; gap: 16px; border-top: var(--hairline) solid var(--line-2); background: rgba(0, 0, 0, 0.14); }
+.palette-foot { height: 44px; padding: 0 16px; gap: 16px; border-top: var(--hairline) solid var(--line-2); background: rgb(0 0 0 / calc(0.14 * var(--sink-k))); }
 .palette-foot .row { display: inline-flex; align-items: center; gap: 7px; }
 .palette-foot .grow { flex: 1; }
 .palette-brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-2); letter-spacing: -0.01em; }

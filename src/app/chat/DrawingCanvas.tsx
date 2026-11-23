@@ -7,6 +7,7 @@ import "@excalidraw/excalidraw/index.css";
 import { convertToExcalidrawElements, Excalidraw, serializeAsJSON } from "@excalidraw/excalidraw";
 import { useMemo } from "react";
 import type { Scene } from "./drawing";
+import { useApp } from "../state/store";
 
 declare global {
   interface Window { EXCALIDRAW_ASSET_PATH?: string | string[] }
@@ -26,9 +27,10 @@ export default function DrawingCanvas({ scene, edit, onReady }: { scene: Scene; 
       return [];
     }
   }, [scene]);
+  const theme = useApp((s) => s.theme);
   return (
     <Excalidraw
-      theme="dark"
+      theme={theme}
       viewModeEnabled={!edit}
       zenModeEnabled={!edit}
       gridModeEnabled={false}

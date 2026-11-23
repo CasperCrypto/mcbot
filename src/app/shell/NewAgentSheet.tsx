@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
 import { RESERVED_PROFILE_NAMES, type GraphNode, type ModelNode } from "../../contracts/graph";
 import { compileBoard, learnSkills, skillName } from "../actions";
+import { prettyName } from "../lib/names";
 import { newAgent, newId, newModel } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { useBoard } from "../state/board";
@@ -93,7 +94,7 @@ export function NewAgentSheet() {
                 <div className="suggest-row">
                   {AGENT_SUGGESTIONS.filter((s) => s.group === g).map((s) => (
                     <button key={s.name} className="suggest-card" aria-pressed={name === s.name} data-testid="new-agent-suggestion"
-                      data-tip={s.skills?.length ? `${s.about} · Hermes skills: ${s.skills.map(skillName).join(", ")}` : s.about}
+                      data-tip={s.skills?.length ? `${s.about} · Hermes skills: ${s.skills.map((k) => prettyName(skillName(k))).join(", ")}` : s.about}
                       onClick={() => { setName(s.name); setAbout(s.about); setSoul(s.soul); setSkills(s.skills ?? []); }}>
                       <AgentFace seed={agentIdFor(s.name, new Set())} size={26} />
                       <span className="ellipsis">{s.name}</span>
@@ -107,8 +108,8 @@ export function NewAgentSheet() {
             <div className="field" data-testid="new-agent-skills"><span>Starts with Hermes skills</span>
               <div className="suggest-row">
                 {skills.map((k) => (
-                  <span key={k} className="chip">{skillName(k)}
-                    <button className="chip-x" aria-label={`Leave out ${skillName(k)}`} onClick={() => setSkills(skills.filter((x) => x !== k))}><X size={10} /></button>
+                  <span key={k} className="chip" data-tip={k}>{prettyName(skillName(k))}
+                    <button className="chip-x" aria-label={`Leave out ${prettyName(skillName(k))}`} onClick={() => setSkills(skills.filter((x) => x !== k))}><X size={10} /></button>
                   </span>
                 ))}
               </div>

@@ -35,8 +35,9 @@ export function LogoTile({ logo, kind, sm, children }: { logo: Logo | null; kind
   if (!logo) return <span className={`${cls} ${kind}`}>{children}</span>;
   if ("src" in logo) return <span className={`${cls} logo dropped`}><img src={logo.src} alt="" draggable={false} /></span>;
   return (
-    <span className={`${cls} logo`} style={logo.tile ? { background: logo.tile } : undefined} data-tip={logo.title} data-tip-side="top">
-      <svg viewBox="0 0 24 24" width={sm ? 14 : 17} height={sm ? 14 : 17} aria-hidden fill={logo.ink}><path d={logo.path} /></svg>
+    <span className={`${cls} logo${logo.tile ? "" : " neutral"}`} style={logo.tile ? { background: logo.tile } : undefined} data-tip={logo.title} data-tip-side="top">
+      {/* A near-black mark has no tile of its own: it takes the text colour, so it shows in both appearances. */}
+      <svg viewBox="0 0 24 24" width={sm ? 14 : 17} height={sm ? 14 : 17} aria-hidden fill={logo.tile ? logo.ink : "currentColor"}><path d={logo.path} /></svg>
     </span>
   );
 }

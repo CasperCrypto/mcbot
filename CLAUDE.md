@@ -120,6 +120,8 @@ Change them additively; a breaking change bumps the version.
   loopback API from a terminal; runs it starts show live in every window.
 - The tool catalog (`src/app/graph/catalog.ts`) also has hosted MCP servers that need no key
   (Exa, Parallel: `transport: http`, `url` only), so agents can search the web from minute one,
+  GitHub on GitHub's own hosted server (a hosted entry with a key sends it as
+  `Authorization: Bearer ${env:NAME}`; Hermes renders `${env:…}` in `url` and `headers`),
   and Hermes' own vetted connectors (`hermes/optional-mcps`, generated: `npm run engine:connectors`
   → `src/contracts/connectors.generated.ts`; `npm test` fails while it is stale). An OAuth one
   compiles to `auth: oauth` (+ its pinned `oauth` block) and signs in with `hermes -p <agent> mcp
@@ -131,7 +133,9 @@ Change them additively; a breaking change bumps the version.
   `hermes -p <agent> skills install official/<path> --yes` (host only). Both live in category
   folders, which the board reader skips: they are Hermes', not blocks. The Skills view
   (`views/SkillsView.tsx`, host only) shows all three per agent plus what each agent taught itself
-  (`profileSkills`); the Inspector links to it. Its one box searches every registry Hermes knows
+  (`profileSkills`) and "Suggested for <agent>" (`lib/suggestSkills.ts`, pure: what the agent is for
+  against each library skill, a starter card's own picks first); names read through `lib/names.ts`
+  (Antigravity CLI, MLOps, MCP servers); the Inspector links to it. Its one box searches every registry Hermes knows
   (`hermes skills search --json`) or, given a GitHub link or SKILL.md URL, installs it into the
   `added` category after Hermes' scan (`skillSources`: a GitHub folder tries `owner/repo/path`, then
   the raw SKILL.md). Its Plugins pane (`views/PluginsPanel.tsx`, `engine/plugins.ts`) lists the
@@ -262,11 +266,18 @@ Change them additively; a breaking change bumps the version.
 
 ## UI invariants
 
-- **Look:** dark, quiet, Apple-native. All colours, radii, shadows and motion are
-  tokens in `src/app/styles/tokens.css`; components use tokens, not literals.
+- **Look:** quiet, Apple-native; dark by default, light or the system's in Settings → Appearance
+  (`lib/appearance.ts`: `data-theme` and `data-accent` on `<html>`, kept per computer, applied
+  before the first paint; every window, the native window, Monaco, the terminal, React Flow and
+  Excalidraw follow). All colours, radii, shadows and motion are tokens in
+  `src/app/styles/tokens.css` (a light block, and macOS's eight accent colours with a dark and a
+  light value each); components use tokens, not literals: overlays are `rgb(var(--tint-rgb) / a)`,
+  shadows and recessed fills scale with `--shadow-k` / `--sink-k`, state colours as text use
+  `--*-text` (`styles/tokens.test.ts` fails on a theme-blind literal). Fixed-colour surfaces are
+  the exceptions: the island (black in both), colour tiles, swatches, note paper.
   Colour means identity (agents, node kinds) or state (running, ok, failed).
-  macOS system colours, flat: the accent is system blue; no gradients, glows or
-  gradient text (the website follows the same rule).
+  macOS system colours, flat: the accent is the person's (system blue by default); no gradients,
+  glows or gradient text (the website follows the same rule).
 - **Glass and springs** (`src/app/styles/glass.css`, loaded last): whatever floats over content
   (sheets, menus, tooltips, the dock, board blocks, the inspector, the chat header and composer)
   is a material — `--mat-*` fill, `--mat-blur`, a hairline edge and specular top line
@@ -328,7 +339,8 @@ Change them additively; a breaking change bumps the version.
 - **Harness doctor** (`graph/doctor.ts`, pure and tested; `shell/DoctorSheet.tsx`): the stethoscope
   in the title bar counts what is wrong (red: it won't run, yellow: runs badly or unseen) and its
   sheet lists every finding with one fix: compile errors, agents without a model, unsaved keys of
-  models in use, silent local servers, chat apps nobody may message, blocks wired to no agent
+  models and tools in use (a hosted tool's is an error, a local one's a warning; saved key names are
+  asked again whenever a key is saved or removed, `onKeysChanged` in `lib/engine.ts`), silent local servers, chat apps nobody may message, blocks wired to no agent
   (Remove, undoable), unpriced cloud models, paid agents with no daily budget, files that differ
   from disk, an engine not ready. ⌘K "Check the harness".
 - **Keyboard:** Tab / ⇧Tab walk the blocks (the focused block is selected), arrows nudge, F2 or
@@ -508,7 +520,10 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   Page anatomy (as the product pages we compare with do it): a platform pill and a split Download button (your OS,
   plus a menu) over the hero; cards whose bold title runs into the sentence; a two-column FAQ (`<details>`);
   flat colour download cards with dark ink; a big footer with a one-paragraph pitch and link columns.
-  Product shots (`site/assets/*.webp`) are taken from the demo at 1440×900 @2x
-  without the Demo chip; re-shoot them when the UI they show changes.
+  The page has no product screenshots (its windows are markup); its share card `site/assets/og.jpg`
+  (1200×630: the burger, the headline, the platforms) is rendered from HTML; render it again when
+  the hero's words change. "Ask McBot" and "Connect" show the builder and what plugs in; the Connect
+  logo wall is generated into `site/index.html` by `npm run site:logos` from the app's own marks
+  (`npm test` fails while it is stale).
 
 Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Skills, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘D duplicate · ⌘0 fit the board · right-click the board · ⌘N new window (desktop).

@@ -212,10 +212,10 @@ the team server).
 
 ### 15. Design and polish ◐ (M15)
 
-● dark design system, flat macOS look, rail, ⌘K, graphs everywhere, the logo
-and agent faces. ○ panes you resize, pin and rearrange (centre, right and bottom),
-tabs in the centre, layouts saved per person, a light theme, keyboard shortcuts
-for every action, accessibility, languages.
+● design system in dark and light (the system's appearance and macOS's accent colours), flat
+macOS look, rail, ⌘K, graphs everywhere, the logo and agent faces. ○ panes you resize, pin and
+rearrange (centre, right and bottom), tabs in the centre, layouts saved per person, keyboard
+shortcuts for every action, accessibility, languages.
 
 ### 16. Shipping and growth ◐
 
@@ -239,7 +239,7 @@ whether setup works.
 | **M12** ◐ | Teams: share on your network (M12a) ●, the Team panel (who is here, team chat with @agent) ●, then the Buzz team server (M12b); roles, audit; McBot Cloud | Two people on two computers edit and run one board |
 | **M13** ○ | Packs and starter teams; import from other agents | A "Dev team" pack installs into a new space and runs |
 | **M14** ○ | Phones | Approve an agent's action from an iPhone |
-| **M15** ◐ | Polish: light theme, layouts, shortcuts, accessibility, languages (brand and agent icons ● done) | Each person arranges McBot their way, and it remembers |
+| **M15** ◐ | Polish: light theme ● (light, dark or the system's, with macOS's accent colours), layouts, shortcuts, accessibility, languages (brand and agent icons ● done) | Each person arranges McBot their way, and it remembers |
 
 "Now" runs before and alongside M6. Hermes upstream syncs happen whenever the
 daily watchdog opens an issue.

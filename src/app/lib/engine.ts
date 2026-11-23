@@ -120,7 +120,17 @@ const http = {
   actOnTask: (boardId: string, id: string, by: string, a: TaskAction) => call<TaskDetail>("POST", "/api/tasks/act", { boardId, id, by, ...a }),
 };
 
-export const engine: typeof http = DEMO ? demoEngine : http;
+const base: typeof http = DEMO ? demoEngine : http;
+
+/** Saved keys changed in this window (one saved or removed): what checks keys asks again. */
+const keyListeners = new Set<() => void>();
+export function onKeysChanged(run: () => void): () => void {
+  keyListeners.add(run);
+  return () => { keyListeners.delete(run); };
+}
+const tellKeys = <A extends unknown[], T>(f: (...a: A) => Promise<T>) => (...a: A) => f(...a).then((v) => { for (const l of keyListeners) l(); return v; });
+
+export const engine: typeof http = { ...base, setSecret: tellKeys(base.setSecret), removeSecret: tellKeys(base.removeSecret) };
 
 /** An agent's files changed in Hermes and the board followed (engine/hermesSync.ts). */
 export interface HarnessChange { boardId: string; agent: string; changed: string[] }

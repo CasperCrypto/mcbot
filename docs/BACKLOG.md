@@ -1,4 +1,4 @@
-# Backlog (2026-11-19)
+# Backlog (2026-11-23)
 
 What is left, in the order to do it. Milestones (M5–M15) are in `docs/PLAN.md`; this list is the
 working view of them plus every bug and gap found while using McBot. Move a line to "Done" in the
@@ -31,6 +31,12 @@ release notes when it ships.
 | ● fixed in 0.6.4 | The inspector cut off its fields when a model id was long (the grid column sized to it) | `styles/graph.css` `.inspector-body` |
 | ● fixed in 0.6.4 | Sticky notes on the board could not be moved (the text filled them, and new ones landed under blocks): a grip on top, and new notes go to free space | `notes/StickyNote.tsx`, `graph/place.ts` `noteSpot` |
 | ● fixed in 0.6.4 | The dock ran off the board beside the inspector; it now shrinks to fit | `graph/GraphView.tsx` |
+| ● 0.7.0 | Light, dark or the system's appearance and macOS's eight accent colours (Settings → Appearance, ⌘K); every literal colour in the style sheets goes through tokens, and `styles/tokens.test.ts` keeps it that way | `lib/appearance.ts`, `styles/tokens.css` |
+| ● 0.7.0 | GitHub in the tool catalog (GitHub's hosted MCP server, token in the header); "Suggested for <agent>" skills; the doctor asks for a tool's missing key | `graph/catalog.ts`, `lib/suggestSkills.ts`, `graph/doctor.ts` |
+| ● fixed in 0.7.0 | After saving a key, the doctor (title bar, island) and Home kept saying it was missing until a reload | `lib/engine.ts` `onKeysChanged` |
+| ● fixed in 0.7.0 | Cost: the price notice had no padding; the daily chart skipped empty days and crowded its bars to the left; agents showed by profile id | `views/CostView.tsx`, `lib/series.ts` |
+| ● fixed in 0.7.0 | A long model id pushed an agent block's model and cost out of its card; the board showed through the inspector; on narrow windows the inspector covered the Board / Layers / Hermes switch | `styles/graph.css`, `styles/tokens.css` |
+| ● fixed in 0.7.0 | Skill names read "Mcp", "Mlops", "Antigravity cli"; Runs showed raw tool names; chat apps listed raw variable names; Ask McBot's request box had no field style | `lib/names.ts`, `views/RunsView.tsx`, `lib/chatApps.ts` |
 | ○ | Hermes' 14 personalities (`display.personality`) apply to chat apps and the terminal but not to runs McBot starts (the runs API takes `instructions` per request): expose them once runs can carry one | `hermes_cli/personality.py`, `gateway/platforms/api_server_runs.py:498` |
 | ○ | 30 brands have no logo (Slack, Canva, OpenAI, Microsoft, AWS, Amplitude, Twilio…): add SVGs to `design/logos/` | `design/logos/README.md` |
 | ○ | Asana's connector is left out (its OAuth client comes from `${ASANA_CLIENT_ID}`) | `scripts/hermes-connectors.ts` |
@@ -64,7 +70,7 @@ release notes when it ships.
 14. **Packs (M13).** Starter teams as installable packs ("Social media team", "Dev team",
     "Support desk"), and import from other agent tools.
 15. **Phones (M14).** Approve an action and read answers from a phone.
-16. **Polish (M15).** Light theme, layouts, accessibility, languages.
+16. **Polish (M15).** ● Light theme (0.7.0); layouts, accessibility, languages.
 
 ## Ideas parked (from other products, feature references only)
 

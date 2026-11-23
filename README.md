@@ -17,32 +17,45 @@ edit and own, as plain files.
 
 ![McBot Studio](docs/screenshots/graph.png)
 
-## What it does today (0.4)
+## What it does (0.7)
 
-- **Board**: agents, local and cloud models (main + backups), tools (any MCP server, plus the engine's vetted connectors),
-  image and video makers, chat apps (Telegram, Slack, Discord… every platform the engine ships),
-  sticky notes. Wire them, press **Compile** (⌘S). A second view, **Hermes**, draws the whole
-  engine behind the board.
-- **Agents**: message an agent; tool calls, answer, time, tokens and cost land in the thread.
-  Risky commands stop and ask you (approval cards, also in the title-bar island).
-- **Skills**: per agent, what it **taught itself** during runs, its own skills, the engine's
-  44 built-in skills and the 140-skill library (install, update, remove).
+- **Ask McBot**: describe the team you need ("a support team that answers customers on Slack from
+  our docs") and McBot proposes the agents, their tools, chat apps, skills and hand-offs. Review it,
+  add it, and one ⌘Z takes it back. Or start from one of 8 starter teams or 19 starter agents.
+- **Board**: agents, local and cloud models (main + backups), tools (any MCP server, GitHub, and the
+  engine's 60+ vetted connectors), image and video makers, chat apps (Telegram, Slack, Discord,
+  WhatsApp… every platform the engine ships), sticky notes and frames. Wire them, press **Compile**
+  (⌘S). **Layers** shows each agent's harness from the outside in; **Hermes** draws the whole engine
+  behind the board. The **harness doctor** finds what would fail (a missing key, a silent model
+  server, a chat app nobody may message) and fixes it in one click.
+- **Chat**: message an agent; tool calls, answer, time, tokens and cost land in the thread. Answers
+  can carry tables, charts, choices and drawings. Risky commands stop and ask you (approval cards,
+  also in the island at the top of the screen).
+- **Skills**: per agent, what it **taught itself** during runs, its own skills, the engine's 44
+  built-in skills, a 140-skill library with suggestions that fit the agent, and any SKILL.md on
+  GitHub. **Plugins** turn on per agent.
 - **Tasks** and **schedules**: a shared task board agents pick up, and cron-style jobs.
 - **Runs**: every run as a flow graph: prompt → tool calls → answer → cost.
-- **Memory**, **Files**, **Code** (editor + terminal), **Browser**: what agents remember, wrote
-  and built, editable in place.
-- **Cost**: spend by agent, model and day, daily budgets that stop runs at the limit.
+- **Memory**, **Files**, **Code** (editor + terminal), **Browser**: what agents remember, wrote and
+  built, editable in place.
+- **Cost**: spend by agent, model and day, and daily budgets that stop runs at the limit.
 - **Team**: share a board on your network, team chat, `@agent` from chat.
-- **Engine updates**: the engine (Hermes Agent, MIT) ships inside; a weekly job merges each
-  new stable release, runs every test and opens a pull request, so updates arrive tested.
+- **At home on a Mac or PC**: light, dark or your system's appearance with your accent colour,
+  ⌘K for everything, ⌘⇧Space from any app, a menu bar icon and notifications.
+- **Engine updates**: the engine (Hermes Agent, MIT) ships inside; a weekly job merges each new
+  stable release, runs every test and opens a pull request, so updates arrive tested.
 
-| Agents | Runs |
+| Chat | Runs |
 |---|---|
-| ![Agents](docs/screenshots/agents.png) | ![Runs](docs/screenshots/runs.png) |
+| ![Chat](docs/screenshots/agents.png) | ![Runs](docs/screenshots/runs.png) |
+| **Skills that fit each agent** | **Cost** |
+| ![Skills](docs/screenshots/skills.png) | ![Cost](docs/screenshots/cost.png) |
 | **Files: any folder as a graph** | **Memory** |
 | ![Files](docs/screenshots/files.png) | ![Memory](docs/screenshots/memory.png) |
 | **Compile** | **⌘K** |
 | ![Compile](docs/screenshots/compile.png) | ![Command palette](docs/screenshots/palette.png) |
+| **Light appearance** | |
+| ![Light appearance](docs/screenshots/light.png) | |
 
 ## Install
 
@@ -116,7 +129,7 @@ Pages with "GitHub Actions" as the source).
 | tool | `config.yaml` → `mcp_servers.<name>` (stdio command or URL) |
 | agent abilities | `config.yaml` → `platform_toolsets.cli` (left out = the engine's defaults) |
 | image / video maker | `config.yaml` → `image_gen` / `video_gen` `{ provider, model }` |
-| Telegram bot | its token and allowed users in the agent's `.env`; an own Bot API server in `config.yaml` → `platforms.telegram` |
+| chat app (Telegram, Slack, Discord, WhatsApp…) | its keys, settings and who may message it in the agent's `.env`, under the platform's own variables; Telegram's own Bot API server in `config.yaml` → `platforms.telegram` |
 
 Two kinds of model endpoint, both OpenAI-compatible: one **local** (Ollama, LM
 Studio, vLLM, llama.cpp) and one **cloud** (any OpenAI-compatible API). Boards and
@@ -135,8 +148,8 @@ that agent uses, in its own profile's `.env` — the only place the engine reads
          │ McBot engine (Node)                                        │
          │  board relay (Yjs) · compiler writer · agent runner  · data│
          └──────┬───────────────────────────────┬─────────────────────┘
-                │ writes                        │ spawns, reads
-        ~/McBot/hermes/profiles/<agent>/   agent CLI: chat … --format stream-json
+                │ writes                        │ runs (the engine's runs API), reads
+        ~/McBot/hermes/profiles/<agent>/   gateway: POST /p/<agent>/v1/runs, SSE events
                                            state.db · memories/
 ```
 
@@ -156,12 +169,15 @@ invariants (never invent an engine config key; every compiler module is byte-tes
 
 ## Status
 
-v0.1. Done: graph, compiler, shared board, runs, memory and cost (M0–M4); the
-setup assistant, the engine inside the app and unsigned installers for
-macOS, Windows and Linux (M5). Under way (M6): abilities, image and video makers,
-Obsidian and Telegram are in; WhatsApp, Slack, Discord and email, tool and
-skill catalogs and the OS keychain are next. No accounts yet: the engine only
-listens on this computer and checks origins. The whole plan, M6–M15, is in
+0.7. Done: the board, the compiler, the shared board, runs, memory and cost (M0–M4); the setup
+assistant, the engine inside the app and unsigned installers for macOS, Windows and Linux (M5);
+connections: abilities, makers, every chat app the engine ships, its connectors and GitHub, its
+skill library and plugins (most of M6); Home, tasks, schedules, hand-offs, approvals, the island,
+notifications and the menu bar (most of M7); the code editor, terminal and browser (M8); Ask McBot
+and the Layers view (M9, first part); sharing on your network and team chat (M12a); light and dark
+(M15, first part). Next: workflows and a gallery of what agents made (M10), always-on agents and
+signed builds (M11). No accounts: the engine listens only on this computer (and, while you share,
+your network with an invite key) and checks origins. The whole plan, M6–M15, is in
 [docs/PLAN.md](docs/PLAN.md); why that order, in [docs/NEXT.md](docs/NEXT.md).
 
 ## Licences and credits
