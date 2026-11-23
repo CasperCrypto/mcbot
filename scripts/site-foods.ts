@@ -37,7 +37,9 @@ export function siteFoods(): { js: string; css: string; logo: string; icon: stri
     charset: "utf8",
   });
   const js = HEAD + out.outputFiles[0]!.text.replace(/^\s*\/\/ .*\n/gm, "");
+  // The website is dark: only the first :root block (the light appearance's overrides come after it).
   const tokens = readFileSync(join(root, "src/app/styles/tokens.css"), "utf8")
+    .split(/\n\}\n/)[0]!
     .split("\n")
     .filter((l) => /^\s*--(food|logo)-/.test(l))
     .join("\n");

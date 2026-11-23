@@ -1,5 +1,5 @@
 import {
-  BookOpen, Bot, FileCode2, History, Stethoscope, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
+  BookOpen, Bot, FileCode2, History, Moon, Palette as PaletteIcon, Stethoscope, Sun, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Sparkles, Upload, Users, Waypoints, Workflow,
 } from "lucide-react";
 import { redo, undo } from "../../board/undo";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -118,6 +118,11 @@ function useCommands(close: () => void): Command[] {
       { id: "settings", group: "Actions", label: "Settings", hint: "Models, API keys, your name, team", icon: <Settings size={15} />, keys: ["⌘", ","], run: () => app.openSettings() },
       { id: "models", group: "Actions", label: "Add a model…", hint: "Ollama, LM Studio, OpenAI, OpenRouter…", icon: <Sparkles size={15} />, run: () => app.openSettings("models") },
       { id: "keys", group: "Actions", label: "API keys", icon: <KeyRound size={15} />, run: () => app.openSettings("keys") },
+      { id: "appearance", group: "Actions", label: "Appearance…", hint: "Light, dark or your system's; accent colour", icon: <PaletteIcon size={15} />, run: () => app.openSettings("appearance") },
+      {
+        id: "theme-toggle", group: "Actions", label: app.theme === "dark" ? "Light appearance" : "Dark appearance", hint: "On this computer", icon: app.theme === "dark" ? <Sun size={15} /> : <Moon size={15} />,
+        run: () => { close(); app.setAppearance({ ...app.appearance, theme: app.theme === "dark" ? "light" : "dark" }); },
+      },
       { id: "hermes", group: "Actions", label: "Engine", hint: "Status and restart", icon: <Cpu size={15} />, run: () => app.setHermesOpen(true) },
       { id: "report", group: "Actions", label: "Report a problem…", hint: "Details to paste into an issue", icon: <LifeBuoy size={15} />, run: () => app.setReportOpen(true) },
       { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Sparkles size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: app.setup?.profile ?? null }); } },

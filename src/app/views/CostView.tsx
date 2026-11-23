@@ -63,7 +63,7 @@ function Budgets({ rows, name }: { rows: BudgetStatus[]; name: (profile: string)
             <tr key={b.profile}>
               <td><span className="row"><AgentFace seed={b.profile} size={22} />{name(b.profile)}</span></td>
               <td style={{ width: "40%" }}>
-                <div role="progressbar" aria-valuemin={0} aria-valuemax={b.limitUsd} aria-valuenow={Math.min(b.spentTodayUsd, b.limitUsd)} style={{ height: 6, borderRadius: 3, background: "var(--bg-3, rgba(255,255,255,.08))" }}>
+                <div role="progressbar" aria-valuemin={0} aria-valuemax={b.limitUsd} aria-valuenow={Math.min(b.spentTodayUsd, b.limitUsd)} style={{ height: 6, borderRadius: 3, background: "rgb(var(--tint-rgb) / 0.08)" }}>
                   <i style={{ display: "block", height: "100%", borderRadius: 3, width: `${Math.min(100, (b.spentTodayUsd / b.limitUsd) * 100)}%`, background: b.state === "over" ? "var(--fail)" : b.state === "warn" ? "var(--warn)" : "var(--ok)" }} />
                 </div>
               </td>

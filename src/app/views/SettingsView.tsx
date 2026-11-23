@@ -4,7 +4,7 @@
  * Models are blocks on the board (so they compile); adding one here places it and wires it to the
  * agents picked. Keys never leave this computer: the board only names them.
  */
-import { Check, Cloud, Cpu, ExternalLink, HardDrive, Info, KeyRound, LifeBuoy, LoaderCircle, Plus, RefreshCw, RotateCw, Sparkles, Trash2, User, Users, Waypoints } from "lucide-react";
+import { Check, Cloud, Cpu, ExternalLink, HardDrive, Info, KeyRound, LifeBuoy, LoaderCircle, Palette, Plus, RefreshCw, RotateCw, Sparkles, Trash2, User, Users, Waypoints } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { addEdge, addNode, removeNodes, updateEdge } from "../../board/ydoc";
 import type { HermesInfo, LocalServer, SharingView, UpdateView } from "../../contracts/api";
@@ -22,10 +22,12 @@ import { Sidebar } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
 import { useApp, type SettingsSection } from "../state/store";
 import { AgentFace, Field, PersonFace, Segmented } from "../ui";
+import { ACCENTS, ACCENT_SWATCH, type Accent, type ThemePref } from "../lib/appearance";
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode; host?: boolean }[] = [
   { id: "models", label: "Models", icon: <Sparkles size={14} /> },
   { id: "keys", label: "API keys", icon: <KeyRound size={14} />, host: true },
+  { id: "appearance", label: "Appearance", icon: <Palette size={14} /> },
   { id: "you", label: "You", icon: <User size={14} /> },
   { id: "team", label: "Team", icon: <Users size={14} /> },
   { id: "engine", label: "Engine", icon: <Cpu size={14} />, host: true },
@@ -406,6 +408,51 @@ function KeysSection() {
   );
 }
 
+// ---------------------------------------------------------------- appearance
+
+const THEMES: { value: ThemePref; label: string }[] = [{ value: "light", label: "Light" }, { value: "dark", label: "Dark" }, { value: "system", label: "Auto" }];
+const accentName = (a: Accent) => a.charAt(0).toUpperCase() + a.slice(1);
+
+/** A small window drawn in one appearance, as macOS draws its appearance choices. */
+function MiniWindow({ look }: { look: "light" | "dark" }) {
+  return (
+    <span className={`ap-window ${look}`} aria-hidden>
+      <i className="ap-lights" />
+      <i className="ap-side" />
+      <i className="ap-main"><i className="ap-line" /><i className="ap-line short" /><i className="ap-accent" /></i>
+    </span>
+  );
+}
+
+function AppearanceSection() {
+  const appearance = useApp((s) => s.appearance);
+  const setAppearance = useApp((s) => s.setAppearance);
+  return (
+    <Card title="Appearance" sub="On this computer. Auto follows your system." testId="settings-appearance">
+      <div className="appearance-options" role="radiogroup" aria-label="Appearance">
+        {THEMES.map((t) => (
+          <button key={t.value} role="radio" aria-checked={appearance.theme === t.value} className="appearance-option" data-testid={`appearance-${t.value}`}
+            onClick={() => setAppearance({ ...appearance, theme: t.value })}>
+            <span className="ap-preview">
+              {t.value === "system" ? <><MiniWindow look="light" /><span className="ap-half"><MiniWindow look="dark" /></span></> : <MiniWindow look={t.value} />}
+            </span>
+            <span>{t.label}</span>
+          </button>
+        ))}
+      </div>
+      <div className="settings-row" style={{ marginTop: 6 }}>
+        <span className="grow">Accent colour</span>
+        <span className="accent-row" role="radiogroup" aria-label="Accent colour">
+          {ACCENTS.map((a) => (
+            <button key={a} role="radio" aria-checked={appearance.accent === a} aria-label={accentName(a)} data-tip={accentName(a)} className="accent-swatch"
+              style={{ background: ACCENT_SWATCH[a] }} data-testid={`accent-${a}`} onClick={() => setAppearance({ ...appearance, accent: a })} />
+          ))}
+        </span>
+      </div>
+    </Card>
+  );
+}
+
 // ---------------------------------------------------------------- you, team, engine, about
 
 function YouSection() {
@@ -532,6 +579,7 @@ export function SettingsView() {
           <div className="settings-page" key={current}>
             {current === "models" && <ModelsSection />}
             {current === "keys" && <KeysSection />}
+            {current === "appearance" && <AppearanceSection />}
             {current === "you" && <YouSection />}
             {current === "team" && <TeamSection />}
             {current === "engine" && <EngineSection />}

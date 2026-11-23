@@ -1,4 +1,5 @@
 import { DEMO } from "./engine";
+import { WINDOW_BG, type Theme, type ThemePref } from "./appearance";
 import { ISLAND_ACT, ISLAND_READY, ISLAND_STATE, type IslandAct, type IslandState } from "./islandBridge";
 
 /**
@@ -6,6 +7,19 @@ import { ISLAND_ACT, ISLAND_READY, ISLAND_STATE, type IslandAct, type IslandStat
  * Both do nothing in a browser (the demo, `npm run dev` in a browser tab).
  */
 export const inApp = () => !DEMO && typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
+/**
+ * The native window follows the appearance: the title bar and traffic lights (setTheme: null =
+ * the system's) and the colour behind the page, so a resize or a new window never flashes the
+ * other appearance.
+ */
+export async function setWindowAppearance(pref: ThemePref, shown: Theme): Promise<void> {
+  if (!inApp()) return;
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  const w = getCurrentWindow();
+  await w.setTheme(pref === "system" ? null : pref).catch(() => undefined);
+  await w.setBackgroundColor(WINDOW_BG[shown]).catch(() => undefined);
+}
 
 let lastCount = -1;
 /** How many things need the person: shown next to the menu bar icon (src-tauri `set_attention`). */

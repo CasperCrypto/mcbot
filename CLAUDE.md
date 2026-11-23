@@ -262,11 +262,18 @@ Change them additively; a breaking change bumps the version.
 
 ## UI invariants
 
-- **Look:** dark, quiet, Apple-native. All colours, radii, shadows and motion are
-  tokens in `src/app/styles/tokens.css`; components use tokens, not literals.
+- **Look:** quiet, Apple-native; dark by default, light or the system's in Settings → Appearance
+  (`lib/appearance.ts`: `data-theme` and `data-accent` on `<html>`, kept per computer, applied
+  before the first paint; every window, the native window, Monaco, the terminal, React Flow and
+  Excalidraw follow). All colours, radii, shadows and motion are tokens in
+  `src/app/styles/tokens.css` (a light block, and macOS's eight accent colours with a dark and a
+  light value each); components use tokens, not literals: overlays are `rgb(var(--tint-rgb) / a)`,
+  shadows and recessed fills scale with `--shadow-k` / `--sink-k`, state colours as text use
+  `--*-text` (`styles/tokens.test.ts` fails on a theme-blind literal). Fixed-colour surfaces are
+  the exceptions: the island (black in both), colour tiles, swatches, note paper.
   Colour means identity (agents, node kinds) or state (running, ok, failed).
-  macOS system colours, flat: the accent is system blue; no gradients, glows or
-  gradient text (the website follows the same rule).
+  macOS system colours, flat: the accent is the person's (system blue by default); no gradients,
+  glows or gradient text (the website follows the same rule).
 - **Glass and springs** (`src/app/styles/glass.css`, loaded last): whatever floats over content
   (sheets, menus, tooltips, the dock, board blocks, the inspector, the chat header and composer)
   is a material — `--mat-*` fill, `--mat-blur`, a hairline edge and specular top line

@@ -121,8 +121,8 @@ export function TitleBar() {
       >
         {busy ? <LoaderCircle size={14} className="spin-icon" /> : <Hammer size={14} />}
         Compile
-        {errors > 0 ? <span className="chip fail" style={{ height: 18, background: "rgba(0,0,0,.25)", color: "#fff" }}>{errors}</span>
-          : drift ? <span className="chip" style={{ height: 18, background: "rgba(255,255,255,.22)", color: "#fff" }}>{drift}</span> : null}
+        {errors > 0 ? <span className="chip fail" style={{ height: 18, background: "rgba(0,0,0,.25)", color: "var(--on-accent)" }}>{errors}</span>
+          : drift ? <span className="chip" style={{ height: 18, background: "rgba(255,255,255,.22)", color: "var(--on-accent)" }}>{drift}</span> : null}
       </button>}
       <WindowControls />
     </header>

@@ -3,10 +3,12 @@ import type { Scene } from "../chat/drawing";
 import type { BoardInfo, CompileResponse, Health, SetupState } from "../../contracts/api";
 import { summarizeRun, type RunEvent, type RunSummary } from "../../contracts/run";
 import { loadIdentity, saveIdentity, type Identity } from "../lib/identity";
+import { applyAppearance, loadAppearance, resolveTheme, saveAppearance, systemDark, type Appearance, type Theme } from "../lib/appearance";
+import { setWindowAppearance } from "../lib/desktop";
 
 export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "skills" | "files" | "cost" | "team" | "settings";
 
-export type SettingsSection = "models" | "keys" | "you" | "team" | "engine" | "about";
+export type SettingsSection = "models" | "keys" | "appearance" | "you" | "team" | "engine" | "about";
 
 export interface Toast {
   id: number;
@@ -22,6 +24,10 @@ interface State {
   health: Health | null;
   engineUp: boolean | null;
   identity: Identity;
+  /** Light, dark or the system's, and the accent (Settings → Appearance; kept per computer). */
+  appearance: Appearance;
+  /** The appearance shown now (the system's when the person follows it). */
+  theme: Theme;
   selectedNodeId: string | null;
   selectedRunId: string | null;
   compileOpen: boolean;
@@ -116,6 +122,9 @@ interface State {
   setBoards(b: BoardInfo[]): void;
   setHealth(h: Health | null, up: boolean): void;
   setIdentity(id: Identity): void;
+  setAppearance(a: Appearance): void;
+  /** Show the stored appearance again (the system switched, or another window changed it). */
+  syncAppearance(a?: Appearance): void;
   select(nodeId: string | null): void;
   selectRun(runId: string | null): void;
   setCompile(patch: Partial<Pick<State, "compileOpen" | "compileBusy" | "compile" | "drift" | "onDisk">>): void;
@@ -144,6 +153,8 @@ export const useApp = create<State>((set, get) => ({
   health: null,
   engineUp: null,
   identity: loadIdentity(),
+  appearance: loadAppearance(),
+  theme: resolveTheme(loadAppearance().theme, systemDark()),
   selectedNodeId: null,
   selectedRunId: null,
   compileOpen: false,
@@ -232,6 +243,18 @@ export const useApp = create<State>((set, get) => ({
   },
   setBoards: (boards) => set({ boards }),
   setHealth: (health, engineUp) => set({ health, engineUp }),
+  setAppearance: (appearance) => {
+    saveAppearance(appearance);
+    const theme = applyAppearance(appearance);
+    set({ appearance, theme });
+    void setWindowAppearance(appearance.theme, theme);
+  },
+  syncAppearance: (a) => {
+    const appearance = a ?? get().appearance;
+    const theme = applyAppearance(appearance);
+    set({ appearance, theme });
+    void setWindowAppearance(appearance.theme, theme);
+  },
   setIdentity: (identity) => {
     saveIdentity(identity);
     set({ identity });

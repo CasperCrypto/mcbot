@@ -286,7 +286,7 @@ export function AgentsView() {
                   <span className="title ellipsis">{a.data.displayName || a.data.name}</span>
                   <span className="time">{r ? shortTime(r.startedAt) : ""}</span>
                 </span>
-                <span className="sub ellipsis" style={r?.status === "running" ? { color: "var(--run)" } : undefined}>{preview}</span>
+                <span className="sub ellipsis" style={r?.status === "running" ? { color: "var(--run-text)" } : undefined}>{preview}</span>
               </span>
             </button>
           );

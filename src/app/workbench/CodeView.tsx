@@ -10,7 +10,7 @@ import { Sidebar, SidebarGroup } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, Empty, Kbd } from "../ui";
-import { languageOf, monaco } from "./monaco";
+import { applyMonacoTheme, languageOf, monaco } from "./monaco";
 import { TerminalPanel } from "./TerminalPanel";
 
 interface Doc {
@@ -151,6 +151,13 @@ export default function CodeView() {
       toast({ kind: "fail", text: (err as Error).message });
     }
   }, [docs, active, toast]);
+
+  // The editor follows the appearance and the accent.
+  const theme = useApp((s) => s.theme);
+  const accent = useApp((s) => s.appearance.accent);
+  useEffect(() => {
+    applyMonacoTheme();
+  }, [theme, accent]);
 
   // One editor; each open file is a Monaco model it shows.
   useEffect(() => {

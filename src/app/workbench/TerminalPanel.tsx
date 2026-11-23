@@ -3,10 +3,20 @@ import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { useEffect, useRef, useState } from "react";
 import { openShell, terminalsAvailable, type ShellSession } from "./terminal";
+import { useApp } from "../state/store";
+
+/** The terminal's colours, from tokens.css (xterm needs colours, not CSS variables). */
+function termTheme() {
+  const style = getComputedStyle(document.documentElement);
+  const v = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
+  const accent = v("--accent", "#0a84ff");
+  return { background: v("--bg-canvas", "#161618"), foreground: v("--text", "#f5f5f7"), cursor: accent, cursorAccent: v("--bg-canvas", "#161618"), selectionBackground: /^#[0-9a-f]{6}$/i.test(accent) ? `${accent}55` : "#0a84ff55" };
+}
 
 /** One real shell in `cwd` (the desktop app only). Closed when unmounted. */
 export function TerminalPanel({ cwd }: { cwd: string }) {
   const host = useRef<HTMLDivElement>(null);
+  const terminal = useRef<Terminal | null>(null);
   const [ended, setEnded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [run, setRun] = useState(0);
@@ -19,8 +29,9 @@ export function TerminalPanel({ cwd }: { cwd: string }) {
       fontSize: 13.5,
       cursorBlink: true,
       allowProposedApi: false,
-      theme: { background: style.getPropertyValue("--bg-canvas").trim() || "#161618", foreground: style.getPropertyValue("--text").trim() || "#f5f5f7", cursor: style.getPropertyValue("--accent").trim() || "#0a84ff", selectionBackground: "#0a84ff55" },
+      theme: termTheme(),
     });
+    terminal.current = term;
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(host.current);
@@ -53,8 +64,15 @@ export function TerminalPanel({ cwd }: { cwd: string }) {
       size.dispose();
       shell?.close();
       term.dispose();
+      terminal.current = null;
     };
   }, [cwd, run]);
+  // Light or dark: the open shell changes colour with the window.
+  const theme = useApp((s) => s.theme);
+  const accent = useApp((s) => s.appearance.accent);
+  useEffect(() => {
+    if (terminal.current) terminal.current.options.theme = termTheme();
+  }, [theme, accent]);
 
   if (!terminalsAvailable()) return <div className="terminal-off faint">The terminal runs in the desktop app.</div>;
   return (

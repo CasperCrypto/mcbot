@@ -125,6 +125,7 @@ function Welcome({ onStart }: { onStart: () => void }) {
 
 function Canvas() {
   const { graph, doc, peers, setCursor } = useBoard();
+  const theme = useApp((s) => s.theme);
   const selectedNodeId = useApp((s) => s.selectedNodeId);
   const select = useApp((s) => s.select);
   const runs = useApp((s) => s.runs);
@@ -482,9 +483,9 @@ function Canvas() {
         snapGrid={SNAP}
         selectionKeyCode="Shift"
         multiSelectionKeyCode={["Meta", "Control"]}
-        colorMode="dark"
+        colorMode={theme}
       >
-        <Background variant={BackgroundVariant.Dots} gap={22} size={1.1} color="rgba(255,255,255,0.075)" />
+        <Background variant={BackgroundVariant.Dots} gap={22} size={1.1} color="var(--grid-dot)" />
         <Controls position="bottom-left" showInteractive={false} />
         {graph.nodes.length >= 8 && !selected && <MiniMap position="bottom-right" pannable zoomable className="minimap" nodeBorderRadius={6} nodeColor={miniColor} />}
         <Cursors peers={peers} />
