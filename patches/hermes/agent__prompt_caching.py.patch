@@ -1,11 +1,16 @@
 --- a/hermes/agent/prompt_caching.py
 +++ b/hermes/agent/prompt_caching.py
-@@ -152,7 +152,7 @@
- # were cold re-writes after a 5–60 min idle gap (1h saves ~42% of write cost there), while
- # 1h on subagents/cron would have cost ~49% more.
+@@ -155,9 +155,13 @@
+ # (hermes_cli/config_defaults.py). ``api_server`` is the API server's platform label and
+ # ``curator`` the background skill curator (tens of back-to-back calls); both are machine-paced.
  AUTO_CACHE_TTL = "auto"
--MACHINE_PACED_SOURCES = frozenset({"subagent", "cron", "oneshot", "webhook", "kanban", "api", "tool", "batch"})
++<<<<<<< /tmp/hermes-sync-2375/ours
 +MACHINE_PACED_SOURCES = frozenset({"subagent", "cron", "oneshot", "webhook", "kanban", "api", "tool", "batch", "mcbot"})  # McBot: finite runs, like oneshot
++=======
+ MACHINE_PACED_SOURCES = frozenset({
+     "subagent", "cron", "oneshot", "webhook", "kanban", "api", "api_server", "tool", "batch", "curator",
+     "a2a", "msgraph_webhook", "gateway_hygiene"})
++>>>>>>> /tmp/hermes-sync-2375/theirs
  
  
  def auto_cache_ttl_for_source(source: str | None) -> str:
