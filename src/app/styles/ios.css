@@ -13,7 +13,7 @@
   --fill-2: rgba(120, 120, 128, 0.32);
   --fill-3: rgba(120, 120, 128, 0.24);
   --fill-4: rgba(120, 120, 128, 0.18);
-  --r-card: 18px;
+  --r-card: 12px;
 }
 ::selection { background: rgb(var(--accent-rgb) / 0.38); color: inherit; }
 img, svg { -webkit-user-drag: none; }
@@ -30,8 +30,8 @@ img, svg { -webkit-user-drag: none; }
 
 /* Cards and sheets: rounder, no outline, depth from material and shadow. */
 .card { border-radius: var(--r-card); border-color: transparent; box-shadow: var(--mat-edge), var(--shadow-1); }
-.palette, .hermes-sheet { border-radius: 22px; }
-.list-row, .assignee, .suggest-card { border-radius: 10px; }
+.palette, .hermes-sheet { border-radius: 14px; }
+.list-row, .assignee, .suggest-card { border-radius: 8px; }
 
 /* Everything you can tap gives under the finger, then springs back. */
 .catalog-card, .task-card, .home-row-main, .suggest-card, .assignee, .pill, .list-row, .abilities button {
@@ -51,9 +51,9 @@ img, svg { -webkit-user-drag: none; }
 @supports (corner-shape: squircle) {
   .card, .palette, .hermes-sheet, .inspector, .composer, .btn, .field input, .field textarea, .field select, .search-pill,
   .catalog-card, .task-card, .list-row, .assignee, .suggest-card, .msg.user .bubble, .island { corner-shape: squircle; }
-  .card { border-radius: 26px; }
-  .palette, .hermes-sheet { border-radius: 32px; }
-  .btn, .field input, .field textarea, .field select, .search-pill, .list-row, .assignee { border-radius: 14px; }
+  .card { border-radius: 16px; }
+  .palette, .hermes-sheet { border-radius: 20px; }
+  .btn, .field input, .field textarea, .field select, .search-pill, .list-row, .assignee { border-radius: 10px; }
 }
 
 /* ---------- The palette, premium: a launcher's calm and speed ---------- */

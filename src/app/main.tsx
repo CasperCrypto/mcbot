@@ -1,9 +1,10 @@
 import { StrictMode } from "react";
+import { LucideProvider } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { IslandPill } from "./shell/IslandPill";
 import "./styles/index.css";
-import { applyAppearance, loadAppearance, onAppearanceElsewhere, onSystemTheme } from "./lib/appearance";
+import { onAppearanceElsewhere } from "./lib/appearance";
 import { useApp } from "./state/store";
 
 // In the macOS app the title bar is an overlay: leave room for the traffic lights.
@@ -22,17 +23,18 @@ const meta = (window as unknown as { __TAURI_INTERNALS__?: { metadata?: { curren
 const pill = meta?.metadata?.currentWindow?.label === "island";
 if (pill) document.documentElement.dataset.island = "";
 
-// Light, dark or the system's, before the first paint; then follow the system and the other
-// windows. The floating pill is black and see-through around it, so it keeps its own look.
+// The accent colour, before the first paint; then follow the other windows. The floating pill
+// is black and see-through around it, so it keeps its own look.
 if (!pill) {
-  applyAppearance(loadAppearance());
   useApp.getState().syncAppearance();
-  onSystemTheme(() => { if (useApp.getState().appearance.theme === "system") useApp.getState().syncAppearance(); });
   onAppearanceElsewhere((a) => useApp.getState().syncAppearance(a));
 }
 
+// Every icon draws with a slightly lighter line than lucide's default (explicit weights stay).
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    {pill ? <IslandPill /> : <App />}
+    <LucideProvider strokeWidth={1.75}>
+      {pill ? <IslandPill /> : <App />}
+    </LucideProvider>
   </StrictMode>,
 );

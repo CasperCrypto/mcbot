@@ -67,12 +67,11 @@ export function TerminalPanel({ cwd }: { cwd: string }) {
       terminal.current = null;
     };
   }, [cwd, run]);
-  // Light or dark: the open shell changes colour with the window.
-  const theme = useApp((s) => s.theme);
+  // A new accent: the open shell's cursor and selection follow it.
   const accent = useApp((s) => s.appearance.accent);
   useEffect(() => {
     if (terminal.current) terminal.current.options.theme = termTheme();
-  }, [theme, accent]);
+  }, [accent]);
 
   if (!terminalsAvailable()) return <div className="terminal-off faint">The terminal runs in the desktop app.</div>;
   return (

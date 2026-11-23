@@ -1,4 +1,4 @@
-import { ArrowUp, Check, CheckCheck, Cloud, HardDrive, LoaderCircle, LogIn, MessagesSquare, Plug, Plus, RotateCcw, Send, Sparkles, Square, Trash2, X } from "lucide-react";
+import { ArrowUp, Check, CheckCheck, Cloud, HardDrive, LoaderCircle, LogIn, MessagesSquare, Plug, Plus, RotateCcw, Send, Square, Trash2, X, GraduationCap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SignInView } from "../../contracts/api";
 import { removeNodes, setNodeField, updateEdge } from "../../board/ydoc";
@@ -315,7 +315,7 @@ function SkillLibrary({ data, set }: { data: AgentData; set: (f: string, v: unkn
           {builtin && <Check size={11} strokeWidth={2.6} />}Built-in skills
         </button>
       </div>
-      <button className="btn" onClick={() => useApp.getState().setTab("skills")} data-testid="open-skills"><Sparkles size={14} /> Browse the skill library</button>
+      <button className="btn" onClick={() => useApp.getState().setTab("skills")} data-testid="open-skills"><GraduationCap size={14} /> Browse the skill library</button>
     </div>
   );
 }

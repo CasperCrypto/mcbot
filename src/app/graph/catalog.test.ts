@@ -45,3 +45,11 @@ describe("connectors from Hermes' catalog", () => {
     expect("auth" in make(keyless, new Set(), { x: 0, y: 0 }).data).toBe(false);
   });
 });
+
+describe("brand tiles", () => {
+  it("tint a brand's colour behind its mark and lift a dark one so it reads on black", async () => {
+    const { brandTint } = await import("./Logo");
+    expect(brandTint("#26A5E4")).toEqual({ background: "rgb(38 165 228 / 0.16)", color: "rgb(38 165 228)", boxShadow: "inset 0 0 0 0.5px rgb(38 165 228 / 0.34)" });
+    expect(brandTint("#0052CC").color).toBe("rgb(115 160 227)");
+  });
+});

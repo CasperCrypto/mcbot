@@ -40,8 +40,8 @@ edit and own, as plain files.
   built, editable in place.
 - **Cost**: spend by agent, model and day, and daily budgets that stop runs at the limit.
 - **Team**: share a board on your network, team chat, `@agent` from chat.
-- **At home on a Mac or PC**: light, dark or your system's appearance with your accent colour,
-  ⌘K for everything, ⌘⇧Space from any app, a menu bar icon and notifications.
+- **At home on a Mac or PC**: a calm dark design with your accent colour, ⌘K for everything,
+  ⌘⇧Space from any app, a menu bar icon and notifications.
 - **Engine updates**: the engine (Hermes Agent, MIT) ships inside; a weekly job merges each new
   stable release, runs every test and opens a pull request, so updates arrive tested.
 
@@ -54,8 +54,6 @@ edit and own, as plain files.
 | ![Files](docs/screenshots/files.png) | ![Memory](docs/screenshots/memory.png) |
 | **Compile** | **⌘K** |
 | ![Compile](docs/screenshots/compile.png) | ![Command palette](docs/screenshots/palette.png) |
-| **Light appearance** | |
-| ![Light appearance](docs/screenshots/light.png) | |
 
 ## Install
 
@@ -174,8 +172,8 @@ assistant, the engine inside the app and unsigned installers for macOS, Windows 
 connections: abilities, makers, every chat app the engine ships, its connectors and GitHub, its
 skill library and plugins (most of M6); Home, tasks, schedules, hand-offs, approvals, the island,
 notifications and the menu bar (most of M7); the code editor, terminal and browser (M8); Ask McBot
-and the Layers view (M9, first part); sharing on your network and team chat (M12a); light and dark
-(M15, first part). Next: workflows and a gallery of what agents made (M10), always-on agents and
+and the Layers view (M9, first part); sharing on your network and team chat (M12a); the dark design and
+accent colours (M15, first part). Next: workflows and a gallery of what agents made (M10), always-on agents and
 signed builds (M11). No accounts: the engine listens only on this computer (and, while you share,
 your network with an invite key) and checks origins. The whole plan, M6–M15, is in
 [docs/PLAN.md](docs/PLAN.md); why that order, in [docs/NEXT.md](docs/NEXT.md).

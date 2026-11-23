@@ -304,31 +304,7 @@
 /* A one-line notice inside a page (Cost's unpriced tokens): a quiet card with its action at the end. */
 .notice-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; margin-bottom: 14px; font-size: 13.5px; color: var(--text-2); }
 
-/* ---------- Settings → Appearance: the choices drawn as small windows, as macOS does ---------- */
-.appearance-options { display: flex; flex-wrap: wrap; gap: 20px; padding: 6px 2px 4px; }
-.appearance-option { display: grid; justify-items: center; gap: 9px; padding: 0; border: 0; background: none; color: var(--text-2); font-size: 13.5px; font-weight: 500; cursor: default; }
-.appearance-option[aria-checked="true"] { color: var(--text); font-weight: 600; }
-.ap-preview { position: relative; display: block; width: 118px; height: 76px; border-radius: 11px; overflow: hidden; box-shadow: 0 0 0 1px var(--line-2), var(--shadow-1); transition: box-shadow var(--t) var(--ease), transform var(--t-spring) var(--spring-snappy); }
-.appearance-option:hover .ap-preview { box-shadow: 0 0 0 1px var(--line-3), var(--shadow-2); }
-.appearance-option:active .ap-preview { transform: scale(0.97); }
-.appearance-option[aria-checked="true"] .ap-preview { box-shadow: 0 0 0 2.5px var(--accent), var(--shadow-1); }
-.ap-half { position: absolute; inset: 0; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
-/* The previews show both looks whichever is on, so their colours are fixed (as macOS draws them). */
-.ap-window { position: absolute; inset: 0; display: block; }
-.ap-window.light { background: #e8e8ec; }
-.ap-window.dark { background: #111112; }
-.ap-lights { position: absolute; top: 7px; left: 8px; width: 5px; height: 5px; border-radius: 50%; background: #ff5f57; box-shadow: 7px 0 0 #febc2e, 14px 0 0 #28c840; }
-.ap-side { position: absolute; top: 18px; left: 8px; bottom: 8px; width: 24px; border-radius: 4px; }
-.ap-window.light .ap-side { background: #dcdce1; }
-.ap-window.dark .ap-side { background: #1c1c1f; }
-.ap-main { position: absolute; top: 18px; left: 37px; right: 8px; bottom: 8px; border-radius: 5px; display: grid; align-content: start; gap: 5px; padding: 8px; }
-.ap-window.light .ap-main { background: #ffffff; box-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.14); }
-.ap-window.dark .ap-main { background: #232326; }
-.ap-line { display: block; height: 4px; border-radius: 2px; width: 80%; }
-.ap-line.short { width: 52%; }
-.ap-window.light .ap-line { background: #d8d8dd; }
-.ap-window.dark .ap-line { background: #3a3a3f; }
-.ap-accent { display: block; width: 26px; height: 9px; border-radius: 5px; background: var(--accent); margin-top: 3px; }
+/* ---------- Settings → Appearance: the accent colour, as macOS offers it ---------- */
 .accent-row { display: flex; align-items: center; gap: 10px; }
 .accent-swatch { position: relative; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.2); transition: transform var(--t-spring) var(--spring-snappy), box-shadow var(--t) var(--ease); }
 .accent-swatch:hover { transform: scale(1.1); }

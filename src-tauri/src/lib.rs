@@ -348,7 +348,7 @@ fn new_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .title("McBot Studio")
         .inner_size(1440.0, 900.0)
         .min_inner_size(960.0, 600.0);
-    let builder = builder.theme(Some(tauri::Theme::Dark)).background_color(tauri::window::Color(21, 21, 22, 255));
+    let builder = builder.theme(Some(tauri::Theme::Dark)).background_color(tauri::window::Color(12, 12, 13, 255));
     #[cfg(target_os = "macos")]
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)

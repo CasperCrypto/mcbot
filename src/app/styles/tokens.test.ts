@@ -12,25 +12,18 @@ const block = (selector: string) => {
 const names = (css: string) => new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]!));
 
 describe("design tokens", () => {
-  it("give every accent a dark and a light value", () => {
+  it("give every accent its colour and channels", () => {
     for (const a of ACCENTS.filter((x) => x !== "blue")) {
       expect(block(`:root[data-accent="${a}"]`), a).toContain("--accent-rgb");
-      expect(block(`:root[data-theme="light"][data-accent="${a}"]`), a).toContain("--accent-rgb");
+      expect(block(`:root[data-accent="${a}"]`), a).toContain("--accent-text");
     }
   });
 
-  it("set every surface, line and text colour for the light appearance", () => {
-    const light = names(block(':root[data-theme="light"]'));
-    const dark = [...names(block(":root"))].filter((n) => /^--(bg-|line|text|ok|run|fail|warn|tone-|mat-|btn-light)/.test(n) && !/-blur/.test(n));
-    expect(dark.length).toBeGreaterThan(30);
-    for (const n of dark) expect(light.has(n), `${n} has no light value`).toBe(true);
-  });
-
-  it("keep theme-blind colours out of the other style sheets", () => {
-    // Overlays and text colours go through tokens (rgb(var(--tint-rgb) / a), var(--text)…), so both
-    // appearances follow. Surfaces that look the same in both are the exceptions: the island and the
-    // floating pill (always black), colour tiles, colour swatches, sticky-note paper, Windows' window
-    // buttons, and the accent-filled menu row.
+  it("keep literal colours out of the other style sheets", () => {
+    // Overlays and text colours go through tokens (rgb(var(--tint-rgb) / a), var(--text)…), so a
+    // change of palette is one edit in tokens.css. Fixed-colour surfaces are the exceptions: the
+    // island and the floating pill (always black), colour tiles, colour swatches, sticky-note paper,
+    // Windows' window buttons, and the accent-filled menu row.
     const allowed = /island|pill-|\.pill\b|^\s*\.tile\s*\{|\.swatch|sticky|win-controls|\.menu button|\.peer-tag|\.cursor \.tag|\.badge|\.unread|doctor-count|\.switch span|start-mark|browser-page iframe|setup-checks|--fill-\d|\.ap-|accent-swatch/;
     const bad: string[] = [];
     for (const f of readdirSync(dir).filter((x) => x.endsWith(".css") && x !== "tokens.css")) {

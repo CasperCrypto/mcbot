@@ -1,7 +1,6 @@
 import { Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, ReactFlowProvider, useReactFlow, useStore, type Edge, type Node, type NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { memo, useEffect, useMemo, type ReactNode } from "react";
-import { useApp } from "../state/store";
 
 /** React Flow (MIT) is credited in the About screen's notices; its corner badge is not part of the board. */
 const PRO = { hideAttribution: true } as const;
@@ -58,7 +57,6 @@ export function GraphCanvas({ nodes, edges, dir = "LR", selected, onSelect, fitS
   /** Refit the view when this changes (not on every live update). */
   fitSignature: string;
 }) {
-  const theme = useApp((s) => s.theme);
   const rfNodes = useMemo<Node<GData>[]>(() => nodes.map((n) => ({
     id: n.id, type: "g", position: { x: n.x, y: n.y }, selected: n.id === selected, draggable: false, connectable: false,
     data: { content: n.content, className: n.className, dir },
@@ -69,7 +67,7 @@ export function GraphCanvas({ nodes, edges, dir = "LR", selected, onSelect, fitS
       <ReactFlowProvider>
         <ReactFlow
           proOptions={PRO}
-          nodes={rfNodes} edges={rfEdges} nodeTypes={nodeTypes} colorMode={theme} fitView fitViewOptions={{ padding: 0.14, maxZoom: 1.15 }}
+          nodes={rfNodes} edges={rfEdges} nodeTypes={nodeTypes} colorMode="dark" fitView fitViewOptions={{ padding: 0.14, maxZoom: 1.15 }}
           minZoom={0.15} maxZoom={1.6} nodesDraggable={false} nodesConnectable={false} elementsSelectable
           onNodeClick={(_, n) => onSelect?.(n.id)} onPaneClick={() => onSelect?.(null)} deleteKeyCode={null}
         >

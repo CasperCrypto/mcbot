@@ -3,8 +3,7 @@ import type { Scene } from "../chat/drawing";
 import type { BoardInfo, CompileResponse, Health, SetupState } from "../../contracts/api";
 import { summarizeRun, type RunEvent, type RunSummary } from "../../contracts/run";
 import { loadIdentity, saveIdentity, type Identity } from "../lib/identity";
-import { applyAppearance, loadAppearance, resolveTheme, saveAppearance, systemDark, type Appearance, type Theme } from "../lib/appearance";
-import { setWindowAppearance } from "../lib/desktop";
+import { applyAppearance, loadAppearance, saveAppearance, type Appearance } from "../lib/appearance";
 
 export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "skills" | "files" | "cost" | "team" | "settings";
 
@@ -24,10 +23,8 @@ interface State {
   health: Health | null;
   engineUp: boolean | null;
   identity: Identity;
-  /** Light, dark or the system's, and the accent (Settings → Appearance; kept per computer). */
+  /** The accent colour (Settings → Appearance; kept per computer). McBot is dark, always. */
   appearance: Appearance;
-  /** The appearance shown now (the system's when the person follows it). */
-  theme: Theme;
   selectedNodeId: string | null;
   selectedRunId: string | null;
   compileOpen: boolean;
@@ -123,7 +120,7 @@ interface State {
   setHealth(h: Health | null, up: boolean): void;
   setIdentity(id: Identity): void;
   setAppearance(a: Appearance): void;
-  /** Show the stored appearance again (the system switched, or another window changed it). */
+  /** Show the stored appearance again (another window changed it). */
   syncAppearance(a?: Appearance): void;
   select(nodeId: string | null): void;
   selectRun(runId: string | null): void;
@@ -154,7 +151,6 @@ export const useApp = create<State>((set, get) => ({
   engineUp: null,
   identity: loadIdentity(),
   appearance: loadAppearance(),
-  theme: resolveTheme(loadAppearance().theme, systemDark()),
   selectedNodeId: null,
   selectedRunId: null,
   compileOpen: false,
@@ -245,15 +241,13 @@ export const useApp = create<State>((set, get) => ({
   setHealth: (health, engineUp) => set({ health, engineUp }),
   setAppearance: (appearance) => {
     saveAppearance(appearance);
-    const theme = applyAppearance(appearance);
-    set({ appearance, theme });
-    void setWindowAppearance(appearance.theme, theme);
+    applyAppearance(appearance);
+    set({ appearance });
   },
   syncAppearance: (a) => {
     const appearance = a ?? get().appearance;
-    const theme = applyAppearance(appearance);
-    set({ appearance, theme });
-    void setWindowAppearance(appearance.theme, theme);
+    applyAppearance(appearance);
+    set({ appearance });
   },
   setIdentity: (identity) => {
     saveIdentity(identity);

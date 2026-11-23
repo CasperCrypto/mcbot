@@ -20,25 +20,24 @@ self.MonacoEnvironment = {
 };
 
 /**
- * McBot's look in Monaco, from tokens.css (Monaco needs colours, not CSS variables). Defined again,
- * and every open editor repainted, when the appearance or the accent changes.
+ * McBot's dark look in Monaco, from tokens.css (Monaco needs colours, not CSS variables). Defined
+ * again, and every open editor repainted, when the accent changes.
  */
 const css = (name: string, fallback: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 export function applyMonacoTheme(): void {
-  const light = document.documentElement.dataset.theme === "light";
-  const accent = css("--accent", light ? "#007aff" : "#0a84ff");
+  const accent = css("--accent", "#0a84ff");
   monaco.editor.defineTheme("mcbot", {
-    base: light ? "vs" : "vs-dark",
+    base: "vs-dark",
     inherit: true,
     rules: [],
     colors: {
-      "editor.background": css("--bg-main", light ? "#f7f7f9" : "#1c1c1e"),
-      "editor.lineHighlightBackground": light ? "#00000008" : "#ffffff08",
-      "editorLineNumber.foreground": css("--text-4", light ? "#a1a1a6" : "#5c5c64"),
-      "editorLineNumber.activeForeground": css("--text-2", light ? "#424245" : "#b4b4ba"),
+      "editor.background": css("--bg-main", "#1c1c1e"),
+      "editor.lineHighlightBackground": "#ffffff08",
+      "editorLineNumber.foreground": css("--text-4", "#5c5c64"),
+      "editorLineNumber.activeForeground": css("--text-2", "#b4b4ba"),
       "editor.selectionBackground": /^#[0-9a-f]{6}$/i.test(accent) ? `${accent}44` : "#0a84ff44",
       "editorCursor.foreground": accent,
-      "editorWidget.background": css("--bg-raised", light ? "#ffffff" : "#222225"),
+      "editorWidget.background": css("--bg-raised", "#222225"),
     },
   });
   monaco.editor.setTheme("mcbot");

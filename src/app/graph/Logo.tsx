@@ -30,14 +30,26 @@ export function logoFor(keys: (string | null | undefined)[], url?: string): Logo
   return null;
 }
 
+/**
+ * A brand's colour as a soft tint behind its mark, the mark in the colour itself, lifted toward white
+ * when the colour would sink into the dark (as kind tiles are drawn: pro.css `.tile.*`).
+ */
+export function brandTint(hex: string): { background: string; color: string; boxShadow: string } {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  const lift = (c: number) => Math.round(c + (255 - c) * (lum < 0.38 ? 0.45 : 0));
+  return { background: `rgb(${r} ${g} ${b} / 0.16)`, color: `rgb(${lift(r)} ${lift(g)} ${lift(b)})`, boxShadow: `inset 0 0 0 0.5px rgb(${r} ${g} ${b} / 0.34)` };
+}
+
 export function LogoTile({ logo, kind, sm, children }: { logo: Logo | null; kind: string; sm?: boolean; children: ReactNode }) {
   const cls = `tile${sm ? " sm" : ""}`;
   if (!logo) return <span className={`${cls} ${kind}`}>{children}</span>;
   if ("src" in logo) return <span className={`${cls} logo dropped`}><img src={logo.src} alt="" draggable={false} /></span>;
   return (
-    <span className={`${cls} logo${logo.tile ? "" : " neutral"}`} style={logo.tile ? { background: logo.tile } : undefined} data-tip={logo.title} data-tip-side="top">
-      {/* A near-black mark has no tile of its own: it takes the text colour, so it shows in both appearances. */}
-      <svg viewBox="0 0 24 24" width={sm ? 14 : 17} height={sm ? 14 : 17} aria-hidden fill={logo.tile ? logo.ink : "currentColor"}><path d={logo.path} /></svg>
+    <span className={`${cls} logo${logo.tile ? "" : " neutral"}`} style={logo.tile ? brandTint(logo.tile) : undefined} data-tip={logo.title} data-tip-side="top">
+      {/* A near-black mark has no colour of its own: it takes the text colour. */}
+      <svg viewBox="0 0 24 24" width={sm ? 14 : 17} height={sm ? 14 : 17} aria-hidden fill="currentColor"><path d={logo.path} /></svg>
     </span>
   );
 }

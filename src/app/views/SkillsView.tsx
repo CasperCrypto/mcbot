@@ -5,7 +5,7 @@
  * compiled agent with `hermes skills install`). Host only: members don't reach the library.
  */
 import { BUNDLED } from "../../contracts/library.generated";
-import { Check, Download, Eye, Globe, Hammer, Link2, Pencil, Plus, RefreshCw, Search, Sparkles, Trash2, Users } from "lucide-react";
+import { Check, Download, Eye, Globe, Hammer, Link2, Pencil, Plus, RefreshCw, Search, Trash2, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { setNodeField } from "../../board/ydoc";
 import type { LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView as SkillsState } from "../../contracts/api";
@@ -209,7 +209,7 @@ export function SkillsView() {
               )}
 
             <div className="stack" style={{ gap: 8 }} data-testid="skills-learned">
-              <div className="row"><span className="section-label grow"><Sparkles size={12} /> Taught itself{learned.length ? ` · ${learned.length}` : ""}</span></div>
+              <div className="row"><span className="section-label grow">Taught itself{learned.length ? ` · ${learned.length}` : ""}</span></div>
               {!state ? <SkeletonCards count={2} /> : learned.length === 0 ? <span className="faint">{state.compiled ? "Nothing yet. Skills it writes during runs show up here." : "Compile, then run it: skills it writes show up here."}</span> : (
                 <div className="catalog-grid">
                   {learned.map((sk) => (
@@ -292,7 +292,7 @@ export function SkillsView() {
 
             {suggested.length > 0 && (
               <div className="stack" style={{ gap: 8 }} data-testid="skills-suggested">
-                <span className="section-label"><Sparkles size={12} /> Suggested for {agent.data.displayName || profile}</span>
+                <span className="section-label">Suggested for {agent.data.displayName || profile}</span>
                 <div className="catalog-grid">
                   {suggested.map((s) => (
                     <div key={s.id} className="catalog-card skill-card-lib">
