@@ -231,3 +231,8 @@ button.chip:hover { filter: brightness(1.2); }
 
 /* The McBot mark, where the app speaks for itself (Ask McBot): sized like an icon. */
 .brand-mark.glyph { display: inline-grid; place-items: center; }
+
+/* Narrow windows (and the demo on a phone): the search box shrinks to its glass. */
+@media (max-width: 760px) {
+  .search-pill, .search-pill:hover { min-width: 0; }
+}

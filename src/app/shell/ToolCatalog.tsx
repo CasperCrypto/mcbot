@@ -18,7 +18,8 @@ export function ToolCatalog() {
   const [q, setQ] = useState("");
   const agents = useMemo(() => graph.nodes.filter((n): n is AgentNode => n.kind === "agent"), [graph]);
   const selected = useApp((s) => s.selectedNodeId);
-  const target = agents.find((a) => a.id === selected) ?? (agents.length === 1 ? agents[0] : undefined);
+  const catalogFor = useApp((s) => s.catalogFor);
+  const target = agents.find((a) => a.id === (catalogFor ?? selected)) ?? (agents.length === 1 ? agents[0] : undefined);
 
   useEffect(() => {
     if (!open) return;
@@ -40,8 +41,11 @@ export function ToolCatalog() {
     });
     setOpen(false);
     const app = useApp.getState();
-    app.setTab("graph");
-    app.select(node.id);
+    // From an agent's page the person stays there; from the board, the new block is selected.
+    if (!catalogFor) {
+      app.setTab("graph");
+      app.select(node.id);
+    }
     app.toast({ kind: "ok", text: target ? `${node.kind === "tool" ? node.data.label || node.data.name : "Tool"} added to ${target.data.displayName || target.data.name}. Compile to use it.` : "Tool added. Wire it to an agent." });
   };
   const add = (t: CatalogTool) => place((p) => catalogNode(t, taken, p));

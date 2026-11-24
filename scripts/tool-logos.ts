@@ -55,22 +55,25 @@ function markFor(key: string): { title: string; path: string; tile: string | nul
 }
 
 export const SITE = join(ROOT, "site/index.html");
-/** The website's "works with" wall: popular marks per group, between `<!-- logos:<group> -->` markers. */
+/** The website's "works with" rows: popular marks per group, between `<!-- logos:<group> -->` markers. */
 export const SITE_GROUPS: Record<string, string[]> = {
+  models: ["ollama", "lmstudio", "openrouter", "claude", "gemini", "mistral", "deepseek", "qwen", "meta", "vllm"],
   tools: ["github", "notion", "linear", "atlassian", "figma", "stripe", "supabase", "vercel", "sentry", "gitlab", "airtable", "todoist", "dropbox", "hugging_face", "cloudflare", "postman"],
   chat: ["telegram", "discord", "whatsapp", "signal", "matrix", "google_chat", "line", "mattermost"],
-  models: ["ollama", "lmstudio", "vllm", "openrouter", "anthropic", "gemini", "mistral", "deepseek"],
 };
 
-/** site/index.html with each logo group drawn from the marks above (inline SVG: no requests, no script). */
+/**
+ * site/index.html with each group drawn from the marks above: an app-style tile in the brand's own
+ * colour (a near-black brand gets the page's dark tile), inline SVG: no requests, no script.
+ */
 export function renderSiteLogos(html: string): string {
   let out = html;
   for (const [group, keys] of Object.entries(SITE_GROUPS)) {
     const items = keys.map((k) => {
       const m = markFor(k);
       if (!m) throw new Error(`no mark for ${k}`);
-      const tile = m.tile ? ` style="background:${m.tile}"` : "";
-      return `<li><span class="lg${m.tile ? "" : " plain"}"${tile}><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="${m.tile ? m.ink : "currentColor"}" d="${m.path}"/></svg></span><span>${m.title}</span></li>`;
+      const tile = m.tile ? ` style="--c:${m.tile}"` : "";
+      return `<li data-key="${k}"><span class="lg${m.tile ? "" : " dark"}"${tile}><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="${m.tile ? m.ink : "#fff"}" d="${m.path}"/></svg></span><span class="lg-name">${m.title}</span></li>`;
     });
     const re = new RegExp(`(<!-- logos:${group} -->)[\\s\\S]*?(<!-- /logos:${group} -->)`);
     if (!re.test(out)) continue;

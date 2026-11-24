@@ -1,5 +1,5 @@
-/** Make an agent: a name, what it does, how it works, and the model it thinks with. */
-import { Cloud, HardDrive, X } from "lucide-react";
+/** Make an agent: a name and what it does (or a starting card), and the model it thinks with. The rest is on its page. */
+import { X } from "lucide-react";
 import { withRichAnswers } from "../chat/rich";
 import { useEffect, useMemo, useState } from "react";
 import { addEdge, addNode } from "../../board/ydoc";
@@ -11,6 +11,7 @@ import { freeSpot } from "../graph/place";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace } from "../ui";
+import { Logo } from "../faces/FoodFace";
 import { usePresence } from "../lib/presence";
 import { AGENT_GROUPS, AGENT_SUGGESTIONS, agentIdFor } from "./agentSuggestions";
 import { REMOTE } from "../lib/engine";
@@ -29,6 +30,7 @@ export function NewAgentSheet() {
   /** Hermes library skills the picked starting card comes with (installed after the first compile). */
   const [skills, setSkills] = useState<readonly string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [group, setGroup] = useState<"All" | (typeof AGENT_GROUPS)[number]>("All");
 
   useEffect(() => {
     if (!open) return;
@@ -69,44 +71,54 @@ export function NewAgentSheet() {
     app.select(agent.id);
     // Ready to talk to straight away when the board compiles; otherwise the graph shows what is missing.
     if (await compileBoard(boardId, { quiet: true })) {
-      app.openChat(agent.id);
+      app.editAgent(agent.id);
       if (skills.length && !REMOTE) void learnSkills(id, name.trim(), skills);
     } else app.setTab("graph");
   };
 
+  const shown = AGENT_SUGGESTIONS.filter((s) => group === "All" || s.group === group);
+  const picked = AGENT_SUGGESTIONS.find((s) => s.name === name);
   return (
     <>
       <div data-closing={presence.closing || undefined} className="palette-scrim" onClick={() => setOpen(false)} />
       <section className="palette hermes-sheet new-agent" role="dialog" aria-modal="true" data-closing={presence.closing || undefined} aria-label="New agent" data-testid="new-agent">
-        <header>
-          <AgentFace seed={id} size={44} />
-          <div className="grow">
-            <h2>{name.trim() || "New agent"}</h2>
-            <small className="mono">@{id}</small>
+        <header className="na-head">
+          <AgentFace seed={id} size={52} />
+          <div className="na-id">
+            <input autoFocus className="na-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name your agent" maxLength={60} data-testid="new-agent-name" aria-label="Name"
+              onKeyDown={(e) => { if (e.key === "Enter") void create(); }} />
+            <input className="na-about" value={about} onChange={(e) => setAbout(e.target.value)} placeholder="What should it do?" maxLength={200} data-testid="new-agent-about" aria-label="What it does"
+              onKeyDown={(e) => { if (e.key === "Enter") void create(); }} />
           </div>
           <button className="icon-btn" aria-label="Close" onClick={() => setOpen(false)}><X size={15} /></button>
         </header>
-        <div className="new-agent-body">
-          <div className="suggest-groups" role="group" aria-label="Suggestions">
-            {AGENT_GROUPS.map((g) => (
-              <div key={g} className="suggest-group">
-                <span className="suggest-label">{g}</span>
-                <div className="suggest-row">
-                  {AGENT_SUGGESTIONS.filter((s) => s.group === g).map((s) => (
-                    <button key={s.name} className="suggest-card" aria-pressed={name === s.name} data-testid="new-agent-suggestion"
-                      data-tip={s.skills?.length ? `${s.about} · Hermes skills: ${s.skills.map((k) => prettyName(skillName(k))).join(", ")}` : s.about}
-                      onClick={() => { setName(s.name); setAbout(s.about); setSoul(s.soul); setSkills(s.skills ?? []); }}>
-                      <AgentFace seed={agentIdFor(s.name, new Set())} size={26} />
-                      <span className="ellipsis">{s.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+        <div className="na-body">
+          <div className="na-filter" role="tablist" aria-label="Starting points">
+            {(["All", ...AGENT_GROUPS] as const).map((g) => (
+              <button key={g} role="tab" aria-selected={group === g} onClick={() => setGroup(g)}>{g}</button>
             ))}
           </div>
+          <div className="na-cards" role="group" aria-label="Start from">
+            {shown.map((s) => (
+              <button key={s.name} className="na-card" aria-pressed={name === s.name} data-testid="new-agent-suggestion"
+                onClick={() => { setName(s.name); setAbout(s.about); setSoul(s.soul); setSkills(s.skills ?? []); }}>
+                <AgentFace seed={agentIdFor(s.name, new Set())} size={30} />
+                <b>{s.name}</b>
+                <small>{s.about}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="na-setup">
+          <label className="na-row"><span>Thinks with</span>
+            <select value={model} onChange={(e) => setModel(e.target.value)} data-testid="new-agent-model" aria-label="Thinks with">
+              {models.map((m) => <option key={m.id} value={m.id}>{m.data.label || m.data.name} · {m.data.model}</option>)}
+              {models.length === 0 && <><option value="new-local">A model on this computer</option><option value="new-cloud">A cloud model</option></>}
+            </select>
+          </label>
           {skills.length > 0 && (
-            <div className="field" data-testid="new-agent-skills"><span>Starts with Hermes skills</span>
-              <div className="suggest-row">
+            <div className="na-row" data-testid="new-agent-skills"><span>Starts with</span>
+              <div className="na-skills">
                 {skills.map((k) => (
                   <span key={k} className="chip" data-tip={k}>{prettyName(skillName(k))}
                     <button className="chip-x" aria-label={`Leave out ${prettyName(skillName(k))}`} onClick={() => setSkills(skills.filter((x) => x !== k))}><X size={10} /></button>
@@ -115,39 +127,13 @@ export function NewAgentSheet() {
               </div>
             </div>
           )}
-          <label className="field"><span>Name</span>
-            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Writer" maxLength={60} data-testid="new-agent-name"
-              onKeyDown={(e) => { if (e.key === "Enter") void create(); }} />
-          </label>
-          <label className="field"><span>What it does</span>
-            <input value={about} onChange={(e) => setAbout(e.target.value)} placeholder="Writes our launch posts and newsletters" maxLength={200} data-testid="new-agent-about" />
-          </label>
-          <label className="field"><span>How it works <i className="faint">(optional)</i></span>
-            <textarea rows={3} value={soul} onChange={(e) => setSoul(e.target.value)} placeholder={"Friendly and short. Always ask before publishing.\nSign posts as the McBot team."} />
-          </label>
-          <div className="field"><span>Thinks with</span>
-            <div className="assignees">
-              {models.map((m) => (
-                <button key={m.id} className="assignee" aria-pressed={model === m.id} onClick={() => setModel(m.id)}>
-                  {m.data.endpoint === "local" ? <HardDrive size={15} /> : <Cloud size={15} />}
-                  <span className="ellipsis">{m.data.label || m.data.name} · <span className="mono faint">{m.data.model}</span></span>
-                </button>
-              ))}
-              {models.length === 0 && (
-                <>
-                  <button className="assignee" aria-pressed={model === "new-local"} onClick={() => setModel("new-local")}><HardDrive size={15} /><span>A local model</span></button>
-                  <button className="assignee" aria-pressed={model === "new-cloud"} onClick={() => setModel("new-cloud")}><Cloud size={15} /><span>A cloud model</span></button>
-                </>
-              )}
-            </div>
-          </div>
         </div>
         <footer className="new-agent-foot">
-          <button className="btn ghost sm" onClick={() => useApp.getState().setTeamsOpen(true)} data-testid="new-agent-team">Or start with a team</button>
-          <button className="btn ghost sm" onClick={() => useApp.getState().setBuilder(true)} data-testid="new-agent-builder">Describe it to McBot</button>
+          <button className="btn ghost sm" onClick={() => useApp.getState().setBuilder(true)} data-testid="new-agent-builder"><Logo size={14} /> Describe a team</button>
+          <button className="btn ghost sm" onClick={() => useApp.getState().setTeamsOpen(true)} data-testid="new-agent-team">Ready-made teams</button>
           <span className="grow" />
-          <button className="btn" onClick={() => setOpen(false)}>Cancel</button>
-          <button className="btn primary" disabled={!name.trim() || busy} onClick={() => void create()} data-testid="new-agent-create">Create agent</button>
+          {picked && <span className="faint na-picked">Personality from {picked.name}</span>}
+          <button className="btn primary" disabled={!name.trim() || busy} onClick={() => void create()} data-testid="new-agent-create">Create</button>
         </footer>
       </section>
     </>

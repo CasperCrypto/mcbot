@@ -1,0 +1,212 @@
+/*
+ * Pages with a layout of their own: the agent page (agent/AgentPage.tsx) wherever it shows, the
+ * New agent sheet, and Home (views/HomeView.tsx). Grouped rows as Settings draws them, widgets as
+ * the desktop draws them. Tokens only (styles/tokens.css); pro.css still finishes shared elements.
+ */
+
+/* ---------- The agent page: one agent, one scroll ---------- */
+.agent-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-content: start; padding: 18px 16px 28px; }
+.ap-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+.ap-id { display: grid; gap: 1px; min-width: 0; padding-top: 1px; }
+.ap-name, .ap-about {
+  width: 100%; min-width: 0; margin-left: -6px; padding: 2px 6px; border: 0; border-radius: var(--r-sm);
+  background: transparent; color: var(--text); font: inherit; outline: none; transition: background var(--t-fast);
+}
+.ap-name { font-size: 19px; font-weight: 650; letter-spacing: -0.018em; line-height: 1.3; }
+.ap-about { font-size: 13.5px; color: var(--text-2); }
+.ap-name:hover, .ap-about:hover { background: rgb(var(--tint-rgb) / 0.04); }
+.ap-name:focus, .ap-about:focus { background: var(--bg-input); box-shadow: inset 0 0 0 1px var(--accent-line), 0 0 0 3px var(--accent-soft); }
+.ap-status { display: flex; align-items: center; gap: 6px; padding: 3px 0 0; font-size: 12px; color: var(--text-3); }
+.ap-status i { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--ok); }
+.ap-status[data-state="run"] i { background: var(--run); animation: live-dot 1.4s ease-in-out infinite; }
+.ap-status[data-state="warn"] i { background: var(--warn); }
+.ap-status[data-state="warn"] { color: var(--warn-text); }
+.ap-status[data-state="fail"] i { background: var(--fail); }
+
+/* What you do with it, as a contact card's buttons: one row, equal width, glyph over word. */
+.ap-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.ap-action {
+  display: grid; justify-items: center; gap: 4px; padding: 9px 4px 8px; border: 0; border-radius: var(--r-md);
+  background: rgb(var(--tint-rgb) / 0.05); box-shadow: inset 0 0 0 0.5px var(--line-2);
+  color: var(--accent-text); font: inherit; font-size: 11.5px; font-weight: 550; transition: background var(--t-fast);
+}
+.ap-action svg { width: 17px; height: 17px; }
+.ap-action:hover { background: rgb(var(--tint-rgb) / 0.09); }
+.ap-action.danger { color: var(--fail-text); }
+
+/* Groups: a quiet title, then rows in one rounded box with hairlines between them. */
+.ap-group { display: grid; gap: 6px; min-width: 0; }
+.ap-group > h3 { display: flex; align-items: center; gap: 6px; min-height: 22px; margin: 0; padding: 0 2px 0 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.01em; color: var(--text-3); }
+.ap-group > h3 .btn { height: 22px; padding: 0 6px; font-size: 12px; }
+.ap-list { min-width: 0; border-radius: var(--r-md); background: var(--bg-card); box-shadow: inset 0 0 0 0.5px var(--line-2); overflow: hidden; }
+.ap-list:has(.ap-soul:focus) { box-shadow: inset 0 0 0 1px var(--accent-line), 0 0 0 3px var(--accent-soft); }
+.ap-foot { margin: 0; padding: 0 4px; font-size: 11.5px; line-height: 1.45; color: var(--text-4); }
+.ap-row {
+  position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 7px 8px 7px 12px;
+  border: 0; background: transparent; color: var(--text); font: inherit; text-align: left;
+}
+.ap-row + .ap-row::before, .ap-row + .ap-written::before { content: ""; position: absolute; top: 0; left: 12px; right: 0; height: var(--hairline); background: var(--line); }
+.ap-row .t { display: grid; gap: 1px; flex: 1; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; }
+.ap-row .t b { font-size: 13.5px; font-weight: 550; letter-spacing: -0.005em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ap-row .t small { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ap-row .t.link:hover b { color: var(--accent-text); }
+.ap-row .chip { flex: none; }
+.ap-row.add { color: var(--accent-text); font-size: 13.5px; font-weight: 500; }
+button.ap-row.add:hover, label.ap-row.add:hover { background: rgb(var(--tint-rgb) / 0.035); }
+.ap-row.add select { flex: 1; min-width: 0; height: 28px; margin: -4px 0; padding: 0; border: 0; background: transparent; color: var(--accent-text); font: inherit; font-weight: 500; outline: none; appearance: none; }
+.ap-row.add select option { color: var(--text); background: var(--bg-raised); }
+.ap-adds { gap: 6px; flex-wrap: wrap; }
+.ap-hint { font-size: 12px; margin-left: 4px; }
+.ap-soul { display: block; width: 100%; min-height: 112px; padding: 11px 12px; border: 0; resize: vertical; background: transparent; color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.55; outline: none; }
+.ap-num { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.ap-num input, .ap-profile {
+  height: 28px; border: 0; border-radius: var(--r-sm); background: var(--bg-input); box-shadow: inset 0 0 0 0.5px var(--line-2);
+  color: var(--text); font: inherit; font-size: 13px; outline: none;
+}
+.ap-num input { width: 84px; padding: 0 8px; text-align: right; font-variant-numeric: tabular-nums; }
+.ap-profile { width: 150px; padding: 0 8px; font-family: var(--mono); font-size: 12.5px; }
+.ap-num input:focus, .ap-profile:focus { box-shadow: inset 0 0 0 1px var(--accent-line), 0 0 0 3px var(--accent-soft); }
+.ap-profile[aria-invalid="true"] { box-shadow: inset 0 0 0 1px var(--fail); }
+.ap-written { position: relative; display: grid; gap: 10px; padding: 12px; }
+.ap-chev { flex: none; color: var(--text-4); transition: transform var(--t) var(--spring-snappy); }
+.ap-chev[data-open] { transform: rotate(90deg); }
+button.ap-row:hover { background: rgb(var(--tint-rgb) / 0.035); }
+
+/* On the board, the inspector is the page's frame: it scrolls, the page draws everything else. */
+.agent-inspector { overflow: hidden; }
+.agent-inspector > .agent-page { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
+
+/* In Chat, the page sits beside the conversation. */
+.chat-split { display: flex; height: 100%; min-height: 0; }
+.chat-split > .thread { position: relative; flex: 1; min-width: 0; }
+.agent-pane {
+  width: 368px; flex: none; min-height: 0; overflow-y: auto; scrollbar-gutter: stable;
+  border-left: var(--hairline) solid var(--line); background: var(--bg-main);
+  animation: pane-in var(--t-spring) var(--spring-smooth) both;
+}
+@keyframes pane-in { from { opacity: 0; transform: translateX(14px); } }
+.thread-who { display: flex; align-items: center; gap: 10px; min-width: 0; margin-left: -6px; padding: 4px 8px 4px 6px; border: 0; border-radius: var(--r); background: transparent; color: var(--text); font: inherit; }
+.thread-who:hover { background: rgb(var(--tint-rgb) / 0.05); }
+.thread-who .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thread-head .icon-btn[aria-pressed="true"] { background: rgb(var(--tint-rgb) / 0.08); color: var(--text); }
+@media (max-width: 980px) {
+  .agent-pane { position: absolute; top: 0; right: 0; bottom: 0; z-index: 6; background: var(--mat-panel); box-shadow: var(--shadow-3); }
+}
+
+/* ---------- New agent: a name, what it does, a starting card ---------- */
+.new-agent { width: min(700px, calc(100vw - 32px)); top: 8vh; display: flex; flex-direction: column; max-height: 84vh; }
+.na-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 18px 16px 14px 20px; border-bottom: var(--hairline) solid var(--line); }
+.na-id { display: grid; gap: 2px; min-width: 0; }
+.na-name, .na-about { width: 100%; border: 0; background: transparent; color: var(--text); font: inherit; outline: none; padding: 0; }
+.na-name { font-size: 21px; font-weight: 650; letter-spacing: -0.02em; }
+.na-about { font-size: 14px; color: var(--text-2); }
+.na-name::placeholder, .na-about::placeholder { color: var(--text-4); }
+.na-body { display: grid; gap: 12px; padding: 14px 16px 6px 20px; overflow-y: auto; min-height: 0; flex: 1; }
+.na-filter { display: flex; gap: 4px; flex-wrap: wrap; }
+.na-filter button { height: 26px; padding: 0 10px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text-3); font: inherit; font-size: 12.5px; font-weight: 550; }
+.na-filter button:hover { color: var(--text); background: rgb(var(--tint-rgb) / 0.05); }
+.na-filter button[aria-selected="true"] { color: var(--text); background: rgb(var(--tint-rgb) / 0.09); box-shadow: inset 0 0 0 0.5px var(--line-2); }
+.na-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(146px, 1fr)); gap: 8px; }
+.na-card {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 9px; row-gap: 1px; align-items: center;
+  padding: 10px; border: 0; border-radius: var(--r-md); background: var(--bg-card); box-shadow: inset 0 0 0 0.5px var(--line-2);
+  color: var(--text); font: inherit; text-align: left; transition: background var(--t-fast), box-shadow var(--t-fast);
+}
+.na-card .face { grid-row: span 2; }
+.na-card b { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.na-card small { grid-column: 2; font-size: 11.5px; line-height: 1.35; color: var(--text-3); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.na-card:hover { background: var(--bg-raised); box-shadow: inset 0 0 0 0.5px var(--line-3); }
+.na-card[aria-pressed="true"] { background: rgb(var(--accent-rgb) / 0.1); box-shadow: inset 0 0 0 1px var(--accent-line); }
+.na-setup { display: grid; gap: 8px; padding: 10px 16px 4px 20px; }
+.na-row { display: flex; align-items: center; gap: 10px; min-height: 30px; font-size: 13px; color: var(--text-3); }
+.na-row > span:first-child { width: 84px; flex: none; }
+.na-row select { flex: 1; min-width: 0; height: 30px; padding: 0 8px; border: 0; border-radius: var(--r-sm); background: var(--bg-input); box-shadow: inset 0 0 0 0.5px var(--line-2); color: var(--text); font: inherit; font-size: 13px; }
+.na-skills { display: flex; gap: 6px; flex-wrap: wrap; }
+.na-picked { font-size: 12px; margin-right: 4px; }
+.new-agent .new-agent-foot { border-top: var(--hairline) solid var(--line); margin-top: 10px; }
+
+/* ---------- Home: a large title, the day in pills, agents as tiles, then widgets ---------- */
+.home-inner.dash { max-width: 1080px; gap: 22px; grid-template-columns: minmax(0, 1fr); }
+.home-inner.dash > * { min-width: 0; }
+.dash-head { display: flex; align-items: flex-end; gap: 8px; }
+.dash-title { display: grid; gap: 2px; }
+.dash-date { font-size: 12.5px; font-weight: 600; color: var(--text-3); }
+.dash-title h1 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.1; }
+.dash-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: -10px; }
+.dash-pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: var(--r-pill);
+  background: rgb(var(--tint-rgb) / 0.055); box-shadow: inset 0 0 0 0.5px var(--line-2); color: var(--text-2);
+  font: inherit; font-size: 12.5px; font-weight: 500; transition: background var(--t-fast);
+}
+.dash-pill:hover { background: rgb(var(--tint-rgb) / 0.09); }
+.dash-pill b { color: var(--text); font-weight: 650; }
+.dash-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--run); animation: live-dot 1.4s ease-in-out infinite; }
+.dash-pill[data-tone="run"] { color: var(--run-text); background: rgb(var(--accent-rgb) / 0.1); box-shadow: inset 0 0 0 0.5px rgb(var(--accent-rgb) / 0.3); }
+.dash-pill[data-tone="warn"] { color: var(--warn-text); background: var(--warn-soft); box-shadow: inset 0 0 0 0.5px rgb(255 214 10 / 0.25); }
+
+/* Ask: the agent is picked inside the box, as a "To:" field. */
+.composer.dash-ask { width: 100%; max-width: none; margin: 0; align-items: center; gap: 8px; padding: 6px 6px 6px 8px; }
+.dash-ask textarea { padding: 6px 2px; }
+.ask-who { position: relative; display: inline-flex; align-items: center; gap: 6px; flex: none; height: 32px; padding: 0 10px 0 5px; margin-right: 2px; border-radius: var(--r); background: rgb(var(--tint-rgb) / 0.05); box-shadow: inset 0 0 0 0.5px var(--line-2); color: var(--text-2); }
+.ask-who:hover { background: rgb(var(--tint-rgb) / 0.08); color: var(--text); }
+.ask-who select { appearance: none; border: 0; padding: 0; background: transparent; color: var(--text); font: inherit; font-size: 13px; font-weight: 600; outline: none; max-width: 140px; }
+.ask-who select option { background: var(--bg-raised); color: var(--text); }
+.ask-mode { width: 116px; flex: none; }
+
+.dash-section { display: grid; gap: 10px; }
+.dash-section-head { display: flex; align-items: center; gap: 8px; padding: 0 2px; }
+.dash-section-head h2 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+
+/* Agents as tiles: face, name and what it does now; working tiles take the accent. */
+.agent-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(218px, 1fr)); gap: 10px; }
+.agent-tile { position: relative; min-width: 0; border-radius: var(--r-xl); background: var(--bg-card); box-shadow: inset 0 0 0 0.5px var(--line-2); transition: background var(--t-fast), box-shadow var(--t-fast); }
+.agent-tile:hover { background: var(--bg-raised); box-shadow: inset 0 0 0 0.5px var(--line-3); }
+.agent-tile-main { display: flex; align-items: center; gap: 11px; width: 100%; min-height: 66px; padding: 12px 38px 12px 12px; border: 0; background: none; color: var(--text); font: inherit; text-align: left; }
+.agent-tile-main .t { display: grid; gap: 2px; min-width: 0; }
+.agent-tile-main b { font-size: 14px; font-weight: 600; letter-spacing: -0.008em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-tile-main small { font-size: 12.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-tile-edit { position: absolute; top: 50%; right: 9px; translate: 0 -50%; display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text-3); opacity: 0; transition: opacity var(--t-fast), background var(--t-fast); }
+.agent-tile:hover .agent-tile-edit, .agent-tile-edit:focus-visible, .agent-tile-edit.shown { opacity: 1; }
+.agent-tile-edit:hover { background: rgb(var(--tint-rgb) / 0.08); color: var(--text); }
+.agent-tile[data-state="run"] { background: rgb(var(--accent-rgb) / 0.09); box-shadow: inset 0 0 0 0.5px rgb(var(--accent-rgb) / 0.35); }
+.agent-tile[data-state="run"] small { color: var(--run-text); }
+.agent-tile[data-state="warn"] small { color: var(--warn-text); }
+.agent-tile[data-state="fail"] small { color: var(--fail-text); }
+.agent-tile.add { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 66px; border: 0; background: transparent; color: var(--text-3); font: inherit; font-size: 13.5px; font-weight: 500; }
+.agent-tile.add:hover { color: var(--text); background: rgb(var(--tint-rgb) / 0.04); }
+
+/* Widgets: one surface, a small titled head, content below; wide ones take two columns. */
+.dash-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.widget { display: grid; align-content: start; gap: 2px; min-width: 0; padding: 12px 10px 10px; border: 0; border-radius: var(--r-xl); background: var(--bg-card); box-shadow: inset 0 0 0 0.5px var(--line-2); color: var(--text); font: inherit; text-align: left; }
+.widget.wide { grid-column: span 2; }
+.widget-head { display: flex; align-items: center; gap: 7px; min-height: 24px; padding: 0 4px 6px; color: var(--text-3); }
+.widget-head h2 { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-2); letter-spacing: -0.003em; }
+.widget-head .chip { margin-left: 2px; }
+.widget-foot { padding: 6px 4px 0; font-size: 12px; color: var(--text-3); }
+.widget-calm { color: var(--text-3); }
+.home-start { gap: 12px; padding: 18px; }
+.home-start h2 { margin: 0; font-size: 17px; font-weight: 650; }
+
+/* Spent today: the number, then seven small bars (today in the accent). */
+.spend-widget { transition: background var(--t-fast), box-shadow var(--t-fast); }
+.spend-widget:hover { background: var(--bg-raised); box-shadow: inset 0 0 0 0.5px var(--line-3); }
+.spend-now { padding: 0 4px; font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+.spend-bars { display: flex; align-items: flex-end; justify-content: space-between; gap: 5px; height: 48px; margin: 12px 4px 2px; }
+.spend-bars i { flex: 1; max-width: 18px; min-height: 3px; border-radius: 3px 3px 1.5px 1.5px; background: rgb(var(--tint-rgb) / 0.13); transition: height var(--t-spring) var(--spring-smooth); }
+.spend-bars i[data-today] { background: var(--accent); }
+
+.need-row .home-row-main { padding: 8px; }
+.start-card .widget-head { padding-bottom: 4px; }
+.start-card .start-steps { margin: 0; padding: 0 2px; }
+.start-card .start-all { justify-self: start; margin: 2px 0 0 4px; height: 24px; font-size: 12px; color: var(--text-3); }
+
+@media (max-width: 980px) {
+  .dash-grid { grid-template-columns: minmax(0, 1fr); }
+  .widget.wide { grid-column: auto; }
+}
+@media (max-width: 640px) {
+  .ask-mode { display: none; }
+  .dash-title h1 { font-size: 26px; }
+  .dash-head { flex-wrap: wrap; }
+  .ask-who select { max-width: 96px; }
+}
