@@ -25,6 +25,7 @@
     "desktop": "tauri dev",
     "engine:patches": "tsx scripts/hermes-patches.ts",
     "site:foods": "tsx scripts/site-foods.ts",
+    "app:icon": "node scripts/app-icon.mjs",
     "engine:platforms": "tsx scripts/hermes-platforms.ts",
     "mcbot": "tsx scripts/mcbot.ts",
     "engine:connectors": "tsx scripts/hermes-connectors.ts",

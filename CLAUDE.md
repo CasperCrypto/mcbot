@@ -388,8 +388,10 @@ Change them additively; a breaking change bumps the version.
   Blobatars with `tone={0.48}` (auto tone can be near-black on dark).
 - **Logo:** the gray glass burger (`logoSvg`). The website's bots and the logo
   files (`site/assets/logo.svg`, `design/icon.svg`) are generated from the same
-  code by `npm run site:foods`; `npm test` fails when they are stale. App icons:
-  render `design/icon.svg` to `design/icon-1024.png`, then `npx tauri icon`.
+  code by `npm run site:foods`; `npm test` fails when they are stale. App icons: `npm run app:icon`
+  (`scripts/app-icon.mjs`) renders the website's glass burger (`site/assets/burger.webp`, with its eyes) on
+  a near-black tile: `design/icon-1024.png` on Apple's grid for macOS's `.icns`, `design/icon-full-1024.png`
+  filling the canvas for Windows and Linux, and the site's `icon-180.png`.
 - **Effects use block bodies.** `useEffect(() => { … })` — never a concise arrow:
   `scrollIntoView` returns a Promise in current Chromium, and an effect that
   returns a non-function crashes React on cleanup.
