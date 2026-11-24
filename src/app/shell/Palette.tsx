@@ -1,8 +1,7 @@
 import {
   ClipboardCopy,
   History as HistoryIcon,
-  BookOpen, Bot, FileCode2, FolderGit2, History, Palette as PaletteIcon, Stethoscope, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Upload, Users, Waypoints, Workflow, GraduationCap, Compass,
-} from "lucide-react";
+  BookOpen, Bot, FileCode2, FolderGit2, History, Palette as PaletteIcon, Stethoscope, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Upload, Users, Waypoints, Workflow, GraduationCap, Compass, Dumbbell } from "lucide-react";
 import { describeHarness } from "../../harness/describe";
 import { Logo } from "../faces/FoodFace";
 import { redo, undo } from "../../board/undo";
@@ -53,6 +52,7 @@ export const VIEWS: { tab: Tab; label: string; icon: ReactNode; group: number; t
   { tab: "passwords", label: "Passwords", icon: <KeyRound size={15} />, group: 2, tip: "Logins and API keys" },
   { tab: "memory", label: "Memory", icon: <Brain size={15} />, group: 3 },
   { tab: "cost", label: "Cost", icon: <ChartColumnBig size={15} />, group: 3 },
+  { tab: "learn", label: "Learn", icon: <Dumbbell size={15} />, group: 3, tip: "Train your own model on your agents' work" },
   { tab: "team", label: "Team", icon: <Users size={15} />, group: 3 },
 ];
 

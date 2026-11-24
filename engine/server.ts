@@ -19,7 +19,7 @@ import { compile, resolveGraph, type AgentBundle } from "../src/compile";
 import { updateChecker } from "./updates";
 import { askForPlan, plannerModel } from "./builder";
 import { PlanChoicesSchema, type HarnessPlan } from "../src/harness/plan";
-import type { AgentMemoryView, GuestView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, AgentSchedules, SignInView, UpdateView, SetupDetect, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../src/contracts/api";
+import type { AgentMemoryView, GuestView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, AgentSchedules, LearnExport, LearnView, SignInView, UpdateView, SetupDetect, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../src/contracts/api";
 import { writeExport } from "./boardFiles";
 import { isHermesHome, readSetup } from "./harnessDisk";
 import { HermesSync } from "./hermesSync";
@@ -52,6 +52,9 @@ import { LoginError, Logins } from "./logins";
 import { GitHubError, downloadRepo, inspectRepo, parseGitHub } from "./github";
 import { APP_PAGES, hasWebApp, pagePolicy, webFile } from "./webApp";
 import { frameable } from "./web";
+import { Ratings, agentConversations, learnAgent, writeDataset } from "./learn";
+import type { Rating } from "../src/harness/learn";
+import { renderSoul } from "../src/compile/soul";
 
 export const ENGINE_VERSION = "0.7.0";
 
@@ -139,6 +142,8 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   // Nothing runs in a fresh engine: a run still marked running is left from before it started.
   void store.list().then((runs) => Promise.all(runs.filter((r) => r.status === "running").map((r) => endOrphan(r.runId)))).catch(() => undefined);
   const secrets = new Secrets(join(cfg.workspace, "secrets.json"));
+  /** Thumbs up / down on answers (Learn). */
+  const ratings = new Ratings(join(cfg.workspace, "ratings.json"));
   let setupJob: HermesInfo["setup"] = { state: "idle", lines: [] };
   const setup = new SetupStore(join(cfg.workspace, "setup.json"));
   // McBot's own Hermes runs through the gateway's runs API, so runs can ask before risky actions.
@@ -793,6 +798,44 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
         .filter((b) => manifest?.profiles.includes(b.agent.data.name))
         .map((b) => ({ profile: b.agent.data.name, agentNodeId: b.agent.id, sessions: readSessions(cfg.hermesHome, b.agent.data.name), dailyBudgetUsd: b.agent.data.dailyBudgetUsd ?? null }));
       return buildCostReport(profiles, await store.list(boardId), modelsOf(bundles));
+    },
+
+    // ---- learn from your work (engine/learn.ts, src/harness/learn.ts) ----
+    "GET /api/ratings": async (_req, url): Promise<Record<string, Rating>> => {
+      const boardId = await requireBoard(url.searchParams.get("boardId"));
+      const mine = new Set((await store.list(boardId)).map((r) => r.runId));
+      return Object.fromEntries(Object.entries(await ratings.all()).filter(([id]) => mine.has(id)));
+    },
+    "POST /api/ratings": async (req): Promise<{ runId: string; rating: Rating | null }> => {
+      const body = parse(z.object({ runId: z.string().regex(/^run_[a-z0-9]+_[a-f0-9]+$/), score: z.union([z.literal(0), z.literal(1), z.null()]), note: z.string().trim().max(500).optional() }), await json(req));
+      if (!(await store.events(body.runId)).length) throw new HttpError(404, "No such run");
+      const rating: Rating | null = body.score === null ? null : { score: body.score, at: Date.now(), ...(body.note ? { note: body.note } : {}) };
+      await ratings.set(body.runId, rating);
+      return { runId: body.runId, rating };
+    },
+    "GET /api/learn": async (_req, url): Promise<LearnView> => {
+      const boardId = await requireBoard(url.searchParams.get("boardId"));
+      const { bundles } = await bundlesOf(boardId);
+      const [runs, rated] = await Promise.all([store.list(boardId), ratings.all()]);
+      const agents: LearnView["agents"] = [];
+      for (const b of bundles) agents.push(learnAgent(b, await agentConversations(b, runs, rated, (id) => store.events(id)), rated));
+      const dir = join(cfg.workspace, "datasets");
+      const home = homedir();
+      return { agents, folder: home.length > 1 && dir.startsWith(home) ? `~${dir.slice(home.length)}` : dir };
+    },
+    /** One agent's conversations as a training dataset in <workspace>/datasets/. Host only: it holds every chat. */
+    "POST /api/learn/export": async (req): Promise<LearnExport> => {
+      const body = parse(z.object({ boardId: z.string(), agentNodeId: z.string(), format: z.enum(["chat", "rewards", "sharegpt"]), pick: z.enum(["good", "all"]) }), await json(req));
+      const boardId = await requireBoard(body.boardId);
+      const graph = await relay.graph(boardId);
+      const { bundles } = resolveGraph(graph);
+      const bundle = bundles.find((b) => b.agent.id === body.agentNodeId);
+      if (!bundle) throw new HttpError(404, "No such agent on this board");
+      const [runs, rated, saved] = await Promise.all([store.list(boardId), ratings.all(), secrets.env()]);
+      const convs = await agentConversations(bundle, runs, rated, (id) => store.events(id));
+      const system = renderSoul(bundle.agent.data, bundle.team.map((t) => t.data), graph.brief);
+      const model = bundle.models[0]?.data.model ?? null;
+      return writeDataset(join(cfg.workspace, "datasets"), { profile: bundle.agent.data.name, convs, format: body.format, pick: body.pick, system, model, secrets: Object.values(saved) });
     },
 
     "GET /api/fs/roots": async (_req, url): Promise<FsRoot[]> => {

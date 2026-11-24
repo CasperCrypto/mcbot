@@ -367,3 +367,58 @@ button.chip:hover { filter: brightness(1.2); }
 .provider-pick[aria-checked="true"] { background: var(--btn-light-bg); color: var(--btn-light-fg); box-shadow: none; }
 .model-pick { border: 0; }
 .model-pick[aria-checked="true"] { border: 0; background: rgb(var(--tint-rgb) / 0.1); }
+
+/* Thumbs on an answer (views/AgentsView.tsx Rate): quiet until hovered or picked. */
+.rate { display: inline-flex; gap: 2px; margin-left: auto; opacity: 0.55; transition: opacity var(--t-fast); }
+.msg.agent:hover .rate, .rate:has([aria-pressed="true"]) { opacity: 1; }
+.rate-btn { display: grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text-3); cursor: pointer; transition: background var(--t-fast), color var(--t-fast); }
+.rate-btn:hover { background: rgb(var(--tint-rgb) / 0.08); color: var(--text); }
+.rate-btn[aria-pressed="true"] { background: rgb(var(--tint-rgb) / 0.12); color: var(--text); }
+.msg .meta:has(.rate [aria-pressed="true"]) { opacity: 1; }
+.msg .meta:has(.rate) { display: flex; align-items: center; }
+
+/* Learn (views/LearnView.tsx): agents as grouped rows, their checks and export inline. */
+.learn-view { overflow-y: auto; padding: 36px 28px 48px; display: grid; align-content: start; justify-items: center; gap: 14px; }
+.learn-view > * { width: min(860px, 100%); }
+.learn-hero h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.025em; }
+.learn-hero p { margin: 4px 0 6px; color: var(--text-2); font-size: 14.5px; }
+.learn-list, .learn-train { display: grid; border-radius: var(--r-xl); background: var(--surface-1); box-shadow: var(--lift); overflow: hidden; }
+.learn-agent + .learn-agent, .learn-train-row + .learn-train-row { box-shadow: var(--divide); }
+.learn-agent-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.learn-agent-text { display: grid; gap: 2px; min-width: 0; }
+.learn-agent-text b { font-size: 14.5px; }
+.learn-stats { display: flex; flex-wrap: wrap; gap: 12px; color: var(--text-3); font-size: 12.5px; }
+.learn-stats span { display: inline-flex; align-items: center; gap: 4px; }
+.learn-ready { color: var(--text-3); font-size: 12.5px; white-space: nowrap; margin-right: 4px; }
+.learn-ready b { color: var(--text); font-size: 15px; margin-right: 3px; }
+.learn-checks, .learn-export { display: grid; gap: 8px; padding: 2px 14px 14px 60px; }
+.learn-check { display: flex; align-items: center; gap: 8px; }
+.learn-check select, .learn-check input { height: 30px; border: 0; border-radius: var(--r-sm); background: var(--bg-input); color: var(--text); font: inherit; font-size: 13.5px; padding: 0 10px; outline: none; }
+.learn-check select { width: 210px; cursor: pointer; }
+.learn-check input { flex: 1; min-width: 0; }
+.learn-check select:focus, .learn-check input:focus { box-shadow: 0 0 0 3px var(--accent-soft); }
+.learn-checks > .btn { justify-self: start; }
+.learn-export-row { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.learn-export-row > span:first-child:not(.grow) { width: 56px; color: var(--text-3); }
+.learn-sub { margin: 14px 0 0; font-size: 15px; font-weight: 650; }
+.learn-train-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 16px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background var(--t-fast); }
+.learn-train-row:hover { background: rgb(var(--tint-rgb) / 0.035); }
+.learn-train-row b { display: block; font-size: 14px; }
+.learn-train-row small { display: block; color: var(--text-3); font-size: 12.5px; margin-top: 1px; }
+.learn-folder { font-size: 12.5px; margin: 2px 4px 0; }
+@media (max-width: 720px) { .learn-agent-head { flex-wrap: wrap; } .learn-checks, .learn-export { padding-left: 14px; } .learn-check select { width: 150px; } }
+
+/* The agent's plan in its answer (views/AgentsView.tsx Plan, chat/plan.ts). */
+.plan { display: grid; gap: 6px; margin: 2px 0 8px; padding: 10px 12px; border-radius: var(--r-lg); background: var(--surface-1); box-shadow: var(--lift); max-width: 560px; }
+.plan-head { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-2); }
+.plan-head b { color: var(--text); font-weight: 600; }
+.plan-head .faint { margin-left: auto; }
+.plan-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.plan-items li { display: flex; align-items: flex-start; gap: 8px; font-size: 13.5px; line-height: 1.45; color: var(--text-2); }
+.plan-items li.sub { padding-left: 22px; }
+.plan-mark { flex: none; display: grid; place-items: center; width: 16px; height: 16px; margin-top: 2px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgb(var(--tint-rgb) / 0.22); color: var(--text); }
+.plan-items li[data-status="completed"] .plan-mark { background: rgb(var(--tint-rgb) / 0.85); box-shadow: none; color: var(--bg-main); }
+.plan-items li[data-status="completed"] .plan-text { color: var(--text-3); }
+.plan-items li[data-status="in_progress"] { color: var(--text); }
+.plan-items li[data-status="in_progress"] .plan-mark { box-shadow: inset 0 0 0 1.5px var(--accent); color: var(--accent-text); }
+.plan-items li[data-status="cancelled"] .plan-text { color: var(--text-4); text-decoration: line-through; }

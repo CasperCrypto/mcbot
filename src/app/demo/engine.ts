@@ -16,7 +16,7 @@ import { addVersion, type HarnessVersion } from "../../harness/versions";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
 import { LIBRARY } from "../../contracts/library.generated";
 import type { HarnessPlan, PlanChoices } from "../../harness/plan";
-import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView, LearnExport, LearnView } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
@@ -27,6 +27,8 @@ import { followChanges } from "../../harness/reconcile";
 import { RUN_EVENT_VERSION, summarizeRun, type RunEvent, type RunEventInput, type RunSummary } from "../../contracts/run";
 import { EngineError } from "../lib/engineError";
 import { ROOT, SEED_BOARD, WORKSPACE, sampleProject, seedGraph, seedMemory, seedRuns, sharedFiles } from "./seed";
+import { agentStats, conversationsOf, datasetLines, rewardOf, toolsUsed, type ConversationInput, type DatasetFormat, type DatasetPick, type Rating } from "../../harness/learn";
+import { renderSoul } from "../../compile/soul";
 
 type Target = "memory" | "user";
 /** The local model server the demo pretends to find (setup lists it, Home asks it). */
@@ -53,6 +55,8 @@ interface State {
   schedules?: Record<string, ScheduleView[]>;
   /** Harness versions per board (src/harness/versions.ts), as the engine keeps them. */
   versions?: Record<string, HarnessVersion[]>;
+  /** Thumbs up / down on answers (Learn), by run id. */
+  ratings?: Record<string, Rating>;
   /** Setup assistant: done or not, and boards it built (their graphs until a window opens them). */
   setup?: SetupState;
   pending?: Record<string, Graph>;
@@ -331,6 +335,19 @@ function script(prompt: string, bundle: AgentBundle): { steps: Step[]; text: str
     return { steps: [{ tool, input, output, toolNodeId }], text: tool.endsWith("list_directory") ? output : "Done." };
   }
   if (/\b2\s*\+\s*2\b/.test(prompt)) return { steps: [], text: "4" };
+  if (/\b(plan|week|calendar|campaign|posts)\b/i.test(prompt)) {
+    // A multi-step job: the agent writes its plan first (Hermes' todo_list), then works through it.
+    const todo = (statuses: string[]) => ({ todos: ["Pick this week's themes from the goals", "Draft a post for each day", "Make an image for each post", "Put them in a calendar for your OK"].map((content, i) => ({ id: String(i + 1), content, status: statuses[i] })) });
+    const all = (s: string) => Array(4).fill(s) as string[];
+    return {
+      steps: [
+        { tool: "todo_list", input: todo(["in_progress", "pending", "pending", "pending"]), output: JSON.stringify(todo(["in_progress", "pending", "pending", "pending"])), toolNodeId: null },
+        { tool: "todo_list", input: { ...todo(["completed", "completed", "in_progress", "pending"]), merge: true }, output: JSON.stringify(todo(["completed", "completed", "in_progress", "pending"])), toolNodeId: null },
+        { tool: "todo_list", input: { ...todo(all("completed")), merge: true }, output: JSON.stringify(todo(all("completed"))), toolNodeId: null },
+      ],
+      text: "Here's the week:\n\n| Day | Post | Image |\n|---|---|---|\n| Mon | Fresh sourdough, still warm | Loaf on the counter, morning light |\n| Wed | Behind the scenes at 5 am | Hands shaping dough |\n| Fri | Weekend cake orders open | Cake with candles |\n\nSay OK and I'll schedule them.",
+    };
+  }
   if (/\b(draw|diagram|sketch|map out)\b/i.test(prompt)) {
     // A drawing, as an agent would answer with one (chat/drawing.ts, skeleton form).
     const box = (id: string, x: number, y: number, text: string) => ({ type: "rectangle", id, x, y, width: 170, height: 64, roundness: { type: 3 }, label: { text } });
@@ -714,6 +731,24 @@ const demoProfileSkills = (profile: string): ProfileSkill[] => [
   }),
 ];
 
+const boardRuns = (boardId: string): RunSummary[] =>
+  Object.values(state.runs).map((e) => summarizeRun(e)).filter((s): s is RunSummary => !!s && s.boardId === boardId);
+/** As engine/learn.ts `agentConversations`, from the demo's own runs. */
+function demoConversations(b: AgentBundle, runs: readonly RunSummary[], rated: Readonly<Record<string, Rating>>): ConversationInput[] {
+  const mine = runs.filter((r) => r.agentNodeId === b.agent.id);
+  const events: Record<string, RunEvent[]> = {};
+  const rewards: Record<string, number | null> = {};
+  for (const r of mine) {
+    events[r.runId] = state.runs[r.runId] ?? [];
+    rewards[r.runId] = rewardOf(r, rated[r.runId], b.agent.data.checks ?? [], toolsUsed(events[r.runId]!));
+  }
+  return conversationsOf(mine).map((c) => ({ runs: c, events, rewards }));
+}
+function learnAgentView(b: AgentBundle, convs: readonly ConversationInput[], rated: Readonly<Record<string, Rating>>): LearnView["agents"][number] {
+  const a = b.agent.data;
+  return { agentNodeId: b.agent.id, profile: a.name, name: a.displayName || a.name, checks: a.checks?.length ?? 0, ...agentStats(convs, rated) };
+}
+
 export const demoEngine = {
   health: api((): Health => ({ ok: true, version: "0.2.0", workspace: WORKSPACE, hermesHome: ROOT, managedRoot: true, hermes: { found: true, path: "simulated in this browser", kind: "bundled" } })),
   hermes: api((): HermesInfo => demoHermes()),
@@ -814,6 +849,36 @@ export const demoEngine = {
     const models = [...new Map(bundles.flatMap((b) => b.models).map((m) => [m.id, m])).values()];
     const runs = Object.values(state.runs).map((e) => summarizeRun(e)).filter((s): s is RunSummary => !!s && s.boardId === boardId);
     return buildCostReport(profiles, runs, models);
+  }),
+  ratings: api((boardId: string): Record<string, Rating> => {
+    const mine = new Set(boardRuns(boardId).map((r) => r.runId));
+    return Object.fromEntries(Object.entries(state.ratings ?? {}).filter(([id]) => mine.has(id)));
+  }),
+  rate: api((runId: string, score: 0 | 1 | null, note?: string) => {
+    if (!state.runs[runId]) throw new EngineError(404, "No such run", {});
+    const all = { ...(state.ratings ?? {}) };
+    const rating: Rating | null = score === null ? null : { score, at: Date.now(), ...(note ? { note } : {}) };
+    if (rating) all[runId] = rating;
+    else delete all[runId];
+    state.ratings = all;
+    save();
+    return { runId, rating };
+  }),
+  learn: api((boardId: string): LearnView => {
+    const { bundles } = bundlesOf(requireBoard(boardId));
+    const runs = boardRuns(boardId);
+    const rated = state.ratings ?? {};
+    return { agents: bundles.map((b) => learnAgentView(b, demoConversations(b, runs, rated), rated)), folder: "~/McBot/datasets" };
+  }),
+  exportDataset: api((boardId: string, agentNodeId: string, format: DatasetFormat, pick: DatasetPick): LearnExport => {
+    const graph = graphOf(requireBoard(boardId));
+    const { bundles } = resolveGraph(graph);
+    const bundle = bundles.find((b) => b.agent.id === agentNodeId);
+    if (!bundle) throw new EngineError(404, "No such agent on this board", {});
+    const convs = demoConversations(bundle, boardRuns(boardId), state.ratings ?? {});
+    const { lines } = datasetLines(convs, { format, pick, system: renderSoul(bundle.agent.data, bundle.team.map((t) => t.data), graph.brief), model: bundle.models[0]?.data.model ?? null, at: new Date().toISOString() });
+    const file = `${bundle.agent.data.name}-${format}.jsonl`;
+    return { file, path: "", shown: file, examples: lines.length, text: lines.join("\n") };
   }),
   share: api((): SharingView => demoShare([{ id: "m-sam", name: "Sam", joinedAt: Date.now() - 6 * 86_400_000, lastSeen: Date.now() - 60_000, role: "edit" }, { id: "m-lee", name: "Lee", joinedAt: Date.now() - 2 * 86_400_000, lastSeen: Date.now() - 3_600_000, role: "edit" }])),
   setShare: api((_on: boolean, _reach?: "network" | "internet"): SharingView => { throw new EngineError(409, "Sharing with other computers works in the desktop app. Here, open a second tab: it is live too.", {}); }),

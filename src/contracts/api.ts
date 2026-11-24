@@ -479,3 +479,37 @@ export interface GitHubRepoView {
   /** What to hand Hermes: a skill's folder link, a plugin's owner/repo[/path]. */
   source: string;
 }
+
+// ---- learn from your work (engine/learn.ts, src/harness/learn.ts) ----
+
+/** One agent's numbers in the Learn view. */
+export interface LearnAgentView {
+  agentNodeId: string;
+  profile: string;
+  name: string;
+  /** How many checks grade its answers. */
+  checks: number;
+  conversations: number;
+  up: number;
+  down: number;
+  /** Mean reward (0 to 1) of the conversations that have one. */
+  reward: number | null;
+  /** Conversations good enough to train on. */
+  good: number;
+}
+
+export interface LearnView {
+  agents: LearnAgentView[];
+  /** Where datasets are written, the home folder as ~. */
+  folder: string;
+}
+
+export interface LearnExport {
+  file: string;
+  path: string;
+  shown: string;
+  examples: number;
+  /** The demo has no files: it gets the lines to download. */
+  text?: string;
+}
+

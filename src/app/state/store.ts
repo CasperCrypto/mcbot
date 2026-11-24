@@ -4,8 +4,9 @@ import type { BoardInfo, CompileResponse, Health, SetupState } from "../../contr
 import { summarizeRun, type RunEvent, type RunSummary } from "../../contracts/run";
 import { loadIdentity, saveIdentity, type Identity } from "../lib/identity";
 import { applyAppearance, loadAppearance, saveAppearance, type Appearance } from "../lib/appearance";
+import type { Rating } from "../../harness/learn";
 
-export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "skills" | "files" | "passwords" | "cost" | "team" | "settings";
+export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "skills" | "files" | "passwords" | "cost" | "learn" | "team" | "settings";
 
 export type SettingsSection = "models" | "keys" | "appearance" | "you" | "team" | "engine" | "about";
 
@@ -37,6 +38,8 @@ interface State {
   onDisk: Record<string, "fresh" | "stale"> | null;
   events: Record<string, RunEvent[]>;
   runs: Record<string, RunSummary>;
+  /** Thumbs up / down on this board's answers (Learn), by run id. */
+  ratings: Record<string, Rating>;
   toasts: Toast[];
   /** The last notices, newest first, kept after they leave the island's bar (it lists them when open). */
   notices: (Toast & { at: number })[];
@@ -112,6 +115,8 @@ interface State {
   editAgent(agentNodeId: string): void;
   setTeamsOpen(open: boolean): void;
   setKnowledgeOpen(open: boolean): void;
+  setRatings(ratings: Record<string, Rating>): void;
+  setRating(runId: string, rating: Rating | null): void;
   setBuilder(open: boolean, request?: string): void;
   setGithub(url: string | null): void;
   openDrawing(drawing: State["drawing"]): void;
@@ -201,6 +206,7 @@ export const useApp = create<State>((set, get) => ({
   chatAppsOpen: false,
   teamsOpen: false,
   knowledgeOpen: false,
+  ratings: {},
   builder: { open: false, request: "" },
   github: null,
   drawing: null,
@@ -237,6 +243,13 @@ export const useApp = create<State>((set, get) => ({
   folderOpened: (id) => set({ openedFolder: { id, at: Date.now() }, folderPickerOpen: false }),
   setTeamsOpen: (teamsOpen) => set({ teamsOpen, paletteOpen: false, newAgentOpen: false }),
   setKnowledgeOpen: (knowledgeOpen) => set({ knowledgeOpen, paletteOpen: false }),
+  setRatings: (ratings) => set({ ratings }),
+  setRating: (runId, rating) => set((s) => {
+    const ratings = { ...s.ratings };
+    if (rating) ratings[runId] = rating;
+    else delete ratings[runId];
+    return { ratings };
+  }),
   requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),
   openDrawing: (drawing) => set({ drawing, paletteOpen: false }),
   setGithub: (github) => set({ github, paletteOpen: false }),

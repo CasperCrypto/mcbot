@@ -12,6 +12,12 @@ export const HIDDEN = "[hidden]";
 /** Tokens that may reach the log without being one of McBot's saved keys. */
 const TOKEN_PATTERNS: [RegExp, string][] = [
   [/\bsk-[A-Za-z0-9_-]{16,}/g, HIDDEN], // OpenAI-style keys (OpenAI, OpenRouter, DeepSeek, …)
+  [/\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}/g, HIDDEN], // GitHub tokens
+  [/\bgithub_pat_[A-Za-z0-9_]{40,}/g, HIDDEN], // GitHub fine-grained tokens
+  [/\bxox[abposr]-[A-Za-z0-9-]{10,}/g, HIDDEN], // Slack tokens
+  [/\bAKIA[0-9A-Z]{16}\b/g, HIDDEN], // AWS access key ids
+  [/\bAIza[0-9A-Za-z_-]{35}\b/g, HIDDEN], // Google API keys
+  [/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g, HIDDEN], // JWTs
   [/\b\d{6,12}:[A-Za-z0-9_-]{30,}/g, HIDDEN], // Telegram bot tokens
   [/\b(Bearer|Bot)\s+[A-Za-z0-9._~+/=-]{16,}/gi, `$1 ${HIDDEN}`], // Authorization headers
   [/\b([A-Za-z0-9_]*(?:API_KEY|TOKEN|SECRET|PASSWORD)[A-Za-z0-9_]*)(["']?\s*[=:]\s*)["']?[^\s"',}]{6,}["']?/gi, `$1$2${HIDDEN}`], // NAME=value, "name": "value"

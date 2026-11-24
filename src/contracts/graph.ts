@@ -98,6 +98,19 @@ export const REASONING_LEVELS = ["none", "minimal", "low", "medium", "high", "xh
 export const ReasoningSchema = z.enum(REASONING_LEVELS);
 export type Reasoning = z.infer<typeof ReasoningSchema>;
 
+/**
+ * A grader an agent's answers are checked against: McBot-side only (never compiled, no Hermes key),
+ * like the daily budget. The Learn view uses them as rewards (src/harness/learn.ts).
+ */
+export const CHECK_KINDS = ["includes", "excludes", "usedTool", "minWords", "maxWords", "json"] as const;
+export const CheckSchema = z.object({
+  id: z.string().min(1).max(40),
+  kind: z.enum(CHECK_KINDS),
+  /** Phrases (comma-separated), a tool name, or a number of words; unused by "json". */
+  value: z.string().max(400).default(""),
+});
+export type Check = z.infer<typeof CheckSchema>;
+
 export const AgentDataSchema = z.object({
   /** The Hermes profile id: runs as `hermes -p <name>`. */
   name: z.string().regex(PROFILE_NAME_RE, "lowercase profile id: a-z, 0-9, - or _ (max 64)"),
@@ -113,6 +126,8 @@ export const AgentDataSchema = z.object({
    * budget bar in Cost and the alert in Home. null/unset = no limit.
    */
   dailyBudgetUsd: z.number().positive().max(1_000_000).nullish(),
+  /** How its answers are graded in Learn (McBot-side only, never compiled). */
+  checks: z.array(CheckSchema).max(20).nullish(),
   /**
    * Hermes' bundled skills (44: notes, email, research, creative, …) seeded into the profile.
    * Unset/true = on; false = only Hermes' essential skill (compile writes `.no-bundled-skills`).
