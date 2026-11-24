@@ -1,16 +1,11 @@
 --- a/hermes/agent/prompt_caching.py
 +++ b/hermes/agent/prompt_caching.py
-@@ -155,9 +155,13 @@
- # (hermes_cli/config_defaults.py). ``api_server`` is the API server's platform label and
- # ``curator`` the background skill curator (tens of back-to-back calls); both are machine-paced.
+@@ -157,7 +157,7 @@
  AUTO_CACHE_TTL = "auto"
-+<<<<<<< /tmp/hermes-sync-2375/ours
-+MACHINE_PACED_SOURCES = frozenset({"subagent", "cron", "oneshot", "webhook", "kanban", "api", "tool", "batch", "mcbot"})  # McBot: finite runs, like oneshot
-+=======
  MACHINE_PACED_SOURCES = frozenset({
      "subagent", "cron", "oneshot", "webhook", "kanban", "api", "api_server", "tool", "batch", "curator",
-     "a2a", "msgraph_webhook", "gateway_hygiene"})
-+>>>>>>> /tmp/hermes-sync-2375/theirs
+-    "a2a", "msgraph_webhook", "gateway_hygiene"})
++    "a2a", "msgraph_webhook", "gateway_hygiene", "mcbot"})  # McBot: finite runs, like oneshot
  
  
  def auto_cache_ttl_for_source(source: str | None) -> str:

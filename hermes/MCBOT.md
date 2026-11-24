@@ -22,9 +22,9 @@ can three-way merge every upstream release into them.
 |---|---|---|
 | `gateway/session_policy.py` | `mcbot` is a session surface (runs as the CLI) and keeps its own stored label | Runs McBot starts are recorded as McBot's (`--source mcbot`) |
 | `tui_gateway/contracts/canonical_sessions.py` | `mcbot` is an accepted `session.create` source | Same |
-| `hermes_state_sessions.py` | `mcbot` sessions stay out of human session pickers | Same treatment as `oneshot` runs |
+| `persistence/conversation/sessions.py` | `mcbot` sessions stay out of human session pickers (`INTERNAL_LISTING_SOURCES`) | Same treatment as `oneshot` runs |
 | `tui_gateway/methods_projects.py` | `mcbot` sessions stay out of project trees | Same |
-| `gateway/session_worker_delegation.py` | `mcbot` sessions may register delegated work | Same as `oneshot` |
+| `persistence/authority/coordination.py` | `mcbot` sessions may dispatch delegated work (`DELEGATION_ORIGIN_SOURCES`) | Same as `oneshot` |
 | `agent/managed_worker.py` | `mcbot` is a CLI-surface label | Same as `tool` and `oneshot` |
 | `agent/prompt_caching.py` | `mcbot` runs are machine-paced (short cache) | Same as `oneshot` |
 | `hermes_cli/config.py` | With `HERMES_MANAGED=mcbot`, refusals say Hermes is part of McBot | `npm run cli -- update` explains that updates arrive with McBot |

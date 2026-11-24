@@ -128,7 +128,7 @@ BOUNDARY_END_REASONS: frozenset[str] = frozenset(
 )
 
 #: Sources every human session picker leaves out (workers, tool integrations, one-shot runs).
-INTERNAL_LISTING_SOURCES = ("kanban", "tool", "oneshot")
+INTERNAL_LISTING_SOURCES = ("kanban", "tool", "oneshot", "mcbot")  # McBot: its runs stay out of human pickers
 
 #: Maximum sanitized title length; a longer title is a ``ValueError``.
 MAX_TITLE_LENGTH = 100
