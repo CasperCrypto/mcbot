@@ -30,6 +30,8 @@ export interface StartRun {
   models: ModelNode[];
   /** What this agent's .env holds from the board (engine/profileEnv.ts envEntriesFor). */
   env?: EnvEntry[];
+  /** Someone who joined this computer (Share) asked: their member id and name. */
+  by?: { id: string; name: string };
 }
 
 export interface RunnerOptions {
@@ -257,7 +259,7 @@ export class Runner {
     const argv = viaApi ? ["runs-api", "/p/" + req.profile + "/v1/runs"] : chatArgv(req.profile, bin ?? undefined);
     const cwd = resolveInside(root, `profiles/${req.profile}/workspace`);
     this.active.set(runId, { child: null, profile: req.profile, startedAt: Date.now() });
-    this.emit(runId, { type: "run.started", boardId: req.boardId, agentNodeId: req.agentNodeId, profile: req.profile, prompt: req.prompt, argv, hermesHome: root, cwd });
+    this.emit(runId, { type: "run.started", boardId: req.boardId, agentNodeId: req.agentNodeId, profile: req.profile, prompt: req.prompt, argv, hermesHome: root, cwd, ...(req.by ? { by: req.by.id, byName: req.by.name } : {}) });
 
     const go = viaApi && bin
       ? prepareHermes(bin, root, (line) => this.emit(runId, { type: "run.log", stream: "stderr", line })).then((b) => this.executeApi(runId, req, b))

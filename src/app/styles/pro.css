@@ -247,3 +247,7 @@ button.chip:hover { filter: brightness(1.2); }
 .node-agent .meta { min-width: 0; }
 .node-compact .sub.plain { font-family: var(--font); }
 .field-note { margin: -6px 2px 0; color: var(--text-3); font-size: 12px; line-height: 1.45; }
+
+/* The title bar's Share button carries the host's name while this window is on their McBot. */
+.icon-btn.share-btn.remote { width: auto; padding: 0 10px 0 8px; white-space: nowrap; display: inline-flex; align-items: center; }
+.icon-btn.share-btn.remote .share-host { margin-left: 6px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }

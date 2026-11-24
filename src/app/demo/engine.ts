@@ -16,7 +16,7 @@ import { addVersion, type HarnessVersion } from "../../harness/versions";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
 import { LIBRARY } from "../../contracts/library.generated";
 import type { HarnessPlan, PlanChoices } from "../../harness/plan";
-import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
@@ -535,6 +535,16 @@ function bundlesOf(boardId: string) {
   return resolveGraph(graphOf(boardId));
 }
 
+/** Passwords in the demo: kept in the page only, a sample to show the view. */
+let demoLogins: (LoginView & { password: string })[] = [
+  { id: "l-1", url: "https://github.com", host: "github.com", username: "you@example.com", note: "", updatedAt: Date.now() - 86_400_000, password: "demo-only-password" },
+];
+
+/** The demo can't share: Share says so, and its sheet shows who joined the demo's own board. */
+const demoShare = (members: SharingView["members"]): SharingView => ({
+  on: false, addresses: [], port: 4318, reach: "network", publicUrl: null, ownUrl: null, tunnel: { state: "off", error: null }, web: false, members, invite: null, link: null, invites: [],
+});
+
 function requireBoard(boardId: string): string {
   if (!state.boards.some((b) => b.id === boardId)) throw new EngineError(404, "no such board", {});
   return boardId;
@@ -805,10 +815,27 @@ export const demoEngine = {
     const runs = Object.values(state.runs).map((e) => summarizeRun(e)).filter((s): s is RunSummary => !!s && s.boardId === boardId);
     return buildCostReport(profiles, runs, models);
   }),
-  share: api((): SharingView => ({ on: false, addresses: [], port: 4318, members: [{ id: "m-sam", name: "Sam", joinedAt: Date.now() - 6 * 86_400_000, lastSeen: Date.now() - 60_000 }, { id: "m-lee", name: "Lee", joinedAt: Date.now() - 2 * 86_400_000, lastSeen: Date.now() - 3_600_000 }], invite: null })),
-  setShare: api((_on: boolean): SharingView => { throw new EngineError(409, "Sharing with other computers works in the desktop app. Here, open a second tab: it is live too.", {}); }),
-  newInvite: api((): SharingView => ({ on: false, addresses: [], port: 4318, members: [], invite: null })),
-  removeMember: api((_id: string): SharingView => ({ on: false, addresses: [], port: 4318, members: [], invite: null })),
+  share: api((): SharingView => demoShare([{ id: "m-sam", name: "Sam", joinedAt: Date.now() - 6 * 86_400_000, lastSeen: Date.now() - 60_000, role: "edit" }, { id: "m-lee", name: "Lee", joinedAt: Date.now() - 2 * 86_400_000, lastSeen: Date.now() - 3_600_000, role: "edit" }])),
+  setShare: api((_on: boolean, _reach?: "network" | "internet"): SharingView => { throw new EngineError(409, "Sharing with other computers works in the desktop app. Here, open a second tab: it is live too.", {}); }),
+  setShareReach: api((_reach: "network" | "internet", _ownUrl?: string | null): SharingView => demoShare([])),
+  newInvite: api((_scope?: { role: "edit" | "chat"; boardId?: string; agents?: string[] }): SharingView => demoShare([])),
+  removeMember: api((_id: string): SharingView => demoShare([])),
+  guest: api((): GuestView => ({ host: "You", role: "edit", name: "You", boardId: null, agents: [] })),
+  githubInspect: api((_url: string): GitHubRepoView => { throw new EngineError(409, "Adding from GitHub works in the desktop app.", {}); }),
+  githubPlugin: api((_profile: string, _source: string): { installed: string } => { throw new EngineError(409, "Adding from GitHub works in the desktop app.", {}); }),
+  githubDownload: api((_url: string): { folder: string; path: string } => { throw new EngineError(409, "Adding from GitHub works in the desktop app.", {}); }),
+  logins: api((host?: string) => ({ logins: demoLogins.filter((l) => !host || l.host === host || host.endsWith(`.${l.host}`)).map(({ password: _p, ...v }) => v) })),
+  saveLogin: api((l: { id?: string; url: string; username: string; password?: string; note?: string }) => {
+    let url: URL;
+    try { url = new URL(/^https?:\/\//.test(l.url) ? l.url : `https://${l.url}`); } catch { throw new EngineError(400, "Use the site's address, like mail.google.com", {}); }
+    const old = demoLogins.find((x) => x.id === l.id);
+    const next = { id: old?.id ?? `l-${demoLogins.length + 1}-${Date.now().toString(36)}`, url: url.origin, host: url.hostname, username: l.username, note: l.note ?? old?.note ?? "", updatedAt: Date.now(), password: l.password || old?.password || "" };
+    demoLogins = [...demoLogins.filter((x) => x.id !== next.id), next];
+    const { password: _p, ...login } = next;
+    return { login, logins: demoLogins.map(({ password: _q, ...v }) => v) };
+  }),
+  removeLogin: api((id: string) => { demoLogins = demoLogins.filter((x) => x.id !== id); return { logins: demoLogins.map(({ password: _p, ...v }) => v) }; }),
+  revealLogin: api((id: string) => { const l = demoLogins.find((x) => x.id === id); if (!l) throw new EngineError(404, "No such login", {}); return { username: l.username, password: l.password, host: l.host }; }),
   tasks: api((boardId: string): TasksView => {
     const team = teamOf(requireBoard(boardId));
     state.tasks ??= boardId === SEED_BOARD.id ? seedTasks() : [];

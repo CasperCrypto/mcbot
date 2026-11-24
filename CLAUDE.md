@@ -249,20 +249,34 @@ Change them additively; a breaking change bumps the version.
   `<workspace>/exports/`, never overwriting (the browser demo downloads it);
   import always makes a new board and loads it loosely. Boards hold key names
   only, so a board file holds no secrets.
-- The engine listens on loopback and checks `Origin` and `Host` on every
-  request and WebSocket upgrade. **Share on your network** (`engine/sharing.ts`, off by
-  default) also opens port 4318 to the LAN while it is on: every request there needs an
-  allowed `Origin` and a member key (`Authorization: Bearer`, or `?key=` for WebSocket/SSE),
-  got with the invite link (`http://<address>:4318/join?code=…`: 24 h, for everyone it is sent
-  to, until "New link" replaces it or sharing stops; failed joins rate-limited); only key hashes
-  are stored (`<workspace>/sharing.json`, owner-only). `GET /join` on that port is the one
-  request without an Origin: a static page that says how to join from McBot (no data). The
-  Share sheet copies the link or emails it: McBot has no mail server, so it opens a ready-to-send
-  message to the typed address in Gmail or Outlook on the web, or the mail app (`lib/invite.ts`);
-  Join takes the pasted link. Members reach boards, compile, runs,
-  tasks, schedules, memory and cost (`guestAllowed`), never keys, files, setup, sharing or
-  the engine's controls. Agents always run on the host. A joined window keeps the host's
-  address and its key in localStorage (`src/app/lib/remote.ts`) and hides Code and Files.
+- The engine listens on loopback and checks `Origin` and `Host` on every request and WebSocket
+  upgrade. **Share** (`engine/sharing.ts`, off by default) also opens port 4318 while it is on,
+  to the LAN and, for **anyone with the link** (`reach: "internet"`, the sheet's default), through a
+  free Cloudflare quick tunnel (`engine/tunnel.ts`: `cloudflared tunnel --url`, no account;
+  cloudflared from `MCBOT_CLOUDFLARED`, the PATH, or downloaded once from its GitHub releases into
+  the tools folder and checked against the SHA256 its release notes list; its own home, since quick
+  tunnels refuse a `config.yaml`; a new `https://<words>.trycloudflare.com` each start, no SSE, 200
+  requests in flight, no uptime guarantee) or the host's own address (`ownUrl`). A link per role,
+  24 h, for everyone it is sent to, until "New link" replaces it or sharing stops: **Can edit**
+  (teammates: boards, compile, runs, tasks, schedules, memory and cost, `guestAllowed`) or **Can
+  chat** (guests, customers: only `GET /api/guest`, their own runs with the agents the link names,
+  their media; never a board, approvals or anything else). Each join trades the code for a member
+  key (`Authorization: Bearer`, or `?key=` for WebSockets); only key hashes are stored
+  (`<workspace>/sharing.json`, owner-only); failed joins are limited per person (Cloudflare's
+  `cf-connecting-ip` through the tunnel) and overall. Runs record who started them (`by`, `byName`
+  on `run.started`); a guest's events and run list hold only theirs, without this computer's paths,
+  and a guest's question compiles a stale agent quietly (they can't compile). The share port serves
+  the built app (`engine/webApp.ts`, `MCBOT_WEB_DIR`, the installer's `web/` resource; static files
+  only, a strict CSP, no Referer), so a link opens McBot in any browser, laptop or phone: the join
+  page (`shell/WebJoin.tsx`), then the app (a teammate) or `shell/GuestChat.tsx` (a guest); same-origin
+  GETs carry no Origin, so there the member key is what counts. Windows that joined get events over a
+  WebSocket (`/api/events`, quick tunnels carry no SSE). The Share sheet: Teammates | Guests (pick
+  agents; it warns when a guest could make one use files, the terminal, code, the browser, the
+  computer or wired tools, `lib/guestRisk.ts`), email chips sent through Gmail, Outlook or the mail
+  app (McBot has no mail server, `lib/invite.ts`), Copy link, a QR code for a phone
+  (`shell/QrCode.tsx`, qrcode-generator, MIT), who has access with their role. Join (desktop) takes a
+  pasted link, http or https. Agents always run on the host. A joined window keeps the host's address,
+  its key and role in localStorage (`src/app/lib/remote.ts`) and hides Code and Files.
 
 ## UI invariants
 
@@ -470,6 +484,33 @@ Change them additively; a breaking change bumps the version.
 - **Terminal:** real shells in the desktop shell (`src-tauri/src/terminal.rs`,
   portable-pty), never in the engine, so the engine stays one plain executable.
   The browser has none.
+- **Add from GitHub** (`shell/GitHubSheet.tsx`, pure parts in `engine/github.ts`; ⌘K "Add from GitHub…", a
+  GitHub link typed in ⌘K, or one pasted or dropped anywhere outside a text field; host only): the engine reads
+  the repository through GitHub's API (`GET /api/github/inspect`; a saved `GITHUB_TOKEN` /
+  `GITHUB_PERSONAL_ACCESS_TOKEN` raises the hourly limit; branch names with slashes are resolved the way
+  GitHub's pages do) and says what it is: a **skill** (SKILL.md → an agent learns it, `POST /api/skills/add`),
+  an **MCP server** (package.json on `@modelcontextprotocol/sdk` → a tool block `npx -y <package>`, or a Python
+  project on `mcp` → `uvx --from git+<repo> <script>`, wired to the agent picked), a **Hermes plugin**
+  (plugin.yaml → `POST /api/github/plugin`: `hermes -p <agent> plugins install owner/repo[/path] --enable
+  --yes-deps`, docs/HERMES.md), or a **project** (`POST /api/github/download`: GitHub's archive unpacked with
+  `tar` into the shared files folder's `github/<repo>`, 80 MB at most). Any of them can go to an agent as a
+  question instead.
+- **Browser start page** (`workbench/BrowserStart.tsx`, pure `lib/browserStore.ts`, kept per computer):
+  one big field (address or search), favorites as brand tiles (`siteLogo`: Simple Icons marks, a few
+  site keys added in `scripts/tool-logos.ts`), what answers on the usual local ports (asked of the
+  engine's frameable probe), and recently visited pages. The address bar has Home, a favorite star
+  and a key (Passwords for this site); the ask bar has one-click asks (Summarize, Key facts, Translate).
+- **Passwords** (`views/PasswordsView.tsx`, rail "…" and ⌘K; hidden for people who joined): the
+  person's site logins and the API keys (Settings' `KeysSection`). Logins live in
+  `<workspace>/logins.json` (owner-only), each password sealed with AES-256-GCM under
+  `<data>/logins.key` (owner-only, outside the workspace, so the McBot folder alone holds no readable
+  password; `engine/logins.ts`). Lists never carry a password; `POST /api/logins/reveal` gives one to
+  McBot's own window (loopback, allowed Origin) to copy or fill, never to a member (not in
+  `guestAllowed`). Fill (`browser_fill` in `src-tauri/src/browser.rs`) runs only on the native page,
+  only while it is on the login's site or a subdomain, and only over https (or this computer); it
+  types into the page's fields and submits nothing. Hermes never sees logins. `SECRET_FILES`
+  (`engine/profileEnv.ts`) keeps every file that holds keys (agents' `.env`, McBot's `secrets.json`,
+  `logins.json`, `logins.key`, `sharing.json`) out of the Files view and the editor.
 - **Browser view:** on macOS and Windows the page is a real child webview over the view's page
   area (`src-tauri/src/browser.rs`, Tauri `unstable` feature, one `page-<window>` per window), so
   sites that refuse iframes still load; it hides while a sheet or ⌘K is open (native views draw

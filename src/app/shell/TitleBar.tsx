@@ -108,7 +108,7 @@ export function TitleBar() {
         {unread > 0 && <span className="unread" data-testid="team-unread">{unread}</span>}
       </button>
       <button className={`icon-btn share-btn${REMOTE ? " remote" : ""}`} onClick={() => useApp.getState().setShareOpen(true)} data-testid="share-open" aria-label="Share"
-        data-tip={REMOTE ? `On ${REMOTE.label}'s boards` : "Share on your network"} data-tip-side="bottom">
+        data-tip={REMOTE ? `On ${REMOTE.label}'s McBot` : "Share: invite people"} data-tip-side="bottom">
         <Users size={15} />{REMOTE && <span className="share-host">{REMOTE.label}</span>}
       </button>
       <button className="search-pill" onClick={() => setPalette(true)} data-testid="open-palette">

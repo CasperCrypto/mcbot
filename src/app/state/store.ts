@@ -5,7 +5,7 @@ import { summarizeRun, type RunEvent, type RunSummary } from "../../contracts/ru
 import { loadIdentity, saveIdentity, type Identity } from "../lib/identity";
 import { applyAppearance, loadAppearance, saveAppearance, type Appearance } from "../lib/appearance";
 
-export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "skills" | "files" | "cost" | "team" | "settings";
+export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "skills" | "files" | "passwords" | "cost" | "team" | "settings";
 
 export type SettingsSection = "models" | "keys" | "appearance" | "you" | "team" | "engine" | "about";
 
@@ -65,6 +65,8 @@ interface State {
   teamsOpen: boolean;
   /** Ask McBot (shell/BuilderSheet.tsx), with the words it opened with. */
   builder: { open: boolean; request: string };
+  /** Add from GitHub: null closed, else the link it opened with ("" = none yet). */
+  github: string | null;
   /** The drawing open full size (chat/DrawingSheet.tsx): a scene, and where it saves when it came from a file. */
   drawing: { scene: Scene; title: string; file?: { root: string; path: string; sha256: string | null } } | null;
   /** Bumped to ask the board to fit everything in view (after a team or a plan joins it). */
@@ -108,6 +110,7 @@ interface State {
   editAgent(agentNodeId: string): void;
   setTeamsOpen(open: boolean): void;
   setBuilder(open: boolean, request?: string): void;
+  setGithub(url: string | null): void;
   openDrawing(drawing: State["drawing"]): void;
   requestFit(): void;
   setShareOpen(open: boolean): void;
@@ -195,6 +198,7 @@ export const useApp = create<State>((set, get) => ({
   chatAppsOpen: false,
   teamsOpen: false,
   builder: { open: false, request: "" },
+  github: null,
   drawing: null,
   fitRequest: 0,
   shareOpen: false,
@@ -230,6 +234,7 @@ export const useApp = create<State>((set, get) => ({
   setTeamsOpen: (teamsOpen) => set({ teamsOpen, paletteOpen: false, newAgentOpen: false }),
   requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),
   openDrawing: (drawing) => set({ drawing, paletteOpen: false }),
+  setGithub: (github) => set({ github, paletteOpen: false }),
   setBuilder: (open, request = "") => set((s) => ({ builder: { open, request: open ? request : s.builder.request }, paletteOpen: false, newAgentOpen: false, teamsOpen: false })),
   freshNote: null,
   setFreshNote: (freshNote) => set({ freshNote }),

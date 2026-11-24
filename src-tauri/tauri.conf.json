@@ -29,7 +29,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' ws://localhost:5173 http://127.0.0.1:4317 ws://127.0.0.1:4317 http://*:4318 ws://*:4318 ipc: http://ipc.localhost; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; frame-src http: https:"
+      "csp": "default-src 'self'; connect-src 'self' ws://localhost:5173 http://127.0.0.1:4317 ws://127.0.0.1:4317 http://*:4318 ws://*:4318 https://*.trycloudflare.com wss://*.trycloudflare.com ipc: http://ipc.localhost; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; frame-src http: https:"
     }
   },
   "bundle": {
@@ -46,7 +46,8 @@
       "binaries/mcbot-engine"
     ],
     "resources": {
-      "../dist-hermes/hermes/": "hermes/"
+      "../dist-hermes/hermes/": "hermes/",
+      "../dist/": "web/"
     },
     "category": "DeveloperTool",
     "shortDescription": "Draw a team of AI agents and run it.",

@@ -120,6 +120,8 @@ fn start_engine<R: Runtime>(app: &AppHandle<R>) -> Result<Option<Child>, String>
     std::fs::create_dir_all(&data).map_err(|e| e.to_string())?;
     let log = std::fs::File::create(data.join("engine.log")).map_err(|e| e.to_string())?;
     let mut cmd = Command::new(&engine);
+    // The app itself, which the engine serves to people who open a Share link in a web browser.
+    cmd.env("MCBOT_WEB_DIR", resources.join("web"));
     cmd.env("MCBOT_HERMES_BUNDLE", resources.join("hermes"))
         .env("MCBOT_DATA_DIR", &data)
         .stdin(Stdio::null())
@@ -421,6 +423,7 @@ pub fn run() {
             browser::browser_bounds,
             browser::browser_hide,
             browser::browser_go,
+            browser::browser_fill,
             terminal::terminal_open,
             terminal::terminal_write,
             terminal::terminal_resize,

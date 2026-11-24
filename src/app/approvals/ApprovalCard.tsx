@@ -14,11 +14,19 @@ const LABELS: Record<string, { label: string; tip: string }> = {
 const ORDER = ["once", "session", "always", "deny"];
 
 /** Hermes stopped before a risky action and asks the person. One tap answers it. */
-export function ApprovalCard({ run, compact = false }: { run: RunSummary; compact?: boolean }) {
+/** `waitingFor`: a guest's window (Share → Can chat) shows who decides instead of the answers. */
+export function ApprovalCard({ run, compact = false, waitingFor }: { run: RunSummary; compact?: boolean; waitingFor?: string }) {
   const toast = useApp((s) => s.toast);
   const [busy, setBusy] = useState(false);
   if (!run.approval) return null;
   const a = run.approval;
+  if (waitingFor) {
+    return (
+      <div className={`approval waiting${compact ? " compact" : ""}`} data-testid="approval-waiting">
+        <div className="approval-head"><ShieldAlert size={14} /><b>Waiting for {waitingFor}</b><span className="faint grow ellipsis">{a.description}</span></div>
+      </div>
+    );
+  }
   const answer = async (choice: string) => {
     setBusy(true);
     try {
