@@ -236,3 +236,13 @@ button.chip:hover { filter: brightness(1.2); }
 @media (max-width: 760px) {
   .search-pill, .search-pill:hover { min-width: 0; }
 }
+
+/* Models: the family's mark and the name people say (graph/Logo.tsx ModelChip, ModelMark), never a long id. */
+.model-mark { display: block; flex: none; object-fit: contain; }
+.model-mark.none { display: grid; place-items: center; color: var(--text-3); }
+.model-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; height: 22px; padding: 0 8px 0 5px; border-radius: 6px; background: rgb(var(--tint-rgb) / 0.06); box-shadow: inset 0 0 0 0.5px var(--line-2); color: var(--text-2); font-size: 12px; font-weight: 550; white-space: nowrap; }
+.model-chip.empty { padding: 0 8px; color: var(--text-4); }
+.model-more { color: var(--text-3); font-weight: 500; }
+.tile.model-tile { display: grid; place-items: center; background: rgb(var(--tint-rgb) / 0.06); box-shadow: inset 0 0 0 0.5px var(--line-2); }
+.node-agent .meta { min-width: 0; }
+.node-compact .sub.plain { font-family: var(--font); }

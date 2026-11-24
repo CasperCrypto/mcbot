@@ -1,7 +1,7 @@
 import { ArrowUp, Bell, CalendarClock, Check, ChevronDown, ChevronRight, CircleDashed, Clock, Cpu, Hammer, History, KeyRound, ListChecks, Pause, Play, Plus, RotateCcw, SlidersHorizontal, Square, Trash2, Wallet, X, StickyNote as StickyNoteIcon } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AgentSchedules, CostReport, TaskView } from "../../contracts/api";
-import type { AgentNode } from "../../contracts/graph";
+import type { AgentNode, ModelData } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 import { compileBoard, openHermesSetup, runAgent, stopRun } from "../actions";
 import { engine, onKeysChanged } from "../lib/engine";
@@ -16,7 +16,9 @@ import { newId } from "../graph/defaults";
 import { StickyNote } from "../notes/StickyNote";
 import { useTasks } from "./TasksView";
 import { ApprovalCard } from "../approvals/ApprovalCard";
-import { agentsWithoutModel, chainOf, modelsOf } from "../lib/models";
+import { agentsWithoutModel, chainOf, modelsOf, otherEnd } from "../lib/models";
+import { ModelMark } from "../graph/Logo";
+import { modelName } from "../lib/modelName";
 import { useModelHealth } from "../lib/useModelHealth";
 import { nameChosen } from "../lib/identity";
 import { latestRunByAgent } from "../state/store";
@@ -101,7 +103,7 @@ function Ask({ agents }: { agents: AgentNode[] }) {
 }
 
 /** One agent as a tile, the way a home app shows a room's lights: who, and what it is doing now. */
-function AgentTile({ agent, live, runId, step, failed, asks, noModel, last }: { agent: AgentNode; live: boolean; runId: string | null; step: string; failed: boolean; asks: boolean; noModel: boolean; last: number | null }) {
+function AgentTile({ agent, live, runId, step, failed, asks, noModel, last, model }: { agent: AgentNode; live: boolean; runId: string | null; step: string; failed: boolean; asks: boolean; noModel: boolean; last: number | null; model: ModelData | null }) {
   const name = agent.data.displayName || agent.data.name;
   const state = asks ? "warn" : live ? "run" : noModel ? "warn" : failed ? "fail" : "idle";
   const line = asks ? "Asks before acting" : live ? step : noModel ? "No model yet" : failed ? "Last run failed" : last ? `Free · ${ago(last)}` : agent.data.description || "Free";
@@ -110,7 +112,7 @@ function AgentTile({ agent, live, runId, step, failed, asks, noModel, last }: { 
     <div className="agent-tile" data-state={state} data-testid="home-agent">
       <button className="agent-tile-main" onClick={() => app.openChat(agent.id)} data-tip="Chat">
         <AgentFace seed={agent.data.name} size={34} status={live ? "running" : failed ? "failed" : undefined} />
-        <span className="t"><b>{name}</b><small>{line}</small></span>
+        <span className="t"><b>{name}{model && <span className="tile-model" data-tip={modelName(model.model)}><ModelMark model={model.model} baseUrl={model.baseUrl} size={13} /></span>}</b><small>{line}</small></span>
       </button>
       {runId
         ? <button className="agent-tile-edit shown" aria-label={`Stop ${name}`} data-tip="Stop" onClick={() => void stopRun(runId)}><Square size={10} /></button>
@@ -420,6 +422,11 @@ export function HomeView() {
   const latest = latestRunByAgent(runs);
   const busyTask = (profile: string) => working.find((t) => t.assignee === profile);
   const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const mainModel = (agentId: string): ModelData | null => {
+    const first = chainOf(graph, agentId)[0];
+    const n = first ? graph.nodes.find((x) => x.id === otherEnd(first, agentId)) : undefined;
+    return n?.kind === "model" ? n.data : null;
+  };
 
   return (
     <section className="main flush-left">
@@ -466,7 +473,8 @@ export function HomeView() {
                   const task = busyTask(a.data.name);
                   return (
                     <AgentTile key={a.id} agent={a} live={!!run || !!task} runId={run?.runId ?? null} step={run ? stepOf(events[run.runId]) : task ? task.title : ""}
-                      failed={r?.status === "failed"} asks={!!r?.approval} noModel={chainOf(graph, a.id).length === 0} last={r ? r.finishedAt ?? r.startedAt : null} />
+                      failed={r?.status === "failed"} asks={!!r?.approval} noModel={chainOf(graph, a.id).length === 0} last={r ? r.finishedAt ?? r.startedAt : null}
+                      model={mainModel(a.id)} />
                   );
                 })}
                 <button className="agent-tile add" onClick={() => app.setNewAgentOpen(true)} data-testid="home-tile-new"><Plus size={16} /><span>New agent</span></button>

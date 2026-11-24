@@ -210,3 +210,5 @@ button.ap-row:hover { background: rgb(var(--tint-rgb) / 0.035); }
   .dash-head { flex-wrap: wrap; }
   .ask-who select { max-width: 96px; }
 }
+.agent-tile-main b { display: flex; align-items: center; gap: 6px; }
+.tile-model { display: inline-grid; place-items: center; opacity: 0.9; }

@@ -14,7 +14,8 @@ import { newId, uniqueName } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { DEMO, engine, REMOTE } from "../lib/engine";
 import { PEER_COLORS, nameChosen } from "../lib/identity";
-import { agentsOf, attachModel, chainOf, modelsOf, promoteModel, usersOf, type ModelHealth } from "../lib/models";
+import { agentsOf, attachModel, chainOf, modelsOf, otherEnd, promoteModel, usersOf, type ModelHealth } from "../lib/models";
+import { ModelMark, modelTitle } from "../graph/Logo";
 import { useModelHealth } from "../lib/useModelHealth";
 import { openExternal } from "../lib/open";
 import { CLOUD_PROVIDERS, LOCAL_PRESETS, keyEnvFor, modelSlug, providerOf } from "../lib/providers";
@@ -69,13 +70,14 @@ function ModelRow({ m, graph, saved, health, onRemove, onPromote }: { m: ModelNo
   const users = usersOf(graph, m.id);
   const keyName = m.data.apiKeyEnv;
   const missingKey = m.data.endpoint === "cloud" && !!saved && !!keyName && !saved.includes(keyName);
-  const main = users.filter((a) => chainOf(graph, a.id)[0]?.source === m.id).length;
+  const main = users.filter((a) => { const first = chainOf(graph, a.id)[0]; return !!first && otherEnd(first, a.id) === m.id; }).length;
   const app = useApp.getState();
   return (
     <div className="settings-row" data-testid="settings-model">
-      <span className={`tile sm ${m.data.endpoint === "cloud" ? "cloud" : "model"}`}>{m.data.endpoint === "cloud" ? <Cloud size={14} /> : <HardDrive size={14} />}</span>
+      {m.data.model ? <span className="tile sm model-tile"><ModelMark model={m.data.model} baseUrl={m.data.baseUrl} size={18} /></span>
+        : <span className={`tile sm ${m.data.endpoint === "cloud" ? "cloud" : "model"}`}>{m.data.endpoint === "cloud" ? <Cloud size={14} /> : <HardDrive size={14} />}</span>}
       <span className="grow" style={{ display: "grid", gap: 1, minWidth: 0 }}>
-        <span className="title ellipsis">{m.data.label || m.data.name} <span className="mono faint" style={{ fontWeight: 400 }}>{m.data.model || "no model set"}</span></span>
+        <span className="title ellipsis" data-tip={m.data.model || undefined}>{m.data.model ? modelTitle(m.data) : m.data.label || m.data.name}</span>
         <span className="sub ellipsis">
           {users.length === 0 ? "No agent uses it" : `${main ? `Main for ${main}` : ""}${main && users.length - main ? " · " : ""}${users.length - main ? `Backup for ${users.length - main}` : ""}`}
           {" · "}{providerOf(m.data.baseUrl)?.label ?? m.data.baseUrl}

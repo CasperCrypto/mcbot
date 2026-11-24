@@ -1,3 +1,4 @@
+import { modelName } from "../lib/modelName";
 import {
   applyNodeChanges,
   Background,
@@ -96,7 +97,7 @@ function HarnessSidebar() {
                 </LogoTile>}
               <span className="grow">
                 <span className="title ellipsis" style={{ display: "block" }}>{n.kind === "agent" ? n.data.displayName || n.data.name : ("label" in n.data && n.data.label) || n.data.name}</span>
-                <span className="sub ellipsis mono" style={{ display: "block", fontSize: 12 }}>{n.kind === "model" ? (n.data as ModelData).model || "—" : n.kind === "media" ? makerService(n.data) || "—" : n.kind === "channel" ? `${n.data.allowedUsers.length} allowed` : n.data.name}</span>
+                <span className={`sub ellipsis${n.kind === "model" ? "" : " mono"}`} style={{ display: "block", fontSize: 12 }}>{n.kind === "model" ? modelName((n.data as ModelData).model) || "—" : n.kind === "media" ? makerService(n.data) || "—" : n.kind === "channel" ? `${n.data.allowedUsers.length} allowed` : n.data.name}</span>
               </span>
             </button>
           ))}

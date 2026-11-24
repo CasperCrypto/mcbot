@@ -16,6 +16,7 @@ import { ApprovalCard } from "../approvals/ApprovalCard";
 import { screenCaptures } from "../chat/screen";
 import { RichText } from "../chat/RichText";
 import { AgentPage } from "../agent/AgentPage";
+import { ModelChip } from "../graph/Logo";
 
 function shortTime(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -193,7 +194,7 @@ function Thread({ agent, model, info, onInfo }: { agent: AgentNode; model: strin
           <span className="name">{name}</span>
         </button>
         <span className="grow" />
-        {model && <span className="chip mono">{model}</span>}
+        {model && <ModelChip model={model} />}
         <button className="icon-btn" aria-label={info ? "Hide its settings" : "Show its settings"} aria-pressed={info} data-tip={info ? "Hide settings" : "Settings"} onClick={onInfo} data-testid="agent-info"><PanelRight size={16} /></button>
       </div>
       <div className="thread-scroll" ref={scroller}>

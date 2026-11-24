@@ -13,7 +13,7 @@ import type { LibrarySkill, SkillsView as SkillsState } from "../../contracts/ap
 import { AgentDataSchema, CAPABILITIES, DEFAULT_CAPABILITIES, PLATFORMS, type AgentNode, type GraphEdge, type GraphNode, type ModelNode } from "../../contracts/graph";
 import { compileBoard } from "../actions";
 import { Abilities, Skills as WrittenSkills, fieldErrors } from "../graph/Inspector";
-import { LogoTile, nodeLogo } from "../graph/Logo";
+import { LogoTile, ModelMark, modelTitle, modelWhere, nodeLogo } from "../graph/Logo";
 import { MakerIcon } from "../graph/nodes";
 import { duplicateNode, newId } from "../graph/defaults";
 import { REMOTE, engine } from "../lib/engine";
@@ -190,8 +190,8 @@ export function AgentPage({ agent, where, onClose }: { agent: AgentNode; where: 
       <Group title="Thinks with" testId="agent-models" foot={chain.length > 1 ? "When the main model fails, the next one answers." : undefined}>
         {chain.map((c, i) => (
           <div key={c.edge.id} className="ap-row" data-testid="agent-model">
-            <NodeTile node={c.model} />
-            <span className="t"><b>{label(c.model)}</b><small className="mono">{c.model.data.model || "No model id"}</small></span>
+            <span className="tile sm model-tile"><ModelMark model={c.model.data.model} baseUrl={c.model.data.baseUrl} size={18} /></span>
+            <span className="t" data-tip={c.model.data.model || undefined}><b>{modelTitle(c.model.data)}</b><small>{modelWhere(c.model.data)}</small></span>
             <span className={`chip${i === 0 ? " run" : ""}`}>{i === 0 ? "Main" : "Backup"}</span>
             {i > 0 && <button className="icon-btn sm" aria-label="Make main" data-tip="Make main" onClick={() => makeMain(c.edge.id)}><ArrowUp size={13} /></button>}
             <button className="icon-btn sm" aria-label={`Stop using ${label(c.model)}`} data-tip="Stop using" onClick={() => removeEdges(doc, [c.edge.id])}><X size={13} /></button>
@@ -202,7 +202,7 @@ export function AgentPage({ agent, where, onClose }: { agent: AgentNode; where: 
             <Plus size={14} />
             <select value="" onChange={(e) => addModel(e.target.value)} aria-label={chain.length ? "Add a backup model" : "Pick a model"} data-testid="agent-add-model">
               <option value="" disabled>{chain.length ? "Add a backup model" : "Pick a model"}</option>
-              {spare.map((m) => <option key={m.id} value={m.id}>{label(m)} · {m.data.model}</option>)}
+              {spare.map((m) => <option key={m.id} value={m.id}>{modelTitle(m.data)} · {modelWhere(m.data)}</option>)}
               <option value="new">New model…</option>
             </select>
           </label>
