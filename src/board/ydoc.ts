@@ -110,6 +110,20 @@ export function loadGraphIntoDoc(doc: Y.Doc, graph: Graph): void {
   });
 }
 
+/**
+ * Put back a harness version's blocks and wires (src/harness/versions.ts), in one transaction so one
+ * ⌘Z takes it back; notes, frames, chat and the board's name stay as they are.
+ */
+export function restoreHarness(doc: Y.Doc, graph: Pick<Graph, "nodes" | "edges">): void {
+  const { nodes, edges } = boardMaps(doc);
+  doc.transact(() => {
+    for (const id of [...edges.keys()]) if (!graph.edges.some((e) => e.id === id)) edges.delete(id);
+    for (const id of [...nodes.keys()]) if (!graph.nodes.some((n) => n.id === id)) nodes.delete(id);
+    for (const n of graph.nodes) nodes.set(n.id, nodeToY(n));
+    for (const e of graph.edges) edges.set(e.id, { ...e });
+  });
+}
+
 // ---- edits used by the UI (each one transaction, origin = local user) ----
 
 export function addNode(doc: Y.Doc, node: GraphNode): void {

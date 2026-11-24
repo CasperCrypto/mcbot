@@ -338,6 +338,14 @@ Change them additively; a breaking change bumps the version.
   (never chat), tracking only origin `null`, i.e. this window's own edits, so ⌘Z / ⇧⌘Z never take
   back a teammate's or the engine's change; edits within 600 ms are one step. Created with the doc
   (`state/board.tsx`); text fields and the code editor keep their own undo.
+- **History** (`graph/HistoryPanel.tsx`, the board's "History" button, ⌘K "Harness history"; pure
+  `src/harness/versions.ts`): every compile that changes the harness (blocks and wires, never positions, notes,
+  frames or chat: `harnessHash`) keeps a version in `<workspace>/versions/<boardId>.json` (`GET /api/versions`,
+  `POST /api/versions/name`; the newest 60 plus every named one), with what changed in words (`describeChanges`).
+  Runs count against the version live when they started (`versionStats`), so two versions compare on runs,
+  success, cost, time and tokens per run. Restore puts a version's blocks and wires back in one transaction (one ⌘Z).
+  ⌘K "Copy the harness as text" (`src/harness/describe.ts`) gives any AI the whole graph in Markdown (key
+  names only). The demo seeds two versions.
 - **Live files** (`graph/LiveFiles.tsx`, the board's "Files" button, ⌘K): while you edit, the
   engine's dry-run compile (`GET /api/compile`, the real writer and config.yaml merge) is shown
   file by file, whole, with its changes against disk marked; selecting a block opens its agent's

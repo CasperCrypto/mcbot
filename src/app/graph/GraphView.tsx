@@ -16,7 +16,7 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Bot, StickyNote as NoteIcon, Clapperboard, Cloud, Command, FileCode2, FolderOpen, HardDrive, Image, Plug, Plus, Send, Server } from "lucide-react";
+import { Bot, StickyNote as NoteIcon, Clapperboard, Cloud, Command, FileCode2, FolderOpen, HardDrive, History as HistoryIcon, Image, Plug, Plus, Send, Server } from "lucide-react";
 import { Logo } from "../faces/FoodFace";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode, addNote, moveNode, removeEdges, removeNodes, setFrameField, setNoteField } from "../../board/ydoc";
@@ -35,6 +35,7 @@ import { duplicateNode, newChannel, newId, newMaker, newModel, newTool } from ".
 import { ContextMenu, type MenuAt } from "./ContextMenu";
 import { Inspector } from "./Inspector";
 import { LiveFiles } from "./LiveFiles";
+import { HistoryPanel } from "./HistoryPanel";
 import { useLingering, usePresence } from "../lib/presence";
 import { LogoTile, nodeLogo } from "./Logo";
 import { MakerIcon, makerService, nodeTypes, type FlowNode } from "./nodes";
@@ -136,6 +137,8 @@ function Canvas() {
   const health = useApp((s) => s.health);
   const setPalette = useApp((s) => s.setPalette);
   const liveOpen = useApp((s) => s.liveFilesOpen);
+  const historyOpen = useApp((s) => s.historyOpen);
+  const history = usePresence(historyOpen);
   const drift = useApp((s) => s.drift);
   const flow = useReactFlow();
   const wrap = useRef<HTMLDivElement>(null);
@@ -518,15 +521,21 @@ function Canvas() {
         </div>
       )}
 
-      {graph.nodes.length > 0 && !liveOpen && (
-        <button className="live-toggle glass" onClick={() => useApp.getState().setLiveFilesOpen(true)} data-testid="live-files-open" data-tip="The files this board writes, live" data-tip-side="right">
-          <FileCode2 size={13} /> Files{drift ? <span className="chip warn">{drift}</span> : null}
-        </button>
+      {graph.nodes.length > 0 && !liveOpen && !historyOpen && (
+        <div className="board-tools">
+          <button className="live-toggle glass" onClick={() => useApp.getState().setLiveFilesOpen(true)} data-testid="live-files-open" data-tip="The files this board writes, live" data-tip-side="bottom">
+            <FileCode2 size={13} /> Files{drift ? <span className="chip warn">{drift}</span> : null}
+          </button>
+          <button className="live-toggle glass" onClick={() => useApp.getState().setHistoryOpen(true)} data-testid="history-open" data-tip="Every version of this harness, and how its runs went" data-tip-side="bottom">
+            <HistoryIcon size={13} /> History
+          </button>
+        </div>
       )}
       {menu && <ContextMenu at={menu} onClose={() => setMenu(null)} onFit={fit} selection={rfNodes
         .filter((n) => !n.id.startsWith("frame:") && (n.selected || n.id === menu.nodeId))
         .map((n) => ({ x: n.position.x, y: n.position.y, width: n.measured?.width ?? 200, height: n.measured?.height ?? 80 }))} />}
       {live.mounted && <LiveFiles closing={live.closing} onClose={() => useApp.getState().setLiveFilesOpen(false)} />}
+      {history.mounted && <HistoryPanel closing={history.closing} onClose={() => useApp.getState().setHistoryOpen(false)} />}
       {inspecting.value && <Inspector key={inspecting.value.id} node={inspecting.value} closing={inspecting.closing} issues={issuesByNode.get(inspecting.value.id) ?? []} />}
       {compiling.mounted && <CompileSheet wide={!selected} closing={compiling.closing} />}
     </div>

@@ -7,6 +7,7 @@
  */
 import { randomBytes } from "node:crypto";
 import { createReadStream, existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join, resolve } from "node:path";
@@ -22,6 +23,7 @@ import { writeExport } from "./boardFiles";
 import { isHermesHome, readSetup } from "./harnessDisk";
 import { HermesSync } from "./hermesSync";
 import { unshownNote, type Unshown } from "../src/harness/read";
+import { addVersion, type HarnessVersion } from "../src/harness/versions";
 import { diagnosticsText, osLine, redact, tail } from "./diagnostics";
 import { PROFILE_NAME_RE as PROFILE_RE, type Graph, type ModelNode } from "../src/contracts/graph";
 import { buildCostReport } from "./cost";
@@ -354,6 +356,17 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       return compileBoard(await requireBoard(body.boardId), body.dryRun);
     },
 
+    "GET /api/versions": async (_req, url) => ({ versions: await readVersions(await requireBoard(url.searchParams.get("boardId"))) }),
+    "POST /api/versions/name": async (req) => {
+      const body = parse(z.object({ boardId: z.string(), id: z.string(), name: z.string().trim().max(80) }), await json(req));
+      const boardId = await requireBoard(body.boardId);
+      const versions = await readVersions(boardId);
+      const v = versions.find((x) => x.id === body.id);
+      if (!v) throw new HttpError(404, "no such version");
+      v.name = body.name || null;
+      await writeVersions(boardId, versions);
+      return { versions };
+    },
     "GET /api/runs": async (_req, url) => store.list(url.searchParams.get("boardId") ?? undefined),
     "POST /api/runs": async (req) => {
       const body = parse(z.object({ boardId: z.string(), agentNodeId: z.string(), prompt: z.string().trim().min(1).max(100_000) }), await json(req));
@@ -713,6 +726,24 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     }
   }).catch(() => undefined));
 
+  /** A board's harness versions (src/harness/versions.ts), oldest first; none yet = []. */
+  async function readVersions(boardId: string): Promise<HarnessVersion[]> {
+    try {
+      const v = JSON.parse(await readFile(join(cfg.workspace, "versions", `${boardId}.json`), "utf8")) as { versions?: HarnessVersion[] };
+      return Array.isArray(v.versions) ? v.versions : [];
+    } catch {
+      return [];
+    }
+  }
+  const writeVersions = (boardId: string, versions: HarnessVersion[]) =>
+    atomicWrite(join(cfg.workspace, "versions", `${boardId}.json`), `${JSON.stringify({ versions })}\n`);
+  /** After a compile: a new version when the harness changed since the last one. */
+  async function recordVersion(boardId: string, graph: Graph): Promise<void> {
+    const before = await readVersions(boardId);
+    const after = addVersion(before, graph, Date.now());
+    if (after.length !== before.length || after.at(-1)?.id !== before.at(-1)?.id) await writeVersions(boardId, after);
+  }
+
   async function compileBoard(boardId: string, dryRun: boolean): Promise<CompileResponse> {
     const graph = await relay.graph(boardId);
     const { issues } = resolveGraph(graph);
@@ -722,6 +753,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const configChanged = report.changes.some((c) => c.path.endsWith("/config.yaml") && c.status !== "unchanged");
       if (!dryRun && configChanged) runner.markGatewayStale();
       if (!dryRun) await atomicWrite(join(cfg.workspace, "compiles", `${boardId}.json`), `${JSON.stringify({ at: Date.now(), report }, null, 2)}\n`);
+      if (!dryRun) await recordVersion(boardId, graph);
       if (!dryRun) await hermesSync.remember(report.profiles.map((p) => p.name));
       if (!dryRun) void syncAgents();
       if (!dryRun) void seedSkills(graph, report.profiles.map((p) => p.name));

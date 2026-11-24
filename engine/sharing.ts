@@ -174,7 +174,7 @@ document.getElementById("copy").onclick=function(){navigator.clipboard&&navigato
  */
 const GUEST_ROUTES = new Set([
   "GET /api/health", "GET /api/boards", "POST /api/boards", "GET /api/setup", "GET /api/hermes", "GET /api/secrets",
-  "GET /api/compile", "POST /api/compile", "GET /api/runs", "POST /api/runs",
+  "GET /api/compile", "POST /api/compile", "GET /api/versions", "POST /api/versions/name", "GET /api/runs", "POST /api/runs",
   "GET /api/memory", "PUT /api/memory", "GET /api/cost",
   "GET /api/tasks", "GET /api/tasks/one", "POST /api/tasks", "POST /api/tasks/act",
   "GET /api/schedules", "POST /api/schedules", "POST /api/schedules/act",

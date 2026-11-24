@@ -52,6 +52,8 @@ interface State {
   newAgentOpen: boolean;
   /** The tool catalog. */
   catalogOpen: boolean;
+  /** The board's History panel (graph/HistoryPanel.tsx): versions of the harness and their runs. */
+  historyOpen: boolean;
   /** The agent the tool or chat-app catalog adds to, when opened from that agent's page. */
   catalogFor: string | null;
   /** The Chat view shows the agent's page beside the conversation. */
@@ -101,6 +103,7 @@ interface State {
   /** Add a tool or a chat app to one agent (from its page): the catalog wires it there. */
   addTo(kind: "tool" | "app", agentNodeId: string): void;
   setAgentInfo(open: boolean): void;
+  setHistoryOpen(open: boolean): void;
   /** Open an agent's page (its chat, with the page beside it): from Home, ⌘K, New agent. */
   editAgent(agentNodeId: string): void;
   setTeamsOpen(open: boolean): void;
@@ -186,6 +189,7 @@ export const useApp = create<State>((set, get) => ({
   setNewAgentOpen: (newAgentOpen) => set({ newAgentOpen, paletteOpen: false }),
   catalogOpen: false,
   catalogFor: null,
+  historyOpen: false,
   agentInfo: (() => { try { return localStorage.getItem("mcbot.agentInfo") === "1"; } catch { return false; } })(),
   liveFilesOpen: (() => { try { return localStorage.getItem("mcbot.liveFiles") === "1"; } catch { return false; } })(),
   chatAppsOpen: false,
@@ -232,8 +236,10 @@ export const useApp = create<State>((set, get) => ({
   setCatalogOpen: (catalogOpen) => set({ catalogOpen, paletteOpen: false, ...(catalogOpen ? {} : { catalogFor: null }) }),
   setLiveFilesOpen: (liveFilesOpen) => {
     try { localStorage.setItem("mcbot.liveFiles", liveFilesOpen ? "1" : "0"); } catch { /* private window */ }
-    set({ liveFilesOpen, paletteOpen: false });
+    set({ liveFilesOpen, paletteOpen: false, ...(liveFilesOpen ? { historyOpen: false } : {}) });
   },
+  // History and the live files share the board's left side: one at a time.
+  setHistoryOpen: (historyOpen) => set({ historyOpen, paletteOpen: false, ...(historyOpen ? { liveFilesOpen: false } : {}) }),
   setChatAppsOpen: (chatAppsOpen) => set({ chatAppsOpen, paletteOpen: false, ...(chatAppsOpen ? {} : { catalogFor: null }) }),
   addTo: (kind, catalogFor) => set({ catalogFor, catalogOpen: kind === "tool", chatAppsOpen: kind === "app", paletteOpen: false }),
   setAgentInfo: (agentInfo) => {
