@@ -320,6 +320,11 @@ function ToolFields({ nodeId, data, set }: { nodeId: string; data: ToolData; set
       {keys.map((k) => <KeyField key={k} name={k} label={keys.length > 1 ? k : "API key"} />)}
       <Segmented value={data.transport} onChange={(v) => set("transport", v)} options={[{ value: "stdio", label: "Local" }, { value: "http", label: "Remote" }]} />
       <Field label="Key" value={data.name} onChange={(v) => set("name", v)} mono error={errors.name} />
+      <TextListField label="Only these tools" value={(data.toolsInclude ?? []).join("\n")} rows={3}
+        placeholder={"All of its tools.\nOr one per line: search, get_*"}
+        onCommit={(t) => { const xs = t.split("\n").map((x) => x.trim()).filter(Boolean); set("toolsInclude", xs.length ? xs : undefined); }} />
+      <p className="field-note">Fewer tools, fewer tokens on every message. Names or patterns like <span className="mono">get_*</span>.</p>
+      {data.toolsExclude?.length ? <p className="field-note">Hidden from the model: <span className="mono">{data.toolsExclude.join(", ")}</span></p> : null}
       {data.transport === "stdio" ? (
         <>
           <Field label="Command" value={data.command} onChange={(v) => set("command", v)} mono placeholder="npx" />

@@ -10,7 +10,7 @@ import { addEdge, addNode, removeEdges, removeNodes, setNodeField, updateEdge } 
 import { undo } from "../../board/undo";
 import { resolveGraph } from "../../compile";
 import type { LibrarySkill, SkillsView as SkillsState } from "../../contracts/api";
-import { AgentDataSchema, CAPABILITIES, DEFAULT_CAPABILITIES, PLATFORMS, type AgentNode, type GraphEdge, type GraphNode, type ModelNode } from "../../contracts/graph";
+import { AgentDataSchema, CAPABILITIES, DEFAULT_CAPABILITIES, PLATFORMS, type Reasoning, type AgentNode, type GraphEdge, type GraphNode, type ModelNode } from "../../contracts/graph";
 import { compileBoard } from "../actions";
 import { Abilities, Skills as WrittenSkills, fieldErrors } from "../graph/Inspector";
 import { LogoTile, ModelMark, modelTitle, modelWhere, nodeLogo } from "../graph/Logo";
@@ -24,6 +24,15 @@ import { suggestSkills } from "../lib/suggestSkills";
 import { useBoard } from "../state/board";
 import { latestRunByAgent, useApp } from "../state/store";
 import { AgentFace, Issues } from "../ui";
+
+/** Hermes' reasoning levels as people pick them (the ladder's ends kept for models that offer them). */
+const THINKING: { value: Reasoning; label: string; hint: string }[] = [
+  { value: "none", label: "Off", hint: "Answers straight away" },
+  { value: "low", label: "Light", hint: "A quick think first" },
+  { value: "medium", label: "Medium", hint: "Thinks before it answers" },
+  { value: "high", label: "Deep", hint: "Thinks hard: slower, costs more" },
+  { value: "max", label: "Deepest", hint: "As much as the model allows" },
+];
 
 /** A titled group of rows, as Settings draws them. */
 function Group({ title, children, foot, testId, action }: { title: string; children: ReactNode; foot?: ReactNode; testId?: string; action?: ReactNode }) {
@@ -209,6 +218,13 @@ export function AgentPage({ agent, where, onClose }: { agent: AgentNode; where: 
         ) : (
           <button className="ap-row add" onClick={() => app.openSettings("models")}><Plus size={14} /><span>New model…</span></button>
         )}
+        <label className="ap-row" data-testid="agent-reasoning" data-tip="How hard it thinks before it answers (agent.reasoning_effort). Deeper costs more and takes longer; models that cannot think ignore it.">
+          <span className="t"><b>Thinking</b><small>{a.reasoning ? THINKING.find((t) => t.value === a.reasoning)?.hint ?? a.reasoning : "As the model decides"}</small></span>
+          <select className="ap-select" value={a.reasoning ?? ""} onChange={(e) => set("reasoning", e.target.value || null)} aria-label="Thinking">
+            <option value="">Default</option>
+            {THINKING.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+        </label>
       </Group>
 
       <Group title="Tools and apps" testId="agent-tools">

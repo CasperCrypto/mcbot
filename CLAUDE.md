@@ -324,7 +324,11 @@ Change them additively; a breaking change bumps the version.
   skills, Hermes' compaction), Model (main and backups), Tools (abilities, connectors, makers), Plugins, Guardrails
   (approvals, daily budget). Each row says whether the board sets it, Hermes defaults it or it is missing, and opens
   where it is changed. The loop's **steps per message** is the agent's `maxSteps`, compiled to `agent.max_turns`
-  (only when set; `OWNED` `agent.max_turns`; read back by `src/harness/read.ts`).
+  (only when set; `OWNED` `agent.max_turns`; read back by `src/harness/read.ts`). Its **thinking** is `reasoning`,
+  compiled to `agent.reasoning_effort` (`none`…`ultra`, only when set; `OWNED`; read back). A tool block's **only
+  these tools** (`toolsInclude`, and `toolsExclude` read from Hermes) compiles to `mcp_servers.<name>.tools.include`
+  / `.exclude`: fewer tool definitions, fewer tokens per message (Hermes' code-mode-like `execute_code` covers only
+  its built-in tools, not MCP ones).
 - **Board | Hermes** (top of the board): Board is what you edit; Hermes (`src/app/graph/HermesView.tsx`)
   draws the whole harness behind it: gateway, chat apps, each agent's model chain, abilities,
   tools, makers, skills, memory, schedules, the shared task board, approvals. A click on a part

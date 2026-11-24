@@ -122,7 +122,10 @@ export function moveNode(doc: Y.Doc, id: string, position: { x: number; y: numbe
 
 export function setNodeField(doc: Y.Doc, id: string, field: string, value: unknown): void {
   const data = boardMaps(doc).nodes.get(id)?.get("data");
-  if (data instanceof Y.Map) data.set(field, structuredClone(value));
+  if (!(data instanceof Y.Map)) return;
+  // `undefined` takes an optional field off the block (an unset field is absent, not null).
+  if (value === undefined) data.delete(field);
+  else data.set(field, structuredClone(value));
 }
 
 export function removeNodes(doc: Y.Doc, ids: readonly string[]): void {
