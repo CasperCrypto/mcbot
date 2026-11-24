@@ -1,0 +1,16 @@
+name: An idea
+description: Something McBot Studio could do, or do better.
+labels: [idea]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you want to get done
+      description: The job, in your words (not the solution yet).
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: How you picture it
+      description: On the board, in chat, on Home, in Hermes… anything goes.
