@@ -11,14 +11,7 @@ import { AgentFace } from "../ui";
 import { addRecent, isFavorite, loadFavorites, toggleFavorite, type Site } from "../lib/browserStore";
 import { BrowserStart } from "./BrowserStart";
 
-/** "localhost:3000" → "http://localhost:3000"; "mcbot docs" → a search. */
-export function toUrl(input: string): string {
-  const v = input.trim();
-  if (/^https?:\/\//i.test(v)) return v;
-  if (/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/i.test(v)) return `http://${v}`;
-  if (/^[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$/.test(v)) return `https://${v}`;
-  return `https://duckduckgo.com/?q=${encodeURIComponent(v)}`;
-}
+import { framedUrl, toUrl } from "../lib/pageUrl";
 
 const hostOf = (u: string) => {
   try {
@@ -326,7 +319,7 @@ export default function BrowserView() {
             </div>
           </div>
         ) : url ? (
-          <iframe key={`${url}#${reload}`} src={url} title="Page" sandbox="allow-scripts allow-forms allow-popups allow-same-origin allow-downloads" referrerPolicy="no-referrer" data-testid="browser-frame" />
+          <iframe key={`${url}#${reload}`} src={framedUrl(url)} title="Page" sandbox="allow-scripts allow-forms allow-popups allow-same-origin allow-downloads" referrerPolicy="no-referrer" data-testid="browser-frame" />
         ) : (
           <BrowserStart onGo={go} favorites={favorites} onFavorites={setFavorites} />
         )}

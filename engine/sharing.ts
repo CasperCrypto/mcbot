@@ -12,7 +12,7 @@
  * - Never this computer's saved keys, its files and folders, its setup or its engine
  *   (`guestAllowed`). Agents always run here, on the host.
  */
-import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import { chmod } from "node:fs/promises";
 import { networkInterfaces } from "node:os";
 import type { ShareRole, SharingView } from "../src/contracts/api";
@@ -58,9 +58,9 @@ export const INVITE_MS = 24 * 60 * 60_000;
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
-/** A link's code: nine letters and digits (31⁹ ≈ 2.6·10¹³), in threes. */
+/** A link's code: nine letters and digits (31⁹ ≈ 2.6·10¹³), in threes, each one equally likely. */
 export function newCode(): string {
-  const chars = [...randomBytes(9)].map((b) => ALPHABET[b % ALPHABET.length]).join("");
+  const chars = Array.from({ length: 9 }, () => ALPHABET[randomInt(ALPHABET.length)]).join("");
   return `${chars.slice(0, 3)}-${chars.slice(3, 6)}-${chars.slice(6)}`;
 }
 
