@@ -16,9 +16,9 @@ people change the drawing: *graph engineering*. McBot is Hermes with design thin
 
 | Area | What works | Status |
 |---|---|---|
-| Harness | Board (agents, models with backups, tools, makers, chat apps, hand-offs), compile to real files, read back from Hermes, live two-way sync, Layers view, Hermes view, Live files, doctor, undo | ● |
+| Harness | Board (agents, models with backups, tools, makers, chat apps, hand-offs), compile to real files, read back from Hermes, live two-way sync, Layers view (editable), Live files, doctor, undo | ● |
 | Harness over time | History: a version per compile that changes the harness, changes in words, runs/success/cost/time per version, compare two, restore; harness as text for any AI (⌘K) | ● new |
-| Agents | One page per agent (personality, models, tools, skills, abilities, limits), New agent with 19 starting cards, 8 ready-made teams, Ask McBot builds a team from words | ● |
+| Agents | One page per agent (personality, models, tools, skills, abilities, limits), New agent with 19 starting cards, 10 ready-made teams that bring their tools and makers, Ask McBot builds a team from words | ● |
 | Models | Any OpenAI-compatible model: Ollama, LM Studio, llama.cpp, vLLM, Jan locally; OpenRouter, OpenAI, Anthropic, Gemini, Groq, DeepSeek, Mistral, Together, OpenCode Zen in the cloud; model marks and readable names; thinking level per agent | ● |
 | Tools | 60+ tools: Hermes' vetted connectors, GitHub, keyless web search, any MCP server; "only these tools" per server to cut tokens | ● |
 | Chat apps | 25: Telegram, Slack, Discord, WhatsApp, Signal, Teams, iMessage, email, SMS and more | ● |

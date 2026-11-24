@@ -9,17 +9,28 @@
   --mono: "SF Mono", ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
 
   /* surfaces, darkest to lightest: a deep, neutral black for the chrome, one step up for content,
-     cards and fields a step above that; edges come from hairlines, not shadows */
-  --bg-window: #0c0c0d;
-  --bg-chrome: #0f0f11;
-  --bg-sidebar: #0c0c0d;
+     cards and groups a step above that. What sits in the page has no outline: its edge is the
+     step in fill and a soft lift (owner's decision, v3); hairlines only divide rows. */
+  --bg-window: #0b0b0c;
+  --bg-chrome: #0e0e10;
+  --bg-sidebar: #0b0b0c;
   --bg-main: #131315;
   --bg-canvas: #101012;
-  --bg-raised: #1c1c1f;
-  --bg-card: #18181b;
-  --bg-hover: #212125;
-  --bg-active: #2a2a2f;
-  --bg-input: #0e0e10;
+  --bg-raised: #1d1d21;
+  --bg-card: #19191c;
+  --bg-hover: #222226;
+  --bg-active: #2b2b30;
+  --bg-input: rgba(255, 255, 255, 0.055);
+  /* The three steps of a surface in the page: a card or group, its hover, a selected or nested one. */
+  --surface-1: #1a1a1d;
+  --surface-2: #202024;
+  --surface-3: #27272c;
+  /* A soft lift instead of an outline: the faintest top light and a shadow that fades out. */
+  --lift: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 2px rgba(0, 0, 0, 0.22), 0 8px 24px rgba(0, 0, 0, 0.16);
+  --lift-hover: inset 0 1px 0 rgba(255, 255, 255, 0.055), 0 2px 4px rgba(0, 0, 0, 0.26), 0 12px 32px rgba(0, 0, 0, 0.22);
+  /* Row dividers inside a group. */
+  --divide: inset 0 0.5px 0 rgba(255, 255, 255, 0.06);
+  --divide-bottom: inset 0 -0.5px 0 rgba(255, 255, 255, 0.06);
   --bg-glass: rgba(24, 24, 27, 0.78);
   /* Panels that hold text (inspector, sheets): nearly opaque, so the canvas never reads through. */
   --bg-panel: rgba(23, 23, 26, 0.97);
@@ -46,22 +57,27 @@
   --accent-line: rgb(var(--accent-rgb) / 0.6);
   --focus: 0 0 0 3px rgb(var(--accent-rgb) / 0.4);
 
-  --ok: #30d158;
-  --ok-soft: rgba(48, 209, 88, 0.14);
-  --run: #0a84ff;
-  --run-soft: rgba(10, 132, 255, 0.16);
-  --fail: #ff453a;
-  --fail-soft: rgba(255, 69, 58, 0.14);
-  --warn: #ffd60a;
-  --warn-soft: rgba(255, 214, 10, 0.14);
-  /* state colours as text (chips, marks, diffs): the bright ones read well on dark */
-  --ok-text: var(--ok);
-  --run-text: var(--run);
-  --fail-text: #ff8c84;
-  --warn-text: var(--warn);
-  --tone-orange: #ffc48a;
-  --tone-yellow: #ffd36b;
-  --tone-teal: #7fe8d0;
+  /* State: muted, never neon (owner's decision, v3). Shown as a small mark (a dot, a glyph), not as
+     a tinted block; chips stay neutral. "Running" is the person's accent. */
+  --ok-rgb: 104 196 150;
+  --warn-rgb: 222 176 98;
+  --fail-rgb: 226 114 106;
+  --ok: rgb(var(--ok-rgb));
+  --ok-soft: rgb(var(--ok-rgb) / 0.12);
+  --run: var(--accent);
+  --run-soft: var(--accent-soft);
+  --fail: rgb(var(--fail-rgb));
+  --fail-soft: rgb(var(--fail-rgb) / 0.12);
+  --warn: rgb(var(--warn-rgb));
+  --warn-soft: rgb(var(--warn-rgb) / 0.12);
+  /* state colours as text (marks, diffs): a little lighter, so they read on dark */
+  --ok-text: #8fd3b0;
+  --run-text: var(--accent-text);
+  --fail-text: #f0a09a;
+  --warn-text: #e9c68a;
+  --tone-orange: #e8bf98;
+  --tone-yellow: #e9d29a;
+  --tone-teal: #9fd8cb;
 
   /* Overlays as channels, so one rule serves both appearances: a tint toward the text colour
      (hover, selection, chips), the specular top line of glass, and how strong shadows and
@@ -75,7 +91,7 @@
   --bg-tooltip: #232327;
   --bg-bubble: #222226;
   --bg-composer: #18181b;
-  --bg-node: rgba(27, 27, 30, 0.92);
+  --bg-node: rgba(30, 30, 34, 0.94);
   --grid-dot: rgba(255, 255, 255, 0.065);
   /* the high-contrast neutral button (Ask, Get started, send): white on dark */
   --btn-light-bg: #f5f5f7;
@@ -84,28 +100,29 @@
 
   /* node kinds (the tiles in graph.css): the colour of a kind's glyph, and its channels for the
      tile's tint behind it */
+  /* muted (v3): a kind is told apart by a calm tint, not a candy colour */
   --k-agent-rgb: 142 142 147;
-  --k-model-rgb: 255 159 10;
-  --k-model-cloud-rgb: 10 132 255;
-  --k-tool-rgb: 48 176 199;
-  --k-media-rgb: 255 55 95;
-  --k-channel-rgb: 48 209 88;
-  --k-folder-rgb: 172 142 104;
+  --k-model-rgb: 214 162 104;
+  --k-model-cloud-rgb: 112 158 222;
+  --k-tool-rgb: 98 172 184;
+  --k-media-rgb: 214 128 152;
+  --k-channel-rgb: 116 182 140;
+  --k-folder-rgb: 172 150 122;
   /* a kind's glyph on its tint: the kind colour, lifted a little where it would sink into the dark */
   --k-agent-ink: #c7c7cc;
-  --k-model-ink: #ffab2e;
-  --k-cloud-ink: #4ca2ff;
-  --k-tool-ink: #4fc6da;
-  --k-media-ink: #ff6482;
-  --k-channel-ink: #4cd471;
-  --k-folder-ink: #c9a77b;
+  --k-model-ink: #e2b884;
+  --k-cloud-ink: #98b9e8;
+  --k-tool-ink: #8ac4cd;
+  --k-media-ink: #e3a2b4;
+  --k-channel-ink: #9acbaa;
+  --k-folder-ink: #c8b296;
   --k-agent: #8e8e93;
-  --k-model: #ff9f0a;
-  --k-model-cloud: #0a84ff;
-  --k-tool: #30b0c7;
-  --k-media: #ff375f;
-  --k-channel: #30d158;
-  --k-folder: #ac8e68;
+  --k-model: #d6a268;
+  --k-model-cloud: #709ede;
+  --k-tool: #62acb8;
+  --k-media: #d68098;
+  --k-channel: #74b68c;
+  --k-folder: #ac967a;
 
   /* agent faces: glass food (faces/foods.ts). One colour per agent, from its name. */
   --food-1: #8b7bff;
@@ -172,22 +189,22 @@
   /*
    * Materials: Apple-style glass for anything that floats over content (sheets, menus, the dock,
    * the inspector, sticky headers, the composer). Translucent fill + strong blur + saturation, a
-   * hairline edge and a specular top line. Thin < regular < thick: the more text a surface holds,
+   * specular top line and the faintest edge. Thin < regular < thick: the more text a surface holds,
    * the thicker its material, so what is behind never hurts reading (the palette, menus and sheets
-   * are nearly opaque: their blur only softens the edge of what lies behind).
+   * are frosted: what lies behind them is blurred past reading, only its light comes through).
    */
-  --mat-ultrathin: rgba(34, 34, 38, 0.5);
-  --mat-thin: rgba(28, 28, 32, 0.7);
-  --mat-regular: rgba(26, 26, 29, 0.985);
-  --mat-thick: rgba(22, 22, 25, 0.985);
+  --mat-ultrathin: rgba(40, 40, 46, 0.42);
+  --mat-thin: rgba(32, 32, 37, 0.6);
+  --mat-regular: rgba(30, 30, 34, 0.84);
+  --mat-thick: rgba(26, 26, 30, 0.9);
   /* Panels you read and type in (inspector, team chat, side panels): solid, so the board never shows through their text. */
-  --mat-panel: #161619;
+  --mat-panel: #17171a;
   --mat-chrome: rgba(15, 15, 17, 0.84);
-  --mat-blur: blur(24px) saturate(150%);
-  --mat-blur-strong: blur(36px) saturate(160%);
-  /* a hairline edge and the faintest top light: depth without shine */
-  --mat-edge: inset 0 0 0 0.5px rgba(255, 255, 255, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  --mat-edge-strong: inset 0 0 0 0.5px rgba(255, 255, 255, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --mat-blur: blur(32px) saturate(180%);
+  --mat-blur-strong: blur(48px) saturate(190%);
+  /* glass edge: a specular top light and a barely-there rim: depth without an outline */
+  --mat-edge: inset 0 1px 0 rgba(255, 255, 255, 0.07), inset 0 0 0 0.5px rgba(255, 255, 255, 0.055);
+  --mat-edge-strong: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 0 0 0.5px rgba(255, 255, 255, 0.075);
   --mat-hover: rgba(255, 255, 255, 0.06);
   --mat-press: rgba(255, 255, 255, 0.09);
   --mat-select: rgba(255, 255, 255, 0.08);

@@ -57,7 +57,8 @@ by itself (a few minutes) and walks you through setup. It finds models already o
 ### Describe a team, get a team
 Tell **Ask McBot** what you need ("a support team that answers customers on Slack from our docs"). It proposes the
 agents, their tools, chat apps, skills and hand-offs. Review it, add it, and one ⌘Z takes it back. Or start from
-one of 8 ready-made teams or 19 starter agents.
+one of 10 ready-made teams or 19 starter agents. Agents do the work, not just talk about it: a designer makes
+the images for your posts, a researcher searches the web, and every agent knows your business from the setup.
 
 ### Invite anyone, like a shared document
 Send a link by email, or show a QR code. It works from anywhere and opens in any browser, phone included:

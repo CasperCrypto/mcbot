@@ -1,10 +1,17 @@
 import { applyFix } from "./DoctorSheet";
 import type { Finding } from "../graph/doctor";
-import { Bot, Check, Hammer, LoaderCircle, MessagesSquare, Search, ShieldAlert, Square, X } from "lucide-react";
+import { ArrowUp, Bot, CalendarClock, Check, Copy, Hammer, LoaderCircle, MessagesSquare, Minus, Search, ShieldAlert, Square, SquareDashed, UserPlus, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { AgentSchedules, CostReport } from "../../contracts/api";
 import type { RunSummary } from "../../contracts/run";
-import { compileBoard, stopRun } from "../actions";
+import { compileBoard, runAgent, stopRun } from "../actions";
+import { inApp, onMaximized, windowAct } from "../lib/desktop";
 import { engine } from "../lib/engine";
+import { usd } from "../lib/format";
+import { agentsOf } from "../lib/models";
+import { stepOf } from "../lib/runStep";
+import { utcDay } from "../lib/series";
+import { Logo } from "../faces/FoodFace";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, PersonFace, clock, useNow } from "../ui";
@@ -12,13 +19,20 @@ import { AgentFace, PersonFace, clock, useNow } from "../ui";
 /**
  * The dynamic island: always there, in the middle of the title bar.
  *
- * At rest it is a slim pill (a status dot). When something happens it grows, with a spring, into
- * the one thing that matters most right now: an agent asking before a risky action (answer it
- * right there), agents at work (live clock), a compile, a new team message, a notice. It opens into
- * everything at once, with quick actions, as the pointer heads for it (or on click / Enter); it
- * closes when the pointer moves away, or with Esc or a click outside.
+ * At rest it is a pill that says how things are (agents ready, or what one is doing). When
+ * something happens it grows, with a spring, into the one thing that matters most right now: an
+ * agent asking before a risky action (answer it right there), agents at work (what each is doing,
+ * live), a compile, a new team message, a notice. It opens into everything at once when the
+ * pointer rests on it, or on click / Enter: what needs you, who is working on what, today's spend
+ * and what runs next, a field to ask any agent, quick actions, and the window's own buttons. It
+ * never opens because the pointer passes by on its way to something under it. Opened by hovering,
+ * it closes when the pointer leaves; opened by click, on Esc or a click outside.
  */
 type Mode = "rest" | "ask" | "run" | "compile" | "message" | "toast" | "problems";
+
+/** How long the pointer rests on the pill before it opens, and how long it may wander off before it closes. */
+const OPEN_AFTER_MS = 240;
+const CLOSE_AFTER_MS = 320;
 
 function useLatestMessage() {
   const { graph } = useBoard();
@@ -37,6 +51,51 @@ function useLatestMessage() {
   return { last, fresh: fresh && last?.id === fresh ? last : null };
 }
 
+/** Today's spend and the next scheduled run, asked of the engine each time the island opens. */
+function useToday(open: boolean, boardId: string) {
+  const [spent, setSpent] = useState<number | null>(null);
+  const [next, setNext] = useState<{ name: string; profile: string; at: number } | null>(null);
+  useEffect(() => {
+    if (!open || !boardId) return;
+    let live = true;
+    engine.cost(boardId).then((c: CostReport) => {
+      if (live) setSpent(c.byDay.find((d) => d.key === utcDay(Date.now()))?.usd ?? 0);
+    }).catch(() => undefined);
+    engine.schedules(boardId).then((all: AgentSchedules[]) => {
+      const jobs = all.flatMap((a) => a.schedules.filter((j) => j.enabled && j.nextRunAt).map((j) => ({ name: j.name || j.prompt || "Scheduled run", profile: a.profile, at: j.nextRunAt! })));
+      if (live) setNext(jobs.sort((a, b) => a.at - b.at)[0] ?? null);
+    }).catch(() => undefined);
+    return () => { live = false; };
+  }, [open, boardId]);
+  return { spent, next };
+}
+
+function when(ts: number): string {
+  const d = new Date(ts);
+  const sameDay = d.toDateString() === new Date().toDateString();
+  return `${sameDay ? "" : `${d.toLocaleDateString([], { weekday: "short" })} `}${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+}
+
+/** Minimize and maximize the whole window, from the island (the app's own window only). */
+function WindowButtons() {
+  const [max, setMax] = useState(false);
+  useEffect(() => {
+    let off: (() => void) | undefined;
+    let live = true;
+    void onMaximized(setMax).then((f) => { if (live) off = f; else f(); });
+    return () => { live = false; off?.(); };
+  }, []);
+  if (!inApp()) return null;
+  return (
+    <div className="island-win" role="group" aria-label="Window">
+      <button type="button" className="island-icon" aria-label="Minimize" data-tip="Minimize" data-tip-side="bottom" onClick={() => void windowAct("min")}><Minus size={15} /></button>
+      <button type="button" className="island-icon" aria-label={max ? "Restore" : "Maximize"} data-tip={max ? "Restore" : "Maximize"} data-tip-side="bottom" onClick={() => void windowAct("max")}>
+        {max ? <Copy size={13} /> : <SquareDashed size={14} />}
+      </button>
+    </div>
+  );
+}
+
 export function Island({ findings = [] }: { findings?: Finding[] }) {
   const { graph, boardId, doc } = useBoard();
   const notices = useApp((s) => s.notices);
@@ -44,10 +103,12 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
   const problems = findings.filter((f) => f.level !== "tip");
   const problemErrors = problems.filter((f) => f.level === "error").length;
   const runs = useApp((s) => s.runs);
+  const events = useApp((s) => s.events);
   const toasts = useApp((s) => s.toasts);
   const busy = useApp((s) => s.compileBusy);
   const dismiss = useApp((s) => s.dismiss);
   const openChat = useApp((s) => s.openChat);
+  const chatAgentId = useApp((s) => s.chatAgentId);
   const [open, setOpen] = useState(false);
   const shell = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
@@ -58,11 +119,14 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
   const now = useNow(running.length > 0);
   const toast = toasts.at(-1);
   const { last, fresh } = useLatestMessage();
+  const agents = agentsOf(graph);
   const nameOf = (r: RunSummary) => {
-    const a = graph.nodes.find((n) => n.id === r.agentNodeId);
-    return a?.kind === "agent" ? a.data.displayName || a.data.name : r.profile;
+    const a = agents.find((n) => n.id === r.agentNodeId);
+    return a ? a.data.displayName || a.data.name : r.profile;
   };
-  const agents = graph.nodes.filter((n) => n.kind === "agent").length;
+  const { spent, next } = useToday(open, boardId);
+  const midnight = new Date().setHours(0, 0, 0, 0);
+  const runsToday = Object.values(runs).filter((r) => r.startedAt >= midnight).length;
 
   // A notice (a compile that failed and its Fix) comes before a team message: it is what was just done.
   const mode: Mode = asking.length ? "ask" : running.length ? "run" : busy ? "compile" : toast ? "toast" : fresh ? "message" : problemErrors ? "problems" : "rest";
@@ -77,10 +141,15 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
     ro.observe(el);
     return () => ro.disconnect();
   }, [mode, open]);
+
+  // Opened by hovering: it follows the pointer. Opened by click or keyboard: it stays until Esc or a click outside.
+  const byHover = useRef(false);
+  const openRef = useRef(open);
+  openRef.current = open;
   useEffect(() => {
     if (!open) return;
-    const away = (e: MouseEvent) => { if (!shell.current?.contains(e.target as Node)) { byPointer.current = false; setOpen(false); } };
-    const key = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const away = (e: MouseEvent) => { if (!shell.current?.contains(e.target as Node)) { byHover.current = false; setOpen(false); } };
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") { byHover.current = false; setOpen(false); } };
     window.addEventListener("mousedown", away);
     window.addEventListener("keydown", key);
     return () => {
@@ -88,100 +157,83 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
       window.removeEventListener("keydown", key);
     };
   }, [open]);
-
-  // Opens as the pointer comes toward it, before it gets there: the pointer's path is projected
-  // a little ahead, and a pill it is about to reach opens now (no hover delay). Close by, the pill
-  // leans in. Opened that way, it closes once the pointer has moved clearly away from the panel;
-  // opened by click or keyboard, it stays until a click outside or Esc.
-  const [near, setNear] = useState(false);
-  const byPointer = useRef(false);
-  const openRef = useRef(open);
-  openRef.current = open;
   useEffect(() => {
-    let raf = 0;
-    let last: { x: number; y: number; t: number; d: number } | null = null;
-    let pending: PointerEvent | null = null;
-    let leaveAt = 0;
-    let dwell: ReturnType<typeof setTimeout> | null = null;
-    const gap = (r: DOMRect, x: number, y: number) => Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
-    const tick = () => {
-      raf = 0;
-      const e = pending;
-      const el = shell.current;
-      if (!e || !el) return;
-      const r = el.getBoundingClientRect();
-      const now = performance.now();
-      const d = gap(r, e.clientX, e.clientY);
-      // Where the pointer will be in ~140 ms at its current speed, and how fast it goes (px/ms).
-      let ahead = d;
-      let speed = 0;
-      let closing = false;
-      if (last && now - last.t > 0 && now - last.t < 120) {
-        const dt = now - last.t;
-        const k = 140 / dt;
-        ahead = gap(r, e.clientX + (e.clientX - last.x) * k, e.clientY + (e.clientY - last.y) * k);
-        speed = Math.hypot(e.clientX - last.x, e.clientY - last.y) / dt;
-        closing = d < last.d;
-      }
-      last = { x: e.clientX, y: e.clientY, t: now, d };
-      if (!openRef.current) {
-        setNear(d < 90);
-        // Aimed at it (heading in, not sweeping past), or on it at a walking pace.
-        const aimed = closing && ahead < 4 && d < 140 && speed < 1.4;
-        const on = d < 10 && speed < 1.6;
-        if (aimed || on) {
-          byPointer.current = true;
-          setOpen(true);
-        } else if (d < 10) {
-          // Arrived fast and stopped on it: look again once the pointer has settled.
-          if (dwell) clearTimeout(dwell);
-          dwell = setTimeout(() => { if (!raf) raf = requestAnimationFrame(tick); }, 70);
-        }
-      } else if (byPointer.current) {
-        if (d > 36) {
-          leaveAt ||= now;
-          if (now - leaveAt > 90) {
-            leaveAt = 0;
-            byPointer.current = false;
-            setOpen(false);
-          }
-        } else leaveAt = 0;
-      }
-    };
-    const move = (e: PointerEvent) => {
+    const el = shell.current;
+    if (!el) return;
+    let enterT: ReturnType<typeof setTimeout> | undefined;
+    let leaveT: ReturnType<typeof setTimeout> | undefined;
+    const enter = (e: PointerEvent) => {
       if (e.pointerType !== "mouse") return;
-      pending = e;
-      if (!raf) raf = requestAnimationFrame(tick);
+      clearTimeout(leaveT);
+      if (!openRef.current) enterT = setTimeout(() => { byHover.current = true; setOpen(true); }, OPEN_AFTER_MS);
     };
-    const out = (e: MouseEvent) => {
-      // The pointer left the window: let go.
-      if (e.relatedTarget) return;
-      setNear(false);
-      if (openRef.current && byPointer.current) {
-        byPointer.current = false;
+    const leave = () => {
+      clearTimeout(enterT);
+      if (!openRef.current || !byHover.current) return;
+      leaveT = setTimeout(() => {
+        // Typing in its field, or a menu of its own open: stay.
+        if (el.contains(document.activeElement) && document.activeElement !== el) return;
+        byHover.current = false;
         setOpen(false);
-      }
+      }, CLOSE_AFTER_MS);
     };
-    window.addEventListener("pointermove", move, { passive: true });
-    document.addEventListener("mouseout", out);
+    el.addEventListener("pointerenter", enter);
+    el.addEventListener("pointerleave", leave);
     return () => {
-      window.removeEventListener("pointermove", move);
-      document.removeEventListener("mouseout", out);
-      if (raf) cancelAnimationFrame(raf);
-      if (dwell) clearTimeout(dwell);
+      el.removeEventListener("pointerenter", enter);
+      el.removeEventListener("pointerleave", leave);
+      clearTimeout(enterT);
+      clearTimeout(leaveT);
     };
   }, []);
 
   const answer = (r: RunSummary, choice: string) => void engine.answerRun(r.runId, choice).catch((err: unknown) => useApp.getState().toast({ kind: "fail", text: String((err as Error).message ?? err) }));
-  const go = (fn: () => void) => () => { setOpen(false); fn(); };
+  const go = (fn: () => void) => () => { byHover.current = false; setOpen(false); fn(); };
+
+  // Ask any agent from here: straight away, or in its queue while it works (as the chat does).
+  const [askTo, setAskTo] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const target = agents.find((a) => a.id === askTo) ?? agents.find((a) => a.id === chatAgentId) ?? agents[0];
+  const ask = async () => {
+    const prompt = draft.trim();
+    if (!target || !prompt) return;
+    setDraft("");
+    const s = useApp.getState();
+    const busyAgent = running.some((r) => r.agentNodeId === target.id) || s.starting[target.id] || (s.queue[target.id]?.items.length ?? 0) > 0;
+    if (busyAgent) { s.enqueue(target.id, prompt); return; }
+    const id = await runAgent(boardId, target.id, prompt);
+    if (!id) setDraft(prompt);
+  };
 
   let body: React.ReactNode;
   if (open) {
+    const needs = asking.length + problems.length;
     body = (
       <div className="island-panel" data-testid="island-panel">
+        <div className="island-head">
+          <Logo size={18} />
+          <span className="island-title">{needs ? `${needs} need${needs === 1 ? "s" : ""} you` : running.length ? `${running.length} at work` : "All quiet"}</span>
+          <span className="island-meta">{new Date().toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</span>
+          <span className="grow" />
+          <WindowButtons />
+        </div>
+
+        {agents.length > 0 && (
+          <form className="island-ask" onSubmit={(e) => { e.preventDefault(); void ask(); }} data-testid="island-ask">
+            <label className="island-ask-who" data-tip="Who to ask">
+              {target && <AgentFace seed={target.data.name} size={22} />}
+              <select value={target?.id ?? ""} onChange={(e) => setAskTo(e.target.value)} aria-label="Agent">
+                {agents.map((a) => <option key={a.id} value={a.id}>{a.data.displayName || a.data.name}</option>)}
+              </select>
+            </label>
+            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={`Ask ${target ? target.data.displayName || target.data.name : "an agent"}…`} aria-label="Ask" data-testid="island-ask-input" />
+            <button type="submit" className="island-send" disabled={!draft.trim()} aria-label="Send"><ArrowUp size={15} /></button>
+          </form>
+        )}
+
         {asking.map((r) => (
           <div key={r.runId} className="island-sec ask">
-            <div className="island-line"><ShieldAlert size={14} className="warn-text" /><b>{nameOf(r)}</b><span className="faint">asks before acting</span></div>
+            <div className="island-line"><ShieldAlert size={15} className="warn-text" /><b>{nameOf(r)}</b><span className="faint">asks before acting</span></div>
             <code className="island-cmd">{r.approval!.command || r.approval!.description}</code>
             <div className="island-actions">
               <button className="pill primary" onClick={() => answer(r, "once")}>Allow once</button>
@@ -190,12 +242,52 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
             </div>
           </div>
         ))}
+
+        <div className="island-grid">
+          <div className="island-sec">
+            <span className="island-label">{running.length ? "Working now" : "Agents"}</span>
+            {running.length === 0 && (
+              agents.length ? (
+                <div className="island-faces">
+                  {agents.slice(0, 6).map((a) => (
+                    <button key={a.id} className="island-face" onClick={go(() => openChat(a.id))} data-tip={`Chat with ${a.data.displayName || a.data.name}`}>
+                      <AgentFace seed={a.data.name} size={26} />
+                      <span className="ellipsis">{a.data.displayName || a.data.name}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : <span className="faint island-sub">No agents yet</span>
+            )}
+            {running.map((r) => (
+              <div key={r.runId} className="island-run">
+                <AgentFace seed={r.profile} size={26} status="running" />
+                <button className="grow island-link" onClick={go(() => openChat(r.agentNodeId))}>
+                  <b>{nameOf(r)}</b>
+                  <span className="faint ellipsis">{stepOf(events[r.runId])} · {r.prompt.split("\n")[0]}</span>
+                </button>
+                <span className="time">{clock(now - r.startedAt)}</span>
+                <button className="island-icon" aria-label="Stop" data-tip="Stop" onClick={() => void stopRun(r.runId)}><Square size={11} /></button>
+              </div>
+            ))}
+          </div>
+          <div className="island-sec island-today" data-testid="island-today">
+            <span className="island-label">Today</span>
+            <div className="island-stats">
+              <span><b className="num">{spent === null ? "…" : usd(spent)}</b><small>spent</small></span>
+              <span><b className="num">{runsToday}</b><small>{runsToday === 1 ? "run" : "runs"}</small></span>
+            </div>
+            {next && (
+              <span className="island-next"><CalendarClock size={13} /><span className="ellipsis"><b>{when(next.at)}</b> {next.name}</span></span>
+            )}
+          </div>
+        </div>
+
         {problems.length > 0 && (
           <div className="island-sec" data-testid="island-problems">
             <span className="island-label">{problems.length === 1 ? "1 thing to fix" : `${problems.length} things to fix`}</span>
             {problems.slice(0, 4).map((f) => (
               <div key={f.id} className={`island-notice ${f.level === "error" ? "fail" : "warn"}`}>
-                {f.level === "error" ? <X size={14} className="bad" /> : <ShieldAlert size={14} className="warn-text" />}
+                <span className={`island-mark ${f.level === "error" ? "fail" : "warn"}`} />
                 <span className="grow island-notice-text">{f.title}</span>
                 <button className="pill" onClick={go(() => applyFix(f, boardId, doc))}>{f.fix.label}</button>
               </div>
@@ -206,7 +298,7 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
         {notices.length > 0 && (
           <div className="island-sec" data-testid="island-notices">
             <div className="island-line"><span className="island-label grow">Notices</span><button className="island-link faint" onClick={() => clearNotices()}>Clear</button></div>
-            {notices.slice(0, 4).map((n) => (
+            {notices.slice(0, 3).map((n) => (
               <div key={n.id} className={`island-notice ${n.kind}`}>
                 {n.kind === "fail" ? <X size={14} className="bad" /> : <Check size={14} className="ok" />}
                 <span className="grow island-notice-text">{n.text}</span>
@@ -215,18 +307,6 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
             ))}
           </div>
         )}
-        <div className="island-sec">
-          <span className="island-label">{running.length ? "Working now" : "All quiet"}</span>
-          {running.length === 0 && <span className="faint island-sub">{agents ? `${agents} agent${agents > 1 ? "s" : ""} ready` : "No agents yet"}</span>}
-          {running.map((r) => (
-            <div key={r.runId} className="island-run">
-              <AgentFace seed={r.profile} size={24} status="running" />
-              <button className="grow island-link" onClick={go(() => openChat(r.agentNodeId))}><b>{nameOf(r)}</b><span className="faint ellipsis">{r.prompt}</span></button>
-              <span className="time">{clock(now - r.startedAt)}</span>
-              <button className="icon-btn sm" aria-label="Stop" data-tip="Stop" onClick={() => void stopRun(r.runId)}><Square size={11} /></button>
-            </div>
-          ))}
-        </div>
         {last && (
           <button className="island-sec island-msg" onClick={go(() => useApp.getState().setTeamOpen(true))}>
             <span className="island-label">Team chat</span>
@@ -237,10 +317,12 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
           </button>
         )}
         <div className="island-quick">
-          <button onClick={go(() => useApp.getState().setNewAgentOpen(true))}><Bot size={15} /><span>New agent</span></button>
-          <button onClick={go(() => useApp.getState().setPalette(true))}><Search size={15} /><span>Ask</span></button>
-          <button onClick={go(() => void compileBoard(boardId))}><Hammer size={15} /><span>Compile</span></button>
-          <button onClick={go(() => useApp.getState().setTeamOpen(true))}><MessagesSquare size={15} /><span>Team</span></button>
+          <button onClick={go(() => useApp.getState().setBuilder(true))}><Logo size={17} /><span>Build a team</span></button>
+          <button onClick={go(() => useApp.getState().setNewAgentOpen(true))}><Bot size={16} /><span>New agent</span></button>
+          <button onClick={go(() => void compileBoard(boardId))}><Hammer size={16} /><span>Compile</span></button>
+          <button onClick={go(() => useApp.getState().setShareOpen(true))}><UserPlus size={16} /><span>Invite</span></button>
+          <button onClick={go(() => useApp.getState().setTeamOpen(true))}><MessagesSquare size={16} /><span>Team</span></button>
+          <button onClick={go(() => useApp.getState().setPalette(true))}><Search size={16} /><span>Commands</span></button>
         </div>
       </div>
     );
@@ -250,7 +332,7 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
       <div className="island-bar">
         <span className="island-dot warn" />
         <AgentFace seed={r.profile} size={22} status="running" />
-        <span><b>{nameOf(r)}</b> <span className="faint">asks</span></span>
+        <span className="ellipsis" style={{ maxWidth: 260 }}><b>{nameOf(r)}</b> <span className="faint">asks: {r.approval!.command || r.approval!.description}</span></span>
         <button className="pill primary" onClick={(e) => { e.stopPropagation(); answer(r, "once"); }}>Allow</button>
         <button className="pill" onClick={(e) => { e.stopPropagation(); answer(r, "deny"); }}>Deny</button>
       </div>
@@ -260,7 +342,8 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
     body = (
       <div className="island-bar">
         <AgentFace seed={r.profile} size={22} status="running" />
-        <span>{nameOf(r)}</span>
+        <b>{nameOf(r)}</b>
+        <span className="faint ellipsis" style={{ maxWidth: 220 }}>{stepOf(events[r.runId])}</span>
         {running.length > 1 && <span className="faint">+{running.length - 1}</span>}
         <span className="time">{clock(now - r.startedAt)}</span>
       </div>
@@ -271,33 +354,37 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
     body = (
       <div className="island-bar">
         {fresh.agent ? <AgentFace seed={fresh.agent} size={22} /> : <PersonFace name={fresh.author} color={fresh.color || "#888"} size={22} />}
-        <b>{fresh.author}</b><span className="faint ellipsis" style={{ maxWidth: 300 }}>{fresh.text}</span>
+        <b>{fresh.author}</b><span className="faint ellipsis" style={{ maxWidth: 320 }}>{fresh.text}</span>
       </div>
     );
   } else if (mode === "toast" && toast) {
     body = (
       <div className="island-bar">
         {toast.kind === "fail" ? <X size={14} className="bad" /> : <Check size={14} className="ok" />}
-        <span className="ellipsis" style={{ maxWidth: 420 }}>{toast.text}</span>
+        <span className="ellipsis" style={{ maxWidth: 440 }}>{toast.text}</span>
         {toast.action && <button className="pill" onClick={(e) => { e.stopPropagation(); toast.action!.run(); dismiss(toast.id); }}>{toast.action.label}</button>}
       </div>
     );
   } else if (mode === "problems") {
-    body = <div className="island-bar"><X size={14} className="bad" /><span>{problemErrors === 1 ? "1 problem" : `${problemErrors} problems`}</span></div>;
+    body = <div className="island-bar"><span className="island-mark fail" /><span>{problemErrors === 1 ? "1 thing to fix" : `${problemErrors} things to fix`}</span></div>;
   } else {
-    body = <div className="island-bar rest"><span className={`island-dot${agents ? " ok" : ""}`} /></div>;
+    body = (
+      <div className="island-bar rest">
+        <span className={`island-dot${agents.length ? " ok" : ""}`} />
+        <span className="faint">{agents.length ? `${agents.length} agent${agents.length > 1 ? "s" : ""} ready` : "McBot"}</span>
+      </div>
+    );
   }
 
   return (
     <div className="island-slot">
       <div
         ref={shell}
-        className={`island${open ? " open" : ""}${near ? " near" : ""} mode-${mode}`}
+        className={`island${open ? " open" : ""} mode-${mode}`}
         style={size ? { width: size.w, height: size.h } : undefined}
         role="button" tabIndex={0} aria-expanded={open} aria-label="McBot status"
-        
-        onClick={() => { if (!open) { byPointer.current = false; setOpen(true); } else byPointer.current = false; }}
-        onKeyDown={(e) => { if (!open && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); byPointer.current = false; setOpen(true); } }}
+        onClick={() => { if (!open) { byHover.current = false; setOpen(true); } else byHover.current = false; }}
+        onKeyDown={(e) => { if (!open && e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); byHover.current = false; setOpen(true); } }}
         data-testid="island"
       >
         <div ref={inner} className="island-inner" key={open ? "open" : mode}>{body}</div>

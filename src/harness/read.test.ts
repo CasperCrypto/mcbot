@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import type { CompileResult } from "../contracts/compile";
 import { compile } from "../compile";
 import { readHermes, readSkill, splitSoul, type ProfileFiles } from "./read";
+import { AgentDataSchema, BriefSchema } from "../contracts/graph";
+import { renderSoul } from "../compile/soul";
 
 const FIXTURES = join(import.meta.dirname, "../../test/fixtures");
 const graphs = readdirSync(FIXTURES).filter((f) => f.endsWith(".graph.json"));
@@ -54,10 +56,19 @@ describe("Hermes setup → board", () => {
 
   it("splits the compiled Team section from the agent's own words", () => {
     const soul = "# Lead\n\nRuns the desk.\n\n## Team\n\nYou can hand work to these agents.\n\n- `writer` (Writer): drafts\n- `editor`";
-    expect(splitSoul(soul)).toEqual({ own: "# Lead\n\nRuns the desk.", team: ["writer", "editor"] });
-    expect(splitSoul("# Solo")).toEqual({ own: "# Solo", team: [] });
+    expect(splitSoul(soul)).toEqual({ own: "# Lead\n\nRuns the desk.", team: ["writer", "editor"], brief: null });
+    expect(splitSoul("# Solo")).toEqual({ own: "# Solo", team: [], brief: null });
     // Text typed after the list is the person's: kept.
-    expect(splitSoul(`${soul}\n\nAlways answer in two sentences.`)).toEqual({ own: "# Lead\n\nRuns the desk.\n\nAlways answer in two sentences.", team: ["writer", "editor"] });
+    expect(splitSoul(`${soul}\n\nAlways answer in two sentences.`)).toEqual({ own: "# Lead\n\nRuns the desk.\n\nAlways answer in two sentences.", team: ["writer", "editor"], brief: null });
+  });
+
+  it("reads the board's brief back out of the Shared knowledge section compile writes", () => {
+    const brief = BriefSchema.parse({ who: "Northwind Bakery", goals: "Sell out by noon.\nGrow the newsletter.", channels: "Instagram" });
+    const soul = renderSoul(AgentDataSchema.parse({ name: "lead", soul: "You lead." }), [AgentDataSchema.parse({ name: "writer" })], brief).replace(/\n+$/, "");
+    expect(splitSoul(soul)).toEqual({ own: "You lead.", team: ["writer"], brief });
+    const { graph } = readHermes({ id: "b", name: "B" }, [{ name: "lead", config: null, soul, profileYaml: null, skills: {} }]);
+    expect(graph.brief).toEqual(brief);
+    expect((graph.nodes.find((n) => n.kind === "agent")!.data as { soul: string }).soul).toBe("You lead.");
   });
 
   it("reads a SKILL.md the board can hold, and refuses one it cannot", () => {

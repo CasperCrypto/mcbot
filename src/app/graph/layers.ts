@@ -5,13 +5,13 @@
  * where it is changed, so the Layers view only ever links to what compiles (or to Hermes' own state).
  */
 import type { AgentBundle } from "../../compile/validate";
-import { DEFAULT_CAPABILITIES } from "../../contracts/graph";
+import { BRIEF_FIELDS, DEFAULT_CAPABILITIES, type Brief } from "../../contracts/graph";
 import type { AgentMemoryView, InstalledPlugin, ScheduleView } from "../../contracts/api";
 
 export type LayerId = "surfaces" | "loop" | "context" | "model" | "tools" | "plugins" | "guardrails";
 
 /** Where an item is changed: a block on the board, or a view. */
-export type LayerTarget = { node: string } | { tab: "skills" | "memory" | "home" | "tasks" | "settings" | "agents" };
+export type LayerTarget = { node: string } | { tab: "skills" | "memory" | "home" | "tasks" | "settings" | "agents" } | { sheet: "knowledge" };
 
 export interface LayerItem {
   label: string;
@@ -19,6 +19,8 @@ export interface LayerItem {
   /** "set": the board sets it; "default": Hermes' default; "missing": it won't work without it. */
   state: "set" | "default" | "missing";
   target: LayerTarget;
+  /** A setting of the agent itself, changed right in the row (the Layers view draws its control). */
+  edit?: "maxSteps" | "reasoning" | "helpers" | "dailyBudgetUsd";
 }
 
 export interface Layer {
@@ -35,6 +37,8 @@ export interface LayerFacts {
   plugins?: InstalledPlugin[] | null;
   /** Library skills installed in the profile (names). */
   installedSkills?: string[] | null;
+  /** The board's brief: what every agent knows about the business. */
+  brief?: Brief | null;
 }
 
 const n = (k: number, one: string, many = `${one}s`) => `${k} ${k === 1 ? one : many}`;
@@ -47,6 +51,7 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
   const soulLines = a.soul.split("\n").filter((l) => l.trim()).length;
   const memEntries = facts.memory ? facts.memory.memory.entries.length + facts.memory.user.entries.length : null;
   const enabledPlugins = facts.plugins?.filter((p) => p.enabled) ?? null;
+  const briefFilled = facts.brief ? BRIEF_FIELDS.filter((k) => facts.brief![k].trim()).length : 0;
 
   return [
     {
@@ -60,9 +65,9 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
     {
       id: "loop", title: "Loop", what: "How it works through a task: steps, hand-offs, schedules",
       items: [
-        { label: "Steps per message", detail: a.maxSteps ? `Up to ${a.maxSteps}` : "No limit (Hermes' default)", state: a.maxSteps ? "set" : "default", target: self },
+        { label: "Steps per message", detail: a.maxSteps ? `Up to ${a.maxSteps}` : "No limit (Hermes' default)", state: a.maxSteps ? "set" : "default", target: self, edit: "maxSteps" },
         { label: "Hands work to", detail: b.team.length ? b.team.map((t) => t.data.displayName || t.data.name).join(", ") : "Nobody", state: b.team.length ? "set" : "default", target: self },
-        { label: "Helpers", detail: caps.includes("delegation") ? "Can start helpers for parts of a task" : "Off", state: caps.includes("delegation") ? "default" : "set", target: self },
+        { label: "Helpers", detail: caps.includes("delegation") ? "Can start helpers for parts of a task" : "Off", state: caps.includes("delegation") ? "default" : "set", target: self, edit: "helpers" },
         { label: "Schedules", detail: facts.schedules == null ? "—" : facts.schedules.length ? n(facts.schedules.length, "schedule") : "None", state: facts.schedules?.length ? "set" : "default", target: { tab: "home" } },
       ],
     },
@@ -70,6 +75,7 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
       id: "context", title: "Context", what: "What it knows before it answers: who it is, memory, skills",
       items: [
         { label: "Identity", detail: soulLines ? `${n(soulLines, "line")} in SOUL.md` : "Empty: say who it is and how it works", state: soulLines ? "set" : "missing", target: self },
+        { label: "Team knowledge", detail: briefFilled ? `${briefFilled} of ${BRIEF_FIELDS.length} filled, shared by every agent` : "Empty: tell your agents about the business", state: briefFilled ? "set" : "default", target: { sheet: "knowledge" } },
         { label: "Memory", detail: memEntries == null ? "—" : memEntries ? n(memEntries, "memory", "memories") : "Nothing yet", state: memEntries ? "set" : "default", target: { tab: "memory" } },
         { label: "Skills", detail: [a.skills.length ? n(a.skills.length, "own") : "", a.builtinSkills === false ? "built-in off" : "44 built-in", facts.installedSkills?.length ? `${facts.installedSkills.length} from the library` : ""].filter(Boolean).join(" · "), state: a.skills.length || facts.installedSkills?.length ? "set" : "default", target: { tab: "skills" } },
         { label: "Long chats", detail: "Hermes compacts the conversation when it fills half the window", state: "default", target: { tab: "settings" } },
@@ -81,7 +87,7 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
         ? [
             { label: primary.data.label || primary.data.name, detail: `${primary.data.model} · ${primary.data.endpoint === "local" ? "on this computer" : "cloud"}`, state: "set", target: { node: primary.id } },
             ...fallbacks.map((m): LayerItem => ({ label: `Backup: ${m.data.label || m.data.name}`, detail: m.data.model, state: "set", target: { node: m.id } })),
-            { label: "Thinking", detail: a.reasoning ? (a.reasoning === "none" ? "Off" : `${a.reasoning[0]!.toUpperCase()}${a.reasoning.slice(1)} effort`) : "As the model decides (Hermes' default)", state: a.reasoning ? "set" : "default", target: self },
+            { label: "Thinking", detail: a.reasoning ? (a.reasoning === "none" ? "Off" : `${a.reasoning[0]!.toUpperCase()}${a.reasoning.slice(1)} effort`) : "As the model decides (Hermes' default)", state: a.reasoning ? "set" : "default", target: self, edit: "reasoning" },
           ]
         : [{ label: "No model", detail: "Wire a model to it on the board", state: "missing", target: self }],
     },
@@ -101,7 +107,7 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
       id: "guardrails", title: "Guardrails", what: "What keeps it safe and affordable",
       items: [
         { label: "Approvals", detail: "Asks you before risky commands", state: "default", target: { tab: "settings" } },
-        { label: "Daily budget", detail: a.dailyBudgetUsd ? `$${a.dailyBudgetUsd} a day` : "No limit", state: a.dailyBudgetUsd ? "set" : "default", target: self },
+        { label: "Daily budget", detail: a.dailyBudgetUsd ? `$${a.dailyBudgetUsd} a day` : "No limit", state: a.dailyBudgetUsd ? "set" : "default", target: self, edit: "dailyBudgetUsd" },
       ],
     },
   ];

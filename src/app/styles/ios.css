@@ -97,7 +97,7 @@ img, svg { -webkit-user-drag: none; }
 .island-slot { top: 0; }
 .island { border-radius: 0 0 22px 22px; transform-origin: top center; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
 .island.open { border-radius: 0 0 28px 28px; }
-.island.near:not(.open) { transform: scaleX(1.05); }
+.island:not(.open):hover { transform: scaleX(1.03); }
 /* The floating island window: see-through around a pill that is flat on top and round underneath. */
 html[data-island], html[data-island] body, html[data-island] #root { background: transparent !important; }
 .pill-island { border-radius: 0 0 22px 22px; }

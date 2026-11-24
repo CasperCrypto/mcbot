@@ -95,7 +95,7 @@ export function TitleBar() {
     <header className="titlebar" data-tauri-drag-region>
       <BrandMark />
       <BoardMenu />
-      {DEMO && <span className="chip warn" data-tip="Browser demo: compile is real, runs are simulated" data-tip-side="bottom" data-testid="demo-chip">Demo</span>}
+      {DEMO && <span className="chip" data-tip="Browser demo: compile is real, runs are simulated" data-tip-side="bottom" data-testid="demo-chip">Demo</span>}
       <div className="spacer" data-tauri-drag-region />
       <Island findings={findings} />
       <button className="presence" data-testid="presence" data-dismiss-ignore onClick={() => useApp.getState().setTeamOpen(!useApp.getState().teamOpen)}
@@ -121,8 +121,8 @@ export function TitleBar() {
       >
         {busy ? <LoaderCircle size={14} className="spin-icon" /> : <Hammer size={14} />}
         Compile
-        {errors > 0 ? <span className="chip fail" style={{ height: 18, background: "rgba(0,0,0,.25)", color: "var(--on-accent)" }}>{errors}</span>
-          : drift ? <span className="chip" style={{ height: 18, background: "rgba(255,255,255,.22)", color: "var(--on-accent)" }}>{drift}</span> : null}
+        {errors > 0 ? <span className="btn-count fail">{errors}</span>
+          : drift ? <span className="btn-count">{drift}</span> : null}
       </button>}
       <WindowControls />
     </header>

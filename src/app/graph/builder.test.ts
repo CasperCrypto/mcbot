@@ -53,3 +53,20 @@ describe("Ask McBot: a model's plan", () => {
     expect(resolveGraph(all).issues.filter((i) => i.level === "error")).toEqual([]);
   });
 });
+
+describe("plans that make things", () => {
+  it("gives a social media team a designer that makes the images itself", async () => {
+    const { quickPlan, planToBoard } = await import("./builder");
+    const { resolveGraph } = await import("../../compile");
+    const plan = quickPlan("A team that makes our Instagram and LinkedIn posts, with images");
+    const designer = plan.agents.find((a) => a.name === "Designer");
+    expect(designer?.makers).toEqual(["image"]);
+    const graph = { schema: "mcbot.graph/v1" as const, id: "b", name: "B", nodes: [], edges: [] };
+    const model = { id: "m", kind: "model" as const, position: { x: 0, y: 0 }, data: { name: "cloud", label: "OpenRouter", endpoint: "cloud" as const, baseUrl: "https://openrouter.ai/api/v1", model: "x/y", apiKeyEnv: "OPENROUTER_API_KEY", pricing: null } };
+    const add = planToBoard(plan, { ...graph, nodes: [model] }, model, () => model);
+    const g = { ...graph, nodes: [model, ...add.nodes], edges: add.edges };
+    const { bundles, issues } = resolveGraph(g);
+    expect(issues.filter((i) => i.level === "error")).toEqual([]);
+    expect(bundles.find((b) => b.agent.data.displayName === "Designer")!.image?.data).toMatchObject({ media: "image", provider: "openrouter" });
+  });
+});

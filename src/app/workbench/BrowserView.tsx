@@ -1,4 +1,5 @@
 import { ArrowLeft, ArrowRight, ExternalLink, Globe, House, KeyRound, LoaderCircle, RotateCw, Star, WifiOff, MessageSquare } from "lucide-react";
+import { uiZoom } from "../lib/appearance";
 import type { LoginView } from "../../contracts/api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode } from "../../contracts/graph";
@@ -148,9 +149,12 @@ export default function BrowserView() {
     else setReload((n) => n + 1);
   };
 
+  // The native page is placed in the window's own units: with the app zoomed (Settings → Size),
+  // a CSS pixel is `uiZoom()` of them.
   const box = (): PageBox | null => {
     const r = area.current?.getBoundingClientRect();
-    return r && r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : null;
+    const z = uiZoom();
+    return r && r.width > 0 && r.height > 0 ? { x: r.left * z, y: r.top * z, w: r.width * z, h: r.height * z } : null;
   };
 
   // Desktop: show the address in the page, placed over the page area. The area may not have its

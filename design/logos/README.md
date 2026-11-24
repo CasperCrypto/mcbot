@@ -10,3 +10,13 @@ Drop an SVG here named after the tool's key, then run `npm run site:logos`.
 Everything else comes from Simple Icons (CC0). Brands that asked Simple Icons to remove their
 mark (Slack, Canva, OpenAI, Microsoft and others) are missing there: those show a lettered tile
 until their SVG is added here.
+
+## Where the files here come from
+
+- `amplitude`, `aws-knowledge` (its dark letters made white, for McBot's dark tiles), `browser`
+  (Playwright), `close`, `microsoft-learn`, `monday`, `slack`, `teams`, `twilio-docs`: Gil Barbara's
+  [logos](https://github.com/gilbarbara/logos) (CC0 1.0).
+- `comfy-cloud`, `exa`, `firecrawl`, `tavily`: [LobeHub icons](https://github.com/lobehub/lobe-icons)
+  (MIT, © LobeHub), as the model marks are.
+- `email`, `sms`, `irc`, `knowledge`, `thinking`: plain glyphs for things that have no brand, drawn
+  with [Lucide](https://lucide.dev)'s paths (ISC).

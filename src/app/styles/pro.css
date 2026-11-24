@@ -251,3 +251,119 @@ button.chip:hover { filter: brightness(1.2); }
 /* The title bar's Share button carries the host's name while this window is on their McBot. */
 .icon-btn.share-btn.remote { width: auto; padding: 0 10px 0 8px; white-space: nowrap; display: inline-flex; align-items: center; }
 .icon-btn.share-btn.remote .share-host { margin-left: 6px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+
+/* ======================================================================
+   v3 (owner's direction): nothing that sits in the page has an outline. Cards, groups, fields,
+   buttons and chips are told apart by a step in fill and a soft lift; hairlines only divide rows
+   inside a group. Colour is a small mark (a dot, a glyph), never a tinted block, and the main
+   action is a light button, not a saturated one. Floating things are frosted glass.
+   ====================================================================== */
+
+/* Window chrome */
+.main { border: 0; box-shadow: inset 0 1px 0 rgb(var(--spec-rgb) / 0.03); }
+.home-hello { border-bottom: 0; }
+.search-pill, .search-pill:hover, .sidebar-search, .kbd, .titlebar .btn:not(.primary), .titlebar .btn:not(.primary):hover { box-shadow: none; }
+.search-pill { background: rgb(var(--tint-rgb) / 0.06); }
+.search-pill:hover { background: rgb(var(--tint-rgb) / 0.09); }
+.sidebar-search { background: rgb(var(--tint-rgb) / 0.055); }
+.rail-indicator { box-shadow: none; background: rgb(var(--tint-rgb) / 0.09); }
+.list-row[aria-selected="true"], .list-row[aria-current="true"] { box-shadow: none; background: rgb(var(--tint-rgb) / 0.08); }
+
+/* Controls: fills, no rims. The main action is light. */
+.btn, .btn:hover { box-shadow: none; }
+.btn { background: rgb(var(--tint-rgb) / 0.075); }
+.btn:hover { background: rgb(var(--tint-rgb) / 0.12); }
+.btn.primary { background: var(--btn-light-bg); color: var(--btn-light-fg); box-shadow: none; }
+.btn.primary:hover { background: var(--btn-light-hover); filter: none; box-shadow: none; }
+.btn.primary:disabled { background: rgb(var(--tint-rgb) / 0.1); color: var(--text-4); }
+/* A count on a button (Compile: problems or files out of date). */
+.btn-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; font-size: 11.5px; font-weight: 650; font-variant-numeric: tabular-nums; background: rgb(0 0 0 / 0.1); }
+.btn-count.fail { background: var(--fail); color: var(--on-accent); }
+.send { background: var(--btn-light-bg); color: var(--btn-light-fg); }
+.send:hover { filter: none; background: var(--btn-light-hover); }
+.ability, .ability[aria-pressed="true"], .ask-agent, .ask-agent[aria-checked="true"], .model-chip, .tile.model-tile, .tile.file, .palette-row .tile, .hermes-mark { box-shadow: none; }
+.ability { background: rgb(var(--tint-rgb) / 0.05); }
+.ability[aria-pressed="true"] { background: rgb(var(--tint-rgb) / 0.14); }
+.ask-agent[aria-checked="true"] { background: rgb(var(--tint-rgb) / 0.11); }
+.model-chip { background: rgb(var(--tint-rgb) / 0.07); }
+
+/* Fields: a soft well, an accent ring only on focus. */
+.field input, .field textarea, .field select, input.input, .catalog-search, .share-email-row, .field input:hover, .field textarea:hover, .field select:hover { box-shadow: none; }
+.field input:hover, .field textarea:hover, .field select:hover { background: rgb(var(--tint-rgb) / 0.07); }
+.field input:focus, .field textarea:focus, .field select:focus, input.input:focus, .catalog-search:focus-within, .share-email-row:focus-within { background: rgb(var(--tint-rgb) / 0.07); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* Segmented controls: a well and a lifted thumb. */
+.segmented, .segmented-thumb, .seg-float button[aria-selected="true"] { box-shadow: none; }
+.segmented { background: rgb(var(--tint-rgb) / 0.055); }
+.segmented-thumb { background: rgb(var(--tint-rgb) / 0.14); box-shadow: 0 1px 3px rgb(0 0 0 / 0.3); }
+.seg-float button[aria-selected="true"] { background: rgb(var(--tint-rgb) / 0.14); }
+.switch { box-shadow: none; }
+
+/* Chips are neutral; a state is a small dot in front. */
+.chip, .chip.ok, .chip.run, .chip.fail, .chip.warn { background: rgb(var(--tint-rgb) / 0.07); color: var(--text-2); }
+.chip.ok::before, .chip.run::before, .chip.fail::before, .chip.warn::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; }
+.chip.ok::before { background: var(--ok); }
+.chip.run::before { background: var(--run); }
+.chip.fail::before { background: var(--fail); }
+.chip.warn::before { background: var(--warn); }
+.dash-pill[data-tone="run"], .dash-pill[data-tone="warn"] { color: var(--text); background: rgb(var(--tint-rgb) / 0.07); box-shadow: none; }
+.dash-pill[data-tone="warn"]::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
+
+/* Counts: the accent, never an alarm red. */
+.doctor-count.fail, .doctor-count.warn { background: var(--accent); color: var(--on-accent); }
+
+/* Progress and checks: quiet, not green. */
+.start-progress i { background: rgb(var(--tint-rgb) / 0.75); }
+.start-steps li[data-done] .start-mark { border-color: rgb(var(--tint-rgb) / 0.3); color: var(--text-2); }
+
+/* Cards and groups: filled and lifted, no rim. */
+.card, .widget, .catalog-card, .task-card, .team-card, .agent-tile, .na-card, .gh-card, .ap-list, .ver, .choice, .agent-pick,
+.setup-section, .skill-card, .chain-item, .share-toggle, .suggest-card, .rich-table, .rich-code, .rich-chart, .rich-drawing, .engine-log {
+  border: 0; background: var(--surface-1); box-shadow: var(--lift);
+}
+.catalog-card:hover, .task-card:hover, .team-card:hover, .agent-tile:hover, .na-card:hover, .ver:hover, .choice:hover, .agent-pick:hover, .suggest-card:hover {
+  background: var(--surface-2); box-shadow: var(--lift-hover);
+}
+.suggest-card[aria-pressed="true"], .choice[aria-pressed="true"], .agent-pick[aria-pressed="true"], .choice[aria-checked="true"], .agent-pick[aria-checked="true"] { background: var(--surface-3); box-shadow: 0 0 0 2px var(--accent-soft), var(--lift); }
+.share-invite { border: 0; background: rgb(var(--tint-rgb) / 0.055); }
+.msg.user .bubble { box-shadow: none; background: var(--surface-3); }
+.composer, .composer:focus-within { box-shadow: 0 12px 34px rgb(0 0 0 / 0.38), inset 0 1px 0 rgb(var(--spec-rgb) / 0.05); background: var(--surface-2); }
+.composer:focus-within { box-shadow: 0 12px 34px rgb(0 0 0 / 0.38), inset 0 1px 0 rgb(var(--spec-rgb) / 0.06), 0 0 0 3px var(--accent-soft); }
+.team-compose, .team-compose:focus-within { box-shadow: none; background: var(--surface-2); }
+
+/* Tiles: the kind's calm tint behind its glyph, no rim. */
+.tile, .tile.model, .tile.cloud, .tile.tool, .tile.media, .tile.channel, .tile.folder, .tile.note, .tile.logo { box-shadow: none; }
+
+/* Board blocks: glass slabs with a top light, no rim. */
+.node { background: var(--bg-node); box-shadow: inset 0 1px 0 rgb(var(--spec-rgb) / 0.06), 0 10px 28px rgb(0 0 0 / 0.42), 0 1px 2px rgb(0 0 0 / 0.3); }
+.react-flow__node:hover .node { box-shadow: inset 0 1px 0 rgb(var(--spec-rgb) / 0.08), 0 12px 32px rgb(0 0 0 / 0.46), 0 1px 2px rgb(0 0 0 / 0.3); }
+.react-flow__node.dragging .node { box-shadow: inset 0 1px 0 rgb(var(--spec-rgb) / 0.08), 0 20px 48px rgb(0 0 0 / 0.55); }
+.node-agent .foot { border-top: 0; box-shadow: var(--divide); }
+
+/* Graphs of runs, memory and folders: the same slabs as the board; a state is a mark, not a rim. */
+.gnode, .react-flow__node:hover .gnode { border: 0; background: var(--surface-1); box-shadow: inset 0 1px 0 rgb(var(--spec-rgb) / 0.05), 0 8px 24px rgb(0 0 0 / 0.36); }
+.react-flow__node:hover .gnode { background: var(--surface-2); }
+.react-flow__node.selected .gnode { box-shadow: 0 0 0 2px var(--accent-soft), inset 0 1px 0 rgb(var(--spec-rgb) / 0.06), 0 8px 24px rgb(0 0 0 / 0.36); }
+.gnode.ok, .gnode.fail, .gnode.live { border: 0; position: relative; }
+.gnode.ok::after, .gnode.fail::after, .gnode.live::after { content: ""; position: absolute; top: 10px; right: 10px; width: 7px; height: 7px; border-radius: 50%; }
+.gnode.ok::after { background: var(--ok); }
+.gnode.fail::after { background: var(--fail); }
+.gnode.live::after { background: var(--run); }
+.gnode.more { box-shadow: none; background: rgb(var(--tint-rgb) / 0.05); }
+.tile.logo.dropped { background: rgb(var(--tint-rgb) / 0.07); }
+
+/* Team knowledge (shell/KnowledgeSheet.tsx): a tall sheet of plain fields, scrolling inside. */
+.hermes-sheet.knowledge-sheet { width: min(680px, calc(100vw - 32px)); top: 7vh; max-height: calc(100dvh - 14vh); display: flex; flex-direction: column; }
+.knowledge-body { flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 14px; padding: 6px 20px 18px; }
+.knowledge-body textarea { resize: vertical; min-height: 44px; line-height: 1.5; }
+.knowledge-foot { display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 20px; box-shadow: var(--divide); font-size: 13px; }
+/* The sheets' own edges: no rim (v3); the frosted material and its top light set them apart. */
+.palette, .hermes-sheet { border: 0; }
+.palette-input, .sheet-head, .hermes-sheet header { border-bottom: 0; box-shadow: var(--divide-bottom); }
+.palette-foot { border-top: 0; box-shadow: var(--divide); }
+/* Provider and model picks: fills, the picked one light. */
+.provider-pick { border: 0; background: rgb(var(--tint-rgb) / 0.06); }
+.provider-pick:hover { background: rgb(var(--tint-rgb) / 0.1); color: var(--text); }
+.provider-pick[aria-checked="true"] { background: var(--btn-light-bg); color: var(--btn-light-fg); box-shadow: none; }
+.model-pick { border: 0; }
+.model-pick[aria-checked="true"] { border: 0; background: rgb(var(--tint-rgb) / 0.1); }

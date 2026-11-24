@@ -181,9 +181,13 @@ Change them additively; a breaking change bumps the version.
   (`engine/updates.ts`, `GET /api/update`, host only), sending nothing about the computer. A newer published
   release shows once per launch as a notice and in Settings → About, with Download (the release page). Installing
   stays manual until the signed Tauri updater (owner's key).
-- First launch runs the setup assistant (`src/app/setup/`): its answers go into
-  every agent's SOUL.md and their USER.md memory; `<workspace>/setup.json`
-  records that it ran. Local model servers are found by asking the usual
+- First launch runs the setup assistant (`src/app/setup/`, pure parts in `setup/onboarding.ts`), step by
+  step: who it is for, you, your business (what you do, offer, customers, links), what the agents should
+  get done (goals → starter teams), voice and channels, the team (members can be left out), a model,
+  and the tools that team needs (an image service and its key, unless the cloud model's key already
+  runs it; web search needs none). The answers become the board's **brief** (every agent's SOUL.md)
+  and USER.md memory; the team is built with its tools, makers and shared files, compiled, and its
+  Hermes skills installed; `<workspace>/setup.json` records that it ran. Local model servers are found by asking the usual
   addresses for `/v1/models` (Ollama :11434, LM Studio :1234, llama.cpp :8080, vLLM :8000,
   Jan :1337), or any address the person types.
 
@@ -228,6 +232,13 @@ Change them additively; a breaking change bumps the version.
 - One Y.Doc per board, everything keyed by id (no Y.Array), node fields as
   separate map entries. Persisted as plain JSON by the relay; loaded loosely
   (a half-edited board is not compile-valid and must still load).
+- **Team knowledge** lives in the board too (`brief`, optional in `mcbot.graph/v1`; a Y.Map `brief` with one entry per
+  field, so two people editing two fields keep both): who the agents work for, what you do, offer, customers, goals,
+  voice, channels, how you sell, links, notes. Compile writes it into **every agent's SOUL.md** as a "Shared knowledge"
+  section, after the agent's own text and before the Team section (`renderKnowledge` in `src/compile/soul.ts`: SOUL.md
+  is the one file Hermes always puts in the system prompt, `agent/prompt_builder.py` `build_context_files_prompt`);
+  `splitSoul` in `src/harness/read.ts` reads it back out (the agent's soul never takes it in). Edited in the Team
+  knowledge sheet (`shell/KnowledgeSheet.tsx`: ⌘K, Home's Get started, Layers → Context) and by the setup assistant.
 - Sticky notes live in the board too (`notes`, optional in `mcbot.graph/v1`, keyed by id like
   everything else): on the canvas for everyone, pinned ones on Home. The compiler never reads them.
   On the canvas a note moves by its grip (top) or footer, its text never drags; a new one goes to free
@@ -283,11 +294,19 @@ Change them additively; a breaking change bumps the version.
 - **Look:** quiet, pro, Apple-native, and **dark, always** (owner's decision: no light or system
   appearance). Settings → Appearance (and ⌘K) picks one of macOS's eight accent colours
   (`lib/appearance.ts`: `data-accent` on `<html>`, kept per computer, applied before the first
-  paint; every window follows at once). Deep neutral blacks; hairline edges (`--line*`), not
-  shadows, for anything that sits in the page; shadows only for what floats; tight radii (controls
-  7–8, cards 10–12, sheets 14). A kind's colour is a tint behind its coloured glyph (`--k-*-rgb`,
-  `--k-*-ink`), a brand logo sits on its own colour (`brandTint` in `graph/Logo.tsx`), never a
-  candy block; the dock and rail are monochrome glyphs. McBot's own mark (the burger, `Logo`)
+  paint; every window follows at once) and the **Size** (100–145%, **120% by default**: the owner
+  found 100% too small; ⌘+ / ⌘−): the app window's own zoom (Tauri `setZoom`,
+  `core:webview:allow-set-webview-zoom`; never a CSS zoom, which breaks React Flow), so the native
+  browser page is placed in zoomed units (`uiZoom`). **Nothing that sits in the page has an outline**
+  (owner's decision, v3: outlined boxes read as a generic dashboard): cards, groups, fields, buttons
+  and chips are set apart by a step in fill (`--surface-1/2/3`) and a soft lift (`--lift`);
+  hairlines only divide rows inside a group (`--divide`). Tight radii (controls 7–8, cards 10–12,
+  sheets 14). State colours are muted (`--ok-rgb`, `--warn-rgb`, `--fail-rgb`), shown as a small dot or
+  glyph, never a tinted block: chips are neutral with a dot, counts are the accent, progress is
+  neutral. The main action is a light button (`.btn.primary`, the send button), not a saturated
+  block; the accent marks selection, focus and switches. A kind's colour is a calm tint behind its
+  glyph (`--k-*-rgb`, `--k-*-ink`), a brand logo sits on its own colour (`brandTint` in
+  `graph/Logo.tsx`, no rim), never a candy block; the dock and rail are monochrome glyphs. McBot's own mark (the burger, `Logo`)
   stands for what McBot itself does (Ask McBot); no sparkles or other stock "AI" icons. All
   colours, radii, shadows and motion are tokens in `src/app/styles/tokens.css` (macOS's eight
   accent colours as `--accent-rgb` / `--accent` / `--accent-text`); components use tokens, not
@@ -295,14 +314,14 @@ Change them additively; a breaking change bumps the version.
   (`styles/tokens.test.ts` fails on a literal colour). Fixed-colour surfaces are the exceptions:
   the island, colour tiles, swatches, note paper. `src/app/styles/pro.css` (loaded last) is the
   finish of every shared element (buttons, fields, chips, cards, tiles, nodes, dock, composer,
-  Home). Colour means identity (agents, node kinds) or state (running, ok, failed). macOS system
-  colours, flat: the accent is the person's (system blue by default); no gradients, glows or
-  gradient text (the website follows the same rule).
+  Home). Colour means identity (agents, node kinds) or state (running, ok, failed), flat: the accent is
+  the person's (system blue by default); no gradients, glows or gradient text (the website follows
+  the same rule).
 - **Glass and springs** (`src/app/styles/glass.css`, before `pro.css`): whatever floats over content
   (sheets, menus, tooltips, the dock, board blocks, the inspector, the chat header and composer)
-  is a material — `--mat-*` fill, `--mat-blur`, a hairline edge and specular top line
-  (`--mat-edge`) — never a gradient; content surfaces stay solid. The palette, menus and sheets
-  are nearly opaque (`--mat-regular`, `--mat-thick`), so nothing behind them reads through. Motion uses `--spring-snappy`
+  is frosted glass — `--mat-*` fill, a strong `--mat-blur`, a specular top light and the faintest
+  rim (`--mat-edge`) — never a gradient; content surfaces stay solid. The palette, menus and sheets
+  (`--mat-regular`, `--mat-thick`) blur what lies behind past reading, so only its light comes through. Motion uses `--spring-snappy`
   (controls), `--spring-bouncy` (things that arrive) and `--spring-smooth` (things that move):
   real springs via CSS `linear()` where supported, cubic fallbacks in tokens.css. The rail's
   selection and segmented controls' thumbs slide. Reduced motion turns it all off.
@@ -326,28 +345,28 @@ Change them additively; a breaking change bumps the version.
   you" point there when an agent has no model, a key is missing or a local server isn't answering.
 - **Ask McBot** (`shell/BuilderSheet.tsx`; ⌘K "Ask McBot to build…", the dock's first button, the empty board, New
   agent, and ⌘K's "Ask McBot to build this" for any typed request): the person describes the agents they need; a plan
-  (`src/harness/plan.ts`: agents with soul, tools, chat apps, Hermes skills and steps per message, plus hand-offs) is
+  (`src/harness/plan.ts`: agents with soul, tools, chat apps, makers, Hermes skills and steps per message, plus
+  hand-offs; a social media or marketing request gets a Designer that makes the images) is
   shown for review, and "Add to board" places it in one transaction (one ⌘Z takes it back), compiles, installs the
   skills (`learnTeamSkills`) and fits the board. The board's own model plans it when it can (`POST /api/builder/plan`,
   host only, `engine/builder.ts`: the first agent's model, else the first model block, on its OpenAI-compatible
   `/chat/completions`, the key read in the engine; hard rule 4), given only the app's catalog ids (`PLAN_CHOICES`);
   otherwise (no model, a teammate's window, the demo, a failed answer) `quickPlan` makes it from the words. Every plan
   is cut to known ids twice (`restrictPlan` in the engine and in `planToBoard`). Nothing changes until accepted.
-- **Layers** (third mode of the board, `graph/LayersView.tsx`, pure `graph/layers.ts`): one agent's harness outside in:
-  Surfaces (McBot chat, chat apps), Loop (steps per message, hand-offs, helpers, schedules), Context (SOUL.md, memory,
-  skills, Hermes' compaction), Model (main and backups), Tools (abilities, connectors, makers), Plugins, Guardrails
-  (approvals, daily budget). Each row says whether the board sets it, Hermes defaults it or it is missing, and opens
-  where it is changed. The loop's **steps per message** is the agent's `maxSteps`, compiled to `agent.max_turns`
+- **Layers** (second mode of the board, `graph/LayersView.tsx`, pure `graph/layers.ts`): one agent's harness outside in,
+  grouped like Settings: Surfaces (McBot chat, chat apps), Loop (steps per message, hand-offs, helpers, schedules),
+  Context (SOUL.md, team knowledge, memory, skills, Hermes' compaction), Model (main and backups), Tools (abilities,
+  connectors, makers), Plugins, Guardrails (approvals, daily budget). Each row says whether the board sets it, Hermes
+  defaults it or it is missing. The agent's own settings (steps per message, helpers, thinking, daily budget: `edit`
+  in `layers.ts`) change right in their row; every other row opens where it is changed. The loop's **steps per message** is the agent's `maxSteps`, compiled to `agent.max_turns`
   (only when set; `OWNED` `agent.max_turns`; read back by `src/harness/read.ts`). Its **thinking** is `reasoning`,
   compiled to `agent.reasoning_effort` (`none`…`ultra`, only when set; `OWNED`; read back). A tool block's **only
   these tools** (`toolsInclude`, and `toolsExclude` read from Hermes) compiles to `mcp_servers.<name>.tools.include`
   / `.exclude`: fewer tool definitions, fewer tokens per message (Hermes' code-mode-like `execute_code` covers only
   its built-in tools, not MCP ones).
-- **Board | Hermes** (top of the board): Board is what you edit; Hermes (`src/app/graph/HermesView.tsx`)
-  draws the whole harness behind it: gateway, chat apps, each agent's model chain, abilities,
-  tools, makers, skills, memory, schedules, the shared task board, approvals. A click on a part
-  opens what makes it (`hermesTarget.ts`): the block on the Board, or the Memory, Home, Tasks or
-  engine view, so what you change is always what compiles.
+- **Board | Layers** (top left of the board, clear of the island): Board is the harness you draw; Layers is one
+  agent's harness you change in place. (A read-only map of Hermes was here once; the owner asked what it was for
+  if nothing could be changed in it, and it went.)
 - **Undo** (`src/board/undo.ts`): Yjs' UndoManager over blocks, wires, notes and the board name
   (never chat), tracking only origin `null`, i.e. this window's own edits, so ⌘Z / ⇧⌘Z never take
   back a teammate's or the engine's change; edits within 600 ms are one step. Created with the doc
@@ -422,14 +441,17 @@ Change them additively; a breaking change bumps the version.
   `scrollIntoView` returns a Promise in current Chromium, and an effect that
   returns a non-function crashes React on cleanup.
 - **Dynamic island** (`src/app/shell/Island.tsx`): always in the middle of the title bar. At rest a
-  slim pill; it grows (spring, `--ease-island`) into the most important thing now: an approval
-  (answer inline), agents at work, a compile, a new team message, a notice. It opens into
-  everything at once plus quick actions as the pointer heads for it — its path is projected
-  ~140 ms ahead, a fast sweep across the title bar does not count — leans in when the pointer is
-  close, and closes once the pointer moves away; click or Enter pins it open until Esc or a click
-  outside. One height (30px) for every title-bar control. Opened, it also lists the last notices
-  (`notices` in the store, kept with each `toast`; Clear) and the doctor's findings with their fix
-  (`applyFix` in `shell/DoctorSheet.tsx`), so nothing it covers is lost.
+  pill that says how things are ("3 agents ready"); it grows (spring, `--ease-island`) into the most
+  important thing now: an approval (answer inline), an agent at work with what it is doing (the tool
+  in use, `lib/runStep.ts`), a compile, a new team message, a notice. It opens only when the pointer
+  rests on it (240 ms) or on click / Enter — never because the pointer passes on its way to
+  something under it — and, opened by hovering, closes when the pointer leaves; by click, on Esc or
+  a click outside. Opened (600 px wide, scrolling rather than cutting off): what needs you, who works
+  on what, today's spend and runs, the next scheduled run, a field to ask any agent (queued while it
+  works, as in Chat), quick actions (Build a team, New agent, Compile, Invite, Team, Commands) and
+  the window's Minimize / Maximize (app only). One height (30px) for every title-bar control. It
+  also lists the last notices (`notices` in the store; Clear) and the doctor's findings with their
+  fix (`applyFix` in `shell/DoctorSheet.tsx`), so nothing it covers is lost.
 - **Rail** (`shell/Rail.tsx`): a few pinned views (default Home, Board, Chat, Tasks, Runs) and "…", a menu of every
   view with its shortcut and a pin toggle (pins kept per computer in localStorage); the view you are on shows even
   when it is not pinned. The app opens on Chat. The title bar stays calm: Compile shows on the Board, or anywhere
@@ -453,8 +475,11 @@ Change them additively; a breaking change bumps the version.
   on macOS it stays a black rectangle (transparency needs a private API).
 - **New agent** (`shell/NewAgentSheet.tsx`): 19 one-click starting cards in five groups (`agentSuggestions.ts`) fill
   name, purpose and soul, and name the Hermes library skills they start with; after the first compile those install
-  one by one (`learnSkills` in `actions.ts`, `POST /api/skills/install`, host only). Starter teams (`graph/teams.ts`, 8)
-  carry skills per member the same way, with one notice per team. Every skill id they name must be in
+  one by one (`learnSkills` in `actions.ts`, `POST /api/skills/install`, host only). Starter teams (`graph/teams.ts`, 10)
+  carry skills per member the same way, with one notice per team. Members and cards also bring their **tools** (catalog
+  ids, e.g. web search) and **makers** (image, video), wired to them, so a designer makes the images itself and a
+  researcher searches the web: agents do the work, not only describe it (owner's ask). A maker uses the service whose
+  key the board's cloud model already has (`makerProvider`), else OpenRouter. Every skill id they name must be in
   `src/contracts/library.generated.ts` (`npm run engine:library` from `hermes/optional-skills` and `hermes/skills`;
   `npm test` fails while it is stale or a card names a skill Hermes doesn't ship). The demo's library is that list
   (all 141), and the Skills view lists Hermes' 44 built-in skills by name ("Show all").

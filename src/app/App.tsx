@@ -14,6 +14,7 @@ import { ToolCatalog } from "./shell/ToolCatalog";
 import { ChatAppCatalog } from "./shell/ChatAppCatalog";
 import { TeamPanel } from "./shell/TeamPanel";
 import { TeamsSheet } from "./shell/TeamsSheet";
+import { KnowledgeSheet } from "./shell/KnowledgeSheet";
 import { BuilderSheet } from "./shell/BuilderSheet";
 import { DrawingSheet } from "./chat/DrawingSheet";
 import { ShareSheet } from "./shell/ShareSheet";
@@ -26,6 +27,7 @@ import { BrandMark, TitleBar } from "./shell/TitleBar";
 import { BoardProvider, useBoard } from "./state/board";
 import { useSignals } from "./state/signals";
 import { engineRestart, engineStatus, inApp, onSummon, type EngineStatus } from "./lib/desktop";
+import { stepScale } from "./lib/appearance";
 import { engineDetails, engineVerdict } from "./lib/engineHealth";
 import { useApp } from "./state/store";
 import { useTasks } from "./views/TasksView";
@@ -148,6 +150,10 @@ function BoardEffects() {
       } else if (/^[1-9]$/.test(k) && VIEWS[Number(k) - 1]) {
         e.preventDefault();
         app.setTab(VIEWS[Number(k) - 1]!.tab);
+      } else if ((k === "=" || k === "+" || k === "-") && inApp() && app.tab !== "code") {
+        // Bigger or smaller, the whole app (a web browser zooms by itself; Code zooms its editor).
+        e.preventDefault();
+        app.setAppearance({ ...app.appearance, scale: stepScale(app.appearance.scale, k === "-" ? -1 : 1) });
       }
     };
     window.addEventListener("keydown", onKey);
@@ -214,6 +220,7 @@ function Shell() {
       </Boundary>
       <Boundary>
         <TeamsSheet />
+        <KnowledgeSheet />
         <BuilderSheet />
         <DrawingSheet />
       </Boundary>

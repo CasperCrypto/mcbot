@@ -331,6 +331,35 @@ export type Message = z.infer<typeof MessageSchema>;
 /** A board keeps its last messages; older ones drop off. */
 export const MESSAGES_KEPT = 500;
 
+/**
+ * What every agent knows about who it works for: the business (or person), what it does, for whom,
+ * the goals, the voice. Optional; each field plain text. Compiled into every agent's SOUL.md as its
+ * "Shared knowledge" section (src/compile/soul.ts), the one file Hermes always puts in the system
+ * prompt (agent/prompt_builder.py `build_context_files_prompt`, `load_soul_md`).
+ */
+/** Each field's longest text (the sheet and the setup assistant cut there too). */
+export const BRIEF_MAX = { who: 300, what: 1500, offer: 1500, customers: 1500, goals: 2000, voice: 800, channels: 600, sales: 1500, links: 800, notes: 8000 } as const;
+const briefText = (k: keyof typeof BRIEF_MAX) => z.string().max(BRIEF_MAX[k]).default("");
+export const BriefSchema = z.object({
+  /** The business or person, in a few words ("Northwind Bakery, a family bakery in Leeds"). */
+  who: briefText("who"),
+  what: briefText("what"),
+  offer: briefText("offer"),
+  customers: briefText("customers"),
+  goals: briefText("goals"),
+  voice: briefText("voice"),
+  /** Where it shows up: "Instagram, LinkedIn, newsletter". */
+  channels: briefText("channels"),
+  sales: briefText("sales"),
+  links: briefText("links"),
+  notes: briefText("notes"),
+});
+export type Brief = z.infer<typeof BriefSchema>;
+export const BRIEF_FIELDS = ["who", "what", "offer", "customers", "goals", "voice", "channels", "sales", "links", "notes"] as const satisfies readonly (keyof Brief)[];
+export const emptyBrief = (): Brief => BriefSchema.parse({});
+/** A brief with nothing in it is no brief. */
+export const briefHasContent = (b: Partial<Brief> | null | undefined): boolean => !!b && BRIEF_FIELDS.some((k) => (b[k] ?? "").trim());
+
 export const GraphSchema = z.object({
   schema: z.literal(GRAPH_SCHEMA),
   id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
@@ -343,6 +372,8 @@ export const GraphSchema = z.object({
   messages: z.array(MessageSchema).optional(),
   /** Frames grouping blocks (optional, never compiled). */
   frames: z.array(FrameSchema).optional(),
+  /** What every agent knows about who it works for (optional; compiled into each SOUL.md). */
+  brief: BriefSchema.optional(),
 });
 export type Graph = z.infer<typeof GraphSchema>;
 

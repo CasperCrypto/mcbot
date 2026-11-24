@@ -9,7 +9,11 @@
  * (src/harness/read.test.ts), apart from compile's header comment.
  */
 import { parse } from "yaml";
+import { BRIEF_LABELS, KNOWLEDGE_HEAD, KNOWLEDGE_INTRO } from "../compile/soul";
 import {
+  BRIEF_FIELDS,
+  emptyBrief,
+  type Brief,
   CAPABILITIES,
   GRAPH_SCHEMA,
   MEDIA_PROVIDERS,
@@ -85,17 +89,42 @@ function isLocal(url: string): boolean {
   }
 }
 
-/** Split SOUL.md into the agent's own text and the hand-off list compile appends (src/compile/soul.ts). */
-export function splitSoul(soul: string): { own: string; team: string[] } {
+/**
+ * Split SOUL.md into the agent's own text, the board's brief (the "Shared knowledge" section) and the
+ * hand-off list compile appends (src/compile/soul.ts).
+ */
+export function splitSoul(soul: string): { own: string; team: string[]; brief: Brief | null } {
   const at = soul.indexOf(`\n\n${TEAM_HEAD}\n\n`);
-  if (at < 0) return { own: soul, team: [] };
-  const tail = soul.slice(at + TEAM_HEAD.length + 4).split("\n");
-  const team = tail.map((l) => TEAM_LINE.exec(l)?.[1]).filter((n): n is string => !!n);
-  // Anything a person wrote after the list is theirs, not the section's: it stays (compile puts it
-  // back above the Team section, which it always writes last).
-  const after = tail.filter((l) => l.trim() && !TEAM_LINE.test(l) && !l.startsWith(TEAM_INTRO)).join("\n").trim();
-  const own = soul.slice(0, at);
-  return { own: after ? `${own}\n\n${after}` : own, team };
+  let own = soul;
+  let team: string[] = [];
+  if (at >= 0) {
+    const tail = soul.slice(at + TEAM_HEAD.length + 4).split("\n");
+    team = tail.map((l) => TEAM_LINE.exec(l)?.[1]).filter((n): n is string => !!n);
+    // Anything a person wrote after the list is theirs, not the section's: it stays (compile puts it
+    // back above the Team section, which it always writes last).
+    const after = tail.filter((l) => l.trim() && !TEAM_LINE.test(l) && !l.startsWith(TEAM_INTRO)).join("\n").trim();
+    own = after ? `${soul.slice(0, at)}\n\n${after}` : soul.slice(0, at);
+  }
+  const k = own.indexOf(`\n\n${KNOWLEDGE_HEAD}\n\n${KNOWLEDGE_INTRO}\n\n`);
+  if (k < 0) return { own, team, brief: null };
+  return { own: own.slice(0, k), team, brief: readKnowledge(own.slice(k + KNOWLEDGE_HEAD.length + KNOWLEDGE_INTRO.length + 6)) };
+}
+
+/** The "Shared knowledge" lines back into a brief: each `**Label:**` runs to the next one. */
+function readKnowledge(text: string): Brief {
+  const brief = emptyBrief();
+  const labels = new Map(BRIEF_LABELS.map(([k, label]) => [label, k]));
+  let field: keyof Brief | null = null;
+  for (const line of text.split("\n")) {
+    const m = /^\*\*([^*]+):\*\* ?(.*)$/.exec(line);
+    const k = m ? labels.get(m[1]!) : undefined;
+    if (k) {
+      field = k;
+      brief[k] = m![2]!;
+    } else if (field) brief[field] = `${brief[field]}\n${line}`;
+  }
+  for (const k of BRIEF_FIELDS) brief[k] = brief[k].trim();
+  return brief;
 }
 
 /** SKILL.md → a board skill, or null when it is not one the board can hold. */
@@ -135,6 +164,7 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
   const edges: GraphEdge[] = [];
   const byKey = new Map<string, string>(); // shared node identity → node id
   let sideY = 0;
+  let brief: Brief | null = null;
 
   const shared = (key: string, make: () => GraphNode): string => {
     const have = byKey.get(key);
@@ -170,8 +200,10 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
     }
 
     // Who the agent is: SOUL.md (without the compiled Team section) and profile.yaml.
-    const { own, team } = splitSoul((p.soul ?? "").replace(/\n+$/, ""));
+    const { own, team, brief: known } = splitSoul((p.soul ?? "").replace(/\n+$/, ""));
     if (team.length) teams.set(p.name, team);
+    // Every agent carries the same brief; the first one found is the board's.
+    brief ??= known;
     let meta: Obj = {};
     if (p.profileYaml) {
       try {
@@ -322,7 +354,9 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
     }
   }
 
-  return { graph: { schema: GRAPH_SCHEMA, id: board.id, name: board.name, nodes, edges }, unshown };
+  const graph: Graph = { schema: GRAPH_SCHEMA, id: board.id, name: board.name, nodes, edges };
+  if (brief) graph.brief = brief;
+  return { graph, unshown };
 
   // Distinct nodes that share a name (two different "local" models) get a numbered id.
   function byKeyCount(kind: string, name: string): string {

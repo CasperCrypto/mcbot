@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AgentDataSchema } from "../contracts/graph";
+import { AgentDataSchema, BriefSchema } from "../contracts/graph";
 import { renderSoul } from "./soul";
 
 const agent = (over: object) => AgentDataSchema.parse({ name: "triage", ...over });
@@ -22,5 +22,15 @@ describe("renderSoul", () => {
       + "- `editor`\n- `writer` (Writer): Writes the posts.\n",
     );
     expect(renderSoul(agent({ displayName: "Lead" }), team.slice(0, 1))).toMatch(/^# Lead\n\n## Team\n/);
+  });
+  it("gives every agent the board's brief as a Shared knowledge section, before the Team section", () => {
+    const brief = BriefSchema.parse({ who: "Northwind Bakery", what: "Sourdough and pastries, baked daily.", channels: "Instagram, newsletter", notes: "Closed on Mondays.\nNo nuts in anything." });
+    expect(renderSoul(agent({ soul: "You write our posts.\n" }), [], brief)).toBe(
+      "You write our posts.\n\n## Shared knowledge\n\nEvery agent on this team knows this. Use it in all your work.\n\n"
+      + "**Who:** Northwind Bakery\n**What we do:** Sourdough and pastries, baked daily.\n**Channels:** Instagram, newsletter\n**Notes:** Closed on Mondays.\nNo nuts in anything.\n",
+    );
+    const withTeam = renderSoul(agent({ soul: "You lead.\n" }), [agent({ name: "writer" })], brief);
+    expect(withTeam.indexOf("## Shared knowledge")).toBeLessThan(withTeam.indexOf("## Team"));
+    expect(renderSoul(agent({ soul: "You lead.\n" }), [], BriefSchema.parse({}))).toBe("You lead.\n");
   });
 });
