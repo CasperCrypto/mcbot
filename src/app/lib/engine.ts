@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView, LearnExport, LearnView } from "../../contracts/api";
 import type { HarnessVersion } from "../../harness/versions";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
@@ -18,6 +18,7 @@ const auth = (): Record<string, string> => (REMOTE ? { authorization: `Bearer ${
 import type { HarnessPlan, PlanChoices } from "../../harness/plan";
 import { demoEngine, subscribeDemoEvents } from "../demo/engine";
 import { EngineError } from "./engineError";
+import type { DatasetFormat, DatasetPick, Rating } from "../../harness/learn";
 
 export { EngineError };
 
@@ -77,6 +78,10 @@ const http = {
   saveMemory: (profile: string, target: "memory" | "user", entries: string[], baseSha256: string | null) =>
     call<MemoryFileView>("PUT", "/api/memory", { profile, target, entries, baseSha256 }),
   cost: (boardId: string) => call<CostReport>("GET", `/api/cost?boardId=${encodeURIComponent(boardId)}`),
+  ratings: (boardId: string) => call<Record<string, Rating>>("GET", `/api/ratings?boardId=${encodeURIComponent(boardId)}`),
+  rate: (runId: string, score: 0 | 1 | null, note?: string) => call<{ runId: string; rating: Rating | null }>("POST", "/api/ratings", { runId, score, ...(note ? { note } : {}) }),
+  learn: (boardId: string) => call<LearnView>("GET", `/api/learn?boardId=${encodeURIComponent(boardId)}`),
+  exportDataset: (boardId: string, agentNodeId: string, format: DatasetFormat, pick: DatasetPick) => call<LearnExport>("POST", "/api/learn/export", { boardId, agentNodeId, format, pick }),
   roots: (boardId: string) => call<FsRoot[]>("GET", `/api/fs/roots?boardId=${encodeURIComponent(boardId)}`),
   openFolder: (path: string) => call<FsRoot>("POST", "/api/fs/roots", { path }),
   browse: (path: string | null) => call<FsBrowse>("GET", `/api/fs/browse${path ? `?path=${encodeURIComponent(path)}` : ""}`),

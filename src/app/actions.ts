@@ -202,3 +202,18 @@ export async function learnTeamSkills(label: string, skills: readonly { profile:
   if (done) useApp.getState().toast({ kind: "ok", text: `${label} learned ${done} Hermes skill${done === 1 ? "" : "s"}`, action: skillsTab });
   if (failed.length) useApp.getState().toast({ kind: "fail", text: `Couldn't add ${failed.join(", ")}`, action: skillsTab });
 }
+
+/** Thumbs up (1) or down (0) on an answer, or take it back (null): shown at once, saved by the engine (Learn). */
+export async function rateRun(runId: string, score: 0 | 1 | null): Promise<void> {
+  const app = useApp.getState();
+  const before = app.ratings[runId] ?? null;
+  app.setRating(runId, score === null ? null : { score, at: Date.now() });
+  try {
+    const { rating } = await engine.rate(runId, score);
+    useApp.getState().setRating(runId, rating);
+  } catch (err) {
+    useApp.getState().setRating(runId, before);
+    app.toast({ kind: "fail", text: (err as Error).message });
+  }
+}
+

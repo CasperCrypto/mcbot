@@ -26,6 +26,12 @@ export const CLOUD_PROVIDERS: CloudProvider[] = [
   // Base URL and key variable: hermes_cli/auth.py:223 (Hermes' own opencode-zen provider). The first model is a
   // guess to be replaced by the provider's list (`/v1/models`); whether Zen answers without a key is not verified.
   { id: "opencode-zen", label: "OpenCode Zen", baseUrl: "https://opencode.ai/zen/v1", keyEnv: "OPENCODE_ZEN_API_KEY", keysUrl: "https://opencode.ai/auth", model: "deepseek-flash" },
+  // OpenCode's Go subscription (open models for a flat monthly price): hermes_cli/auth.py:227. Same host as Zen,
+  // so presets are told apart by their whole address (providerOf). The model comes from the provider's list.
+  { id: "opencode-go", label: "OpenCode Go", baseUrl: "https://opencode.ai/zen/go/v1", keyEnv: "OPENCODE_GO_API_KEY", keysUrl: "https://opencode.ai/auth", model: "" },
+  // Concentrate: one OpenAI-compatible gateway to 100+ models with routing and fallbacks, no fees on top
+  // (concentrate.ai). Not one of Hermes' named providers: it runs as McBot's own `mcbot-<name>` endpoint like any other.
+  { id: "concentrate", label: "Concentrate", baseUrl: "https://api.concentrate.ai/v1", keyEnv: "CONCENTRATE_API_KEY", keysUrl: "https://concentrate.ai", model: "" },
   { id: "together", label: "Together", baseUrl: "https://api.together.xyz/v1", keyEnv: "TOGETHER_API_KEY", keysUrl: "https://api.together.ai/settings/api-keys", model: "meta-llama/Llama-3.3-70B-Instruct-Turbo" },
 ];
 
@@ -38,8 +44,13 @@ export const LOCAL_PRESETS = [
   { label: "Jan", baseUrl: "http://127.0.0.1:1337/v1" },
 ];
 
-/** The preset an address belongs to, if any. */
+/** The preset an address belongs to, if any: the longest preset address it starts with, else the first on its host. */
 export const providerOf = (baseUrl: string): CloudProvider | undefined => {
+  const norm = (u: string) => u.trim().replace(/\/+$/, "").toLowerCase();
+  const b = norm(baseUrl);
+  const byPath = CLOUD_PROVIDERS.filter((p) => b === norm(p.baseUrl) || b.startsWith(`${norm(p.baseUrl)}/`))
+    .sort((x, y) => y.baseUrl.length - x.baseUrl.length)[0];
+  if (byPath) return byPath;
   const host = (() => {
     try {
       return new URL(baseUrl).host;

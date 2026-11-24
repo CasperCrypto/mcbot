@@ -1,11 +1,11 @@
 import { starterPrompts } from "../chat/starters";
-import { ArrowUp, Download, PanelRight, Plug, Plus, Square, Waypoints, X } from "lucide-react";
+import { ArrowUp, Download, PanelRight, Plug, Plus, Square, Waypoints, X, ThumbsUp, ThumbsDown, ListChecks, Check, LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode, ModelData } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 import { resolveGraph } from "../../compile";
-import { runAgent, stopRun } from "../actions";
-import { engine } from "../lib/engine";
+import { rateRun, runAgent, stopRun } from "../actions";
+import { engine, REMOTE } from "../lib/engine";
 import { duration, plainLine, tokens, usd } from "../lib/format";
 import { Sidebar } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
@@ -17,6 +17,7 @@ import { screenCaptures } from "../chat/screen";
 import { RichText } from "../chat/RichText";
 import { AgentPage } from "../agent/AgentPage";
 import { ModelChip } from "../graph/Logo";
+import { isPlanStep, planOf, type PlanItem } from "../chat/plan";
 
 function shortTime(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -97,9 +98,42 @@ function Made({ profile, kind, path }: { profile: string; kind: "image" | "video
   );
 }
 
+/** Thumbs up or down on an answer: what Learn trains on (a second click takes it back). */
+function Rate({ runId }: { runId: string }) {
+  const rating = useApp((s) => s.ratings[runId]);
+  const pick = (score: 0 | 1) => void rateRun(runId, rating?.score === score ? null : score);
+  return (
+    <span className="rate" role="group" aria-label="Rate this answer">
+      <button type="button" className="rate-btn" aria-pressed={rating?.score === 1} aria-label="Good answer" data-tip="Good answer: train on it" data-tip-side="top" onClick={() => pick(1)} data-testid="rate-up"><ThumbsUp size={13} /></button>
+      <button type="button" className="rate-btn" aria-pressed={rating?.score === 0} aria-label="Bad answer" data-tip="Not good: leave it out" data-tip-side="top" onClick={() => pick(0)} data-testid="rate-down"><ThumbsDown size={13} /></button>
+    </span>
+  );
+}
+
 /** An agent's answer: its steps, screen, approval, text and what it made. Also a guest's chat (`waitingFor`: the host). */
+/** The agent's plan (Hermes' to-do tool), live: what is done, what it is on, what comes next. */
+function Plan({ items, live }: { items: PlanItem[]; live: boolean }) {
+  const done = items.filter((i) => i.status === "completed").length;
+  return (
+    <div className="plan" data-testid="agent-plan">
+      <div className="plan-head"><ListChecks size={13} /><b>Plan</b><span className="faint num">{done} of {items.filter((i) => i.status !== "cancelled").length}</span></div>
+      <ol className="plan-items">
+        {items.map((i) => (
+          <li key={i.id} data-status={i.status} className={i.parent ? "sub" : undefined}>
+            <span className="plan-mark" aria-hidden>
+              {i.status === "completed" ? <Check size={11} strokeWidth={3} /> : i.status === "in_progress" && live ? <LoaderCircle size={12} className="spin-icon" /> : i.status === "cancelled" ? <X size={11} /> : null}
+            </span>
+            <span className="plan-text">{i.content}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 export function AgentMessage({ run, events, name, onChoose, waitingFor }: { run: RunSummary; events: RunEvent[] | undefined; name: string; onChoose?: (reply: string) => void; waitingFor?: string }) {
-  const tools = (events ?? []).filter((e): e is Extract<RunEvent, { type: "run.tool.started" }> => e.type === "run.tool.started");
+  const plan = planOf(events);
+  const tools = (events ?? []).filter((e): e is Extract<RunEvent, { type: "run.tool.started" }> => e.type === "run.tool.started" && !isPlanStep(e));
   const failedTools = new Set((events ?? []).filter((e) => e.type === "run.tool.finished" && e.isError).map((e) => (e.type === "run.tool.finished" ? e.tool : "")));
   const text = (run.text || "").trim();
   const failed = run.status === "failed" || run.status === "interrupted";
@@ -113,6 +147,7 @@ export function AgentMessage({ run, events, name, onChoose, waitingFor }: { run:
           {tools.map((t) => <span key={t.seq} className={`step-chip${failedTools.has(t.tool) ? " fail" : ""}`} data-tip={t.tool}><Plug size={11} /><span>{toolLabel(t.tool)}</span></span>)}
         </div>
       )}
+      {plan && plan.length > 0 && <Plan items={plan} live={run.status === "running"} />}
       {shots.length > 0 && <Screen profile={run.profile} shots={shots} live={run.status === "running"} />}
       <ApprovalCard run={run} waitingFor={waitingFor} />
       {run.status === "running" && !text ? (
@@ -128,6 +163,7 @@ export function AgentMessage({ run, events, name, onChoose, waitingFor }: { run:
           {run.finishedAt && <span>{duration(run.finishedAt - run.startedAt)}</span>}
           {run.tokens && <span>{tokens(run.tokens.total)} tokens</span>}
           {(run.reportedUsd || run.estimatedUsd) ? <span>{usd(run.reportedUsd || run.estimatedUsd)}</span> : null}
+          {!waitingFor && REMOTE?.role !== "chat" && <Rate runId={run.runId} />}
         </div>
       )}
     </div>

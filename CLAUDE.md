@@ -147,6 +147,15 @@ Change them additively; a breaking change bumps the version.
   running, and only against the sha256 the editor read.
 - An agent's `dailyBudgetUsd` is McBot-side only (never compiled, no Hermes key): `buildCostReport` compares
   today's (UTC) spend with it; Cost shows the bar and Home's "Needs you" warns at 80% and 100%; at 100% `POST /api/runs` refuses (409) the runs McBot starts (Hermes' own schedules and task-board runs are not stopped).
+- **Learn** (`views/LearnView.tsx`, pure `src/harness/learn.ts`, `engine/learn.ts`; docs/TRAINING.md): the agents'
+  work as data to train a model of your own. Thumbs up / down on any answer in Chat (`<workspace>/ratings.json`,
+  `GET/POST /api/ratings`, teammates too) and an agent's **checks** (`checks` on the agent, McBot-side only, never
+  compiled: mentions, never mentions, used a tool, word counts, valid JSON) give each run a reward from 0 to 1 (the
+  rating wins; failed or stopped runs are 0). Export (`POST /api/learn/export`, host only) writes one agent's
+  conversations (runs of one Hermes session together) to `<workspace>/datasets/`, never over an earlier file, as
+  OpenAI chat JSONL, the same with rewards, or Hermes' own trajectory format; saved key values, token-shaped strings
+  and the home folder are left out (`redact`). Training itself happens elsewhere (MLX, Unsloth, hosted fine-tuning);
+  the model comes back as a model block.
 - Cost comes from each profile's `state.db`; Hermes-priced vs McBot-estimated is
   always labelled. Hermes reports no GPU time — do not fabricate it.
 - API keys typed into McBot live in `<workspace>/secrets.json` (owner-only); boards
@@ -399,6 +408,8 @@ Change them additively; a breaking change bumps the version.
   Enter names it, ⌘D duplicates, ⌫ deletes, Esc deselects.
 - **Compile** says how it went in a notice (with "Fix" on the first block with a problem); the
   compile sheet (files and diffs) opens only when asked (the notice's "Files", ⌘K → Compiled files).
+- **The agent's plan** (`src/app/chat/plan.ts`): when an agent plans with Hermes' `todo_list` tool, its answer shows
+  the newest list as a checklist (done, working on, next), live while it runs; the tool's steps are not listed again.
 - **Rich answers** (`src/app/chat/rich.ts`, `RichText.tsx`): an agent's answer is drawn from
   Markdown (headings, lists, tables, code with Copy, links through `openExternal`, images it made)
   plus ` ```chart ` (JSON → SVG bar, line or pie) and ` ```choices ` (reply buttons on the latest

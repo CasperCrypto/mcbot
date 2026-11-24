@@ -71,6 +71,7 @@ const MemoryView = lazyView(() => import("./views/MemoryView"), (m) => m.MemoryV
 const SkillsView = lazyView(() => import("./views/SkillsView"), (m) => m.SkillsView);
 const FilesView = lazyView(() => import("./views/FilesView"), (m) => m.FilesView);
 const CostView = lazyView(() => import("./views/CostView"), (m) => m.CostView);
+const LearnView = lazyView(() => import("./views/LearnView"), (m) => m.LearnView);
 const TeamView = lazyView(() => import("./views/TeamView"), (m) => m.TeamView);
 const SettingsView = lazyView(() => import("./views/SettingsView"), (m) => m.SettingsView);
 const BrowserTab = lazyView(() => import("./workbench/BrowserView"), (m) => m.default);
@@ -91,6 +92,7 @@ const VIEW_COMPONENTS = {
   files: FilesView,
   passwords: PasswordsView,
   cost: CostView,
+  learn: LearnView,
   team: TeamView,
   settings: SettingsView,
 } as const;
@@ -106,6 +108,8 @@ function BoardEffects() {
 
   useEffect(() => {
     engine.runs(boardId).then(loadRuns).catch(() => undefined);
+    // Thumbs on answers, for Chat and Learn (a guest's window has none to read).
+    if (REMOTE?.role !== "chat") engine.ratings(boardId).then((r) => useApp.getState().setRatings(r)).catch(() => undefined);
   }, [boardId, loadRuns]);
 
   // The queue: an agent that is free takes its next queued message. One at a time per agent
