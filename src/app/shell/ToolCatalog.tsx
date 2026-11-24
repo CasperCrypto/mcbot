@@ -51,7 +51,8 @@ export function ToolCatalog() {
   const add = (t: CatalogTool) => place((p) => catalogNode(t, taken, p));
   const words = q.trim().toLowerCase();
   const list = [...CATALOG, ...CONNECTOR_TOOLS].filter((t) => !words || `${t.label} ${t.does} ${t.group}`.toLowerCase().includes(words));
-  const groups = [...new Set(list.map((t) => t.group))];
+  // Making images and video first: it is what people look for most and least expect to find here.
+  const groups = [...new Set(list.map((t) => t.group))].sort((a, b) => Number(b === "Images & video") - Number(a === "Images & video"));
 
   return (
     <>
@@ -61,7 +62,7 @@ export function ToolCatalog() {
           <span className="hermes-mark" aria-hidden><Plug size={18} /></span>
           <div className="grow">
             <h2>Add a tool</h2>
-            <small>{target ? `For ${target.data.displayName || target.data.name}` : "Select an agent first to wire it straight in"}</small>
+            {target && <small>For {target.data.displayName || target.data.name}</small>}
           </div>
           <button className="icon-btn" aria-label="Close" onClick={() => setOpen(false)}><X size={15} /></button>
         </header>

@@ -136,7 +136,7 @@ export function LayersView({ onEdit }: { onEdit: (nodeId: string) => void }) {
         </header>
         {layers.map((l) => (
           <section key={l.id} className={`layer layer-${l.id}`} data-testid={`layer-${l.id}`}>
-            <header className="layer-head" data-tip={l.what} data-tip-side="right">{ICONS[l.id]}<b>{l.title}</b><span className="layer-what">{l.what}</span></header>
+            <header className="layer-head" data-tip={l.what} data-tip-side="right">{ICONS[l.id]}<b>{l.title}</b></header>
             <div className="layer-items">
               {l.items.map((it) => it.edit ? (
                 <div key={`${it.label}-${it.detail}`} className="layer-item editable" data-state={it.state}>

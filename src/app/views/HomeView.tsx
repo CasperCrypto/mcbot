@@ -255,13 +255,13 @@ function GettingStarted({ agents, keys, runs, silent }: { agents: AgentNode[]; k
   const missingKeys = modelsOf(graph).filter((m) => m.data.endpoint === "cloud" && m.data.apiKeyEnv && keys && !keys.includes(m.data.apiKeyEnv));
   const steps = [
     { id: "agents", label: "Add your agents", done: agents.length > 0, action: { label: "Pick a team", run: () => app.setTeamsOpen(true) } },
-    { id: "knowledge", label: "Tell them about your business", sub: "Every agent knows it", done: briefHasContent(graph.brief), action: { label: "Write it", run: () => app.setKnowledgeOpen(true) } },
+    { id: "knowledge", label: "Tell them about your business", done: briefHasContent(graph.brief), action: { label: "Write it", run: () => app.setKnowledgeOpen(true) } },
     { id: "model", label: "Give them a model", sub: noModel.length ? `${noModel.length} without one` : missingKeys.length ? "A key is missing" : silent ? "Its server isn't answering" : undefined, done: agents.length > 0 && noModel.length === 0 && missingKeys.length === 0 && silent === 0, action: { label: "Add model", run: () => app.openSettings(missingKeys.length && !noModel.length ? "keys" : "models") } },
     { id: "engine", label: "Prepare the engine", done: !!health?.hermes.found, action: { label: "Prepare", run: () => app.openSettings("engine") } },
-    { id: "compile", label: "Compile", sub: "Writes the agents to disk", done: agents.length > 0 && drift === 0, action: { label: "Compile", run: () => void compileBoard(boardId) } },
+    { id: "compile", label: "Compile", done: agents.length > 0 && drift === 0, action: { label: "Compile", run: () => void compileBoard(boardId) } },
     { id: "ask", label: "Ask an agent something", done: runs > 0, action: { label: "Ask", run: () => agents[0] && app.openChat(agents[0].id) } },
-    ...(nameChosen(identity) ? [] : [{ id: "name", label: "Add your name", sub: "Teammates see it", done: false, action: { label: "Add", run: () => app.openSettings("you") } }]),
-    ...(REMOTE ? [] : [{ id: "invite", label: "Invite a teammate", sub: "Optional", done: false, action: { label: "Invite", run: () => app.setShareOpen(true) } }]),
+    ...(nameChosen(identity) ? [] : [{ id: "name", label: "Add your name", done: false, action: { label: "Add", run: () => app.openSettings("you") } }]),
+    ...(REMOTE ? [] : [{ id: "invite", label: "Invite a teammate", done: false, action: { label: "Invite", run: () => app.setShareOpen(true) } }]),
   ];
   const required = steps.filter((s) => s.id !== "invite" && s.id !== "name");
   if (hidden || required.every((s) => s.done)) return null;

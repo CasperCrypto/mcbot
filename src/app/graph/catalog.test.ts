@@ -47,9 +47,11 @@ describe("connectors from Hermes' catalog", () => {
 });
 
 describe("brand tiles", () => {
-  it("tint a brand's colour behind its mark and lift a dark one so it reads on black", async () => {
-    const { brandTint } = await import("./Logo");
-    expect(brandTint("#26A5E4")).toEqual({ background: "rgb(38 165 228 / 0.16)", color: "rgb(38 165 228)" });
-    expect(brandTint("#0052CC").color).toBe("rgb(115 160 227)");
+  it("know each brand's colour and the ink that reads on it (near-black brands go on the dark tile)", async () => {
+    const { LOGOS } = await import("../lib/logos.generated");
+    const telegram = LOGOS.telegram as { tile: string | null; ink: string };
+    expect(telegram.tile).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    expect(telegram.ink).toBe("#fff");
+    expect((LOGOS.github as { tile: string | null }).tile).toBeNull();
   });
 });

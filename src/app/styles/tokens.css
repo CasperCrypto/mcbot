@@ -28,6 +28,10 @@
   /* A soft lift instead of an outline: the faintest top light and a shadow that fades out. */
   --lift: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 2px rgba(0, 0, 0, 0.22), 0 8px 24px rgba(0, 0, 0, 0.16);
   --lift-hover: inset 0 1px 0 rgba(255, 255, 255, 0.055), 0 2px 4px rgba(0, 0, 0, 0.26), 0 12px 32px rgba(0, 0, 0, 0.22);
+  /* An icon tile's light: a bright top edge, a faint rim, depth below (app icons, the website's brand rows). */
+  --icon-lift: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 0 0 0.5px rgba(255, 255, 255, 0.14), inset 0 -8px 14px rgba(0, 0, 0, 0.1), 0 6px 14px -6px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --icon-dark: #1f1f23;
+  --icon-ink: #ffffff;
   /* Row dividers inside a group. */
   --divide: inset 0 0.5px 0 rgba(255, 255, 255, 0.06);
   --divide-bottom: inset 0 -0.5px 0 rgba(255, 255, 255, 0.06);
@@ -100,29 +104,29 @@
 
   /* node kinds (the tiles in graph.css): the colour of a kind's glyph, and its channels for the
      tile's tint behind it */
-  /* muted (v3): a kind is told apart by a calm tint, not a candy colour */
+  /* a kind is an app-icon colour (its tile is solid, like the website's brand rows) */
   --k-agent-rgb: 142 142 147;
-  --k-model-rgb: 214 162 104;
-  --k-model-cloud-rgb: 112 158 222;
-  --k-tool-rgb: 98 172 184;
-  --k-media-rgb: 214 128 152;
-  --k-channel-rgb: 116 182 140;
-  --k-folder-rgb: 172 150 122;
+  --k-model-rgb: 255 159 10;
+  --k-model-cloud-rgb: 10 132 255;
+  --k-tool-rgb: 48 176 199;
+  --k-media-rgb: 255 55 95;
+  --k-channel-rgb: 48 209 88;
+  --k-folder-rgb: 172 142 104;
   /* a kind's glyph on its tint: the kind colour, lifted a little where it would sink into the dark */
   --k-agent-ink: #c7c7cc;
-  --k-model-ink: #e2b884;
-  --k-cloud-ink: #98b9e8;
-  --k-tool-ink: #8ac4cd;
-  --k-media-ink: #e3a2b4;
-  --k-channel-ink: #9acbaa;
-  --k-folder-ink: #c8b296;
+  --k-model-ink: #ffab2e;
+  --k-cloud-ink: #4ca2ff;
+  --k-tool-ink: #4fc6da;
+  --k-media-ink: #ff6482;
+  --k-channel-ink: #4cd471;
+  --k-folder-ink: #c9a77b;
   --k-agent: #8e8e93;
-  --k-model: #d6a268;
-  --k-model-cloud: #709ede;
-  --k-tool: #62acb8;
-  --k-media: #d68098;
-  --k-channel: #74b68c;
-  --k-folder: #ac967a;
+  --k-model: #ff9f0a;
+  --k-model-cloud: #0a84ff;
+  --k-tool: #30b0c7;
+  --k-media: #ff375f;
+  --k-channel: #30d158;
+  --k-folder: #ac8e68;
 
   /* agent faces: glass food (faces/foods.ts). One colour per agent, from its name. */
   --food-1: #8b7bff;

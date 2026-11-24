@@ -73,7 +73,7 @@ export function KnowledgeSheet() {
           <span className="hermes-mark" aria-hidden><BookOpen size={18} /></span>
           <div className="grow">
             <h2>Team knowledge</h2>
-            <small>Every agent knows this · {filled} of {BRIEF_FORM.length}</small>
+            <small data-tip="Every agent knows this (its SOUL.md)" data-tip-side="bottom">{filled} of {BRIEF_FORM.length}</small>
           </div>
           <button className="icon-btn" aria-label="Close" onClick={done}><X size={15} /></button>
         </header>
@@ -92,7 +92,7 @@ export function KnowledgeSheet() {
           ))}
         </div>
         <footer className="knowledge-foot">
-          <span className="faint grow">Goes into every agent's SOUL.md when you compile.</span>
+          <span className="grow" />
           <button className="btn primary" onClick={done} data-testid="knowledge-done">Done</button>
         </footer>
       </section>

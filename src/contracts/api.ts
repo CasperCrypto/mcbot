@@ -113,6 +113,8 @@ export interface CostSession {
   costStatus: string | null;
   runId: string | null;
   runStatus: string | null;
+  /** Ran on a model on this computer: free (only time and power), never "unpriced". */
+  local?: boolean;
 }
 
 /** One agent's spend today (UTC) against its daily budget. Only agents with a budget are listed. */

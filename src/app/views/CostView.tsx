@@ -133,15 +133,20 @@ export function CostView() {
       ) : (
         <div className="scroll-page page-enter">
           <div className="kpis" data-testid="cost-kpis">
-            <div className="card kpi"><small>Spend</small><b>{usd(report.totals.usd)}</b><span>{report.totals.sessions} session{report.totals.sessions === 1 ? "" : "s"}</span></div>
+            {(() => {
+              const localOnly = report.sessions.every((x) => x.local);
+              const local = report.sessions.filter((x) => x.local).length;
+              return <div className="card kpi"><small>Spend</small><b>{localOnly ? "Free" : usd(report.totals.usd)}</b><span>{localOnly ? "on your computer" : local ? `${local} of ${report.totals.sessions} sessions free (local)` : `${report.totals.sessions} session${report.totals.sessions === 1 ? "" : "s"}`}</span></div>;
+            })()}
             <div className="card kpi"><small>Tokens</small><b>{tokens(report.totals.inputTokens + report.totals.outputTokens)}</b><span>{tokens(report.totals.inputTokens)} in · {tokens(report.totals.outputTokens)} out</span></div>
             <div className="card kpi"><small>Per successful run</small><b>{report.costPerSuccessfulRun === null ? "—" : usd(report.costPerSuccessfulRun)}</b><span>{report.totals.successfulRuns} of {report.totals.runs} succeeded</span></div>
             <div className="card kpi"><small>Local compute</small><b>{report.localInferenceSeconds.toFixed(1)}s</b><span data-tip="Wall-clock time of runs on local models. GPU time is not reported." data-tip-side="top">wall-clock</span></div>
           </div>
           {(() => {
-            // A custom or local endpoint has no provider price: say so once, and open its price fields.
-            const unpriced = report.sessions.filter((x) => x.source === "none");
-            const model = graph.nodes.find((n) => n.kind === "model" && !n.data.pricing);
+            // A cloud endpoint with no provider price: say so once, and open its price fields. A local
+            // model is free, not unpriced.
+            const unpriced = report.sessions.filter((x) => x.source === "none" && !x.local);
+            const model = graph.nodes.find((n) => n.kind === "model" && n.data.endpoint === "cloud" && !n.data.pricing);
             if (!unpriced.length || !model) return null;
             const t = unpriced.reduce((n, x) => n + x.inputTokens + x.outputTokens, 0);
             return (
@@ -170,7 +175,7 @@ export function CostView() {
                     <td className="right num">{tokens(s.inputTokens)}</td>
                     <td className="right num">{tokens(s.outputTokens)}</td>
                     <td>{s.runStatus ? <span className={`chip ${s.runStatus === "succeeded" ? "ok" : "fail"}`}>{s.runStatus}</span> : <span className="faint" data-tip="Started outside McBot (cron, chat, gateway)" data-tip-side="top">external</span>}</td>
-                    <td className="right num"><span className="row" style={{ justifyContent: "flex-end" }}>{usd(s.usd)}<Source s={s.source} /></span></td>
+                    <td className="right num"><span className="row" style={{ justifyContent: "flex-end" }}>{s.local ? <span className="faint">Free</span> : <>{usd(s.usd)}<Source s={s.source} /></>}</span></td>
                   </tr>
                 ))}
               </tbody>

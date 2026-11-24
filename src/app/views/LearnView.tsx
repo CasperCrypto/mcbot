@@ -55,7 +55,7 @@ function Checks({ agent }: { agent: AgentNode }) {
   );
 }
 
-function AgentRow({ stats, agent }: { stats: LearnAgentView; agent: AgentNode | undefined }) {
+function AgentRow({ stats, agent, folder }: { stats: LearnAgentView; agent: AgentNode | undefined; folder: string }) {
   const { boardId } = useBoard();
   const [open, setOpen] = useState<"checks" | "export" | null>(null);
   const [format, setFormat] = useState<DatasetFormat>("chat");
@@ -93,14 +93,13 @@ function AgentRow({ stats, agent }: { stats: LearnAgentView; agent: AgentNode | 
         </div>
         <span className="learn-ready" data-tip="Conversations good enough to train on"><b className="num">{stats.good}</b> ready</span>
         {agent && <button className="btn sm" aria-expanded={open === "checks"} onClick={() => setOpen(open === "checks" ? null : "checks")} data-testid={`learn-checks-${stats.profile}`}>Checks{stats.checks ? ` · ${stats.checks}` : ""}</button>}
-        {!REMOTE && <button className="btn sm" aria-expanded={open === "export"} onClick={() => setOpen(open === "export" ? null : "export")} data-testid={`learn-export-${stats.profile}`}><Download size={13} /> Export</button>}
+        {!REMOTE && <button className="btn sm" aria-expanded={open === "export"} onClick={() => setOpen(open === "export" ? null : "export")} data-testid={`learn-export-${stats.profile}`} data-tip={folder ? `Saved in ${folder}, keys left out` : undefined}><Download size={13} /> Export</button>}
       </div>
       {open === "checks" && agent && <Checks agent={agent} />}
       {open === "export" && (
         <div className="learn-export">
-          <div className="learn-export-row"><span>Format</span><Segmented value={format} onChange={setFormat} options={FORMATS.map((f) => ({ value: f.value, label: f.label }))} /></div>
-          <div className="learn-export-row"><span>Which</span><Segmented value={pick} onChange={setPick} options={[{ value: "good", label: "Only the good ones" }, { value: "all", label: "Everything finished" }]} /></div>
-          <div className="learn-export-row"><span className="faint grow">{FORMATS.find((f) => f.value === format)!.tip}</span><button className="btn primary sm" disabled={busy} onClick={() => void run()} data-testid="learn-export-go">Export</button></div>
+          <div className="learn-export-row" data-tip={FORMATS.find((f) => f.value === format)!.tip} data-tip-side="top"><Segmented value={format} onChange={setFormat} options={FORMATS.map((f) => ({ value: f.value, label: f.label }))} /></div>
+          <div className="learn-export-row"><Segmented value={pick} onChange={setPick} options={[{ value: "good", label: "The good ones" }, { value: "all", label: "All" }]} /><span className="grow" /><button className="btn primary sm" disabled={busy} onClick={() => void run()} data-testid="learn-export-go">Export</button></div>
         </div>
       )}
     </section>
@@ -125,14 +124,13 @@ export function LearnView() {
     <section className="main">
       <div className="view page-enter learn-view" data-testid="learn">
         <header className="learn-hero">
-          <h1>Learn</h1>
-          <p>Your agents' best work, as data to train a model of your own. Rate answers in Chat; checks grade the rest.</p>
+          <h1 data-tip="Rate answers in Chat, add checks, export, train a model of your own" data-tip-side="bottom">Learn</h1>
         </header>
         {!data ? <SkeletonCards count={3} /> : data.agents.length === 0 ? (
           <div className="empty"><h3>No agents yet</h3></div>
         ) : (
           <div className="learn-list">
-            {data.agents.map((a) => <AgentRow key={a.agentNodeId} stats={a} agent={agents.find((n) => n.id === a.agentNodeId)} />)}
+            {data.agents.map((a) => <AgentRow key={a.agentNodeId} stats={a} agent={agents.find((n) => n.id === a.agentNodeId)} folder={data.folder} />)}
           </div>
         )}
         <h2 className="learn-sub">Train your model</h2>
@@ -144,10 +142,9 @@ export function LearnView() {
             </button>
           ))}
           <button className="learn-train-row" onClick={() => useApp.getState().openSettings("models")}>
-            <span className="grow"><b>Use it</b><small>Add your trained model in Settings → Models (Ollama, LM Studio, or any OpenAI-compatible address)</small></span>
+            <span className="grow"><b>Use it</b><small>Settings → Models</small></span>
           </button>
         </div>
-        {data?.folder && !REMOTE && <p className="learn-folder faint">Exports are saved in <span className="mono">{data.folder}</span>, on this computer only. Keys and tokens are left out.</p>}
       </div>
     </section>
   );

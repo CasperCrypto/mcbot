@@ -74,12 +74,20 @@ Agents run on your computer, with your keys.
 |---|---|
 | ![Share sheet](docs/screenshots/share.png) | ![Joining from a phone, then chatting](docs/screenshots/guest-phone.png) |
 
+### Teach it your business, then train your own model
+Setup asks what you do, who your customers are, your goals and your voice; every agent knows it (Team knowledge,
+⌘K). Rate answers with 👍 / 👎, add checks that grade every answer, and **Learn** exports your agents' best work as
+training data (OpenAI fine-tuning format, with scores, or Hermes' own), so you can fine-tune a model of your own on
+your real work and plug it back in.
+
 ### Know which setup works better
 Every compile that changes the harness is kept in **History**, with what changed in plain words and how its runs
 went: success, cost, time and tokens per run. Compare two versions side by side, keep the better one, restore
 any in a click.
 
 ### Everything an agent needs
+- **Images and video**: Hugging Face (free with an account), OpenRouter, OpenAI, FAL, xAI; a designer agent makes the
+  pictures itself.
 - **Tools**: any MCP server, GitHub, web search out of the box, and 60+ vetted connectors. A tool can offer only
   the few functions an agent needs, so every message costs less.
 - **Chat apps**: Telegram, Slack, Discord, WhatsApp and every other platform the engine ships, one bot per agent.
@@ -103,6 +111,8 @@ any in a click.
 | ![Browser](docs/screenshots/browser.png) | ![Passwords](docs/screenshots/passwords.png) |
 | **Runs: every step on screen** | **Cost and budgets** |
 | ![Runs](docs/screenshots/runs.png) | ![Cost](docs/screenshots/cost.png) |
+| **Learn: your work, as training data** | **The agent's plan, live** |
+| ![Learn](docs/screenshots/learn.png) | ![An answer with its plan](docs/screenshots/plan.png) |
 
 And: **Home** with your agents as live tiles, **Tasks** and **schedules**, **Memory** you can read and edit,
 **Files** and **Code** (editor and terminal), a calm dark design with your accent colour, ⌘K for everything,
