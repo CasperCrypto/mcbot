@@ -6,7 +6,7 @@ name: CodeQL
 on:
   pull_request:
   push:
-    branches: [main, claude/eloquent-ramanujan-4h1z53]
+    branches: [main]
   schedule:
     - cron: "17 3 * * 2"
   workflow_dispatch:

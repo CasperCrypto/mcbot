@@ -58,9 +58,9 @@ jobs:
         with:
           args: --target ${{ matrix.target }}
           tagName: v__VERSION__
-          releaseName: McBot v__VERSION__
+          releaseName: McBot Studio v__VERSION__
           releaseBody: |
-            McBot v__VERSION__. Download the file for your computer below.
+            McBot Studio v__VERSION__. Download the file for your computer below.
             First launch prepares the engine (a few minutes, needs internet).
             Not signed yet: on macOS open it once, then System Settings → Privacy & Security → Open Anyway; on Windows choose More info → Run anyway.
           releaseDraft: true
@@ -73,9 +73,9 @@ jobs:
         with:
           args: --target ${{ matrix.also }}
           tagName: v__VERSION__
-          releaseName: McBot v__VERSION__
+          releaseName: McBot Studio v__VERSION__
           releaseBody: |
-            McBot v__VERSION__. Download the file for your computer below.
+            McBot Studio v__VERSION__. Download the file for your computer below.
             First launch prepares the engine (a few minutes, needs internet).
             Not signed yet: on macOS open it once, then System Settings → Privacy & Security → Open Anyway; on Windows choose More info → Run anyway.
           releaseDraft: true
