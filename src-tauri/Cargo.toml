@@ -23,7 +23,7 @@ tauri-plugin-notification = "2"
 # ⌘⇧Space / Ctrl+Shift+Space from anywhere brings McBot Studio forward with ⌘K open (Raycast-style).
 tauri-plugin-global-shortcut = "2"
 portable-pty = "0.9"
-base64 = "0.22"
+base64 = "0.23"
 
 [profile.release]
 codegen-units = 1
