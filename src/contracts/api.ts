@@ -460,3 +460,22 @@ export interface LoginView {
   note: string;
   updatedAt: number;
 }
+
+/** A GitHub repository (or a folder in it), read by Add from GitHub (engine/github.ts). */
+export interface GitHubRepoView {
+  owner: string;
+  repo: string;
+  ref: string | null;
+  path: string;
+  url: string;
+  description: string;
+  stars: number;
+  license: string | null;
+  language: string | null;
+  /** What it is: a skill, an MCP server, a Hermes plugin, or a project. */
+  kind: "skill" | "mcp" | "plugin" | "project";
+  /** How to run it as an MCP server (a tool block's command and arguments). */
+  mcp: { name: string; command: string; args: string[] } | null;
+  /** What to hand Hermes: a skill's folder link, a plugin's owner/repo[/path]. */
+  source: string;
+}

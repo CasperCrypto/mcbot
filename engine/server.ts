@@ -49,6 +49,7 @@ import { OwnershipError, readManifest, writeCompileResult } from "./writer";
 import { Sharing, cleanOwnUrl, guestAllowed, joinPage, type Member, type SharingView } from "./sharing";
 import { Tunnel, launchQuickTunnel } from "./tunnel";
 import { LoginError, Logins } from "./logins";
+import { GitHubError, downloadRepo, inspectRepo, parseGitHub } from "./github";
 import { APP_PAGES, hasWebApp, pagePolicy, webFile } from "./webApp";
 import { frameable } from "./web";
 
@@ -79,6 +80,8 @@ export interface EngineConfig {
 
 export const DEFAULT_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"];
 const LOOPBACK_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/;
+/** A plugin on GitHub as Hermes takes it: owner/repo, and a folder in it. */
+const GITHUB_SOURCE_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\/[A-Za-z0-9._-]{1,100}(\/[A-Za-z0-9._-]{1,100}){0,8}$/;
 
 class HttpError extends Error {
   constructor(readonly status: number, message: string, readonly body?: unknown) {
@@ -160,6 +163,20 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       return await f();
     } catch (err) {
       throw err instanceof LoginError ? new HttpError(err.status, err.message) : err;
+    }
+  };
+  /** A saved GitHub key raises GitHub's hourly limit for Add from GitHub. */
+  const githubToken = async () => {
+    const saved = await secrets.env().catch(() => ({} as Record<string, string>));
+    return saved.GITHUB_TOKEN || saved.GITHUB_PERSONAL_ACCESS_TOKEN || saved.GH_TOKEN || null;
+  };
+  const githubCall = async <T>(f: () => Promise<T>): Promise<T> => {
+    try {
+      return await f();
+    } catch (err) {
+      if (err instanceof GitHubError) throw new HttpError(err.status, err.message);
+      if (err instanceof TypeError || (err as Error).name === "TimeoutError") throw new HttpError(502, "Can't reach GitHub. Is this computer online?");
+      throw err;
     }
   };
   /** Who sent this request on the share port: the member its key belongs to. */
@@ -635,6 +652,31 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     "POST /api/logins/reveal": async (req) => {
       const { id } = parse(z.object({ id: z.string().max(80) }), await json(req));
       return loginCall(() => logins.reveal(id));
+    },
+    // ---- add from GitHub: what a repository is, and putting it to use (this computer only) ----
+    "GET /api/github/inspect": async (_req, url) => {
+      const ref = parseGitHub(url.searchParams.get("url") ?? "");
+      if (!ref) throw new HttpError(400, "Paste a GitHub link, like github.com/owner/repo");
+      return githubCall(async () => inspectRepo(ref, await githubToken()));
+    },
+    /** A Hermes plugin from GitHub: `hermes -p <agent> plugins install owner/repo[/path]` (plugins_cmd.py _resolve_git_url). */
+    "POST /api/github/plugin": async (req) => {
+      const body = parse(z.object({ profile: z.string().regex(PROFILE_RE), source: z.string().regex(GITHUB_SOURCE_RE) }), await json(req));
+      if (!existsSync(join(cfg.hermesHome, "profiles", body.profile))) throw new HttpError(409, `Compile ${body.profile} first`);
+      const found = await findHermes();
+      if (!found) throw new HttpError(503, "The engine is not set up yet");
+      const r = await runKanban(await prepareHermes(found, cfg.hermesHome), cfg.hermesHome, ["-p", body.profile, ...installPluginArgv(body.source)], "", 5 * 60_000);
+      if (r.code !== 0) throw new HttpError(409, kanbanError(r));
+      if (cfg.managedRoot) runner.markGatewayStale();
+      return { installed: body.source };
+    },
+    /** A project from GitHub, unpacked into the shared files folder (`files/github/<repo>`) for agents. */
+    "POST /api/github/download": async (req) => {
+      const { url } = parse(z.object({ url: z.string().max(500) }), await json(req));
+      const ref = parseGitHub(url);
+      if (!ref) throw new HttpError(400, "Paste a GitHub link, like github.com/owner/repo");
+      const dest = await githubCall(async () => downloadRepo(ref, join(cfg.workspace, "files", "github"), await githubToken()));
+      return { folder: `github/${ref.repo}`, path: dest };
     },
     /** Someone who joined: whose McBot this is, and (a guest) the agents they may chat with. */
     "GET /api/guest": async (req): Promise<GuestView> => {

@@ -484,6 +484,17 @@ Change them additively; a breaking change bumps the version.
 - **Terminal:** real shells in the desktop shell (`src-tauri/src/terminal.rs`,
   portable-pty), never in the engine, so the engine stays one plain executable.
   The browser has none.
+- **Add from GitHub** (`shell/GitHubSheet.tsx`, pure parts in `engine/github.ts`; ⌘K "Add from GitHub…", a
+  GitHub link typed in ⌘K, or one pasted or dropped anywhere outside a text field; host only): the engine reads
+  the repository through GitHub's API (`GET /api/github/inspect`; a saved `GITHUB_TOKEN` /
+  `GITHUB_PERSONAL_ACCESS_TOKEN` raises the hourly limit; branch names with slashes are resolved the way
+  GitHub's pages do) and says what it is: a **skill** (SKILL.md → an agent learns it, `POST /api/skills/add`),
+  an **MCP server** (package.json on `@modelcontextprotocol/sdk` → a tool block `npx -y <package>`, or a Python
+  project on `mcp` → `uvx --from git+<repo> <script>`, wired to the agent picked), a **Hermes plugin**
+  (plugin.yaml → `POST /api/github/plugin`: `hermes -p <agent> plugins install owner/repo[/path] --enable
+  --yes-deps`, docs/HERMES.md), or a **project** (`POST /api/github/download`: GitHub's archive unpacked with
+  `tar` into the shared files folder's `github/<repo>`, 80 MB at most). Any of them can go to an agent as a
+  question instead.
 - **Browser start page** (`workbench/BrowserStart.tsx`, pure `lib/browserStore.ts`, kept per computer):
   one big field (address or search), favorites as brand tiles (`siteLogo`: Simple Icons marks, a few
   site keys added in `scripts/tool-logos.ts`), what answers on the usual local ports (asked of the

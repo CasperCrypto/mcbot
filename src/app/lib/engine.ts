@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import type { HarnessVersion } from "../../harness/versions";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
@@ -107,6 +107,10 @@ const http = {
   removeMember: (id: string) => call<SharingView>("POST", "/api/share/remove", { id }),
   /** Someone who joined: whose McBot it is, and a guest's agents. */
   guest: () => call<GuestView>("GET", "/api/guest"),
+  /** Add from GitHub: what a repository is, a plugin from it for an agent, or its files in the shared folder. */
+  githubInspect: (url: string) => call<GitHubRepoView>("GET", `/api/github/inspect?url=${encodeURIComponent(url)}`),
+  githubPlugin: (profile: string, source: string) => call<{ installed: string }>("POST", "/api/github/plugin", { profile, source }),
+  githubDownload: (url: string) => call<{ folder: string; path: string }>("POST", "/api/github/download", { url }),
   /** Passwords: the person's logins (no passwords in lists), saved, removed, revealed for copy or fill. */
   logins: (host?: string) => call<{ logins: LoginView[] }>("GET", `/api/logins${host ? `?host=${encodeURIComponent(host)}` : ""}`),
   saveLogin: (l: { id?: string; url: string; username: string; password?: string; note?: string }) => call<{ login: LoginView; logins: LoginView[] }>("POST", "/api/logins", l),

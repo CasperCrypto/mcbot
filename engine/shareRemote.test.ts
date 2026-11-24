@@ -19,7 +19,8 @@ import { startEngine, type Engine } from "./server";
 
 const ORIGIN = "tauri://localhost";
 const PUBLIC = "https://quiet-river-test.trycloudflare.com";
-const SHARE_PORT = 49_000 + Math.floor(Math.random() * 2000);
+// Below 32768: no ephemeral port (an engine on port 0, an outgoing connection) can take it.
+const SHARE_PORT = 23_000 + Math.floor(Math.random() * 2000);
 const net = `http://127.0.0.1:${SHARE_PORT}`;
 let engine: Engine;
 let web = "";

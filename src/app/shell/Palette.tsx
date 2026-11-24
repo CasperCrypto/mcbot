@@ -1,7 +1,7 @@
 import {
   ClipboardCopy,
   History as HistoryIcon,
-  BookOpen, Bot, FileCode2, History, Palette as PaletteIcon, Stethoscope, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Upload, Users, Waypoints, Workflow, GraduationCap, Compass,
+  BookOpen, Bot, FileCode2, FolderGit2, History, Palette as PaletteIcon, Stethoscope, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Upload, Users, Waypoints, Workflow, GraduationCap, Compass,
 } from "lucide-react";
 import { describeHarness } from "../../harness/describe";
 import { Logo } from "../faces/FoodFace";
@@ -13,7 +13,8 @@ import { compileBoard, exportBoardFile, importBoardFile, openHermesSetup, runAge
 import { newChannel, newId, newModel, newTool, newVault } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { resetDemo } from "../demo/engine";
-import { DEMO, engine } from "../lib/engine";
+import { DEMO, engine, REMOTE } from "../lib/engine";
+import { githubLink } from "./GitHubSheet";
 import { useBoard } from "../state/board";
 import { useApp, type Tab } from "../state/store";
 import { AgentFace, Kbd } from "../ui";
@@ -74,6 +75,7 @@ function useCommands(close: () => void): Command[] {
       { id: "add-files", group: "Create", label: "Files tool", icon: <Plug size={15} />, run: () => place(newTool(graph, "filesystem", at("tool"), app.health?.workspace ?? null)) },
       { id: "share", group: "Actions", label: "Invite teammates…", hint: "Copy a link, email it", icon: <Users size={15} />, run: () => app.setShareOpen(true) },
       { id: "ask-mcbot", group: "Create", label: "Ask McBot to build…", hint: "Describe the agents you need; review, then add", icon: <Logo size={17} />, run: () => app.setBuilder(true) },
+      ...(REMOTE || DEMO ? [] : [{ id: "github", group: "Create", label: "Add from GitHub…", hint: "A skill, an MCP server, a plugin or a project", icon: <FolderGit2 size={15} />, run: () => app.setGithub("") }]),
       { id: "add-team", group: "Create", label: "Team…", hint: "Research & write, Support desk, Dev team…", icon: <Users size={15} />, run: () => app.setTeamsOpen(true) },
       { id: "add-tool-catalog", group: "Create", label: "Tool…", hint: "Browser, web search, Notion…", icon: <Plug size={15} />, run: () => app.setCatalogOpen(true) },
       { id: "add-mcp", group: "Create", label: "MCP server", icon: <Server size={15} />, run: () => place(newTool(graph, "stdio", at("tool"), null)) },
@@ -229,9 +231,12 @@ function PaletteBody({ close, closing }: { close: () => void; closing: boolean }
       icon: <AgentFace seed={target.data.name} size={22} />,
       run: () => { close(); useApp.getState().openChat(target.id); void runAgent(boardId, target.id, q); },
     }] : [];
+    // A GitHub link: add it, first of all.
+    const gh = !REMOTE && !DEMO ? githubLink(q) : null;
+    if (gh) fallback.unshift({ id: "github-link", group: "Ask", label: `Add ${gh.replace(/^(https?:\/\/)?(www\.)?github\.com\//i, "").split("/").slice(0, 2).join("/")} from GitHub`, hint: "Skill, MCP server, plugin or project", icon: <FolderGit2 size={15} />, run: () => { close(); useApp.getState().setGithub(gh); } });
     // …or have McBot design agents for it.
     if (q.length >= 8) fallback.push({ id: "build-fallback", group: "Ask", label: "Ask McBot to build this", hint: `“${q.slice(0, 80)}”`, icon: <Logo size={17} />, run: () => { close(); useApp.getState().setBuilder(true, q); } });
-    return [...top, ...order.flatMap((g) => rest.filter((c) => c.group === g)), ...said, ...fallback];
+    return gh ? [...fallback, ...top, ...order.flatMap((g) => rest.filter((c) => c.group === g)), ...said] : [...top, ...order.flatMap((g) => rest.filter((c) => c.group === g)), ...said, ...fallback];
   }, [commands, query, asking, runs, graph, close, recent, selectedId, boardId]);
   // Block bodies on purpose: scrollIntoView returns a Promise in current Chromium,
   // and an effect that returns a non-function crashes React on cleanup.

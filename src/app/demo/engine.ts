@@ -16,7 +16,7 @@ import { addVersion, type HarnessVersion } from "../../harness/versions";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
 import { LIBRARY } from "../../contracts/library.generated";
 import type { HarnessPlan, PlanChoices } from "../../harness/plan";
-import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
@@ -821,6 +821,9 @@ export const demoEngine = {
   newInvite: api((_scope?: { role: "edit" | "chat"; boardId?: string; agents?: string[] }): SharingView => demoShare([])),
   removeMember: api((_id: string): SharingView => demoShare([])),
   guest: api((): GuestView => ({ host: "You", role: "edit", name: "You", boardId: null, agents: [] })),
+  githubInspect: api((_url: string): GitHubRepoView => { throw new EngineError(409, "Adding from GitHub works in the desktop app.", {}); }),
+  githubPlugin: api((_profile: string, _source: string): { installed: string } => { throw new EngineError(409, "Adding from GitHub works in the desktop app.", {}); }),
+  githubDownload: api((_url: string): { folder: string; path: string } => { throw new EngineError(409, "Adding from GitHub works in the desktop app.", {}); }),
   logins: api((host?: string) => ({ logins: demoLogins.filter((l) => !host || l.host === host || host.endsWith(`.${l.host}`)).map(({ password: _p, ...v }) => v) })),
   saveLogin: api((l: { id?: string; url: string; username: string; password?: string; note?: string }) => {
     let url: URL;

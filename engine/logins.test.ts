@@ -39,7 +39,8 @@ describe("logins", () => {
 
 describe("logins over the engine", () => {
   const ORIGIN = "tauri://localhost";
-  const SHARE_PORT = 51_000 + Math.floor(Math.random() * 2000);
+  // Below 32768: no ephemeral port can take it.
+  const SHARE_PORT = 25_000 + Math.floor(Math.random() * 2000);
   let engine: Engine;
   beforeAll(async () => {
     const workspace = mkdtempSync(join(tmpdir(), "mcbot-logins-engine-"));

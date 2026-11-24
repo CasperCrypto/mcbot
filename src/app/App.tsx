@@ -17,6 +17,7 @@ import { TeamsSheet } from "./shell/TeamsSheet";
 import { BuilderSheet } from "./shell/BuilderSheet";
 import { DrawingSheet } from "./chat/DrawingSheet";
 import { ShareSheet } from "./shell/ShareSheet";
+import { GitHubSheet, useGitHubDrops } from "./shell/GitHubSheet";
 import { FolderPicker } from "./shell/FolderPicker";
 import { Palette, VIEWS } from "./shell/Palette";
 import { Rail } from "./shell/Rail";
@@ -180,6 +181,8 @@ function Shell() {
   useEffect(() => {
     prefetchViews();
   }, []);
+  // A GitHub link pasted or dropped anywhere opens Add from GitHub with it.
+  useGitHubDrops();
   return (
     <>
       <TitleBar />
@@ -216,6 +219,7 @@ function Shell() {
       </Boundary>
       <Boundary>
         <ShareSheet />
+        <GitHubSheet />
         <FolderPicker />
       </Boundary>
       <BoardEffects />
