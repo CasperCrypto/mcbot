@@ -527,24 +527,27 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   publishes it to GitHub Pages with the demo at `/demo/`. Download buttons read
   the latest GitHub release and show "Coming soon" until one exists.
 - The hero is the glass burger photo (`site/assets/burger.webp`, cut from a black
-  background so the glass stays see-through); `site/site.js` moves its pupils
-  (in the eye holes) toward the cursor, nothing more. The crew graph and the
-  parade use `site/foods.js`. Clean and flat like a Mac page: system font, black
-  and gray surfaces, white buttons; near-black cards with hairline borders, a floating nav, big tight type
-  (Raycast-class finish, never its look or trade dress). Owner's rule: no gradients, glows, dotted grids or status
-  dots, and no scroll-jacking. The live
-  macOS windows (`site/studio.js`, `studio.css`: the hero is a replica of the app as it opens (frameless window,
-  notch island, rail, agents, a chat that uses tools, answers and asks before acting; keep it in step with the
-  app), How it works tabs, the features grid, the ⌘K palette you can
-  type in, the island) play only while on screen, pause under the pointer, hold their final state
-  under `prefers-reduced-motion`, and use the page's flat colours; they are markup, not screenshots.
-  Page anatomy (as the product pages we compare with do it): a platform pill and a split Download button (your OS,
-  plus a menu) over the hero; cards whose bold title runs into the sentence; a two-column FAQ (`<details>`);
-  flat colour download cards with dark ink; a big footer with a one-paragraph pitch and link columns.
-  The page has no product screenshots (its windows are markup); its share card `site/assets/og.jpg`
-  (1200×630: the burger, the headline, the platforms) is rendered from HTML; render it again when
-  the hero's words change. "Ask McBot" and "Connect" show the builder and what plugs in; the Connect
-  logo wall is generated into `site/index.html` by `npm run site:logos` from the app's own marks
-  (`npm test` fails while it is stale).
+  background so the glass stays see-through); `site/main.js` moves its pupils (in the eye holes)
+  toward the cursor and makes it blink; a poke makes it happy. The bots in the page's windows and
+  the crew at the end use `site/foods.js`. Clean and flat like a Mac page: system font, black and
+  gray surfaces, white buttons; near-black cards with hairline borders, a floating nav, big tight
+  type (Raycast-class finish, never its look or trade dress). Owner's rule: no gradients, glows,
+  dotted grids or status dots, no gray boxes behind brand logos, and no scroll-jacking. The copy
+  sells three reasons in plain words (no filler, no placeholder company names): yours (on your
+  computer, private, never locked in), any model ("Switch models, not apps") and the harness you
+  can see and change by drawing; then what a working team needs, a comparison, three steps, a FAQ
+  and downloads. The live views (`site/main.js`, `site/style.css`: the hero window is the app as it
+  opens, with its frameless window, rail and a chat that uses a tool, answers and asks before
+  acting, so keep it in step with the app; then the model switch, the harness compiling, an
+  approval, the ⌘K palette and the terminal) play only while on screen, hold their final state
+  under `prefers-reduced-motion`, and use the page's flat colours; they are markup, not
+  screenshots. Page anatomy (as the product pages we compare with do it): a split Download button
+  (your OS, plus a menu) under the headline; moving rows of brand marks, each on its own colour
+  ("Works with…"); cards whose bold title runs into the sentence; a two-column FAQ (`<details>`);
+  download cards; a big footer with a one-paragraph pitch and link columns. Its share card
+  `site/assets/og.jpg` (1200×630: the burger, the headline, the platforms) is rendered from HTML;
+  render it again when the hero's words change. The brand rows are generated into
+  `site/index.html` (between `<!-- logos:<group> -->` markers) by `npm run site:logos` from the
+  app's own marks (`npm test` fails while they are stale).
 
 Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Skills, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘D duplicate · ⌘0 fit the board · right-click the board · ⌘N new window (desktop).
