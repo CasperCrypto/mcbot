@@ -13,6 +13,10 @@ updates:
       # Tauri stays on 2.x (CLAUDE.md: never 3 while it is alpha).
       - dependency-name: "@tauri-apps/*"
         update-types: [version-update:semver-major]
+      # React Flow 13 changes the board's API (changesets, no applyNodeChanges/useStore): a migration
+      # done on purpose, not a bump (CasperCrypto/mcbot#66).
+      - dependency-name: "@xyflow/react"
+        update-types: [version-update:semver-major]
   - package-ecosystem: cargo
     directory: /src-tauri
     schedule: { interval: weekly, day: monday }

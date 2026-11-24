@@ -6,7 +6,7 @@
  *   node scripts/build-engine.mjs && node scripts/stage-hermes.mjs && node scripts/smoke.mjs
  *
  * CI runs it on macOS, Windows and Linux (.github/workflows/smoke.yml). Exits non-zero, with
- * the engine log and McBot's own problem report, when any step fails.
+ * the engine log, McBot's own problem report and the ends of Hermes' logs, when any step fails.
  */
 import { spawn } from "node:child_process";
 import { createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync } from "node:fs";
@@ -135,6 +135,21 @@ async function main() {
   console.log(`✓ smoke test passed in ${since(started)}`);
 }
 
+/** The engine's own logs (the gateway's and each agent's), whose ends say why a run never started. */
+function hermesLogs(home) {
+  const found = [];
+  const walk = (dir, depth) => {
+    if (depth > 4 || !existsSync(dir)) return;
+    for (const d of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, d.name);
+      if (d.isDirectory()) walk(p, depth + 1);
+      else if (d.name.endsWith(".log") && /[\\/]logs[\\/]/.test(p)) found.push(p);
+    }
+  };
+  walk(home, 0);
+  return found.slice(0, 6).map((f) => `\n--- ${f.slice(home.length + 1)} ---\n${readFileSync(f, "utf8").split("\n").slice(-60).join("\n")}`).join("\n");
+}
+
 let failed = false;
 try {
   await main();
@@ -145,6 +160,11 @@ try {
     console.error(`\n--- McBot's problem report ---\n${(await call("GET", "/api/diagnostics")).text}`);
   } catch {
     console.error(`\n--- engine log ---\n${existsSync(logFile) ? readFileSync(logFile, "utf8").slice(-20_000) : "(none)"}`);
+  }
+  try {
+    console.error(hermesLogs(join(tmp, "McBot", "hermes")) || "\n(no engine logs)");
+  } catch (e) {
+    console.error(`(engine logs unreadable: ${e.message})`);
   }
 } finally {
   for (const c of children) c.kill();
