@@ -361,3 +361,9 @@ button.chip:hover { filter: brightness(1.2); }
 .palette, .hermes-sheet { border: 0; }
 .palette-input, .sheet-head, .hermes-sheet header { border-bottom: 0; box-shadow: var(--divide-bottom); }
 .palette-foot { border-top: 0; box-shadow: var(--divide); }
+/* Provider and model picks: fills, the picked one light. */
+.provider-pick { border: 0; background: rgb(var(--tint-rgb) / 0.06); }
+.provider-pick:hover { background: rgb(var(--tint-rgb) / 0.1); color: var(--text); }
+.provider-pick[aria-checked="true"] { background: var(--btn-light-bg); color: var(--btn-light-fg); box-shadow: none; }
+.model-pick { border: 0; }
+.model-pick[aria-checked="true"] { border: 0; background: rgb(var(--tint-rgb) / 0.1); }

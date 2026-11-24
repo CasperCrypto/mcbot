@@ -25,6 +25,7 @@ a real run behind it. If Hermes changes, re-verify here first.
 | A profile is "live" only with an identity marker: `config.yaml .env SOUL.md profile.yaml auth.json state.db` | `hermes_constants.py:399,433-438` |
 | Dirs `hermes profile create` bootstraps: `memories sessions skills skins logs plans workspace cron home` | `hermes_cli/profiles.py:43` (`_PROFILE_DIRS`) |
 | `SOUL.md` sits at the profile root, injected verbatim as system-prompt slot #1 | `website/docs/user-guide/which-file-does-what.md`; `hermes_cli/profiles_initialization.py:36-48` |
+| SOUL.md is always in the system prompt, whatever the working directory (project context files are found from the cwd, SOUL.md from the profile home), so McBot puts the board's brief there ("Shared knowledge" section, McBot's own text, no Hermes key) | `agent/prompt_builder.py:1767` (`build_context_files_prompt`: SOUL.md appended unless it already filled the identity slot), `:1520` (`load_soul_md`); `agent/system_prompt.py` `_context_files_part` |
 | `profile.yaml` keys `description`, `display_name` | `hermes_cli/profiles.py:874-893` (`read_profile_meta`) |
 | `.no-bundled-skills` marker: existence only; Hermes still seeds essential skills. Compiled only when the board turns built-in skills off (`builtinSkills: false`) | `hermes_cli/profiles.py:102`, `tools/skills_sync.py:400` |
 

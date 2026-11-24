@@ -17,6 +17,10 @@ export interface AgentSuggestion {
   group: (typeof AGENT_GROUPS)[number];
   /** `official/<category>/<name>` ids from hermes/optional-skills (checked against LIBRARY in tests). */
   skills?: readonly string[];
+  /** Makers it gets, so it makes the pictures or videos itself. */
+  makers?: readonly ("image" | "video")[];
+  /** Tool catalog ids it gets (graph/catalog.ts). */
+  tools?: readonly string[];
 }
 
 export const AGENT_GROUPS = ["Everyday", "Work", "Create", "Build", "Money"] as const;
@@ -30,15 +34,15 @@ export const AGENT_SUGGESTIONS: readonly AgentSuggestion[] = [
   { group: "Everyday", name: "Learning Coach", about: "Explains difficult topics and builds study plans.", soul: "Explain simply first, then go deeper.\nEnd with two questions to check understanding.", skills: ["official/productivity/memento-flashcards"] },
   { group: "Everyday", name: "Fitness Coach", about: "Plans workouts and meals around my goals.", soul: "Ask about goals, time and injuries first.\nGive a weekly plan with sets, reps and simple meals. Not medical advice.", skills: ["official/health/fitness-nutrition"] },
   // Work
-  { group: "Work", name: "Researcher", about: "Finds sources and sums them up.", soul: "Search widely, read the best sources, then summarise.\nQuote your sources. Separate facts from guesses.", skills: ["official/research/parallel-cli", "official/research/rss-feeds", "official/social-media/reddit-reading"] },
+  { group: "Work", name: "Researcher", about: "Finds sources and sums them up.", soul: "Search widely, read the best sources, then summarise.\nQuote your sources. Separate facts from guesses.", skills: ["official/research/parallel-cli", "official/research/rss-feeds", "official/social-media/reddit-reading"], tools: ["exa"] },
   { group: "Work", name: "News Watcher", about: "Follows blogs and feeds and tells me what changed.", soul: "Check the feeds I gave you and report only what is new.\nOne line per item, with its link.", skills: ["official/research/blogwatcher", "official/research/rss-feeds", "official/devops/watchers"] },
   { group: "Work", name: "Decision Helper", about: "Turns a hard choice into options and one pick.", soul: "State the problem in one line, give three options with trade-offs, then pick one and say why.", skills: ["official/communication/one-three-one-rule", "official/productivity/decision-questionnaire"] },
   { group: "Work", name: "Knowledge Keeper", about: "Builds and searches a wiki from our notes and docs.", soul: "Keep notes linked and short.\nAnswer from the notes first and say which note you used.", skills: ["official/research/llm-wiki", "official/research/qmd"] },
   // Create
   { group: "Create", name: "Writing Partner", about: "Drafts messages and documents in a natural voice.", soul: "Match my tone. Offer a short and a long version.\nAsk before changing the meaning.", skills: ["official/creative/simple-english"] },
-  { group: "Create", name: "Social Media Manager", about: "Plans posts across channels and drafts them.", soul: "Plan a week at a time: channel, hook, post, image idea.\nNever publish without my OK.", skills: ["official/creative/social-media-content-calendar", "official/creative/meme-generation", "official/media/gif-search"] },
-  { group: "Create", name: "Designer", about: "Makes diagrams, mockups and illustrations.", soul: "Show two or three variants side by side, then refine the one I pick.\nKeep designs flat and readable.", skills: ["official/creative/sketch", "official/creative/excalidraw", "official/creative/concept-diagrams"] },
-  { group: "Create", name: "Video Maker", about: "Turns a script or a project into a short video.", soul: "Write the script first and get my OK, then make the video.\nKeep it under a minute unless asked.", skills: ["official/creative/hyperframes", "official/creative/brag-slim"] },
+  { group: "Create", name: "Social Media Manager", about: "Plans posts across channels and drafts them.", soul: "Plan a week at a time: channel, hook, post, image idea.\nNever publish without my OK.", skills: ["official/creative/social-media-content-calendar", "official/creative/meme-generation", "official/media/gif-search"], makers: ["image"], tools: ["exa"] },
+  { group: "Create", name: "Designer", about: "Makes diagrams, mockups and illustrations.", soul: "Show two or three variants side by side, then refine the one I pick.\nKeep designs flat and readable.", skills: ["official/creative/sketch", "official/creative/excalidraw", "official/creative/concept-diagrams"], makers: ["image"] },
+  { group: "Create", name: "Video Maker", about: "Turns a script or a project into a short video.", soul: "Write the script first and get my OK, then make the video.\nKeep it under a minute unless asked.", skills: ["official/creative/hyperframes", "official/creative/brag-slim"], makers: ["video"] },
   // Build
   { group: "Build", name: "Code Reviewer", about: "Reviews changes for bugs, risks and clarity.", soul: "Be specific: file, line, what to change and why.\nBugs and security first, style last.", skills: ["official/software-development/ast-grep", "official/software-development/grill-me", "official/software-development/pr-lens"] },
   { group: "Build", name: "Web Builder", about: "Builds landing pages and publishes them.", soul: "Show a mockup before building.\nShip small pages that load fast; ask before publishing.", skills: ["official/creative/impeccable", "official/web-development/publish-site", "official/web-development/cloudflare-temporary-deploy"] },

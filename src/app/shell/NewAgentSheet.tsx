@@ -6,7 +6,9 @@ import { addEdge, addNode } from "../../board/ydoc";
 import { RESERVED_PROFILE_NAMES, type GraphNode, type ModelNode } from "../../contracts/graph";
 import { compileBoard, learnSkills, skillName } from "../actions";
 import { prettyName } from "../lib/names";
-import { newAgent, newId, newModel } from "../graph/defaults";
+import { newAgent, newId, newMaker, newModel } from "../graph/defaults";
+import { CATALOG, CONNECTOR_TOOLS, catalogNode } from "../graph/catalog";
+import { makerProvider } from "../graph/teams";
 import { freeSpot } from "../graph/place";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
@@ -65,6 +67,23 @@ export function NewAgentSheet() {
         modelId = m.id;
       }
       addEdge(doc, { id: newId("edge"), source: modelId, target: agent.id, order: 0 });
+      // What the card does it does itself: its maker (images, videos) and tools come with it.
+      const card = AGENT_SUGGESTIONS.find((x) => x.name === name.trim());
+      const names = new Set(graph.nodes.filter((n) => n.kind === "tool").map((n) => String(n.data.name)));
+      (card?.tools ?? []).forEach((toolId, k) => {
+        const t = [...CATALOG, ...CONNECTOR_TOOLS].find((x) => x.id === toolId);
+        if (!t) return;
+        const existing = graph.nodes.find((n) => n.kind === "tool" && n.data.name === t.name);
+        const node = existing ?? catalogNode(t, names, { x: agent.position.x + 300, y: agent.position.y + k * 90 });
+        if (!existing) addNode(doc, node);
+        addEdge(doc, { id: newId("edge"), source: agent.id, target: node.id, order: 0 });
+      });
+      (card?.makers ?? []).forEach((media, k) => {
+        const maker = newMaker(graph, media, { x: agent.position.x + 300, y: agent.position.y + ((card?.tools?.length ?? 0) + k) * 90 });
+        const node = { ...maker, data: { ...maker.data, provider: makerProvider(graph, media) } } as GraphNode;
+        addNode(doc, node);
+        addEdge(doc, { id: newId("edge"), source: agent.id, target: node.id, order: 0 });
+      });
     });
     setOpen(false);
     setBusy(false);

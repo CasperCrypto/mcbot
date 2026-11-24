@@ -1,8 +1,10 @@
 /**
- * First launch: who McBot is for, who you are, which agents, which model.
- * Ends with a compiled team that already knows who it works for.
+ * First launch, step by step: who McBot is for, who you are, what your business does and for whom,
+ * what the agents should get done and in what voice, the team for that (with the tools and makers
+ * that let it do the work, not just talk about it), a model, the keys those tools need.
+ * Ends with a compiled team that knows your business (the board's brief, in every SOUL.md).
  */
-import { ArrowLeft, Building2, Check, Cloud, Copy, HardDrive, LoaderCircle, RefreshCw, TriangleAlert, User, Users } from "lucide-react";
+import { ArrowLeft, Building2, Check, Cloud, Copy, FolderOpen, Globe, HardDrive, ImageIcon, LoaderCircle, RefreshCw, TriangleAlert, User, Users } from "lucide-react";
 import { FrameStrip } from "../shell/WindowControls";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { LocalServer, SetupDetect, SetupKind, SetupProfile } from "../../contracts/api";
@@ -13,10 +15,22 @@ import { useApp } from "../state/store";
 import { nameChosen } from "../lib/identity";
 import { AgentFace, Field } from "../ui";
 import { CLOUD_PROVIDERS } from "../lib/providers";
-import { PRESETS, boardName, buildTeam, defaultPicks, presetsFor, userFacts, type ModelChoice } from "./presets";
+import { boardName, userFacts, type ModelChoice } from "./presets";
+import { CHANNELS, GOALS, VOICES, briefFromSetup, buildSetupBoard, defaultGoals, emptyAnswers, listed, memberKey, setupNeeds, teamsFor, toggleListed, withoutSkipped, type SetupAnswers } from "./onboarding";
+import { MEDIA_PROVIDERS } from "../../contracts/graph";
+import { learnTeamSkills } from "../actions";
+import { REMOTE } from "../lib/engine";
 
-type Step = "welcome" | "kind" | "about" | "agents" | "brain" | "build";
-const STEPS: Step[] = ["welcome", "kind", "about", "agents", "brain", "build"];
+type Step = "welcome" | "kind" | "about" | "business" | "goals" | "team" | "brain" | "tools" | "build";
+const STEPS: Step[] = ["welcome", "kind", "about", "business", "goals", "team", "brain", "tools", "build"];
+
+/** Image services offered in setup, with where to get a key (all Hermes' own image plugins, MEDIA_PROVIDERS). */
+const IMAGE_SERVICES: { id: keyof typeof MEDIA_PROVIDERS.image; keysUrl: string }[] = [
+  { id: "openrouter", keysUrl: "https://openrouter.ai/keys" },
+  { id: "openai", keysUrl: "https://platform.openai.com/api-keys" },
+  { id: "fal", keysUrl: "https://fal.ai/dashboard/keys" },
+  { id: "xai", keysUrl: "https://console.x.ai" },
+];
 
 /** Every preset is an OpenAI-compatible address (src/app/lib/providers.ts); "Other" is any such API. */
 const CLOUDS = [
@@ -47,7 +61,12 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
   // A second run starts from the first one's answers; a made-up name is never filled in.
   const earlier = useApp((s) => s.setup?.profile ?? null);
   const [profile, setProfile] = useState<SetupProfile>(earlier ?? { kind: "personal", name: nameChosen(identity) ? identity.name : "", company: "", about: "", role: "" });
-  const [picks, setPicks] = useState<string[]>(defaultPicks(earlier?.kind ?? "personal"));
+  const [answers, setAnswers] = useState<SetupAnswers>(emptyAnswers);
+  const answer = (k: keyof SetupAnswers, v: string) => setAnswers((a) => ({ ...a, [k]: v }));
+  const [goals, setGoals] = useState<string[]>(defaultGoals(earlier?.kind ?? "personal"));
+  const [skip, setSkip] = useState<Set<string>>(new Set());
+  const [maker, setMaker] = useState<string | null>(null);
+  const [makerKey, setMakerKey] = useState({ value: "", saved: false, error: "" });
   const [detect, setDetect] = useState<SetupDetect | null>(null);
   const [local, setLocal] = useState<{ server: LocalServer; model: string } | null>(null);
   const [cloudId, setCloudId] = useState<CloudId>("openrouter");
@@ -61,6 +80,9 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
   const company = profile.kind !== "personal";
   const index = STEPS.indexOf(step);
   const go = (s: Step) => setStep(s);
+  const teams = useMemo(() => teamsFor(goals), [goals]);
+  const kept = useMemo(() => teams.map((t) => withoutSkipped(t, skip)).filter((t): t is NonNullable<typeof t> => !!t), [teams, skip]);
+  const needs = setupNeeds(kept);
 
   // McBot's engine prepares itself in the background from the first screen (minutes on first launch).
   const prep = useRef<Promise<boolean> | null>(null);
@@ -131,6 +153,24 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
     return out;
   }, [local, cloudReady, provider, cloudBase, cloud.model]);
 
+  // The image service: the one the cloud model's key also runs, unless the person picks another.
+  const KEY_SERVICE: Record<string, string> = { OPENROUTER_API_KEY: "openrouter", OPENAI_API_KEY: "openai", XAI_API_KEY: "xai" };
+  const sharedService = models.map((m) => KEY_SERVICE[m.apiKeyEnv]).find(Boolean) ?? null;
+  const service = (maker ?? sharedService ?? "openrouter") as keyof typeof MEDIA_PROVIDERS.image;
+  const serviceKey = MEDIA_PROVIDERS.image[service].keyEnv;
+  const serviceKeySaved = makerKey.saved || !!detect?.secrets.includes(serviceKey) || (cloud.saved && provider.key === serviceKey);
+  useEffect(() => {
+    setMakerKey((k) => ({ ...k, saved: false, error: "" }));
+  }, [service]);
+  const saveMakerKey = async () => {
+    try {
+      await engine.setSecret(serviceKey, makerKey.value.trim());
+      setMakerKey({ value: "", saved: true, error: "" });
+    } catch (err) {
+      setMakerKey((k) => ({ ...k, error: (err as Error).message }));
+    }
+  };
+
   const build = async (withModels: ModelChoice[]) => {
     go("build");
     setFailed(null);
@@ -140,9 +180,9 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
     const plan: Row[] = [
       preparing ? { label: "Preparing the engine", status: "busy", detail: "first launch, a few minutes" }
         : { label: hermesOk ? (detect?.hermes.kind === "bundled" ? "Hermes is built in" : "Hermes is ready") : "Hermes isn't set up yet", status: hermesOk ? "ok" : "warn" },
-      { label: "Building your board", status: "wait" },
+      { label: "Building your team", status: "wait" },
       { label: "Writing your agents", status: withModels.length ? "wait" : "warn", detail: withModels.length ? undefined : "Add a model on the board, then compile" },
-      { label: "Telling them who you are", status: withModels.length ? "wait" : "warn" },
+      { label: "Teaching them your business", status: withModels.length ? "wait" : "warn" },
     ];
     setRows(plan);
     const set = (i: number, patch: Partial<Row>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)));
@@ -154,11 +194,13 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
         if (ok) setDetect((d) => (d ? { ...d, hermes: { ...d.hermes, found: true, kind: "bundled" } } : d));
       }
       set(1, { status: "busy" });
-      const graph = buildTeam(profile, picks, withModels, workspace);
+      const brief = briefFromSetup(profile, answers);
+      const { graph, lead, skills } = buildSetupBoard({ profile, brief, teams, skip, models: withModels, workspace, maker: service });
       const board = await engine.setupBoard(boardName(profile), graph);
       await pause(350);
-      set(1, { status: "ok", detail: board.name });
-      const first = graph.nodes.find((n) => n.kind === "agent")?.id ?? null;
+      const agentCount = graph.nodes.filter((n) => n.kind === "agent").length;
+      set(1, { status: "ok", detail: `${agentCount} agent${agentCount === 1 ? "" : "s"} · ${board.name}` });
+      const first = lead ?? graph.nodes.find((n) => n.kind === "agent")?.id ?? null;
       if (withModels.length) {
         set(2, { status: "busy" });
         const res = await engine.compile(board.id);
@@ -175,7 +217,9 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
             await Promise.all(agents.map((a) => engine.saveMemory(a, "user", [fact], null).catch(() => null)));
           }
           await pause(350);
-          set(3, { status: "ok", detail: fact ? "USER.md" : undefined });
+          set(3, { status: "ok", detail: graph.brief ? "in every SOUL.md" : fact ? "USER.md" : undefined });
+          // Their Hermes skills install in the background, one agent after another (notices say how it went).
+          if (skills.length && !REMOTE) void learnTeamSkills("Your team", skills);
         }
       }
       await engine.setupComplete(profile);
@@ -195,13 +239,16 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
     welcome: true,
     kind: true,
     about: profile.name.trim().length > 0 && (!company || profile.company.trim().length > 0),
-    agents: picks.length > 0,
+    business: !company || profile.about.trim().length > 0,
+    goals: goals.length > 0,
+    team: kept.length > 0,
     brain: models.length > 0,
+    tools: true,
     build: !!result,
   };
 
   const next = () => {
-    if (step === "brain") void build(models);
+    if (step === "tools") void build(models);
     else go(STEPS[index + 1]!);
   };
 
@@ -225,7 +272,7 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
             <div className="setup-choices">
               {KINDS.map((k) => (
                 <button key={k.kind} className="choice" aria-pressed={profile.kind === k.kind} data-testid={`setup-kind-${k.kind}`}
-                  onClick={() => { setProfile({ ...profile, kind: k.kind }); setPicks(defaultPicks(k.kind)); }}>
+                  onClick={() => { setProfile({ ...profile, kind: k.kind }); setGoals(defaultGoals(k.kind)); }}>
                   <span className="choice-icon">{k.icon}</span>
                   <b>{k.title}</b>
                   <small>{k.sub}</small>
@@ -237,37 +284,114 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
 
         {step === "about" && (
           <>
-            <h1>{company ? "About your company" : "About you"}</h1>
+            <h1>About you</h1>
             <div className="setup-form">
               <Field label="Your name" value={profile.name} onChange={(v) => setProfile({ ...profile, name: v })} testId="setup-name" />
-              {company ? (
+              {company && (
                 <>
-                  <Field label="Company" value={profile.company} onChange={(v) => setProfile({ ...profile, company: v })} placeholder="Your company" testId="setup-company" />
-                  <Field label="What it does" value={profile.about} onChange={(v) => setProfile({ ...profile, about: v })} placeholder="Invoicing software for small shops" testId="setup-about" />
-                  <Field label="Your role" value={profile.role} onChange={(v) => setProfile({ ...profile, role: v })} placeholder="Head of support" testId="setup-role" />
+                  <Field label={profile.kind === "team" ? "Team or company" : "Company"} value={profile.company} onChange={(v) => setProfile({ ...profile, company: v })} placeholder="Northwind Bakery" testId="setup-company" />
+                  <Field label="Your role" value={profile.role} onChange={(v) => setProfile({ ...profile, role: v })} placeholder="Owner" testId="setup-role" />
                 </>
-              ) : (
-                <Field label="What should McBot help with?" value={profile.about} onChange={(v) => setProfile({ ...profile, about: v })} placeholder="Plan my week, answer email, research" testId="setup-about" />
               )}
             </div>
           </>
         )}
 
-        {step === "agents" && (
+        {step === "business" && (
           <>
-            <h1>Pick your first agents</h1>
-            <div className="setup-agents">
-              {presetsFor(profile.kind).map((p) => {
-                const on = picks.includes(p.id);
+            <h1>{company ? `What ${profile.company.trim() || "your company"} does` : "What you do"}</h1>
+            <p className="setup-lead">Every agent will know this, so their work fits your business.</p>
+            <div className="setup-form">
+              <label className="field">
+                <span>{company ? "What you do" : "What you do, and what you'd like help with"}</span>
+                <textarea rows={3} maxLength={600} value={profile.about} onChange={(e) => setProfile({ ...profile, about: e.target.value })}
+                  placeholder={company ? "Sourdough, pastries and cakes, baked every morning. A café and online orders." : "I run a small design studio; help me with clients, invoices and posts."} data-testid="setup-about" />
+              </label>
+              {company && (
+                <label className="field">
+                  <span>Products and prices <small className="faint">optional</small></span>
+                  <textarea rows={2} value={answers.offer} onChange={(e) => answer("offer", e.target.value)} placeholder="Loaves from £4, celebration cakes from £35, a weekly bread subscription" data-testid="setup-offer" />
+                </label>
+              )}
+              <label className="field">
+                <span>{company ? "Your customers" : "Who you work with"} <small className="faint">optional</small></span>
+                <textarea rows={2} value={answers.customers} onChange={(e) => answer("customers", e.target.value)} placeholder={company ? "Local families, office lunch orders, people planning a celebration" : "Small businesses, mostly cafés and shops"} data-testid="setup-customers" />
+              </label>
+              <Field label="Website or profiles (optional)" value={answers.links} onChange={(v) => answer("links", v)} placeholder="northwindbakery.co.uk · instagram.com/northwindbakes" testId="setup-links" />
+            </div>
+          </>
+        )}
+
+        {step === "goals" && (
+          <>
+            <h1>What should your agents get done?</h1>
+            <div className="setup-goals" role="group" aria-label="Goals">
+              {GOALS.map((g) => {
+                const on = goals.includes(g.id);
                 return (
-                  <button key={p.id} className="agent-pick" aria-pressed={on} data-testid={`setup-agent-${p.id}`}
-                    onClick={() => setPicks(on ? picks.filter((x) => x !== p.id) : [...picks, p.id])}>
-                    <AgentFace seed={p.name} size={40} />
-                    <span className="grow"><b>{p.displayName}</b><small>{p.role}</small></span>
-                    <span className="tick">{on && <Check size={13} strokeWidth={3} />}</span>
+                  <button key={g.id} className="goal-pick" aria-pressed={on} data-testid={`setup-goal-${g.id}`}
+                    onClick={() => setGoals(on ? goals.filter((x) => x !== g.id) : [...goals, g.id])}>
+                    <b>{g.label}</b><small>{g.sub}</small>
+                    <span className="tick">{on && <Check size={12} strokeWidth={3} />}</span>
                   </button>
                 );
               })}
+            </div>
+            <div className="setup-form">
+              <label className="field">
+                <span>Your goals right now <small className="faint">optional</small></span>
+                <textarea rows={2} value={answers.goals} onChange={(e) => answer("goals", e.target.value)} placeholder="Post 4 times a week · 500 newsletter subscribers by June · launch online cake orders" data-testid="setup-goals-text" />
+              </label>
+              <div className="field">
+                <span>Voice</span>
+                <div className="chip-row">
+                  {VOICES.map((v) => <button key={v} type="button" className="pick-chip" aria-pressed={listed(answers.voice, v)} onClick={() => answer("voice", toggleListed(answers.voice, v))}>{v}</button>)}
+                </div>
+              </div>
+              <div className="field">
+                <span>Where you show up</span>
+                <div className="chip-row">
+                  {CHANNELS.map((c) => <button key={c} type="button" className="pick-chip" aria-pressed={listed(answers.channels, c)} onClick={() => answer("channels", toggleListed(answers.channels, c))}>{c}</button>)}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {step === "team" && (
+          <>
+            <h1>Your team</h1>
+            <p className="setup-lead">Each one does real work: the designer makes the images, the researcher searches the web. Click to leave one out.</p>
+            <div className="setup-teams">
+              {teams.map((t) => (
+                <section key={t.id} className="setup-team">
+                  <header><b>{t.label}</b><small>{t.does}</small></header>
+                  <div className="setup-members">
+                    {t.members.map((m, i) => {
+                      const k = memberKey(t, m.name);
+                      const on = !skip.has(k);
+                      return (
+                        <button key={k} className="agent-pick" aria-pressed={on} data-testid={`setup-member-${m.name}`}
+                          onClick={() => setSkip((x) => { const n = new Set(x); if (on) n.add(k); else n.delete(k); return n; })}>
+                          <AgentFace seed={m.name} size={38} />
+                          <span className="grow">
+                            <b>{m.displayName}{i === 0 && t.members.length > 1 ? <span className="faint"> · lead</span> : null}</b>
+                            <small>{m.description}</small>
+                            {(m.makers?.length || m.tools?.length) ? (
+                              <span className="member-can">
+                                {m.makers?.includes("image") && <span><ImageIcon size={12} /> Makes images</span>}
+                                {m.makers?.includes("video") && <span><ImageIcon size={12} /> Makes videos</span>}
+                                {m.tools?.includes("exa") && <span><Globe size={12} /> Searches the web</span>}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="tick">{on && <Check size={13} strokeWidth={3} />}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
             </div>
           </>
         )}
@@ -335,12 +459,43 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
           </>
         )}
 
+        {step === "tools" && (
+          <>
+            <h1>Tools for the work</h1>
+            <p className="setup-lead">So your agents can do things, not just write about them.</p>
+            {(needs.image || needs.video) && (
+              <section className="setup-section" data-testid="setup-images">
+                <header><ImageIcon size={14} /> Making images{needs.video ? " and videos" : ""}</header>
+                <div className="provider-grid" role="radiogroup" aria-label="Image service">
+                  {IMAGE_SERVICES.map((sv) => (
+                    <button key={sv.id} role="radio" aria-checked={service === sv.id} className="provider-pick" onClick={() => setMaker(sv.id)}>{MEDIA_PROVIDERS.image[sv.id].label}</button>
+                  ))}
+                </div>
+                {serviceKeySaved ? (
+                  <div className="setup-row"><Check size={14} className="ok-text" /> <span className="grow">{cloud.saved && provider.key === serviceKey ? `Uses your ${MEDIA_PROVIDERS.image[service].label} key` : "Key saved on this computer"}</span></div>
+                ) : (
+                  <div className="setup-key">
+                    <Field label={`${MEDIA_PROVIDERS.image[service].label} key`} type="password" value={makerKey.value} onChange={(v) => setMakerKey({ ...makerKey, value: v, error: "" })} placeholder="Paste your key" error={makerKey.error || null} testId="setup-maker-key"
+                      note={<button className="link-btn" style={{ padding: 0 }} onClick={() => void openExternal(IMAGE_SERVICES.find((x) => x.id === service)!.keysUrl)}>Get your {MEDIA_PROVIDERS.image[service].label} key ↗</button>} />
+                    <button className="btn" disabled={!makerKey.value.trim()} onClick={() => void saveMakerKey()} data-testid="setup-save-maker-key">Save</button>
+                  </div>
+                )}
+              </section>
+            )}
+            <section className="setup-section">
+              {needs.web && <div className="setup-row"><Globe size={15} className="faint" /><span className="grow">Web search</span><small className="faint">Exa · free, no key</small><Check size={14} className="ok-text" /></div>}
+              <div className="setup-row"><FolderOpen size={15} className="faint" /><span className="grow">Shared files</span><small className="faint mono">{(health?.workspace ?? "~/McBot").replace(/[\\/]+$/, "")}/files</small><Check size={14} className="ok-text" /></div>
+            </section>
+            {!(needs.image || needs.video) && <p className="setup-note">Nothing else to set up. Add tools any time from the board.</p>}
+          </>
+        )}
+
         {step === "build" && (
           <>
             <h1>{result ? "Your team is ready" : failed ? "Something went wrong" : "Setting up"}</h1>
             <div className="setup-faces">
-              {PRESETS.filter((p) => picks.includes(p.id)).map((p) => (
-                <span key={p.id} data-tip={p.displayName}><AgentFace seed={p.name} size={46} status={result ? "succeeded" : "running"} /></span>
+              {kept.flatMap((t) => t.members).map((m) => (
+                <span key={m.name} data-tip={m.displayName}><AgentFace seed={m.name} size={46} status={result ? "succeeded" : "running"} /></span>
               ))}
             </div>
             <ul className="setup-checks">
@@ -367,7 +522,7 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
           ) : step === "welcome" ? (
             <button className="btn ghost" onClick={() => void skipAll()} data-testid="setup-skip">Skip setup</button>
           ) : failed ? (
-            <button className="btn ghost" onClick={() => go("brain")}><ArrowLeft size={14} /> Back</button>
+            <button className="btn ghost" onClick={() => go("tools")}><ArrowLeft size={14} /> Back</button>
           ) : <span />}
           <Dots index={index} />
           {step === "build" ? (
@@ -377,8 +532,9 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
           ) : (
             <div className="row">
               {step === "brain" && <button className="btn ghost" onClick={() => void build([])} data-testid="setup-later">Later</button>}
+              {step === "tools" && (needs.image || needs.video) && !serviceKeySaved && <button className="btn ghost" onClick={() => void build(models)} data-testid="setup-tools-later">Later</button>}
               <button className="btn primary lg" disabled={!canNext[step]} onClick={next} data-testid="setup-next">
-                {step === "welcome" ? "Get started" : step === "brain" ? "Build my team" : "Continue"}
+                {step === "welcome" ? "Get started" : step === "tools" ? "Build my team" : "Continue"}
               </button>
             </div>
           )}

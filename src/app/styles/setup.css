@@ -87,3 +87,30 @@
 @media (prefers-reduced-motion: reduce) {
   .setup-body { animation: none; }
 }
+
+/* The longer setup (setup/onboarding.ts): business, goals, the team, tools. */
+.setup-lead { margin: -12px 0 0; color: var(--text-2); font-size: 15px; line-height: 1.5; }
+.setup-form textarea { font-size: 15px; line-height: 1.5; resize: vertical; }
+.setup-form .field > span small { font-weight: 400; margin-left: 4px; }
+.setup-goals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.goal-pick { position: relative; display: grid; gap: 3px; padding: 12px 40px 12px 14px; text-align: left; border: 0; border-radius: var(--r-lg); background: var(--surface-1); box-shadow: var(--lift); color: var(--text); font: inherit; cursor: pointer; transition: background var(--t-fast), box-shadow var(--t-fast); }
+.goal-pick:hover { background: var(--surface-2); }
+.goal-pick b { font-size: 15px; }
+.goal-pick small { color: var(--text-3); font-size: 13px; }
+.goal-pick[aria-pressed="true"] { background: var(--surface-3); box-shadow: 0 0 0 2px var(--accent-soft), var(--lift); }
+.goal-pick .tick { position: absolute; top: 50%; right: 14px; translate: 0 -50%; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--line-3); display: grid; place-items: center; color: var(--on-accent); }
+.goal-pick[aria-pressed="true"] .tick { background: var(--accent); border-color: var(--accent); }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.pick-chip { height: 32px; padding: 0 13px; border: 0; border-radius: var(--r-pill); background: rgb(var(--tint-rgb) / 0.07); color: var(--text-2); font: inherit; font-size: 13.5px; cursor: pointer; transition: background var(--t-fast), color var(--t-fast); }
+.pick-chip:hover { background: rgb(var(--tint-rgb) / 0.11); color: var(--text); }
+.pick-chip[aria-pressed="true"], .pick-chip[aria-pressed="true"]:hover { background: var(--btn-light-bg); color: var(--btn-light-fg); }
+.setup-teams { display: grid; gap: 18px; }
+.setup-team { display: grid; gap: 10px; }
+.setup-team > header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.setup-team > header b { font-size: 16px; }
+.setup-team > header small { color: var(--text-3); font-size: 13.5px; }
+.setup-members { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.member-can { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; font-size: 12.5px; color: var(--text-2); }
+.member-can span { display: inline-flex; align-items: center; gap: 4px; }
+.agent-pick[aria-pressed="false"] { opacity: 0.55; }
+@media (max-width: 640px) { .setup-goals, .setup-members { grid-template-columns: minmax(0, 1fr); } }
