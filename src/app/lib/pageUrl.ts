@@ -21,7 +21,7 @@ export function framedUrl(u: string): string {
     return "about:blank";
   }
   const rest = `${p.host}${p.pathname}${p.search}${p.hash}`;
-  if (p.protocol === "https:") return `https://${rest}`;
-  if (p.protocol === "http:") return `http://${rest}`;
-  return "about:blank";
+  const page = p.protocol === "https:" ? `https://${rest}` : p.protocol === "http:" ? `http://${rest}` : null;
+  // Quotes and angle brackets are never part of an address: escaped, they can't become markup either.
+  return page ? page.replace(/["'<>]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`) : "about:blank";
 }

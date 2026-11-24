@@ -13,6 +13,8 @@ describe("the browser's addresses", () => {
     expect(framedUrl("https://en.wikipedia.org/wiki/Mac?x=1#top")).toBe("https://en.wikipedia.org/wiki/Mac?x=1#top");
     expect(framedUrl("http://localhost:5173/")).toBe("http://localhost:5173/");
     expect(framedUrl("https://user:pw@example.com/a")).toBe("https://example.com/a");
+    expect(framedUrl("https://example.com/a'b?q=\"<x>\"")).toBe("https://example.com/a%27b?q=%22%3Cx%3E%22");
+    expect(framedUrl("https://duckduckgo.com/?q=a%20b%2Fc")).toBe("https://duckduckgo.com/?q=a%20b%2Fc");
     for (const bad of ["javascript:alert(1)", "JavaScript:alert(1)", "data:text/html,<b>x</b>", "file:///etc/passwd", "about:srcdoc", "not a url"]) expect(framedUrl(bad)).toBe("about:blank");
   });
 });
