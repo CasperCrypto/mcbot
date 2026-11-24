@@ -9,6 +9,7 @@ import { randomBytes } from "node:crypto";
 import { createReadStream, existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import type { ChildProcess } from "node:child_process";
 import type { AddressInfo } from "node:net";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
@@ -18,7 +19,7 @@ import { compile, resolveGraph, type AgentBundle } from "../src/compile";
 import { updateChecker } from "./updates";
 import { askForPlan, plannerModel } from "./builder";
 import { PlanChoicesSchema, type HarnessPlan } from "../src/harness/plan";
-import type { AgentMemoryView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, AgentSchedules, SignInView, UpdateView, SetupDetect, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../src/contracts/api";
+import type { AgentMemoryView, GuestView, BoardExport, BoardInfo, CompileResponse, Diagnostics, FsListing, FsPreview, FsRoot, Health, HermesInfo, AgentSchedules, SignInView, UpdateView, SetupDetect, SetupState, TaskAction, TaskDetail, TasksView, TaskView } from "../src/contracts/api";
 import { writeExport } from "./boardFiles";
 import { isHermesHome, readSetup } from "./harnessDisk";
 import { HermesSync } from "./hermesSync";
@@ -41,10 +42,13 @@ import { BOARD_ID_RE, BoardRelay, LooseGraph } from "./relay";
 import { Runner } from "./runner";
 import { HermesRuns, apiEnv, gatewayApi } from "./hermesRuns";
 import { RunStore } from "./runStore";
+import type { RunEvent } from "../src/contracts/run";
 import { SecretError, Secrets } from "./secrets";
 import { SetupStore, detectLocal, listModels } from "./setup";
 import { OwnershipError, readManifest, writeCompileResult } from "./writer";
-import { Sharing, guestAllowed, joinPage, type SharingView } from "./sharing";
+import { Sharing, cleanOwnUrl, guestAllowed, joinPage, type Member, type SharingView } from "./sharing";
+import { Tunnel, launchQuickTunnel } from "./tunnel";
+import { APP_PAGES, hasWebApp, pagePolicy, webFile } from "./webApp";
 import { frameable } from "./web";
 
 export const ENGINE_VERSION = "0.7.0";
@@ -58,8 +62,14 @@ export interface EngineConfig {
   allowedOrigins: string[];
   /** The installed app's engine log (the shell writes it), for "Report a problem"; absent in development. */
   logFile?: string;
-  /** Share on your network: the port teammates connect to while sharing is on (default 4318; 0 = any). */
+  /** Share: the port people who join connect to while sharing is on (default 4318; 0 = any). */
   sharePort?: number;
+  /** The built app (`dist/`), served on the share port so people can join in a web browser. */
+  webDir?: string;
+  /** Where McBot keeps tools it downloads (Cloudflare's tunnel client); default <workspace>/.tools. */
+  toolsDir?: string;
+  /** Tests: start a stand-in for `cloudflared tunnel --url` (engine/tunnel.ts). */
+  launchTunnel?: (port: number) => Promise<ChildProcess>;
   /** Ask GitHub whether a newer McBot is out (the installed app only; never in tests or dev). */
   checkUpdates?: boolean;
 }
@@ -136,17 +146,35 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     api: gateway ? { runs: new HermesRuns(gateway), env: apiEnv(gateway) } : undefined,
   });
   const folders = new Folders(cfg.workspace, cfg.hermesHome);
-  const sharing = new Sharing(join(cfg.workspace, "sharing.json"), cfg.sharePort ?? 4318);
+  // "Anyone with the link": a quick tunnel to the share port while sharing reaches the internet.
+  const toolsDir = cfg.toolsDir ?? join(cfg.workspace, ".tools");
+  let tunnel: Tunnel | null = null;
+  const sharing = new Sharing(join(cfg.workspace, "sharing.json"), cfg.sharePort ?? 4318, () => tunnel?.view().url ?? null);
+  /** Who sent this request on the share port: the member its key belongs to. */
+  const memberOf = new WeakMap<IncomingMessage, Member>();
+  /** Runs someone who joined started, by run id (their member id), for what each guest may see. */
+  const runBy = new Map<string, string>();
   const allowed = new Set(cfg.allowedOrigins);
-  const sse = new Set<ServerResponse>();
+  /** Live events: SSE for McBot's own windows, a WebSocket for windows that joined (quick tunnels carry no SSE). */
+  const sse = new Map<ServerResponse, Member | null>();
+  const eventSockets = new Map<import("ws").WebSocket, Member | null>();
+  /** A guest (Can chat) sees only the runs they started; the host and teammates see every run. */
+  const seesRun = (m: Member | null, runId: string) => !m || m.role === "edit" || runBy.get(runId) === m.id;
+  /** What a guest's window gets of a run: not where it ran on this computer. */
+  const forGuest = (e: RunEvent): RunEvent => (e.type === "run.started" ? { ...e, argv: [], hermesHome: "", cwd: "" } : e);
   store.subscribe((e) => {
-    const frame = `data: ${JSON.stringify(e)}\n\n`;
-    for (const res of sse) res.write(frame);
+    if (e.type === "run.started" && e.by) runBy.set(e.runId, e.by);
+    const all = JSON.stringify(e);
+    let guest: string | null = null;
+    const frame = (m: Member | null) => (m?.role === "chat" ? (guest ??= JSON.stringify(forGuest(e))) : all);
+    for (const [res, m] of sse) if (seesRun(m, e.runId)) res.write(`data: ${frame(m)}\n\n`);
+    for (const [ws, m] of eventSockets) if (seesRun(m, e.runId) && ws.readyState === ws.OPEN) ws.send(`{"run":${frame(m)}}`);
   });
   // Hermes → the board, live: an agent's files changed (editor, Hermes CLI, or the agent itself).
   const hermesSync = new HermesSync(cfg.hermesHome, join(cfg.workspace, "hermes-seen.json"), relay, (c) => {
     const frame = `event: harness\ndata: ${JSON.stringify(c)}\n\n`;
-    for (const res of sse) res.write(frame);
+    for (const [res, m] of sse) if (!m || m.role === "edit") res.write(frame);
+    for (const [ws, m] of eventSockets) if ((!m || m.role === "edit") && ws.readyState === ws.OPEN) ws.send(JSON.stringify({ harness: c }));
   });
   if (cfg.managedRoot) hermesSync.start();
 
@@ -156,6 +184,19 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   };
 
   const bundlesOf = async (boardId: string) => resolveGraph(await relay.graph(boardId));
+  /** Whose McBot this is, as people who join see it. */
+  const hostName = async () => (await setup.get()).profile?.name?.trim() || "A teammate";
+  /** The agents a guest (Can chat) may talk to: the ones their link named, on their board. */
+  const guestAgents = async (m: Member): Promise<GuestView["agents"]> => {
+    if (!m.boardId || !(await relay.list()).some((b) => b.id === m.boardId)) return [];
+    const { bundles } = await bundlesOf(m.boardId);
+    const pick = m.agents?.length ? new Set(m.agents) : null;
+    return bundles.filter((b) => !pick || pick.has(b.agent.id))
+      .map((b) => ({ id: b.agent.id, name: b.agent.data.name, displayName: b.agent.data.displayName || b.agent.data.name, description: b.agent.data.description ?? "" }));
+  };
+  /** Did this guest start that run? */
+  const ownsRun = async (m: Member, runId: string) =>
+    runBy.get(runId) === m.id || (await store.events(runId)).some((e) => e.type === "run.started" && e.by === m.id);
   const modelsOf = (bundles: AgentBundle[]): ModelNode[] => [...new Map(bundles.flatMap((b) => b.models).map((m) => [m.id, m])).values()];
 
   /** This board's compiled agents: profile name → node id (who can be given a task). */
@@ -367,17 +408,35 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       await writeVersions(boardId, versions);
       return { versions };
     },
-    "GET /api/runs": async (_req, url) => store.list(url.searchParams.get("boardId") ?? undefined),
+    "GET /api/runs": async (req, url) => {
+      const list = await store.list(url.searchParams.get("boardId") ?? undefined);
+      const m = memberOf.get(req);
+      return m?.role === "chat" ? list.filter((r) => r.by === m.id) : list;
+    },
     "POST /api/runs": async (req) => {
       const body = parse(z.object({ boardId: z.string(), agentNodeId: z.string(), prompt: z.string().trim().min(1).max(100_000) }), await json(req));
+      const who = memberOf.get(req) ?? null;
+      if (who?.role === "chat") {
+        // A guest: only the agents their link named, one question at a time.
+        if (body.boardId !== who.boardId || !(await guestAgents(who)).some((a) => a.id === body.agentNodeId)) throw new HttpError(403, "You can't chat with that agent");
+        if ((await store.list(who.boardId)).some((r) => r.by === who.id && r.status === "running")) throw new HttpError(409, "Wait for the answer, then ask again.");
+      }
       const boardId = await requireBoard(body.boardId);
       const { bundles, issues } = await bundlesOf(boardId);
       const bundle = bundles.find((b) => b.agent.id === body.agentNodeId);
       if (!bundle) throw new HttpError(404, "no such agent on this board");
-      const drift = await compileBoard(boardId, true);
-      if (!drift.ok) throw new HttpError(409, "The board has errors; fix them before running.", { issues });
+      const agentName = bundle.agent.data.displayName || bundle.agent.data.name;
+      let drift = await compileBoard(boardId, true);
+      if (!drift.ok) throw new HttpError(409, who?.role === "chat" ? `${agentName} isn't ready right now. Ask ${await hostName()} to check it.` : "The board has errors; fix them before running.", who?.role === "chat" ? {} : { issues });
       const dir = `profiles/${bundle.agent.data.name}/`;
-      const stale = drift.report.changes.filter((c) => c.path.startsWith(dir) && c.status !== "unchanged");
+      let stale = drift.report.changes.filter((c) => c.path.startsWith(dir) && c.status !== "unchanged");
+      // A guest can't compile: their question uses the board as it is now, as the host's would.
+      if (stale.length && who?.role === "chat") {
+        const done = await compileBoard(boardId, false);
+        if (!done.ok) throw new HttpError(409, `${agentName} isn't ready right now. Ask ${await hostName()} to check it.`);
+        drift = await compileBoard(boardId, true);
+        stale = drift.ok ? drift.report.changes.filter((c) => c.path.startsWith(dir) && c.status !== "unchanged") : stale;
+      }
       if (stale.length) throw new HttpError(409, `The board changed since ${bundle.agent.data.name} was last compiled. Compile, then run.`, { stale: stale.map((c) => c.path) });
       if (!(await findHermes())) throw new HttpError(503, "The engine is not set up yet");
       // A daily budget stops the runs McBot starts once today's (UTC) spend reaches it.
@@ -391,6 +450,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
         boardId, agentNodeId: bundle.agent.id, profile: bundle.agent.data.name, prompt: body.prompt,
         toolNodes: bundle.tools.map((t) => ({ id: t.id, name: t.data.name })), models: bundle.models,
         env: envEntriesFor(bundle),
+        ...(who ? { by: { id: who.id, name: who.name } } : {}),
       });
       return { runId };
     },
@@ -509,21 +569,52 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     },
 
     // ---- share on your network (this computer only: members never reach these) ----
-    "GET /api/share": async (): Promise<SharingView> => sharing.view(),
+    "GET /api/share": async (): Promise<SharingView> => shareView(),
     "POST /api/share": async (req): Promise<SharingView> => {
-      const { on } = parse(z.object({ on: z.boolean() }), await json(req));
+      const { on, reach } = parse(z.object({ on: z.boolean(), reach: z.enum(["network", "internet"]).optional() }), await json(req));
+      if (reach) await sharing.setReach(reach, (await sharing.reach()).ownUrl);
       await sharing.setOn(on);
       await applySharing();
-      return sharing.view();
+      return shareView();
     },
-    "POST /api/share/invite": async (): Promise<SharingView> => {
-      await sharing.newInvite();
-      return sharing.view();
+    /** Who links reach: this network, or anyone (the quick tunnel, or the host's own address). */
+    "POST /api/share/reach": async (req): Promise<SharingView> => {
+      const body = parse(z.object({ reach: z.enum(["network", "internet"]), ownUrl: z.string().max(300).nullable().optional() }), await json(req));
+      const own = body.ownUrl ? cleanOwnUrl(body.ownUrl) : null;
+      if (body.ownUrl && !own) throw new HttpError(400, "Use a web address like https://team.example.com");
+      await sharing.setReach(body.reach, body.ownUrl === undefined ? (await sharing.reach()).ownUrl : own);
+      await applySharing();
+      return shareView();
+    },
+    /** A new link: for teammates (Can edit), or for guests to chat with some agents of a board. */
+    "POST /api/share/invite": async (req): Promise<SharingView> => {
+      const body = parse(z.object({
+        role: z.enum(["edit", "chat"]).default("edit"), boardId: z.string().optional(),
+        agents: z.array(z.string().max(80)).max(50).optional(), fresh: z.boolean().default(true),
+      }), await json(req));
+      if (body.role === "chat") {
+        const boardId = await requireBoard(body.boardId);
+        const { bundles } = await bundlesOf(boardId);
+        if (!bundles.length) throw new HttpError(409, "Add an agent to this board first");
+        const ids = new Set(bundles.map((b) => b.agent.id));
+        if (body.agents?.some((a) => !ids.has(a))) throw new HttpError(400, "No such agent on this board");
+        await sharing.invite({ role: "chat", boardId, agents: body.agents ?? [] }, body.fresh);
+      } else {
+        await sharing.invite({ role: "edit" }, body.fresh);
+      }
+      return shareView();
     },
     "POST /api/share/remove": async (req): Promise<SharingView> => {
       const { id } = parse(z.object({ id: z.string() }), await json(req));
       await sharing.remove(id);
-      return sharing.view();
+      return shareView();
+    },
+    /** Someone who joined: whose McBot this is, and (a guest) the agents they may chat with. */
+    "GET /api/guest": async (req): Promise<GuestView> => {
+      const m = memberOf.get(req) ?? null;
+      const host = await hostName();
+      if (!m || m.role === "edit") return { host, role: "edit", name: m?.name ?? host, boardId: null, agents: [] };
+      return { host, role: "chat", name: m.name, boardId: m.boardId ?? null, agents: await guestAgents(m) };
     },
 
     // ---- tasks: Hermes' kanban, shared by the agents compiled into this root ----
@@ -788,6 +879,37 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   const deny = (res: ServerResponse, status: number, error: string) => void res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify({ error }));
   /** A teammate's key: `Authorization: Bearer <key>`, or `?key=` where a header cannot be set (WebSocket, SSE). */
   const keyOf = (req: IncomingMessage, url: URL) => /^Bearer\s+(\S+)$/.exec(req.headers.authorization ?? "")?.[1] ?? url.searchParams.get("key");
+  /** Where a join came from, for its rate limit: through the tunnel, Cloudflare names the person's address. */
+  const clientOf = (req: IncomingMessage) => {
+    const ip = req.socket.remoteAddress ?? "";
+    const cf = req.headers["cf-connecting-ip"];
+    return /^(::ffff:)?127\.|^::1$/.test(ip) ? `tunnel:${typeof cf === "string" ? cf : "-"}` : ip;
+  };
+  /** May a page from this Origin use the share port? McBot's windows, and this port's own addresses. */
+  const shareOrigin = async (origin: string | undefined) => !origin || allowed.has(origin) || (await sharing.origins()).has(origin);
+  const sendJson = (res: ServerResponse, body: unknown) => void res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }).end(JSON.stringify(body));
+
+  /** The app, for people who open a link in a web browser: static files, no data (it asks for a key). */
+  const serveApp = async (req: IncomingMessage, res: ServerResponse, url: URL) => {
+    const page = APP_PAGES.test(url.pathname);
+    if (!hasWebApp(cfg.webDir)) {
+      if (!page) return deny(res, 404, "not found");
+      return void res.writeHead(200, {
+        "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer",
+        "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      }).end(joinPage(await hostName()));
+    }
+    const file = webFile(cfg.webDir, page ? "/index.html" : url.pathname);
+    if (!file) return deny(res, 404, "not found");
+    const html = file.type.startsWith("text/html");
+    res.writeHead(200, {
+      "content-type": file.type, "x-content-type-options": "nosniff",
+      "cache-control": html ? "no-store" : file.immutable ? "public, max-age=31536000, immutable" : "no-cache",
+      // The link's code is in the address: no Referer carries it to another site.
+      ...(html ? { "content-security-policy": pagePolicy(req.headers.host ?? ""), "referrer-policy": "no-referrer", "x-frame-options": "DENY" } : {}),
+    });
+    createReadStream(file.abs).pipe(res);
+  };
 
   /**
    * Every request. `shared`: it came in on the network port, from a teammate's McBot: an allowed
@@ -797,29 +919,29 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     cors(req, res);
     if (shared) {
-      // The invite link opened in a web browser: a page that says how to join from McBot (no data).
-      if (req.method === "GET" && url.pathname === "/join") {
-        const who = (await setup.get()).profile?.name?.trim() || "A teammate";
-        return void res.writeHead(200, {
-          "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff",
-          "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
-        }).end(joinPage(who));
-      }
-      if (!req.headers.origin || !allowed.has(req.headers.origin)) return deny(res, 403, "origin not allowed");
+      // The link opened in a web browser: the app itself (or, without it, how to join from McBot).
+      if (req.method === "GET" && !url.pathname.startsWith("/api/")) return serveApp(req, res, url);
+      const origin = req.headers.origin;
+      if (!(await shareOrigin(origin))) return deny(res, 403, "origin not allowed");
       if (req.method === "OPTIONS") return void res.writeHead(204).end();
+      // Before joining: whose McBot this is (the join page says so). No data.
+      if (req.method === "GET" && url.pathname === "/api/share/hello") return sendJson(res, { host: await hostName(), web: hasWebApp(cfg.webDir) });
       if (req.method === "POST" && url.pathname === "/api/join") {
         try {
-          const body = parse(z.object({ code: z.string().max(20), name: z.string().max(64).default("") }), await json(req));
-          const joined = await sharing.join(body.code, body.name);
-          if (!joined) return deny(res, 403, "That code is wrong or used up. Ask for a new one.");
-          console.log(`[engine] ${joined.member.name} joined over the network`);
-          return void res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ key: joined.key, name: joined.member.name }));
+          const body = parse(z.object({ code: z.string().max(24), name: z.string().max(64).default("") }), await json(req));
+          const joined = await sharing.join(body.code, body.name, Date.now(), clientOf(req));
+          if (!joined) return deny(res, 403, "That link is wrong, old or was replaced. Ask for a new one.");
+          console.log(`[engine] ${joined.member.name} joined (${joined.member.role === "chat" ? "can chat" : "can edit"})`);
+          return sendJson(res, { key: joined.key, name: joined.member.name, role: joined.member.role, host: await hostName() });
         } catch (err) {
           return deny(res, err instanceof HttpError ? err.status : 400, (err as Error).message);
         }
       }
-      if (!(await sharing.member(keyOf(req, url)))) return deny(res, 401, "not a member of this computer's boards");
-      if (!guestAllowed(req.method ?? "", url.pathname)) return deny(res, 403, "Only the person sharing can do that");
+      // Same-origin GETs from the app in a browser carry no Origin; the member key is what counts.
+      const member = await sharing.member(keyOf(req, url));
+      if (!member) return deny(res, origin ? 401 : 403, "not a member of this computer's boards");
+      if (!guestAllowed(req.method ?? "", url.pathname, member.role)) return deny(res, 403, member.role === "chat" ? "Guests can only chat" : "Only the person sharing can do that");
+      memberOf.set(req, member);
     } else {
       if (!permitted(req)) return deny(res, 403, "origin or host not allowed");
       if (req.method === "OPTIONS") return void res.writeHead(204).end();
@@ -828,7 +950,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     if (req.method === "GET" && url.pathname === "/api/events") {
       res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache", connection: "keep-alive" });
       res.write(": connected\n\n");
-      sse.add(res);
+      sse.set(res, memberOf.get(req) ?? null);
       const keep = setInterval(() => res.write(": ping\n\n"), 15_000);
       req.on("close", () => {
         clearInterval(keep);
@@ -840,6 +962,16 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     if (req.method === "GET" && url.pathname === "/api/media") {
       try {
         const profile = url.searchParams.get("profile") ?? "";
+        const guest = memberOf.get(req);
+        if (guest?.role === "chat") {
+          // A guest sees what their agent made for them: a file one of their own runs names.
+          const path = JSON.stringify(url.searchParams.get("path") ?? "").slice(1, -1);
+          if (!path || !(await guestAgents(guest)).some((a) => a.name === profile)) throw new MediaError(404, "not found");
+          const mine = (await store.list(guest.boardId)).filter((r) => r.by === guest.id && r.profile === profile);
+          let named = false;
+          for (const r of mine) if (JSON.stringify(await store.events(r.runId)).includes(path)) { named = true; break; }
+          if (!named) throw new MediaError(404, "not found");
+        }
         const manifest = await readManifest(cfg.hermesHome);
         if (!manifest?.profiles.includes(profile)) throw new MediaError(404, `no compiled agent ${profile}`);
         const file = await mediaFile(join(cfg.hermesHome, "profiles", profile), url.searchParams.get("path") ?? "");
@@ -852,9 +984,11 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       return;
     }
     const runMatch = /^\/api\/runs\/(run_[a-z0-9]+_[a-f0-9]+)(\/cancel|\/approval)?$/.exec(url.pathname);
+    const guest = memberOf.get(req);
+    if (runMatch && guest?.role === "chat" && !(await ownsRun(guest, runMatch[1]!))) return deny(res, 404, "no such run");
     try {
       let body: unknown;
-      if (runMatch && req.method === "GET" && !runMatch[2]) body = await store.events(runMatch[1]!);
+      if (runMatch && req.method === "GET" && !runMatch[2]) body = guest?.role === "chat" ? (await store.events(runMatch[1]!)).map(forGuest) : await store.events(runMatch[1]!);
       else if (runMatch && req.method === "POST" && runMatch[2] === "/cancel") body = { cancelled: runner.cancel(runMatch[1]!) || (await endOrphan(runMatch[1]!)) };
       else if (runMatch && req.method === "POST" && runMatch[2] === "/approval") {
         // An approval card's answer: once, session, always or deny.
@@ -885,16 +1019,31 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   const upgrade = async (req: IncomingMessage, socket: import("node:stream").Duplex, head: Buffer, shared: boolean) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     const m = /^\/board\/([a-z0-9][a-z0-9-]{0,63})$/.exec(url.pathname);
+    // Live events as a WebSocket: for windows that joined (a quick tunnel carries no SSE).
+    const events = url.pathname === "/api/events";
+    const member = shared ? await sharing.member(keyOf(req, url)) : null;
+    // A guest (Can chat) gets their events, never a board.
     const ok = shared
-      ? !!req.headers.origin && allowed.has(req.headers.origin) && !!(await sharing.member(keyOf(req, url)))
+      ? !!member && (await shareOrigin(req.headers.origin)) && (events || member.role === "edit")
       : permitted(req);
-    if (!m || !ok) {
+    if ((!m && !events) || !ok) {
       socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
       socket.destroy();
       return;
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
-      relay.connect(ws, m[1]!).catch((err) => {
+      if (events) {
+        eventSockets.set(ws, member);
+        // Something every 25 s, so a tunnel never closes it as idle.
+        const keep = setInterval(() => { if (ws.readyState === ws.OPEN) ws.send('{"ping":1}'); }, 25_000);
+        ws.on("close", () => {
+          clearInterval(keep);
+          eventSockets.delete(ws);
+        });
+        ws.send('{"hello":1}');
+        return;
+      }
+      relay.connect(ws, m![1]!).catch((err) => {
         console.error("[relay]", err);
         ws.close(1011, "board unavailable");
       });
@@ -904,7 +1053,30 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
 
   /** The network port, open only while sharing is on. */
   let shareServer: Server | null = null;
+  const shareView = async (): Promise<SharingView> => {
+    const t = tunnel?.view();
+    return { ...(await sharing.view()), tunnel: { state: t?.state ?? "off", error: t?.error ?? null }, web: hasWebApp(cfg.webDir) };
+  };
   const applySharing = async () => {
+    await applySharePort();
+    // Anyone with the link: a quick tunnel to the share port, unless the host has an address of their own.
+    const { reach, ownUrl } = await sharing.reach();
+    if (shareServer && reach === "internet" && !ownUrl) {
+      if (!tunnel) {
+        const port = (shareServer.address() as AddressInfo).port;
+        tunnel = new Tunnel({
+          port,
+          launch: cfg.launchTunnel ?? ((p) => launchQuickTunnel(toolsDir, p, (line) => console.log(line))),
+          onChange: (v) => console.log(`[share] link for anyone: ${v.state}${v.url ? ` ${v.url}` : ""}${v.error ? ` (${v.error})` : ""}`),
+        });
+      }
+      tunnel.start();
+    } else if (tunnel) {
+      tunnel.stop();
+      tunnel = null;
+    }
+  };
+  const applySharePort = async () => {
     const on = await sharing.isOn();
     if (on && !shareServer) {
       const s2 = createServer((req, res) => void handle(req, res, true));
@@ -944,7 +1116,9 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     store,
     close: async () => {
       hermesSync.stop();
-      for (const res of sse) res.end();
+      tunnel?.stop();
+      for (const res of sse.keys()) res.end();
+      for (const ws of eventSockets.keys()) ws.terminate();
       for (const c of wss.clients) c.terminate();
       await relay.flush();
       await store.flush();

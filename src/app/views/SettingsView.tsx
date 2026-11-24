@@ -465,10 +465,10 @@ function TeamSection() {
     if (!REMOTE && !DEMO) engine.share().then(setView).catch(() => undefined);
   }, []);
   return (
-    <Card title="Team" sub={REMOTE ? `You're on ${REMOTE.label}'s boards.` : "Teammates on your network work on these boards with you, live."} testId="settings-team">
+    <Card title="Team" sub={REMOTE ? `You're on ${REMOTE.label}'s McBot.` : "Invite teammates to work with you, or guests to chat with your agents."} testId="settings-team">
       {!REMOTE && (
         <div className="settings-row">
-          <span className="grow">{view?.on ? `Sharing · ${view.members.length} ${view.members.length === 1 ? "person" : "people"} joined` : "Not sharing"}</span>
+          <span className="grow">{view?.on ? `Sharing with ${view.reach === "internet" ? "anyone with the link" : "this network"} · ${view.members.length} ${view.members.length === 1 ? "person" : "people"} joined` : "Not sharing"}</span>
           <button className="btn sm primary" onClick={() => app.setShareOpen(true)}>Invite people</button>
         </div>
       )}

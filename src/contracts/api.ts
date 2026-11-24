@@ -397,15 +397,42 @@ export interface AgentSchedules {
 
 // ---- share on your network (engine/sharing.ts) ----
 
+/** Who a share link lets in: teammates who edit and run the boards, or guests who only chat. */
+export type ShareRole = "edit" | "chat";
+
 export interface SharingView {
   on: boolean;
   /** Where teammates reach this computer: LAN address:port. */
   addresses: string[];
   port: number;
-  members: { id: string; name: string; joinedAt: number; lastSeen: number }[];
+  /** Who links reach: people on this network, or anyone with the link. */
+  reach: "network" | "internet";
+  /** The address for anyone with the link: the host's own (`ownUrl`) or the quick tunnel's. */
+  publicUrl: string | null;
+  /** The host's own public address for the share port, when they have one. */
+  ownUrl: string | null;
+  /** The free Cloudflare quick tunnel behind "anyone with the link" (engine/tunnel.ts). */
+  tunnel: { state: "off" | "starting" | "on" | "failed"; error: string | null };
+  /** People can join in a web browser: this McBot serves its own app on the share port. */
+  web: boolean;
+  members: { id: string; name: string; joinedAt: number; lastSeen: number; role: ShareRole; boardId?: string; agents?: string[] }[];
+  /** The teammates' link (Can edit), as before roles. */
   invite: { code: string; expiresAt: number } | null;
-  /** The invite as a link teammates open or paste into Join (`http://<address>/join?code=…`). */
+  /** The invite as a link people open or paste into Join (`http(s)://<address>/join?code=…`). */
   link?: string | null;
+  /** Every live link: who it lets in and as what. */
+  invites: { code: string; expiresAt: number; role: ShareRole; boardId?: string; agents?: string[]; link: string | null }[];
+}
+
+/** A member's own view of the computer they joined (`GET /api/guest`). */
+export interface GuestView {
+  /** Whose McBot this is. */
+  host: string;
+  role: ShareRole;
+  name: string;
+  /** A guest's board and the agents they may chat with (teammates: every board, see /api/boards). */
+  boardId: string | null;
+  agents: { id: string; name: string; displayName: string; description: string }[];
 }
 
 /** How a connector's sign-in for one agent went (`GET /api/connectors/login`). */

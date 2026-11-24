@@ -1,0 +1,160 @@
+/*
+ * Joining from a web browser (shell/WebJoin.tsx) and a guest's chat (shell/GuestChat.tsx): the
+ * pages someone sees from a Share link, on a laptop or a phone. Tokens only; the chat's own
+ * pieces (messages, composer, approvals) keep the app's look.
+ */
+
+/* ---------- the join page ---------- */
+.webjoin {
+  min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px 72px;
+  background: var(--bg-window); color: var(--text); position: relative;
+}
+.webjoin-card {
+  width: min(400px, 100%); display: grid; justify-items: center; gap: 10px; text-align: center;
+  padding: 36px 28px 26px; border-radius: var(--r-xl); background: var(--bg-card);
+  border: var(--hairline, 1px) solid var(--line); box-shadow: var(--shadow-2);
+  animation: webjoin-in 420ms var(--spring-bouncy) both;
+}
+.webjoin-card h1 { margin: 10px 0 0; font-size: 26px; line-height: 1.15; letter-spacing: -0.022em; font-weight: 700; }
+.webjoin-sub { margin: 0 0 8px; color: var(--text-2); font-size: 15px; line-height: 1.45; }
+.webjoin-form { width: 100%; display: grid; gap: 12px; text-align: left; margin-top: 4px; }
+.webjoin-form .field input { height: 40px; font-size: 15px; }
+.webjoin-go { width: 100%; justify-content: center; height: 42px; font-size: 15px; gap: 8px; }
+.webjoin-form .error { margin: 0; text-align: center; }
+.webjoin-note { color: var(--text-3); font-size: 12.5px; margin-top: 6px; }
+.webjoin-foot {
+  position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+  color: var(--text-3); font-size: 12.5px; text-decoration: none; white-space: nowrap;
+}
+.webjoin-foot:hover { color: var(--text-2); }
+@keyframes webjoin-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } }
+
+/* ---------- a guest's chat ---------- */
+.guest {
+  height: 100dvh; display: grid; grid-template-rows: auto auto 1fr auto; overflow: hidden;
+  background: var(--bg-main); color: var(--text);
+}
+.guest-top {
+  display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px;
+  padding-top: env(safe-area-inset-top); box-sizing: content-box;
+  border-bottom: var(--hairline, 1px) solid var(--line); background: var(--bg-chrome);
+}
+.guest-host { font-size: 15px; letter-spacing: -0.01em; }
+.guest-me { font-size: 13px; }
+.guest-offline {
+  font-size: 12px; padding: 2px 8px; border-radius: var(--r-pill);
+  background: var(--warn-soft); color: var(--warn-text);
+}
+.guest-agents {
+  display: flex; gap: 6px; padding: 10px 16px; overflow-x: auto; scrollbar-width: none;
+  border-bottom: var(--hairline, 1px) solid var(--line);
+}
+.guest-agents::-webkit-scrollbar { display: none; }
+.guest-agent {
+  display: inline-flex; align-items: center; gap: 8px; flex: none; height: 34px; padding: 0 12px 0 6px;
+  border-radius: var(--r-pill); border: var(--hairline, 1px) solid var(--line-2);
+  background: var(--bg-card); color: var(--text-2); font: inherit; font-size: 13.5px; cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+.guest-agent:hover { background: var(--bg-hover); color: var(--text); }
+.guest-agent.on { background: var(--accent-soft); border-color: var(--accent-line); color: var(--text); }
+.guest-scroll { overflow: auto; overscroll-behavior: contain; padding: 24px 0 16px; user-select: text; }
+.guest-inner { max-width: 760px; margin: 0 auto; padding: 0 20px; display: grid; gap: 24px; }
+.guest-empty { display: grid; justify-items: center; gap: 8px; text-align: center; padding: 56px 0 24px; }
+.guest-empty h2 { margin: 8px 0 0; font-size: 24px; letter-spacing: -0.02em; }
+.guest-empty p { margin: 0 0 10px; color: var(--text-2); max-width: 46ch; line-height: 1.45; }
+.guest-compose.composer-wrap {
+  position: static; pointer-events: auto; padding: 8px 16px calc(12px + env(safe-area-inset-bottom));
+  display: grid; gap: 6px; justify-items: center;
+}
+.guest-compose .composer { width: 100%; max-width: 760px; box-sizing: border-box; }
+.guest-note { margin: 0; font-size: 13px; text-align: center; }
+.guest-foot { color: var(--text-4); font-size: 11.5px; }
+.guest-foot a { color: inherit; }
+.approval.waiting .approval-head b { color: var(--warn-text); }
+
+/* Who asked, in the host's own thread, when someone who joined did. */
+.msg-by { display: block; margin: 0 4px 4px auto; width: fit-content; font-size: 11.5px; color: var(--text-3); }
+
+@media (max-width: 560px) {
+  .webjoin-card { padding: 28px 20px 22px; }
+  .guest-inner { padding: 0 14px; }
+  .guest-me { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .webjoin-card { animation: none; }
+}
+
+/* ---------- the Share sheet: who, the link, people ---------- */
+.share-sheet { width: min(560px, calc(100vw - 32px)); }
+.share-who { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.share-who-note { font-size: 12.5px; }
+.share-agents { display: flex; flex-wrap: wrap; gap: 6px; }
+.share-agent {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px;
+  border-radius: var(--r-pill); border: var(--hairline) solid var(--line-2); background: transparent;
+  color: var(--text-2); font: inherit; font-size: 12.5px; cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+.share-agent:has(.face, svg) { padding-left: 5px; }
+.share-agent:hover { background: var(--bg-hover); color: var(--text); }
+.share-agent.on { background: var(--accent-soft); border-color: var(--accent-line); color: var(--text); }
+.share-risk {
+  display: flex; gap: 8px; align-items: flex-start; padding: 9px 11px; border-radius: var(--r-md);
+  background: var(--warn-soft); color: var(--warn-text); font-size: 12.5px; line-height: 1.4;
+}
+.share-risk svg { flex: none; margin-top: 1px; }
+.share-reach { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.share-reach-opt {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px; text-align: left;
+  border-radius: var(--r-md); border: var(--hairline) solid var(--line-2); background: var(--bg-card);
+  color: var(--text-2); font: inherit; cursor: pointer;
+  transition: border-color var(--t-fast), background var(--t-fast), color var(--t-fast);
+}
+.share-reach-opt svg { flex: none; margin-top: 2px; }
+.share-reach-opt span { display: grid; gap: 2px; }
+.share-reach-opt b { color: var(--text); font-size: 13.5px; font-weight: 600; }
+.share-reach-opt small { font-size: 12px; color: var(--text-3); }
+.share-reach-opt:hover { background: var(--bg-hover); }
+.share-reach-opt.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+.share-create { width: 100%; justify-content: center; }
+.email-chips {
+  flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; cursor: text; min-height: 26px;
+}
+.email-chips > svg { flex: none; margin-right: 2px; }
+.email-chips input { flex: 1; min-width: 120px; border: 0; outline: 0; background: transparent; font: inherit; font-size: 14px; color: var(--text); user-select: text; }
+.email-chip {
+  display: inline-flex; align-items: center; gap: 3px; height: 22px; padding: 0 4px 0 8px;
+  border-radius: var(--r-pill); background: var(--bg-active); color: var(--text); font-size: 12.5px;
+}
+.email-chip.bad { background: var(--fail-soft); color: var(--fail-text); }
+.email-chip button { display: grid; place-items: center; width: 16px; height: 16px; border: 0; border-radius: var(--r-pill); background: transparent; color: inherit; cursor: pointer; opacity: 0.7; }
+.email-chip button:hover { opacity: 1; background: rgb(var(--tint-rgb) / 0.12); }
+.share-link {
+  display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 10px; border-radius: var(--r-md);
+  background: var(--bg-input); border: var(--hairline) solid var(--line-2); min-height: 40px; box-sizing: border-box;
+}
+.share-link.failed { border-color: var(--fail); }
+.share-link-icon { display: grid; place-items: center; color: var(--text-3); }
+.share-link .mono { font-size: 12.5px; }
+.share-link-msg { font-size: 13px; }
+.share-link .icon-btn.on { background: var(--accent-soft); color: var(--accent-text); }
+.share-link-meta { gap: 4px; flex-wrap: wrap; }
+.share-link-meta > .faint { font-size: 12.5px; }
+.share-qr { display: grid; justify-items: center; gap: 8px; padding: 6px 0 2px; animation: webjoin-in 320ms var(--spring-bouncy) both; }
+.share-qr .faint { font-size: 12.5px; }
+.qr { border-radius: var(--r-md); box-shadow: var(--shadow-1); }
+.qr-bg { fill: var(--btn-light-bg); }
+.qr-fg { fill: var(--btn-light-fg); }
+.share-people .row { gap: 10px; min-height: 30px; }
+.share-own { display: flex; gap: 8px; }
+.share-own input { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border-radius: var(--r-sm); border: var(--hairline) solid var(--line-2); background: var(--bg-input); color: var(--text); font-size: 12.5px; }
+.share-own-open { justify-self: start; font-size: 12.5px; color: var(--text-3); background: none; border: 0; padding: 0; cursor: pointer; }
+.share-own-open:hover { color: var(--text-2); text-decoration: underline; }
+@media (max-width: 560px) {
+  .share-reach { grid-template-columns: 1fr; }
+}
+/* A long sheet (many people, the QR code) scrolls inside the window. */
+.share-sheet { max-height: calc(89dvh - 24px); display: flex; flex-direction: column; }
+.share-sheet > header { flex: none; }
+.share-sheet > .share-body { overflow-y: auto; overscroll-behavior: contain; min-height: 0; }

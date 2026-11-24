@@ -51,7 +51,8 @@ export default defineConfig(({ mode }) => {
   base: demo ? "./" : "/",
   build: demo
     ? { target: "es2022", outDir: "dist-demo", sourcemap: false, assetsInlineLimit: 1_000_000, chunkSizeWarningLimit: 2000 }
-    : { target: "es2022", outDir: "dist", sourcemap: true, chunkSizeWarningLimit: 2000 },
+    // No source maps in what ships (they were 69 MB of the app); MCBOT_SOURCEMAP=1 makes them.
+    : { target: "es2022", outDir: "dist", sourcemap: process.env.MCBOT_SOURCEMAP === "1", chunkSizeWarningLimit: 2000 },
   define: demo ? { "import.meta.env.VITE_MCBOT_DEMO": JSON.stringify("1") } : {},
   };
 });

@@ -11,6 +11,7 @@
  *   MCBOT_HERMES_BUNDLE + MCBOT_DATA_DIR   the installed app: its read-only copy of Hermes and a
  *                     writable folder; Hermes is copied there on first launch (engine/bundle.ts)
  */
+import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
@@ -48,6 +49,9 @@ async function main(): Promise<void> {
     host: "127.0.0.1",
     allowedOrigins: [...DEFAULT_ORIGINS, ...(process.env.MCBOT_ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean)],
     logFile: dataDir ? join(dataDir, "engine.log") : undefined,
+    // Share: the app for people who open a link in a browser (the installed app's `web/`, or a build).
+    webDir: process.env.MCBOT_WEB_DIR?.trim() || (existsSync(resolve("dist", "index.html")) ? resolve("dist") : undefined),
+    toolsDir: dataDir ? join(dataDir, "tools") : join(workspace, ".tools"),
     // The installed app says when a newer release is out; MCBOT_NO_UPDATE_CHECK=1 turns that off.
     checkUpdates: !!(bundle && dataDir) && process.env.MCBOT_NO_UPDATE_CHECK !== "1",
   });

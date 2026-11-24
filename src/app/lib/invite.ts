@@ -1,6 +1,6 @@
 /**
  * Email an invite link. McBot has no mail server (no cloud, by design), so it opens a ready-to-send
- * message, recipient, subject and link filled in, in the person's own email: Gmail or Outlook on
+ * message, recipients, subject and link filled in, in the person's own email: Gmail or Outlook on
  * the web (https, so it always opens), or the computer's mail app (mailto:, which needs one set up).
  */
 export type MailService = "gmail" | "outlook" | "app";
@@ -11,18 +11,39 @@ export const MAIL_SERVICES: { value: MailService; label: string }[] = [
   { value: "app", label: "Mail app" },
 ];
 
+const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
+export const isEmail = (s: string) => EMAIL.test(s.trim());
+
 /** "a@x.com, b@y.org" → ["a@x.com", "b@y.org"]; null when any address looks wrong. */
 export function parseEmails(text: string): string[] | null {
   const list = text.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
   if (list.length === 0) return null;
-  return list.every((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) ? list : null;
+  return list.every(isEmail) ? list : null;
 }
 
-export function inviteMessage(from: string, link: string): { subject: string; body: string } {
-  return {
-    subject: `${from} invited you to McBot Studio`,
-    body: `${from} invited you to their McBot boards.\n\n1. Open McBot Studio (get it at https://mcbot.studio)\n2. Click Share, then "Join someone else's"\n3. Paste this link:\n\n${link}\n\nIt works for 24 hours, on the same network.`,
-  };
+export interface InviteWhat {
+  /** Teammates edit and run the boards; guests chat with some agents. */
+  role?: "edit" | "chat";
+  /** A guest's agents, by name. */
+  agents?: string[];
+  /** The link opens McBot in a web browser (else: in McBot, Share → Join). */
+  web?: boolean;
+  /** Only on the sharer's network. */
+  network?: boolean;
+}
+
+const listOf = (names: string[]) => (names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`);
+
+export function inviteMessage(from: string, link: string, what: InviteWhat = {}): { subject: string; body: string } {
+  const chat = what.role === "chat";
+  const agents = listOf(what.agents ?? []);
+  const subject = chat ? `${from} invited you to chat with ${agents || "their AI agents"}` : `${from} invited you to McBot Studio`;
+  const intro = chat ? `${from} invited you to chat with ${agents || "their AI agents"}.` : `${from} invited you to work on their AI agents in McBot Studio.`;
+  const how = what.web === false
+    ? `1. Open McBot Studio (get it at https://mcbot.studio)\n2. Click Share, then "Join someone else's"\n3. Paste this link:\n\n${link}`
+    : `Open this link to join. There's no account to make and nothing to install:\n\n${link}`;
+  const when = `The link works for 24 hours, while ${from}'s McBot is open${what.network ? ", on the same network" : ""}.`;
+  return { subject, body: `${intro}\n\n${how}\n\n${when}` };
 }
 
 export function composeUrl(service: MailService, to: string[], subject: string, body: string): string {
