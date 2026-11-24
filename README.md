@@ -46,7 +46,12 @@ edit and own, as plain files.
 - **Memory**, **Files**, **Code** (editor + terminal), **Browser**: what agents remember, wrote and
   built, editable in place.
 - **Cost**: spend by agent, model and day, and daily budgets that stop runs at the limit.
-- **Team**: share a board on your network, team chat, `@agent` from chat.
+- **Share**: invite people by email with a link that works from anywhere and opens in any browser,
+  phone included. Teammates edit and run your agents; guests (customers) chat only with the agents you
+  pick and see only their own chats. Team chat and `@agent` from chat.
+- **Passwords**: your site logins (sealed, filled in the browser on their own site) and API keys.
+- **Add from GitHub**: paste any GitHub link; McBot adds a skill, an MCP server or a Hermes plugin to an
+  agent, or downloads the project for your agents.
 - **At home on a Mac or PC**: a calm dark design with your accent colour, ⌘K for everything,
   ⌘⇧Space from any app, a menu bar icon and notifications.
 - **Engine updates**: the engine (Hermes Agent, MIT) ships inside; a weekly job merges each new
