@@ -33,7 +33,9 @@ const ALIASES: Record<string, string> = {
 function keys(): string[] {
   const catalog = ["exa", "parallel", "brave", "tavily", "firecrawl", "context7", "github", "notion", "knowledge", "thinking", "browser"];
   const services = ["openrouter", "openai", "anthropic", "gemini", "groq", "deepseek", "mistral", "together", "ollama", "lmstudio", "vllm", "jan", "fal", "xai", "krea", "deepinfra"];
-  return [...new Set([...CONNECTORS.map((c) => c.name), ...catalog, ...Object.keys(PLATFORMS), ...services])].sort();
+  // The browser's favorites and recent pages (workbench/BrowserStart.tsx, lib/browserStore.ts siteKey).
+  const sites = ["gmail", "googlecalendar", "googledrive", "youtube", "wikipedia", "ycombinator", "reddit", "x", "huggingface", "stackoverflow", "producthunt", "google", "duckduckgo", "claude", "perplexity", "spotify", "zoom"];
+  return [...new Set([...CONNECTORS.map((c) => c.name), ...catalog, ...Object.keys(PLATFORMS), ...services, ...sites])].sort();
 }
 
 interface Icon { slug: string; title: string; hex: string; path: string }

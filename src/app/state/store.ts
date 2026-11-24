@@ -5,7 +5,7 @@ import { summarizeRun, type RunEvent, type RunSummary } from "../../contracts/ru
 import { loadIdentity, saveIdentity, type Identity } from "../lib/identity";
 import { applyAppearance, loadAppearance, saveAppearance, type Appearance } from "../lib/appearance";
 
-export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "skills" | "files" | "cost" | "team" | "settings";
+export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "skills" | "files" | "passwords" | "cost" | "team" | "settings";
 
 export type SettingsSection = "models" | "keys" | "appearance" | "you" | "team" | "engine" | "about";
 

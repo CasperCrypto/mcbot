@@ -450,3 +450,13 @@ export interface UpdateView {
   url: string | null;
   available: boolean;
 }
+
+/** A saved login to a website (Passwords), without its password. */
+export interface LoginView {
+  id: string;
+  url: string;
+  host: string;
+  username: string;
+  note: string;
+  updatedAt: number;
+}

@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import type { HarnessVersion } from "../../harness/versions";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
@@ -107,6 +107,11 @@ const http = {
   removeMember: (id: string) => call<SharingView>("POST", "/api/share/remove", { id }),
   /** Someone who joined: whose McBot it is, and a guest's agents. */
   guest: () => call<GuestView>("GET", "/api/guest"),
+  /** Passwords: the person's logins (no passwords in lists), saved, removed, revealed for copy or fill. */
+  logins: (host?: string) => call<{ logins: LoginView[] }>("GET", `/api/logins${host ? `?host=${encodeURIComponent(host)}` : ""}`),
+  saveLogin: (l: { id?: string; url: string; username: string; password?: string; note?: string }) => call<{ login: LoginView; logins: LoginView[] }>("POST", "/api/logins", l),
+  removeLogin: (id: string) => call<{ logins: LoginView[] }>("POST", "/api/logins/remove", { id }),
+  revealLogin: (id: string) => call<{ username: string; password: string; host: string }>("POST", "/api/logins/reveal", { id }),
   tasks: (boardId: string) => call<TasksView>("GET", `/api/tasks?boardId=${encodeURIComponent(boardId)}`),
   task: (boardId: string, id: string) => call<TaskDetail>("GET", `/api/tasks/one?boardId=${encodeURIComponent(boardId)}&id=${encodeURIComponent(id)}`),
   createTask: (boardId: string, t: { title: string; body: string; assignee: string | null; by: string; parents?: string[] }) => call<TaskView>("POST", "/api/tasks", { boardId, ...t }),

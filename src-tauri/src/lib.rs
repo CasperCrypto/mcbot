@@ -423,6 +423,7 @@ pub fn run() {
             browser::browser_bounds,
             browser::browser_hide,
             browser::browser_go,
+            browser::browser_fill,
             terminal::terminal_open,
             terminal::terminal_write,
             terminal::terminal_resize,

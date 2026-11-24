@@ -52,6 +52,7 @@ async function main(): Promise<void> {
     // Share: the app for people who open a link in a browser (the installed app's `web/`, or a build).
     webDir: process.env.MCBOT_WEB_DIR?.trim() || (existsSync(resolve("dist", "index.html")) ? resolve("dist") : undefined),
     toolsDir: dataDir ? join(dataDir, "tools") : join(workspace, ".tools"),
+    dataDir: dataDir || undefined,
     // The installed app says when a newer release is out; MCBOT_NO_UPDATE_CHECK=1 turns that off.
     checkUpdates: !!(bundle && dataDir) && process.env.MCBOT_NO_UPDATE_CHECK !== "1",
   });

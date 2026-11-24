@@ -48,6 +48,7 @@ import { SetupStore, detectLocal, listModels } from "./setup";
 import { OwnershipError, readManifest, writeCompileResult } from "./writer";
 import { Sharing, cleanOwnUrl, guestAllowed, joinPage, type Member, type SharingView } from "./sharing";
 import { Tunnel, launchQuickTunnel } from "./tunnel";
+import { LoginError, Logins } from "./logins";
 import { APP_PAGES, hasWebApp, pagePolicy, webFile } from "./webApp";
 import { frameable } from "./web";
 
@@ -68,6 +69,8 @@ export interface EngineConfig {
   webDir?: string;
   /** Where McBot keeps tools it downloads (Cloudflare's tunnel client); default <workspace>/.tools. */
   toolsDir?: string;
+  /** McBot's own data folder, outside the workspace (the installed app's MCBOT_DATA_DIR): the logins' key. */
+  dataDir?: string;
   /** Tests: start a stand-in for `cloudflared tunnel --url` (engine/tunnel.ts). */
   launchTunnel?: (port: number) => Promise<ChildProcess>;
   /** Ask GitHub whether a newer McBot is out (the installed app only; never in tests or dev). */
@@ -150,6 +153,15 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   const toolsDir = cfg.toolsDir ?? join(cfg.workspace, ".tools");
   let tunnel: Tunnel | null = null;
   const sharing = new Sharing(join(cfg.workspace, "sharing.json"), cfg.sharePort ?? 4318, () => tunnel?.view().url ?? null);
+  // Passwords: the person's logins, sealed with a key kept outside the workspace.
+  const logins = new Logins(join(cfg.workspace, "logins.json"), join(cfg.dataDir ?? join(cfg.workspace, ".data"), "logins.key"));
+  const loginCall = async <T>(f: () => Promise<T>): Promise<T> => {
+    try {
+      return await f();
+    } catch (err) {
+      throw err instanceof LoginError ? new HttpError(err.status, err.message) : err;
+    }
+  };
   /** Who sent this request on the share port: the member its key belongs to. */
   const memberOf = new WeakMap<IncomingMessage, Member>();
   /** Runs someone who joined started, by run id (their member id), for what each guest may see. */
@@ -608,6 +620,21 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const { id } = parse(z.object({ id: z.string() }), await json(req));
       await sharing.remove(id);
       return shareView();
+    },
+    // ---- passwords: the person's logins for the browser (this computer's own window only) ----
+    "GET /api/logins": async (_req, url) => loginCall(async () => ({ logins: await logins.list(url.searchParams.get("host") ?? undefined) })),
+    "POST /api/logins": async (req) => {
+      const body = parse(z.object({ id: z.string().max(80).optional(), url: z.string().max(500), username: z.string().max(200).default(""), password: z.string().max(1000).optional(), note: z.string().max(500).optional() }), await json(req));
+      return loginCall(async () => ({ login: await logins.put(body), logins: await logins.list() }));
+    },
+    "POST /api/logins/remove": async (req) => {
+      const { id } = parse(z.object({ id: z.string().max(80) }), await json(req));
+      return loginCall(async () => { await logins.remove(id); return { logins: await logins.list() }; });
+    },
+    /** A password itself, for copy or fill in this window; never listed, never to someone who joined. */
+    "POST /api/logins/reveal": async (req) => {
+      const { id } = parse(z.object({ id: z.string().max(80) }), await json(req));
+      return loginCall(() => logins.reveal(id));
     },
     /** Someone who joined: whose McBot this is, and (a guest) the agents they may chat with. */
     "GET /api/guest": async (req): Promise<GuestView> => {

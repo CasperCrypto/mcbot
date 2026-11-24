@@ -26,7 +26,8 @@ export const ENV_BEGIN = "# >>> McBot keys: rewritten before each run; change th
 export const ENV_END = "# <<< McBot keys";
 
 /** Files the Files view must never list or show: they hold keys. */
-export const SECRET_FILES = new Set([".env", ".op.env"]);
+/** Files that hold keys: agents' .env, and McBot's own (API keys, logins and their key, who joined). */
+export const SECRET_FILES = new Set([".env", ".op.env", "secrets.json", "logins.json", "logins.key", "sharing.json"]);
 
 const ENV_REF = /\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g;
 

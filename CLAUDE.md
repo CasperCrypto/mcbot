@@ -484,6 +484,22 @@ Change them additively; a breaking change bumps the version.
 - **Terminal:** real shells in the desktop shell (`src-tauri/src/terminal.rs`,
   portable-pty), never in the engine, so the engine stays one plain executable.
   The browser has none.
+- **Browser start page** (`workbench/BrowserStart.tsx`, pure `lib/browserStore.ts`, kept per computer):
+  one big field (address or search), favorites as brand tiles (`siteLogo`: Simple Icons marks, a few
+  site keys added in `scripts/tool-logos.ts`), what answers on the usual local ports (asked of the
+  engine's frameable probe), and recently visited pages. The address bar has Home, a favorite star
+  and a key (Passwords for this site); the ask bar has one-click asks (Summarize, Key facts, Translate).
+- **Passwords** (`views/PasswordsView.tsx`, rail "…" and ⌘K; hidden for people who joined): the
+  person's site logins and the API keys (Settings' `KeysSection`). Logins live in
+  `<workspace>/logins.json` (owner-only), each password sealed with AES-256-GCM under
+  `<data>/logins.key` (owner-only, outside the workspace, so the McBot folder alone holds no readable
+  password; `engine/logins.ts`). Lists never carry a password; `POST /api/logins/reveal` gives one to
+  McBot's own window (loopback, allowed Origin) to copy or fill, never to a member (not in
+  `guestAllowed`). Fill (`browser_fill` in `src-tauri/src/browser.rs`) runs only on the native page,
+  only while it is on the login's site or a subdomain, and only over https (or this computer); it
+  types into the page's fields and submits nothing. Hermes never sees logins. `SECRET_FILES`
+  (`engine/profileEnv.ts`) keeps every file that holds keys (agents' `.env`, McBot's `secrets.json`,
+  `logins.json`, `logins.key`, `sharing.json`) out of the Files view and the editor.
 - **Browser view:** on macOS and Windows the page is a real child webview over the view's page
   area (`src-tauri/src/browser.rs`, Tauri `unstable` feature, one `page-<window>` per window), so
   sites that refuse iframes still load; it hides while a sheet or ⌘K is open (native views draw

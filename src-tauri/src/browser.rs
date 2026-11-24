@@ -93,3 +93,48 @@ pub async fn browser_go(app: AppHandle<Wry>, window: Window<Wry>, action: String
     }
     .map_err(|e| e.to_string())
 }
+
+/// The page script that fills a login: the visible password field, and the user name field before
+/// it (or the first one, on a page that asks for the name first). Like typing: the page's own input
+/// events fire, nothing is submitted. `{data}` is the JSON object `{"u": …, "p": …}`.
+const FILL: &str = r#"(function (d) {
+  var set = function (el, v) {
+    var desc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value");
+    if (desc && desc.set) desc.set.call(el, v); else el.value = v;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  var shown = function (el) { var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !el.disabled && !el.readOnly; };
+  var all = function (q) { return Array.prototype.filter.call(document.querySelectorAll(q), shown); };
+  var pw = all('input[type="password"]')[0] || null;
+  var names = all('input[autocomplete="username"],input[type="email"],input[type="text"],input[type="tel"],input:not([type])');
+  var user = null;
+  if (pw) { for (var i = 0; i < names.length; i++) if (names[i].compareDocumentPosition(pw) & Node.DOCUMENT_POSITION_FOLLOWING) user = names[i]; }
+  else user = names[0] || null;
+  if (user && d.u) set(user, d.u);
+  if (pw && d.p) set(pw, d.p);
+  var last = pw || user;
+  if (last) last.focus();
+})({data});"#;
+
+/// Passwords: fill a saved login into this window's page, only while that page is on the login's
+/// own site (or one of its subdomains) and on https (or this computer). The login comes from the
+/// McBot window that asked; the page never asks for it.
+#[tauri::command]
+pub async fn browser_fill(app: AppHandle<Wry>, window: Window<Wry>, host: String, username: String, password: String) -> Result<(), String> {
+    let Some(page) = app.get_webview(&label(&window)) else { return Err("Open the site first".into()) };
+    let url = page.url().map_err(|e| e.to_string())?;
+    let at = url.host_str().unwrap_or("").to_ascii_lowercase();
+    let want = host.to_ascii_lowercase();
+    let bare = |h: &str| h.strip_prefix("www.").unwrap_or(h).to_string();
+    let (saved, here) = (bare(&want), bare(&at));
+    if !(here == saved || here.ends_with(&format!(".{saved}"))) {
+        return Err(format!("This page is on {at}, not {want}"));
+    }
+    let local = matches!(at.as_str(), "localhost" | "127.0.0.1" | "[::1]");
+    if url.scheme() != "https" && !local {
+        return Err("Logins are filled only on secure (https) pages".into());
+    }
+    let data = serde_json::json!({ "u": username, "p": password }).to_string();
+    page.eval(FILL.replace("{data}", &data)).map_err(|e| e.to_string())
+}

@@ -49,6 +49,7 @@ export const VIEWS: { tab: Tab; label: string; icon: ReactNode; group: number; t
   { tab: "code", label: "Code", icon: <Code2 size={15} />, group: 2 },
   { tab: "browser", label: "Browser", icon: <Globe size={15} />, group: 2 },
   { tab: "files", label: "Files", icon: <FolderOpen size={15} />, group: 2 },
+  { tab: "passwords", label: "Passwords", icon: <KeyRound size={15} />, group: 2, tip: "Logins and API keys" },
   { tab: "memory", label: "Memory", icon: <Brain size={15} />, group: 3 },
   { tab: "cost", label: "Cost", icon: <ChartColumnBig size={15} />, group: 3 },
   { tab: "team", label: "Team", icon: <Users size={15} />, group: 3 },

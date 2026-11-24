@@ -1,4 +1,5 @@
-import { ArrowLeft, ArrowRight, ExternalLink, Globe, LoaderCircle, RotateCw, WifiOff, MessageSquare } from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink, Globe, House, KeyRound, LoaderCircle, RotateCw, Star, WifiOff, MessageSquare } from "lucide-react";
+import type { LoginView } from "../../contracts/api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode } from "../../contracts/graph";
 import { runAgent } from "../actions";
@@ -6,7 +7,9 @@ import { nativePage, openBrowser, page, type PageBox } from "../lib/desktop";
 import { DEMO, engine, REMOTE } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
-import { AgentFace, Empty } from "../ui";
+import { AgentFace } from "../ui";
+import { addRecent, isFavorite, loadFavorites, toggleFavorite, type Site } from "../lib/browserStore";
+import { BrowserStart } from "./BrowserStart";
 
 /** "localhost:3000" → "http://localhost:3000"; "mcbot docs" → a search. */
 export function toUrl(input: string): string {
@@ -25,7 +28,12 @@ const hostOf = (u: string) => {
   }
 };
 
-const START = ["localhost:3000", "localhost:5173", "news.ycombinator.com", "en.wikipedia.org"];
+/** One click asks the agent about the page. */
+const QUICK = [
+  { label: "Summarize", ask: "Summarize this page in a few bullet points." },
+  { label: "Key facts", ask: "List the key facts, numbers and dates on this page." },
+  { label: "Translate", ask: "Translate this page into English, keeping its structure." },
+];
 const isLocal = (u: string) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(u);
 
 /** The page this window last showed: coming back to Browser shows it again. */
@@ -56,6 +64,10 @@ export default function BrowserView() {
   /** Where the native page is now (links clicked inside it move it). */
   const [live, setLive] = useState<string | null>(null);
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
+  const [favorites, setFavorites] = useState<Site[]>(loadFavorites);
+  /** Saved logins for the page's site (Passwords), and whether their menu is open. */
+  const [logins, setLogins] = useState<LoginView[]>([]);
+  const [keysOpen, setKeysOpen] = useState(false);
   const area = useRef<HTMLDivElement>(null);
   const native = useMemo(() => nativePage(), []) && !nativeFailed;
   // A native page draws above the window's HTML, so it steps aside while a sheet or ⌘K is open.
@@ -67,6 +79,46 @@ export default function BrowserView() {
   }, [history, at]);
   // The page on screen: where the native page went, else the address asked for.
   const shown = (native ? live : null) ?? url;
+  // Every page shown joins the start page's recent list.
+  useEffect(() => {
+    if (shown) addRecent(shown);
+  }, [shown]);
+  // The saved logins for this site, offered from the address bar.
+  // Logins are kept by host name, without the port (engine/logins.ts loginSite).
+  const site = (() => {
+    try {
+      return shown ? new URL(shown).hostname : "";
+    } catch {
+      return "";
+    }
+  })();
+  useEffect(() => {
+    setKeysOpen(false);
+    if (!site || REMOTE) return setLogins([]);
+    let alive = true;
+    engine.logins(site).then((r) => { if (alive) setLogins(r.logins); }).catch(() => { if (alive) setLogins([]); });
+    return () => {
+      alive = false;
+    };
+  }, [site]);
+  const applyLogin = async (l: LoginView, how: "fill" | "copy") => {
+    try {
+      const r = await engine.revealLogin(l.id);
+      setKeysOpen(false);
+      if (how === "copy") {
+        await navigator.clipboard.writeText(r.password);
+        useApp.getState().toast({ kind: "ok", text: `Password for ${r.host} copied` });
+      } else {
+        await page.fill(r.host, r.username, r.password);
+      }
+    } catch (err) {
+      useApp.getState().toast({ kind: "fail", text: String(err instanceof Error ? err.message : err) });
+    }
+  };
+  // Back to the start page: the native page steps aside.
+  useEffect(() => {
+    if (native && !url) void page.hide();
+  }, [native, url]);
   // The window's own idea of being online, and whether the page answers: either one failing shows
   // McBot's own screen instead of the web engine's error page (on Windows that page is Edge's).
   useEffect(() => {
@@ -113,7 +165,7 @@ export default function BrowserView() {
   // again for a few frames; a failure falls back to the iframe for this window.
   useEffect(() => {
     if (!native || !url) return;
-    if (covered || unreachable) {
+    if (covered || keysOpen || unreachable) {
       void page.hide();
       return;
     }
@@ -140,7 +192,7 @@ export default function BrowserView() {
       cancelAnimationFrame(raf);
       settle.forEach(clearTimeout);
     };
-  }, [native, url, reload, covered, unreachable]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [native, url, reload, covered, keysOpen, unreachable]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!native || !area.current) return;
     const sync = () => {
@@ -195,10 +247,11 @@ export default function BrowserView() {
     setInput(history[i]!);
   };
   const openOutside = () => url && void openBrowser(url).catch((err: unknown) => useApp.getState().toast({ kind: "fail", text: String(err) }));
-  const ask = async () => {
+  const ask = async (preset?: string) => {
     const agent = agents.find((a) => a.id === (agentId || agents[0]?.id));
-    if (!agent || !url || !question.trim()) return;
-    const runId = await runAgent(boardId, agent.id, `${question.trim()}\n\nPage: ${url}\n(Open it with your browser tool.)`);
+    const q = (preset ?? question).trim();
+    if (!agent || !shown || !q) return;
+    const runId = await runAgent(boardId, agent.id, `${q}\n\nPage: ${shown}\n(Open it with your browser tool.)`);
     if (runId) {
       setQuestion("");
       useApp.getState().toast({ kind: "ok", text: `Asked ${agent.data.displayName || agent.data.name}`, action: { label: "Open", run: () => useApp.getState().openChat(agent.id) } });
@@ -212,13 +265,39 @@ export default function BrowserView() {
         <button className="icon-btn sm" aria-label="Back" disabled={native ? !url : at <= 0} onClick={() => step(-1)}><ArrowLeft size={14} /></button>
         <button className="icon-btn sm" aria-label="Forward" disabled={native ? !url : at >= history.length - 1} onClick={() => step(1)}><ArrowRight size={14} /></button>
         <button className="icon-btn sm" aria-label="Reload" disabled={!url} onClick={() => (native ? void page.go("reload") : setReload((n) => n + 1))}><RotateCw size={13} /></button>
+        <button className="icon-btn sm" aria-label="Start page" data-tip="Start page" disabled={!url} onClick={() => { setAt(-1); setInput(""); }} data-testid="browser-home"><House size={13} /></button>
         <label className="browser-url">
           <Globe size={13} className="faint" />
           <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") go(input); }}
             onFocus={(e) => e.target.select()} placeholder="Search or enter an address" aria-label="Address" data-testid="browser-address" />
+          {shown && !REMOTE && (
+            <button className={`browser-key${logins.length ? " has" : ""}${keysOpen ? " on" : ""}`} aria-label="Passwords for this site" aria-expanded={keysOpen}
+              data-tip={logins.length ? `${logins.length} saved login${logins.length === 1 ? "" : "s"}` : "Passwords"} onClick={(e) => { e.preventDefault(); setKeysOpen(!keysOpen); }} data-testid="browser-key">
+              <KeyRound size={13} />
+            </button>
+          )}
+          {shown && (
+            <button className={`browser-star${isFavorite(favorites, shown) ? " on" : ""}`} aria-label={isFavorite(favorites, shown) ? "Remove from favorites" : "Add to favorites"}
+              data-tip={isFavorite(favorites, shown) ? "In favorites" : "Add to favorites"} onClick={(e) => { e.preventDefault(); setFavorites(toggleFavorite(favorites, shown)); }} data-testid="browser-star">
+              <Star size={13} />
+            </button>
+          )}
         </label>
         <button className="icon-btn sm" aria-label="Open in your browser" data-tip="Open in your browser" disabled={!url} onClick={openOutside}><ExternalLink size={13} /></button>
       </div>
+      {keysOpen && shown && (
+        <div className="browser-keys glass" role="menu" data-testid="browser-keys">
+          <div className="browser-keys-head"><KeyRound size={13} /><b>{site.replace(/^www\./, "")}</b></div>
+          {logins.length === 0 ? <p className="faint">No saved login for this site.</p> : logins.map((l) => (
+            <div key={l.id} className="browser-keys-row">
+              <span className="grow ellipsis">{l.username || "No user name"}</span>
+              {native && <button className="btn sm primary" onClick={() => void applyLogin(l, "fill")} data-testid="browser-fill">Fill</button>}
+              <button className="btn sm" onClick={() => void applyLogin(l, "copy")}>Copy password</button>
+            </div>
+          ))}
+          <button className="link-btn" onClick={() => { setKeysOpen(false); useApp.getState().setTab("passwords"); }}>{logins.length ? "Manage passwords" : "Save a login in Passwords"}</button>
+        </div>
+      )}
       <div className="browser-page">
         {unreachable ? (
           // McBot's own screen, never the web engine's error page.
@@ -249,11 +328,7 @@ export default function BrowserView() {
         ) : url ? (
           <iframe key={`${url}#${reload}`} src={url} title="Page" sandbox="allow-scripts allow-forms allow-popups allow-same-origin allow-downloads" referrerPolicy="no-referrer" data-testid="browser-frame" />
         ) : (
-          <Empty title="Browse next to your agents" action={
-            <div className="row" style={{ flexWrap: "wrap", justifyContent: "center" }}>
-              {START.map((s) => <button key={s} className="btn sm" onClick={() => go(s)}>{s}</button>)}
-            </div>
-          } />
+          <BrowserStart onGo={go} favorites={favorites} onFavorites={setFavorites} />
         )}
       </div>
       {url && agents.length > 0 && (
@@ -263,8 +338,11 @@ export default function BrowserView() {
             {agents.map((a) => <option key={a.id} value={a.id}>{a.data.displayName || a.data.name}</option>)}
           </select>
           <AgentFace seed={agents.find((a) => a.id === (agentId || agents[0]!.id))?.data.name ?? "agent"} size={20} />
-          <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask about this page: summarise it, find the price, fill the form…"
+          <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask about this page: find the price, fill the form…"
             onKeyDown={(e) => { if (e.key === "Enter") void ask(); }} data-testid="browser-ask" />
+          <div className="browser-quick">
+            {QUICK.map((q) => <button key={q.label} className="chip" onClick={() => void ask(q.ask)} data-tip={q.ask}>{q.label}</button>)}
+          </div>
         </div>
       )}
     </section>

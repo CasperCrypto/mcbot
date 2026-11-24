@@ -336,7 +336,8 @@ function ModelsSection() {
 
 // ---------------------------------------------------------------- keys
 
-function KeysSection() {
+/** API keys, names only (also on the Passwords view). */
+export function KeysSection() {
   const { graph } = useBoard();
   const [saved, setSaved] = useSecrets();
   const toast = useApp((s) => s.toast);

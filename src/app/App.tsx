@@ -71,6 +71,7 @@ const CostView = lazyView(() => import("./views/CostView"), (m) => m.CostView);
 const TeamView = lazyView(() => import("./views/TeamView"), (m) => m.TeamView);
 const SettingsView = lazyView(() => import("./views/SettingsView"), (m) => m.SettingsView);
 const BrowserTab = lazyView(() => import("./workbench/BrowserView"), (m) => m.default);
+const PasswordsView = lazyView(() => import("./views/PasswordsView"), (m) => m.PasswordsView);
 /** Monaco and xterm are big: the Code view loads only when it is opened. */
 const CodeTab = lazyView(() => import("./workbench/CodeView"), (m) => m.default, false);
 
@@ -85,6 +86,7 @@ const VIEW_COMPONENTS = {
   memory: MemoryView,
   skills: SkillsView,
   files: FilesView,
+  passwords: PasswordsView,
   cost: CostView,
   team: TeamView,
   settings: SettingsView,
