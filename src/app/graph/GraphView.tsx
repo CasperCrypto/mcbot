@@ -29,7 +29,6 @@ import { latestRunByAgent, toolActivity, useApp } from "../state/store";
 import { AgentFace } from "../ui";
 import { CompileSheet } from "./CompileSheet";
 import { Cursors } from "./Cursors";
-import { HermesView } from "./HermesView";
 import { LayersView } from "./LayersView";
 import { duplicateNode, newChannel, newId, newMaker, newModel, newTool } from "./defaults";
 import { ContextMenu, type MenuAt } from "./ContextMenu";
@@ -543,9 +542,9 @@ function Canvas() {
 }
 
 export function GraphView() {
-  // Board: the parts you edit. Hermes: the whole harness behind them; a click on a part opens the
-  // block that makes it, on the Board.
-  const [mode, setMode] = useState<"board" | "layers" | "hermes">("board");
+  // Board: draw the harness. Layers: one agent's harness, outside in, changed right there.
+  // The switch sits at the top left, clear of the island that drops from the title bar.
+  const [mode, setMode] = useState<"board" | "layers">("board");
   return (
     <ReactFlowProvider>
       <HarnessSidebar />
@@ -553,12 +552,10 @@ export function GraphView() {
         <div className="view page-enter">
           <div className="seg-float" role="tablist" aria-label="View">
             <button role="tab" aria-selected={mode === "board"} onClick={() => setMode("board")} data-testid="mode-board">Board</button>
-            <button role="tab" aria-selected={mode === "layers"} onClick={() => setMode("layers")} data-testid="mode-layers" data-tip="Each agent's harness, layer by layer" data-tip-side="bottom">Layers</button>
-            <button role="tab" aria-selected={mode === "hermes"} onClick={() => setMode("hermes")} data-testid="mode-hermes" data-tip="Everything Hermes runs, live. Click a part to change it" data-tip-side="bottom">Hermes</button>
+            <button role="tab" aria-selected={mode === "layers"} onClick={() => setMode("layers")} data-testid="mode-layers" data-tip="Each agent's harness, layer by layer: change it right there" data-tip-side="bottom">Layers</button>
           </div>
           {mode === "board" ? <Canvas />
-            : mode === "layers" ? <LayersView onEdit={(nodeId) => { setMode("board"); useApp.getState().select(nodeId); }} />
-            : <HermesView onEdit={(nodeId) => { setMode("board"); useApp.getState().select(nodeId); }} />}
+            : <LayersView onEdit={(nodeId) => { setMode("board"); useApp.getState().select(nodeId); }} />}
         </div>
       </section>
     </ReactFlowProvider>

@@ -37,12 +37,13 @@ export function logoFor(keys: (string | null | undefined)[], url?: string): Logo
  * A brand's colour as a soft tint behind its mark, the mark in the colour itself, lifted toward white
  * when the colour would sink into the dark (as kind tiles are drawn: pro.css `.tile.*`).
  */
-export function brandTint(hex: string): { background: string; color: string; boxShadow: string } {
+export function brandTint(hex: string): { background: string; color: string } {
   const n = parseInt(hex.replace("#", ""), 16);
   const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
   const lift = (c: number) => Math.round(c + (255 - c) * (lum < 0.38 ? 0.45 : 0));
-  return { background: `rgb(${r} ${g} ${b} / 0.16)`, color: `rgb(${lift(r)} ${lift(g)} ${lift(b)})`, boxShadow: `inset 0 0 0 0.5px rgb(${r} ${g} ${b} / 0.34)` };
+  // No rim (v3): the tint alone sets the tile apart.
+  return { background: `rgb(${r} ${g} ${b} / 0.16)`, color: `rgb(${lift(r)} ${lift(g)} ${lift(b)})` };
 }
 
 export function LogoTile({ logo, kind, sm, children }: { logo: Logo | null; kind: string; sm?: boolean; children: ReactNode }) {

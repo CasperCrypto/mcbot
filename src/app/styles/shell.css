@@ -35,44 +35,77 @@
 .island:not(.open):hover { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 10px 34px rgba(0, 0, 0, 0.6); }
 .island.open { border-radius: 26px; cursor: default; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.09), var(--shadow-3); }
 .island-inner { position: absolute; top: 0; left: 0; width: max-content; animation: island-content var(--t-slow) var(--ease) both; }
-.island-bar { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 6px; font-size: 13.5px; white-space: nowrap; }
-.island-bar.rest { width: 84px; padding: 0; justify-content: center; }
-.island-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-4); }
-.island-dot.ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(48, 209, 88, 0.16); }
-.island-dot.warn { background: var(--warn); margin-left: 6px; animation: island-pulse 1.4s ease-out infinite; }
-@keyframes island-pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 214, 10, 0.55); } 100% { box-shadow: 0 0 0 7px rgba(255, 214, 10, 0); } }
-.island.mode-toast .island-bar, .island.mode-compile .island-bar { padding-left: 14px; }
-.island .time { font-variant-numeric: tabular-nums; color: #ffb35c; font-weight: 600; margin-left: 2px; }
+.island-bar { display: flex; align-items: center; gap: 8px; height: 30px; min-width: 176px; padding: 0 14px 0 8px; font-size: 13.5px; white-space: nowrap; }
+.island-bar.rest { justify-content: center; padding: 0 16px; gap: 9px; }
+.island-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: rgba(245, 245, 247, 0.35); }
+.island-dot.ok { background: var(--ok); }
+.island-dot.warn { background: var(--warn); margin-left: 6px; animation: island-pulse 1.6s ease-out infinite; }
+@keyframes island-pulse { 0% { box-shadow: 0 0 0 0 rgb(var(--warn-rgb) / 0.5); } 100% { box-shadow: 0 0 0 7px rgb(var(--warn-rgb) / 0); } }
+.island-mark { flex: none; width: 7px; height: 7px; border-radius: 50%; margin: 0 2px; background: var(--warn); }
+.island-mark.fail { background: var(--fail); }
+.island-notice .island-mark { margin-top: 6px; }
+.island.mode-toast .island-bar, .island.mode-compile .island-bar, .island.mode-problems .island-bar { padding-left: 14px; }
+.island .time { font-variant-numeric: tabular-nums; color: rgba(245, 245, 247, 0.85); font-weight: 600; margin-left: 2px; }
 .island .ok { color: var(--ok-text); }
 .island .bad { color: var(--fail-text); }
 .island .faint { color: rgba(245, 245, 247, 0.55); }
-.island .pill { border: 0; background: rgba(255, 255, 255, 0.12); color: #f5f5f7; border-radius: var(--r-pill); height: 24px; padding: 0 11px; font-size: 13px; font-weight: 600; transition: background var(--t-fast), transform var(--t-fast) var(--ease); }
+.island .pill { border: 0; background: rgba(255, 255, 255, 0.12); color: #f5f5f7; border-radius: var(--r-pill); height: 26px; padding: 0 12px; font-size: 13px; font-weight: 600; transition: background var(--t-fast), transform var(--t-fast) var(--ease); }
 .island .pill:hover { background: rgba(255, 255, 255, 0.2); }
 .island .pill:active { transform: scale(0.95); }
-.island .pill.primary { background: var(--accent); }
-.island .pill.primary:hover { background: #2b95ff; }
-.island .pill.danger { color: #ff6961; }
-.island-panel { width: 400px; padding: 14px; display: grid; gap: 10px; white-space: normal; }
-.island-sec { display: grid; gap: 8px; padding: 12px; border-radius: 18px; background: rgba(255, 255, 255, 0.06); border: 0; color: inherit; text-align: left; font: inherit; }
-.island-sec.ask { background: rgba(255, 214, 10, 0.1); }
+.island .pill.primary { background: #f5f5f7; color: #111; }
+.island .pill.primary:hover { background: #fff; }
+.island .pill.danger { color: var(--fail-text); }
+/* Open: wide enough to read, never taller than the window (it scrolls instead of cutting). */
+.island-panel { width: min(600px, calc(100vw - 32px)); max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; padding: 14px; display: grid; gap: 10px; white-space: normal; font-size: 14px; scrollbar-width: none; }
+.island-panel::-webkit-scrollbar { display: none; }
+.island-head { display: flex; align-items: center; gap: 9px; padding: 0 2px 0 6px; min-height: 30px; }
+.island-title { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+.island-meta { font-size: 13px; color: rgba(245, 245, 247, 0.5); }
+.island-win { display: flex; gap: 6px; }
+.island-icon { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.08); color: rgba(245, 245, 247, 0.8); cursor: pointer; transition: background var(--t-fast), color var(--t-fast), transform var(--t-fast) var(--ease); }
+.island-icon:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.island-icon:active { transform: scale(0.92); }
+.island-ask { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 6px 0 8px; border-radius: 16px; background: rgba(255, 255, 255, 0.08); }
+.island-ask:focus-within { background: rgba(255, 255, 255, 0.11); }
+.island-ask-who { position: relative; display: flex; align-items: center; gap: 6px; flex: none; max-width: 42%; padding: 4px 8px 4px 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.07); cursor: pointer; }
+.island-ask-who select { appearance: none; -webkit-appearance: none; border: 0; background: transparent; color: #f5f5f7; font: inherit; font-size: 13.5px; font-weight: 600; padding: 0 2px; max-width: 160px; text-overflow: ellipsis; cursor: pointer; outline: none; }
+.island-ask-who select option { color: initial; }
+.island-ask input { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; color: #f5f5f7; font: inherit; font-size: 14.5px; outline: none; box-shadow: none; padding: 0; }
+.island-ask input::placeholder { color: rgba(245, 245, 247, 0.42); }
+.island-send { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border: 0; border-radius: 50%; background: #f5f5f7; color: #111; cursor: pointer; transition: opacity var(--t-fast), transform var(--t-fast) var(--ease); }
+.island-send:disabled { opacity: 0.25; cursor: default; }
+.island-send:not(:disabled):active { transform: scale(0.92); }
+.island-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 10px; }
+.island-sec { display: grid; gap: 9px; align-content: start; padding: 12px 14px; border-radius: 18px; background: rgba(255, 255, 255, 0.06); border: 0; color: inherit; text-align: left; font: inherit; min-width: 0; }
+.island-sec.ask { background: rgb(var(--warn-rgb) / 0.1); }
 .island-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(245, 245, 247, 0.5); }
-.island-sub { font-size: 13.5px; }
+.island-sub { font-size: 14px; }
 .island-line { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; }
 .island-cmd { display: block; padding: 8px 10px; border-radius: 10px; background: rgba(0, 0, 0, 0.45); font-size: 13px; white-space: pre-wrap; word-break: break-all; max-height: 90px; overflow: auto; }
-.island-actions { display: flex; gap: 6px; }
-.island-run { display: flex; align-items: center; gap: 8px; }
+.island-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.island-run { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .island-link { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; border: 0; background: none; color: inherit; font: inherit; text-align: left; padding: 0; cursor: pointer; min-width: 0; }
+.island-link .ellipsis { max-width: 100%; }
 .island-run .island-link { font-size: 14px; }
-.island-run .icon-btn { color: rgba(245, 245, 247, 0.6); }
-.island-run .icon-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.island-faces { display: flex; flex-wrap: wrap; gap: 6px; }
+.island-face { display: flex; align-items: center; gap: 7px; max-width: 100%; height: 34px; padding: 0 10px 0 4px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.06); color: #f5f5f7; font: inherit; font-size: 13.5px; font-weight: 550; cursor: pointer; transition: background var(--t-fast); }
+.island-face:hover { background: rgba(255, 255, 255, 0.13); }
+.island-stats { display: flex; gap: 18px; }
+.island-stats span { display: grid; gap: 1px; }
+.island-stats b { font-size: 21px; font-weight: 650; letter-spacing: -0.02em; }
+.island-stats small { font-size: 12.5px; color: rgba(245, 245, 247, 0.5); }
+.island-next { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 13px; color: rgba(245, 245, 247, 0.75); }
+.island-next svg { flex: none; color: rgba(245, 245, 247, 0.5); }
 .island-msg { min-width: 0; overflow: hidden; }
 .island .nowrap { white-space: nowrap; flex: none; }
 button.island-sec { cursor: pointer; transition: background var(--t-fast); }
 button.island-sec:hover { background: rgba(255, 255, 255, 0.09); }
-.island-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.island-quick button { display: grid; justify-items: center; gap: 5px; padding: 10px 4px 8px; border: 0; border-radius: 16px; background: rgba(255, 255, 255, 0.06); color: #f5f5f7; font: inherit; font-size: 12.5px; cursor: pointer; transition: background var(--t-fast), transform var(--t-fast) var(--ease); }
+.island-quick { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.island-quick button { display: grid; justify-items: center; gap: 6px; padding: 11px 4px 9px; border: 0; border-radius: 16px; background: rgba(255, 255, 255, 0.06); color: #f5f5f7; font: inherit; font-size: 12.5px; cursor: pointer; transition: background var(--t-fast), transform var(--t-fast) var(--ease); }
+.island-quick button span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .island-quick button:hover { background: rgba(255, 255, 255, 0.12); }
 .island-quick button:active { transform: scale(0.95); }
+@media (max-width: 720px) { .island-grid { grid-template-columns: minmax(0, 1fr); } .island-quick { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .warn-text { color: var(--warn-text); }
 
 /* ---------- page rail ---------- */

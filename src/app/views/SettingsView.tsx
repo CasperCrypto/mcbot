@@ -23,7 +23,8 @@ import { Sidebar } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
 import { useApp, type SettingsSection } from "../state/store";
 import { AgentFace, Field, PersonFace, Segmented } from "../ui";
-import { ACCENTS, ACCENT_SWATCH, type Accent } from "../lib/appearance";
+import { ACCENTS, ACCENT_SWATCH, SCALES, type Accent } from "../lib/appearance";
+import { inApp } from "../lib/desktop";
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode; host?: boolean }[] = [
   { id: "models", label: "Models", icon: <Cpu size={14} /> },
@@ -419,14 +420,21 @@ function AppearanceSection() {
   const appearance = useApp((s) => s.appearance);
   const setAppearance = useApp((s) => s.setAppearance);
   return (
-    <Card title="Appearance" sub="The colour of selections, buttons and focus. On this computer." testId="settings-appearance">
+    <Card title="Appearance" sub="How big McBot is drawn, and the colour of selections and focus. On this computer." testId="settings-appearance">
+      {inApp() && (
+        <div className="settings-row">
+          <span className="grow">Size <span className="faint">⌘+ ⌘−</span></span>
+          <Segmented value={String(appearance.scale)} onChange={(v) => setAppearance({ ...appearance, scale: Number(v) })}
+            options={SCALES.map((sc) => ({ value: String(sc), label: `${Math.round(sc * 100)}%` }))} />
+        </div>
+      )}
       <div className="settings-row">
         <span className="grow">Accent colour</span>
         <span className="faint" style={{ fontSize: 13 }}>{accentName(appearance.accent)}</span>
         <span className="accent-row" role="radiogroup" aria-label="Accent colour">
           {ACCENTS.map((a) => (
             <button key={a} role="radio" aria-checked={appearance.accent === a} aria-label={accentName(a)} data-tip={accentName(a)} className="accent-swatch"
-              style={{ background: ACCENT_SWATCH[a] }} data-testid={`accent-${a}`} onClick={() => setAppearance({ accent: a })} />
+              style={{ background: ACCENT_SWATCH[a] }} data-testid={`accent-${a}`} onClick={() => setAppearance({ ...appearance, accent: a })} />
           ))}
         </span>
       </div>

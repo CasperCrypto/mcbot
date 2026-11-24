@@ -19,6 +19,8 @@ export interface LayerItem {
   /** "set": the board sets it; "default": Hermes' default; "missing": it won't work without it. */
   state: "set" | "default" | "missing";
   target: LayerTarget;
+  /** A setting of the agent itself, changed right in the row (the Layers view draws its control). */
+  edit?: "maxSteps" | "reasoning" | "helpers" | "dailyBudgetUsd";
 }
 
 export interface Layer {
@@ -60,9 +62,9 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
     {
       id: "loop", title: "Loop", what: "How it works through a task: steps, hand-offs, schedules",
       items: [
-        { label: "Steps per message", detail: a.maxSteps ? `Up to ${a.maxSteps}` : "No limit (Hermes' default)", state: a.maxSteps ? "set" : "default", target: self },
+        { label: "Steps per message", detail: a.maxSteps ? `Up to ${a.maxSteps}` : "No limit (Hermes' default)", state: a.maxSteps ? "set" : "default", target: self, edit: "maxSteps" },
         { label: "Hands work to", detail: b.team.length ? b.team.map((t) => t.data.displayName || t.data.name).join(", ") : "Nobody", state: b.team.length ? "set" : "default", target: self },
-        { label: "Helpers", detail: caps.includes("delegation") ? "Can start helpers for parts of a task" : "Off", state: caps.includes("delegation") ? "default" : "set", target: self },
+        { label: "Helpers", detail: caps.includes("delegation") ? "Can start helpers for parts of a task" : "Off", state: caps.includes("delegation") ? "default" : "set", target: self, edit: "helpers" },
         { label: "Schedules", detail: facts.schedules == null ? "—" : facts.schedules.length ? n(facts.schedules.length, "schedule") : "None", state: facts.schedules?.length ? "set" : "default", target: { tab: "home" } },
       ],
     },
@@ -81,7 +83,7 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
         ? [
             { label: primary.data.label || primary.data.name, detail: `${primary.data.model} · ${primary.data.endpoint === "local" ? "on this computer" : "cloud"}`, state: "set", target: { node: primary.id } },
             ...fallbacks.map((m): LayerItem => ({ label: `Backup: ${m.data.label || m.data.name}`, detail: m.data.model, state: "set", target: { node: m.id } })),
-            { label: "Thinking", detail: a.reasoning ? (a.reasoning === "none" ? "Off" : `${a.reasoning[0]!.toUpperCase()}${a.reasoning.slice(1)} effort`) : "As the model decides (Hermes' default)", state: a.reasoning ? "set" : "default", target: self },
+            { label: "Thinking", detail: a.reasoning ? (a.reasoning === "none" ? "Off" : `${a.reasoning[0]!.toUpperCase()}${a.reasoning.slice(1)} effort`) : "As the model decides (Hermes' default)", state: a.reasoning ? "set" : "default", target: self, edit: "reasoning" },
           ]
         : [{ label: "No model", detail: "Wire a model to it on the board", state: "missing", target: self }],
     },
@@ -101,7 +103,7 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
       id: "guardrails", title: "Guardrails", what: "What keeps it safe and affordable",
       items: [
         { label: "Approvals", detail: "Asks you before risky commands", state: "default", target: { tab: "settings" } },
-        { label: "Daily budget", detail: a.dailyBudgetUsd ? `$${a.dailyBudgetUsd} a day` : "No limit", state: a.dailyBudgetUsd ? "set" : "default", target: self },
+        { label: "Daily budget", detail: a.dailyBudgetUsd ? `$${a.dailyBudgetUsd} a day` : "No limit", state: a.dailyBudgetUsd ? "set" : "default", target: self, edit: "dailyBudgetUsd" },
       ],
     },
   ];
