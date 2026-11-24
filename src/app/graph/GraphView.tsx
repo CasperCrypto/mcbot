@@ -1,3 +1,4 @@
+import { modelName } from "../lib/modelName";
 import {
   applyNodeChanges,
   Background,
@@ -15,7 +16,8 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Bot, Sparkles, StickyNote as NoteIcon, Clapperboard, Cloud, Command, FileCode2, FolderOpen, HardDrive, Image, Plug, Plus, Send, Server } from "lucide-react";
+import { Bot, StickyNote as NoteIcon, Clapperboard, Cloud, Command, FileCode2, FolderOpen, HardDrive, History as HistoryIcon, Image, Plug, Plus, Send, Server } from "lucide-react";
+import { Logo } from "../faces/FoodFace";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { addEdge, addNode, addNote, moveNode, removeEdges, removeNodes, setFrameField, setNoteField } from "../../board/ydoc";
 import { resolveGraph } from "../../compile";
@@ -33,6 +35,7 @@ import { duplicateNode, newChannel, newId, newMaker, newModel, newTool } from ".
 import { ContextMenu, type MenuAt } from "./ContextMenu";
 import { Inspector } from "./Inspector";
 import { LiveFiles } from "./LiveFiles";
+import { HistoryPanel } from "./HistoryPanel";
 import { useLingering, usePresence } from "../lib/presence";
 import { LogoTile, nodeLogo } from "./Logo";
 import { MakerIcon, makerService, nodeTypes, type FlowNode } from "./nodes";
@@ -95,7 +98,7 @@ function HarnessSidebar() {
                 </LogoTile>}
               <span className="grow">
                 <span className="title ellipsis" style={{ display: "block" }}>{n.kind === "agent" ? n.data.displayName || n.data.name : ("label" in n.data && n.data.label) || n.data.name}</span>
-                <span className="sub ellipsis mono" style={{ display: "block", fontSize: 12 }}>{n.kind === "model" ? (n.data as ModelData).model || "—" : n.kind === "media" ? makerService(n.data) || "—" : n.kind === "channel" ? `${n.data.allowedUsers.length} allowed` : n.data.name}</span>
+                <span className={`sub ellipsis${n.kind === "model" ? "" : " mono"}`} style={{ display: "block", fontSize: 12 }}>{n.kind === "model" ? modelName((n.data as ModelData).model) || "—" : n.kind === "media" ? makerService(n.data) || "—" : n.kind === "channel" ? `${n.data.allowedUsers.length} allowed` : n.data.name}</span>
               </span>
             </button>
           ))}
@@ -114,7 +117,7 @@ function Welcome({ onStart }: { onStart: () => void }) {
         <h2>Build your harness</h2>
         <p>Agents, the models they think with, the tools they use.</p>
         <div className="row" style={{ marginTop: 6 }}>
-          <button className="btn light lg" onClick={() => useApp.getState().setBuilder(true)} data-testid="welcome-builder"><Sparkles size={15} /> Describe it to McBot</button>
+          <button className="btn light lg" onClick={() => useApp.getState().setBuilder(true)} data-testid="welcome-builder"><Logo size={17} /> Describe it to McBot</button>
           <button className="btn lg" onClick={() => useApp.getState().setTeamsOpen(true)} data-testid="welcome-team">Start with a team</button>
           <button className="btn lg" onClick={onStart} data-testid="welcome-add-agent"><Plus size={15} /> Add an agent</button>
         </div>
@@ -134,6 +137,8 @@ function Canvas() {
   const health = useApp((s) => s.health);
   const setPalette = useApp((s) => s.setPalette);
   const liveOpen = useApp((s) => s.liveFilesOpen);
+  const historyOpen = useApp((s) => s.historyOpen);
+  const history = usePresence(historyOpen);
   const drift = useApp((s) => s.drift);
   const flow = useReactFlow();
   const wrap = useRef<HTMLDivElement>(null);
@@ -484,7 +489,7 @@ function Canvas() {
         multiSelectionKeyCode={["Meta", "Control"]}
         colorMode="dark"
       >
-        <Background variant={BackgroundVariant.Dots} gap={22} size={1.1} color="rgba(255,255,255,0.075)" />
+        <Background variant={BackgroundVariant.Dots} gap={22} size={1.1} color="var(--grid-dot)" />
         <Controls position="bottom-left" showInteractive={false} />
         {graph.nodes.length >= 8 && !selected && <MiniMap position="bottom-right" pannable zoomable className="minimap" nodeBorderRadius={6} nodeColor={miniColor} />}
         <Cursors peers={peers} />
@@ -493,7 +498,7 @@ function Canvas() {
       {graph.nodes.length > 0 && (
         <div ref={dockRef} className={`dock-wrap${selected ? " shifted" : ""}${liveOpen ? " with-live" : ""}`}>
           <div className="dock glass" role="toolbar" aria-label="Add to the harness">
-            <DockItem tile="agent" icon={<Sparkles size={19} />} label="Ask McBot to build" testId="add-builder" onClick={() => useApp.getState().setBuilder(true)} />
+            <DockItem tile="agent" icon={<Logo size={20} />} label="Ask McBot to build" testId="add-builder" onClick={() => useApp.getState().setBuilder(true)} />
             <DockItem tile="agent" icon={<Bot size={20} />} label="New agent" testId="add-agent" onClick={() => useApp.getState().setNewAgentOpen(true)} />
             <div className="dock-sep" />
             <DockItem tile="model" icon={<HardDrive size={19} />} label="Local model" testId="add-model-local" onClick={() => add("model", (p) => newModel(graph, "local", p))} />
@@ -516,15 +521,21 @@ function Canvas() {
         </div>
       )}
 
-      {graph.nodes.length > 0 && !liveOpen && (
-        <button className="live-toggle glass" onClick={() => useApp.getState().setLiveFilesOpen(true)} data-testid="live-files-open" data-tip="The files this board writes, live" data-tip-side="right">
-          <FileCode2 size={13} /> Files{drift ? <span className="chip warn">{drift}</span> : null}
-        </button>
+      {graph.nodes.length > 0 && !liveOpen && !historyOpen && (
+        <div className="board-tools">
+          <button className="live-toggle glass" onClick={() => useApp.getState().setLiveFilesOpen(true)} data-testid="live-files-open" data-tip="The files this board writes, live" data-tip-side="bottom">
+            <FileCode2 size={13} /> Files{drift ? <span className="chip warn">{drift}</span> : null}
+          </button>
+          <button className="live-toggle glass" onClick={() => useApp.getState().setHistoryOpen(true)} data-testid="history-open" data-tip="Every version of this harness, and how its runs went" data-tip-side="bottom">
+            <HistoryIcon size={13} /> History
+          </button>
+        </div>
       )}
       {menu && <ContextMenu at={menu} onClose={() => setMenu(null)} onFit={fit} selection={rfNodes
         .filter((n) => !n.id.startsWith("frame:") && (n.selected || n.id === menu.nodeId))
         .map((n) => ({ x: n.position.x, y: n.position.y, width: n.measured?.width ?? 200, height: n.measured?.height ?? 80 }))} />}
       {live.mounted && <LiveFiles closing={live.closing} onClose={() => useApp.getState().setLiveFilesOpen(false)} />}
+      {history.mounted && <HistoryPanel closing={history.closing} onClose={() => useApp.getState().setHistoryOpen(false)} />}
       {inspecting.value && <Inspector key={inspecting.value.id} node={inspecting.value} closing={inspecting.closing} issues={issuesByNode.get(inspecting.value.id) ?? []} />}
       {compiling.mounted && <CompileSheet wide={!selected} closing={compiling.closing} />}
     </div>

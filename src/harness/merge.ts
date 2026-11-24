@@ -28,7 +28,7 @@ export const OWNED: { readonly [key: string]: Owned } = {
   mcp_servers: { entries: (k) => SLUG_RE.test(k) },
   platform_toolsets: { cli: true, api_server: true },
   browser: { headed: true, engine: true, use_real_profile: true },
-  agent: { max_turns: true },
+  agent: { max_turns: true, reasoning_effort: true },
   image_gen: maker("image"),
   video_gen: maker("video"),
   platforms: { telegram: { extra: { base_url: true } } },

@@ -1,5 +1,6 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { HarnessVersion } from "../../harness/versions";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
@@ -64,6 +65,9 @@ const http = {
   importBoard: (graph: unknown, fallbackName?: string) => call<BoardInfo>("POST", "/api/boards/import", { graph, fallbackName }),
   compile: (boardId: string) => call<CompileResponse>("POST", "/api/compile", { boardId }),
   preview: (boardId: string) => call<CompileResponse>("GET", `/api/compile?boardId=${encodeURIComponent(boardId)}`),
+  /** The board's harness versions (one per compile that changed it), oldest first. */
+  versions: (boardId: string) => call<{ versions: HarnessVersion[] }>("GET", `/api/versions?boardId=${encodeURIComponent(boardId)}`),
+  nameVersion: (boardId: string, id: string, name: string) => call<{ versions: HarnessVersion[] }>("POST", "/api/versions/name", { boardId, id, name }),
   runs: (boardId: string) => call<RunSummary[]>("GET", `/api/runs?boardId=${encodeURIComponent(boardId)}`),
   run: (runId: string) => call<RunEvent[]>("GET", `/api/runs/${runId}`),
   startRun: (boardId: string, agentNodeId: string, prompt: string) => call<{ runId: string }>("POST", "/api/runs", { boardId, agentNodeId, prompt }),
@@ -95,9 +99,23 @@ const http = {
   prepareHermes: () => call<HermesInfo>("POST", "/api/hermes/prepare", {}),
   diagnostics: () => call<Diagnostics>("GET", "/api/diagnostics"),
   share: () => call<SharingView>("GET", "/api/share"),
-  setShare: (on: boolean) => call<SharingView>("POST", "/api/share", { on }),
-  newInvite: () => call<SharingView>("POST", "/api/share/invite", {}),
+  setShare: (on: boolean, reach?: "network" | "internet") => call<SharingView>("POST", "/api/share", { on, ...(reach ? { reach } : {}) }),
+  /** Who links reach: this network, or anyone with the link (a free tunnel, or `ownUrl`). */
+  setShareReach: (reach: "network" | "internet", ownUrl?: string | null) => call<SharingView>("POST", "/api/share/reach", { reach, ...(ownUrl === undefined ? {} : { ownUrl }) }),
+  /** A new link: teammates (edit), or guests who chat with some agents of a board. */
+  newInvite: (scope?: { role: "edit" | "chat"; boardId?: string; agents?: string[] }) => call<SharingView>("POST", "/api/share/invite", scope ?? {}),
   removeMember: (id: string) => call<SharingView>("POST", "/api/share/remove", { id }),
+  /** Someone who joined: whose McBot it is, and a guest's agents. */
+  guest: () => call<GuestView>("GET", "/api/guest"),
+  /** Add from GitHub: what a repository is, a plugin from it for an agent, or its files in the shared folder. */
+  githubInspect: (url: string) => call<GitHubRepoView>("GET", `/api/github/inspect?url=${encodeURIComponent(url)}`),
+  githubPlugin: (profile: string, source: string) => call<{ installed: string }>("POST", "/api/github/plugin", { profile, source }),
+  githubDownload: (url: string) => call<{ folder: string; path: string }>("POST", "/api/github/download", { url }),
+  /** Passwords: the person's logins (no passwords in lists), saved, removed, revealed for copy or fill. */
+  logins: (host?: string) => call<{ logins: LoginView[] }>("GET", `/api/logins${host ? `?host=${encodeURIComponent(host)}` : ""}`),
+  saveLogin: (l: { id?: string; url: string; username: string; password?: string; note?: string }) => call<{ login: LoginView; logins: LoginView[] }>("POST", "/api/logins", l),
+  removeLogin: (id: string) => call<{ logins: LoginView[] }>("POST", "/api/logins/remove", { id }),
+  revealLogin: (id: string) => call<{ username: string; password: string; host: string }>("POST", "/api/logins/reveal", { id }),
   tasks: (boardId: string) => call<TasksView>("GET", `/api/tasks?boardId=${encodeURIComponent(boardId)}`),
   task: (boardId: string, id: string) => call<TaskDetail>("GET", `/api/tasks/one?boardId=${encodeURIComponent(boardId)}&id=${encodeURIComponent(id)}`),
   createTask: (boardId: string, t: { title: string; body: string; assignee: string | null; by: string; parents?: string[] }) => call<TaskView>("POST", "/api/tasks", { boardId, ...t }),
@@ -120,14 +138,72 @@ const http = {
   actOnTask: (boardId: string, id: string, by: string, a: TaskAction) => call<TaskDetail>("POST", "/api/tasks/act", { boardId, id, by, ...a }),
 };
 
-export const engine: typeof http = DEMO ? demoEngine : http;
+const base: typeof http = DEMO ? demoEngine : http;
+
+/** Saved keys changed in this window (one saved or removed): what checks keys asks again. */
+const keyListeners = new Set<() => void>();
+export function onKeysChanged(run: () => void): () => void {
+  keyListeners.add(run);
+  return () => { keyListeners.delete(run); };
+}
+const tellKeys = <A extends unknown[], T>(f: (...a: A) => Promise<T>) => (...a: A) => f(...a).then((v) => { for (const l of keyListeners) l(); return v; });
+
+export const engine: typeof http = { ...base, setSecret: tellKeys(base.setSecret), removeSecret: tellKeys(base.removeSecret) };
 
 /** An agent's files changed in Hermes and the board followed (engine/hermesSync.ts). */
 export interface HarnessChange { boardId: string; agent: string; changed: string[] }
 
+/**
+ * A window that joined another computer gets its events over a WebSocket: a Cloudflare quick tunnel
+ * carries no Server-Sent Events. One socket, shared by every listener, reconnecting on its own.
+ */
+type Frame = { run?: RunEvent; harness?: HarnessChange };
+const listeners = new Set<(f: Frame) => void>();
+const statusListeners = new Set<(up: boolean) => void>();
+let socket: WebSocket | null = null;
+let retry: ReturnType<typeof setTimeout> | null = null;
+function openSocket(): void {
+  if (socket || !REMOTE) return;
+  const ws = new WebSocket(`${ENGINE_WS}/api/events?key=${encodeURIComponent(REMOTE.key)}`);
+  socket = ws;
+  ws.onopen = () => { for (const l of statusListeners) l(true); };
+  ws.onmessage = (m) => {
+    if (socket !== ws) return;
+    try {
+      const f = JSON.parse(String(m.data)) as Frame;
+      if (f.run || f.harness) for (const l of listeners) l(f);
+    } catch {
+      /* a malformed frame is skipped */
+    }
+  };
+  ws.onclose = () => {
+    // An old socket closing late must not drop the one that replaced it.
+    if (socket !== ws) return;
+    socket = null;
+    for (const l of statusListeners) l(false);
+    if (listeners.size && !retry) retry = setTimeout(() => { retry = null; openSocket(); }, 2000);
+  };
+}
+function listen(onFrame: (f: Frame) => void, onStatus?: (up: boolean) => void): () => void {
+  listeners.add(onFrame);
+  if (onStatus) statusListeners.add(onStatus);
+  openSocket();
+  if (onStatus && socket?.readyState === WebSocket.OPEN) onStatus(true);
+  return () => {
+    listeners.delete(onFrame);
+    if (onStatus) statusListeners.delete(onStatus);
+    if (!listeners.size) {
+      const ws = socket;
+      socket = null;
+      ws?.close();
+    }
+  };
+}
+
 export function subscribeHarness(onChange: (c: HarnessChange) => void): () => void {
   if (DEMO) return () => undefined;
-  const es = new EventSource(`${ENGINE_HTTP}/api/events${REMOTE ? `?key=${encodeURIComponent(REMOTE.key)}` : ""}`);
+  if (REMOTE) return listen((f) => { if (f.harness) onChange(f.harness); });
+  const es = new EventSource(`${ENGINE_HTTP}/api/events`);
   es.addEventListener("harness", (m) => {
     try {
       onChange(JSON.parse((m as MessageEvent<string>).data) as HarnessChange);
@@ -141,7 +217,8 @@ export function subscribeHarness(onChange: (c: HarnessChange) => void): () => vo
 /** Live run events for every run, from the engine's SSE stream. Reconnects on its own. */
 export function subscribeRunEvents(onEvent: (e: RunEvent) => void, onStatus?: (connected: boolean) => void): () => void {
   if (DEMO) return subscribeDemoEvents(onEvent, onStatus);
-  const es = new EventSource(`${ENGINE_HTTP}/api/events${REMOTE ? `?key=${encodeURIComponent(REMOTE.key)}` : ""}`);
+  if (REMOTE) return listen((f) => { if (f.run) onEvent(f.run); }, onStatus);
+  const es = new EventSource(`${ENGINE_HTTP}/api/events`);
   es.onopen = () => onStatus?.(true);
   es.onerror = () => onStatus?.(false);
   es.onmessage = (m) => {

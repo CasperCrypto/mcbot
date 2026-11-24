@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, File, FileLock, Folder, FolderPlus, Globe, PanelBottom, Save, Sparkles, X } from "lucide-react";
+import { ChevronDown, ChevronRight, File, FileLock, Folder, FolderPlus, Globe, PanelBottom, Save, X, MessageSquare } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FsEntry, FsRoot } from "../../contracts/api";
 import type { AgentNode } from "../../contracts/graph";
@@ -10,7 +10,7 @@ import { Sidebar, SidebarGroup } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, Empty, Kbd } from "../ui";
-import { languageOf, monaco } from "./monaco";
+import { applyMonacoTheme, languageOf, monaco } from "./monaco";
 import { TerminalPanel } from "./TerminalPanel";
 
 interface Doc {
@@ -152,6 +152,12 @@ export default function CodeView() {
     }
   }, [docs, active, toast]);
 
+  // The editor's cursor and selection follow the accent.
+  const accent = useApp((s) => s.appearance.accent);
+  useEffect(() => {
+    applyMonacoTheme();
+  }, [accent]);
+
   // One editor; each open file is a Monaco model it shows.
   useEffect(() => {
     if (!host.current || editor.current) return;
@@ -261,7 +267,7 @@ export default function CodeView() {
           </div>
           {doc && agents.length > 0 && (
             <div className="code-ask">
-              <Sparkles size={13} className="faint" />
+              <MessageSquare size={13} className="faint" />
               <select value={askAgent || agents[0]!.id} onChange={(e) => setAskAgent(e.target.value)} aria-label="Agent">
                 {agents.map((a) => <option key={a.id} value={a.id}>{a.data.displayName || a.data.name}</option>)}
               </select>

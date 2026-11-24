@@ -3,9 +3,12 @@
  * design/logos (drawn as an image, never as HTML). Unknown brands keep the kind's own tile.
  * Brand colours are content (the brand's identity), like note paper, not UI chrome.
  */
+import { Cpu } from "lucide-react";
 import type { ReactNode } from "react";
-import type { GraphNode } from "../../contracts/graph";
+import type { GraphNode, ModelData } from "../../contracts/graph";
 import { LOGOS, type Logo } from "../lib/logos.generated";
+import { MODEL_MARKS } from "../lib/modelMarks.generated";
+import { modelFamily, modelName } from "../lib/modelName";
 
 /** Local model servers by their usual port (the setup assistant's list). */
 const PORTS: Record<string, string> = { "11434": "ollama", "1234": "lmstudio", "8000": "vllm", "1337": "jan" };
@@ -30,13 +33,26 @@ export function logoFor(keys: (string | null | undefined)[], url?: string): Logo
   return null;
 }
 
+/**
+ * A brand's colour as a soft tint behind its mark, the mark in the colour itself, lifted toward white
+ * when the colour would sink into the dark (as kind tiles are drawn: pro.css `.tile.*`).
+ */
+export function brandTint(hex: string): { background: string; color: string; boxShadow: string } {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  const lift = (c: number) => Math.round(c + (255 - c) * (lum < 0.38 ? 0.45 : 0));
+  return { background: `rgb(${r} ${g} ${b} / 0.16)`, color: `rgb(${lift(r)} ${lift(g)} ${lift(b)})`, boxShadow: `inset 0 0 0 0.5px rgb(${r} ${g} ${b} / 0.34)` };
+}
+
 export function LogoTile({ logo, kind, sm, children }: { logo: Logo | null; kind: string; sm?: boolean; children: ReactNode }) {
   const cls = `tile${sm ? " sm" : ""}`;
   if (!logo) return <span className={`${cls} ${kind}`}>{children}</span>;
   if ("src" in logo) return <span className={`${cls} logo dropped`}><img src={logo.src} alt="" draggable={false} /></span>;
   return (
-    <span className={`${cls} logo`} style={logo.tile ? { background: logo.tile } : undefined} data-tip={logo.title} data-tip-side="top">
-      <svg viewBox="0 0 24 24" width={sm ? 14 : 17} height={sm ? 14 : 17} aria-hidden fill={logo.ink}><path d={logo.path} /></svg>
+    <span className={`${cls} logo${logo.tile ? "" : " neutral"}`} style={logo.tile ? brandTint(logo.tile) : undefined} data-tip={logo.title} data-tip-side="top">
+      {/* A near-black mark has no colour of its own: it takes the text colour. */}
+      <svg viewBox="0 0 24 24" width={sm ? 14 : 17} height={sm ? 14 : 17} aria-hidden fill="currentColor"><path d={logo.path} /></svg>
     </span>
   );
 }
@@ -50,4 +66,37 @@ export function nodeLogo(n: GraphNode): Logo | null {
     case "media": return logoFor([n.data.provider]);
     default: return null;
   }
+}
+
+/** The mark of the family a model belongs to (Claude, GPT, Llama…), else of the server it runs on. */
+export function ModelMark({ model, baseUrl, size = 16 }: { model: string; baseUrl?: string; size?: number }) {
+  const key = modelFamily(model, baseUrl);
+  const mark = key ? MODEL_MARKS[key] : undefined;
+  if (!mark) return <span className="model-mark none" style={{ width: size, height: size }} aria-hidden><Cpu size={Math.round(size * 0.72)} /></span>;
+  return <img className="model-mark" src={mark.src} width={size} height={size} alt="" draggable={false} />;
+}
+
+/** A model as a chip: its family's mark and the name people say; the full id in the tooltip. */
+export function ModelChip({ model, baseUrl, more = 0 }: { model: string | undefined; baseUrl?: string; more?: number }) {
+  if (!model) return <span className="model-chip empty">No model</span>;
+  return (
+    <span className="model-chip" data-tip={more ? `${model} · ${more} backup${more > 1 ? "s" : ""}` : model}>
+      <ModelMark model={model} baseUrl={baseUrl} size={14} />
+      <span className="ellipsis">{modelName(model)}</span>
+      {more > 0 && <span className="model-more">+{more}</span>}
+    </span>
+  );
+}
+
+/** A model block's title: the person's own label, else the model's name ("Cloud model" says nothing). */
+export function modelTitle(m: ModelData): string {
+  const own = m.label.trim();
+  return own && !/^(cloud|local) model$/i.test(own) ? own : modelName(m.model) || own || m.name;
+}
+
+/** Where a model runs, in words: "On this computer · Ollama", "OpenRouter". */
+export function modelWhere(m: ModelData): string {
+  const server = logoFor([], m.baseUrl);
+  const name = server && "title" in server ? server.title : null;
+  return m.endpoint === "local" ? `On this computer${name ? ` · ${name}` : ""}` : name ?? "Cloud";
 }

@@ -10,7 +10,19 @@ const board = (nodes: GraphNode[], edges: GraphEdge[] = []): Graph => ({ schema:
 const ctx = (over: Partial<DoctorContext> = {}): DoctorContext => ({ keys: [], health: {}, drift: 0, engineReady: true, ...over });
 const ids = (g: Graph, c = ctx()) => checkHarness(g, c).map((f) => `${f.level}:${f.id}`);
 
+const tool = (id: string, data: Record<string, unknown>): GraphNode => ({ id, kind: "tool", position: { x: 0, y: 0 }, data: { name: id, label: id, transport: "stdio", command: "npx", args: [], env: {}, url: "", headers: {}, ...data } } as unknown as GraphNode);
+
 describe("harness doctor", () => {
+  it("asks for a tool's key: a hosted server can't connect without it, a local one may not work", () => {
+    const gh = tool("gh", { label: "GitHub", transport: "http", command: "", url: "https://api.githubcopilot.com/mcp/", headers: { Authorization: "Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}" } });
+    const brave = tool("brave", { env: { BRAVE_API_KEY: "${env:BRAVE_API_KEY}" } });
+    const g = board([agent("a", "writer"), local("m"), gh, brave], [edge("e1", "m", "a"), edge("e2", "a", "gh"), edge("e3", "a", "brave")]);
+    const f = checkHarness(g, ctx({ health: { m: "ok" } }));
+    expect(f.map((x) => `${x.level}:${x.id}`)).toEqual(["error:tool-key-gh-GITHUB_PERSONAL_ACCESS_TOKEN", "warn:tool-key-brave-BRAVE_API_KEY"]);
+    expect(f[0]!.fix).toEqual({ kind: "select", nodeId: "gh", label: "Add key" });
+    expect(ids(g, ctx({ health: { m: "ok" }, keys: ["GITHUB_PERSONAL_ACCESS_TOKEN", "BRAVE_API_KEY"] }))).toEqual([]);
+  });
+
   it("is quiet about a healthy board", () => {
     expect(ids(board([agent("a", "writer"), local("m")], [edge("e", "m", "a")]), ctx({ health: { m: "ok" } }))).toEqual([]);
   });

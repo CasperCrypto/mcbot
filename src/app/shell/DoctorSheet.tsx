@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { removeNodes } from "../../board/ydoc";
 import { compileBoard } from "../actions";
 import { checkHarness, type Finding } from "../graph/doctor";
-import { REMOTE, engine } from "../lib/engine";
+import { REMOTE, engine, onKeysChanged } from "../lib/engine";
 import { modelsOf } from "../lib/models";
 import { usePresence } from "../lib/presence";
 import { useModelHealth } from "../lib/useModelHealth";
@@ -21,11 +21,16 @@ export function useDoctor(): Finding[] {
   const health = useApp((s) => s.health);
   const [keys, setKeys] = useState<string[] | null>(null);
   const keysKey = useMemo(() => modelsOf(graph).map((m) => m.data.apiKeyEnv).join(","), [graph]);
+  // Asked again whenever a key is saved or removed (Settings, the inspector), so a fixed key stops being a finding.
+  const [keysRev, setKeysRev] = useState(0);
+  useEffect(() => {
+    return onKeysChanged(() => setKeysRev((n) => n + 1));
+  }, []);
   useEffect(() => {
     // A teammate's window never sees the host's keys: no key findings there.
     if (REMOTE) return;
     engine.secrets().then((r) => setKeys(r.names)).catch(() => setKeys(null));
-  }, [keysKey]);
+  }, [keysKey, keysRev]);
   const modelHealth = useModelHealth(modelsOf(graph));
   return useMemo(() => checkHarness(graph, { keys, health: modelHealth, drift, engineReady: REMOTE || !health ? null : health.hermes.found }), [graph, keys, modelHealth, drift, health]);
 }

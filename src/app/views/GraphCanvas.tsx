@@ -71,7 +71,7 @@ export function GraphCanvas({ nodes, edges, dir = "LR", selected, onSelect, fitS
           minZoom={0.15} maxZoom={1.6} nodesDraggable={false} nodesConnectable={false} elementsSelectable
           onNodeClick={(_, n) => onSelect?.(n.id)} onPaneClick={() => onSelect?.(null)} deleteKeyCode={null}
         >
-          <Background variant={BackgroundVariant.Dots} gap={22} size={1.1} color="rgba(255,255,255,0.075)" />
+          <Background variant={BackgroundVariant.Dots} gap={22} size={1.1} color="var(--grid-dot)" />
           <Controls position="bottom-left" showInteractive={false} />
           <Fit signature={fitSignature} />
         </ReactFlow>

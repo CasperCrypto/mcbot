@@ -5,7 +5,7 @@
  * compiled agent with `hermes skills install`). Host only: members don't reach the library.
  */
 import { BUNDLED } from "../../contracts/library.generated";
-import { Check, Download, Eye, Globe, Hammer, Link2, Pencil, Plus, RefreshCw, Search, Sparkles, Trash2, Users } from "lucide-react";
+import { Check, Download, Eye, Globe, Hammer, Link2, Pencil, Plus, RefreshCw, Search, Trash2, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { setNodeField } from "../../board/ydoc";
 import type { LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView as SkillsState } from "../../contracts/api";
@@ -18,11 +18,12 @@ import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, Empty, Segmented, SkeletonCards } from "../ui";
 import { PluginsPanel } from "./PluginsPanel";
+import { categoryName, prettyName } from "../lib/names";
+import { suggestSkills } from "../lib/suggestSkills";
 
 /** A pasted link or identifier installs; plain words search. */
 const looksLikeSource = (t: string) => /^https:\/\//.test(t.trim()) || /^[\w.-]+(\/[\w.@-]+){2,}$/.test(t.trim());
 
-const pretty = (s: string) => s.replace(/[-_]/g, " ").replace(/^./, (c) => c.toUpperCase());
 const ago = (iso: string) => {
   const d = Math.max(0, Date.now() - Date.parse(iso));
   if (!Number.isFinite(d)) return "";
@@ -60,16 +61,18 @@ export function SkillsView() {
   const builtin = agent.data.builtinSkills !== false;
   const installed = new Set(state?.installed ?? []);
   const library = state?.library ?? [];
-  const cats = [...new Set(library.map((s) => s.category))].sort();
+  const cats = [...new Set(library.map((s) => s.category))].sort((a, b) => categoryName(a).localeCompare(categoryName(b)));
   const words = looksLikeSource(q) ? "" : q.trim().toLowerCase();
-  const shown = library.filter((s) => (!cat || s.category === cat) && (!words || `${s.name} ${s.category} ${s.description} ${s.tags.join(" ")}`.toLowerCase().includes(words)));
+  const shown = library.filter((s) => (!cat || s.category === cat) && (!words || `${s.name} ${prettyName(s.name)} ${categoryName(s.category)} ${s.description} ${s.tags.join(" ")}`.toLowerCase().includes(words)));
   const edit = () => { app.setTab("graph"); app.select(agent.id); };
+  // What fits this agent, from what it is for: shown above the whole library, one click each.
+  const suggested = state && !q.trim() ? suggestSkills({ name: agent.data.displayName || agent.data.name, description: agent.data.description, soul: agent.data.soul }, library, installed) : [];
   const install = async (s: LibrarySkill) => {
     setBusy(s.id);
     try {
       const r = await engine.installSkill(profile, s.id);
       setState((prev) => (prev ? { ...prev, installed: r.installed } : prev));
-      app.toast({ kind: "ok", text: `${pretty(s.name)} installed for ${agent.data.displayName || profile}` });
+      app.toast({ kind: "ok", text: `${prettyName(s.name)} installed for ${agent.data.displayName || profile}` });
     } catch (e) {
       app.toast({ kind: "fail", text: (e as Error).message });
     } finally {
@@ -103,7 +106,7 @@ export function SkillsView() {
         setNodeField(doc, a.id, "skills", [...a.data.skills, parsed]);
         n++;
       }
-      app.toast({ kind: "ok", text: n ? `${pretty(parsed.name)} added to ${n} agent${n === 1 ? "" : "s"}. Compile to apply` : "Every agent has it already" });
+      app.toast({ kind: "ok", text: n ? `${prettyName(parsed.name)} added to ${n} agent${n === 1 ? "" : "s"}. Compile to apply` : "Every agent has it already" });
     } catch (e) {
       app.toast({ kind: "fail", text: (e as Error).message });
     } finally {
@@ -115,7 +118,7 @@ export function SkillsView() {
     try {
       const r = act === "update" ? await engine.updateSkill(profile, name) : await engine.uninstallSkill(profile, name);
       setState((prev) => (prev ? { ...prev, installed: r.installed, skills: r.skills } : prev));
-      app.toast({ kind: "ok", text: `${pretty(name)} ${act === "update" ? "is up to date" : "removed"}` });
+      app.toast({ kind: "ok", text: `${prettyName(name)} ${act === "update" ? "is up to date" : "removed"}` });
     } catch (e) {
       app.toast({ kind: "fail", text: (e as Error).message });
     } finally {
@@ -191,7 +194,7 @@ export function SkillsView() {
                       {found.map((r) => (
                         <div key={r.identifier} className="catalog-card skill-card-lib">
                           <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}>
-                            <span className="row" style={{ gap: 6, minWidth: 0 }}><b className="ellipsis">{pretty(r.name)}</b><span className="chip" data-tip={r.identifier}>{r.source}</span></span>
+                            <span className="row" style={{ gap: 6, minWidth: 0 }}><b className="ellipsis">{prettyName(r.name)}</b><span className="chip" data-tip={r.identifier}>{r.source}</span></span>
                             <span className="faint">{r.description}</span>
                           </span>
                           {installed.has(r.name) ? <span className="chip ok"><Check size={11} /> On</span>
@@ -206,15 +209,15 @@ export function SkillsView() {
               )}
 
             <div className="stack" style={{ gap: 8 }} data-testid="skills-learned">
-              <div className="row"><span className="section-label grow"><Sparkles size={12} /> Taught itself{learned.length ? ` · ${learned.length}` : ""}</span></div>
+              <div className="row"><span className="section-label grow">Taught itself{learned.length ? ` · ${learned.length}` : ""}</span></div>
               {!state ? <SkeletonCards count={2} /> : learned.length === 0 ? <span className="faint">{state.compiled ? "Nothing yet. Skills it writes during runs show up here." : "Compile, then run it: skills it writes show up here."}</span> : (
                 <div className="catalog-grid">
                   {learned.map((sk) => (
                     <div key={sk.path} className="catalog-card skill-card-lib" data-testid={`learned-${sk.name}`}>
                       <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}>
-                        <b className="ellipsis">{pretty(sk.name)}</b>
+                        <b className="ellipsis">{prettyName(sk.name)}</b>
                         <span className="faint">{sk.description}</span>
-                        <span className="faint mono" style={{ fontSize: 12 }}>{ago(sk.modified)}</span>
+                        <span className="faint" style={{ fontSize: 12 }}>{ago(sk.modified)}</span>
                       </span>
                       <span className="row" style={{ gap: 4 }}>
                         <button className="btn ghost sm" aria-label="Read" data-tip="Read" onClick={() => void view(sk)}><Eye size={13} /></button>
@@ -237,7 +240,7 @@ export function SkillsView() {
                   <div className="catalog-grid">
                     {added.map((sk) => (
                       <div key={sk.path} className="catalog-card skill-card-lib">
-                        <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}><b className="ellipsis">{pretty(sk.name)}</b><span className="faint">{sk.description}</span></span>
+                        <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}><b className="ellipsis">{prettyName(sk.name)}</b><span className="faint">{sk.description}</span></span>
                         <span className="row" style={{ gap: 4 }}>
                           <button className="btn ghost sm" aria-label="Read" data-tip="Read" onClick={() => void view(sk)}><Eye size={13} /></button>
                           <button className="btn ghost sm" aria-label={`Update ${sk.name}`} data-tip="Update" disabled={busy !== null} onClick={() => void libraryAct(sk.name, "update")}><RefreshCw size={12} /></button>
@@ -256,7 +259,7 @@ export function SkillsView() {
                 <div className="catalog-grid">
                   {agent.data.skills.map((s) => (
                     <button key={s.name} className="catalog-card" onClick={edit} data-tip="Edit on the board">
-                      <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}><b className="ellipsis">{pretty(s.name)}</b><span className="faint ellipsis">{s.description}</span></span>
+                      <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}><b className="ellipsis">{prettyName(s.name)}</b><span className="faint ellipsis">{s.description}</span></span>
                       <Pencil size={13} className="faint" />
                     </button>
                   ))}
@@ -278,12 +281,31 @@ export function SkillsView() {
               <div className="bundled-skills" data-testid="skills-bundled">
                 {[...new Set(BUNDLED.map((s) => s.category))].map((c) => (
                   <div key={c} className="bundled-group">
-                    <span className="suggest-label">{pretty(c)}</span>
+                    <span className="suggest-label">{categoryName(c)}</span>
                     <div className="suggest-row">
-                      {BUNDLED.filter((s) => s.category === c).map((s) => <span key={s.name} className="chip" data-tip={s.description}>{pretty(s.name)}</span>)}
+                      {BUNDLED.filter((s) => s.category === c).map((s) => <span key={s.name} className="chip" data-tip={s.description}>{prettyName(s.name)}</span>)}
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {suggested.length > 0 && (
+              <div className="stack" style={{ gap: 8 }} data-testid="skills-suggested">
+                <span className="section-label">Suggested for {agent.data.displayName || profile}</span>
+                <div className="catalog-grid">
+                  {suggested.map((s) => (
+                    <div key={s.id} className="catalog-card skill-card-lib">
+                      <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                        <b className="ellipsis">{prettyName(s.name)}</b>
+                        <span className="faint">{s.description}</span>
+                      </span>
+                      <button className="btn sm" disabled={busy !== null || !state?.compiled} onClick={() => void install(s)} data-tip={state?.compiled ? categoryName(s.category) : "Compile first"}>
+                        <Download size={12} /> {busy === s.id ? "Installing…" : "Install"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -295,7 +317,7 @@ export function SkillsView() {
               {cats.length > 0 && (
                 <div className="abilities">
                   <button type="button" className="ability" aria-pressed={!cat} onClick={() => setCat(null)}>All</button>
-                  {cats.map((c) => <button key={c} type="button" className="ability" aria-pressed={cat === c} onClick={() => setCat(cat === c ? null : c)}>{pretty(c)}</button>)}
+                  {cats.map((c) => <button key={c} type="button" className="ability" aria-pressed={cat === c} onClick={() => setCat(cat === c ? null : c)}>{categoryName(c)}</button>)}
                 </div>
               )}
               {!state ? <SkeletonCards count={6} /> : shown.length === 0 ? <span className="faint">Nothing matches.</span> : (
@@ -305,7 +327,7 @@ export function SkillsView() {
                     return (
                       <div key={s.id} className="catalog-card skill-card-lib" data-testid={`lib-${s.name}`}>
                         <span className="grow" style={{ display: "grid", gap: 2, minWidth: 0 }}>
-                          <b className="ellipsis">{pretty(s.name)}</b>
+                          <b className="ellipsis">{prettyName(s.name)}</b>
                           <span className="faint" data-tip={s.tags.join(", ") || undefined}>{s.description}</span>
                         </span>
                         {has ? <span className="row" style={{ gap: 4 }}>

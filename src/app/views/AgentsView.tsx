@@ -1,12 +1,12 @@
 import { starterPrompts } from "../chat/starters";
-import { ArrowUp, Download, Plug, Plus, Square, Waypoints, X } from "lucide-react";
+import { ArrowUp, Download, PanelRight, Plug, Plus, Square, Waypoints, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode, ModelData } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 import { resolveGraph } from "../../compile";
 import { runAgent, stopRun } from "../actions";
 import { engine } from "../lib/engine";
-import { duration, tokens, usd } from "../lib/format";
+import { duration, plainLine, tokens, usd } from "../lib/format";
 import { Sidebar } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
@@ -15,6 +15,8 @@ import { toolLabel } from "../lib/toolLabel";
 import { ApprovalCard } from "../approvals/ApprovalCard";
 import { screenCaptures } from "../chat/screen";
 import { RichText } from "../chat/RichText";
+import { AgentPage } from "../agent/AgentPage";
+import { ModelChip } from "../graph/Logo";
 
 function shortTime(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -95,7 +97,8 @@ function Made({ profile, kind, path }: { profile: string; kind: "image" | "video
   );
 }
 
-function AgentMessage({ run, events, name, onChoose }: { run: RunSummary; events: RunEvent[] | undefined; name: string; onChoose?: (reply: string) => void }) {
+/** An agent's answer: its steps, screen, approval, text and what it made. Also a guest's chat (`waitingFor`: the host). */
+export function AgentMessage({ run, events, name, onChoose, waitingFor }: { run: RunSummary; events: RunEvent[] | undefined; name: string; onChoose?: (reply: string) => void; waitingFor?: string }) {
   const tools = (events ?? []).filter((e): e is Extract<RunEvent, { type: "run.tool.started" }> => e.type === "run.tool.started");
   const failedTools = new Set((events ?? []).filter((e) => e.type === "run.tool.finished" && e.isError).map((e) => (e.type === "run.tool.finished" ? e.tool : "")));
   const text = (run.text || "").trim();
@@ -111,7 +114,7 @@ function AgentMessage({ run, events, name, onChoose }: { run: RunSummary; events
         </div>
       )}
       {shots.length > 0 && <Screen profile={run.profile} shots={shots} live={run.status === "running"} />}
-      <ApprovalCard run={run} />
+      <ApprovalCard run={run} waitingFor={waitingFor} />
       {run.status === "running" && !text ? (
         run.approval ? null : <div className="bubble" style={{ padding: 0 }}><span className="typing"><i /><i /><i /></span></div>
       ) : (
@@ -131,7 +134,7 @@ function AgentMessage({ run, events, name, onChoose }: { run: RunSummary; events
   );
 }
 
-function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
+function Thread({ agent, model, info, onInfo }: { agent: AgentNode; model: string | null; info: boolean; onInfo: () => void }) {
   const { boardId } = useBoard();
   const runs = useApp((s) => s.runs);
   const events = useApp((s) => s.events);
@@ -187,11 +190,13 @@ function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
   return (
     <div className="thread page-enter">
       <div className="thread-head">
-        <AgentFace seed={agent.data.name} size={30} status={running ? "running" : thread.at(-1)?.status} />
-        <div className="grow">
-          <div className="name">{name}</div>
-        </div>
-        {model && <span className="chip mono">{model}</span>}
+        <button className="thread-who" onClick={onInfo} data-tip={info ? undefined : "Its settings"} data-testid="thread-who">
+          <AgentFace seed={agent.data.name} size={30} status={running ? "running" : thread.at(-1)?.status} />
+          <span className="name">{name}</span>
+        </button>
+        <span className="grow" />
+        {model && <ModelChip model={model} />}
+        <button className="icon-btn" aria-label={info ? "Hide its settings" : "Show its settings"} aria-pressed={info} data-tip={info ? "Hide settings" : "Settings"} onClick={onInfo} data-testid="agent-info"><PanelRight size={16} /></button>
       </div>
       <div className="thread-scroll" ref={scroller}>
         <div className="thread-inner" data-testid="thread">
@@ -214,7 +219,7 @@ function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
             return (
               <div key={r.runId} style={{ display: "grid", gap: 14 }}>
                 {sep}
-                <div className="msg user"><div className="bubble">{r.prompt}</div></div>
+                <div className="msg user">{r.byName && <span className="msg-by" data-testid="msg-by">{r.byName}</span>}<div className="bubble">{r.prompt}</div></div>
                 <AgentMessage run={r} events={events[r.runId]} name={name} onChoose={r === thread.at(-1) ? (reply) => void ask(reply) : undefined} />
               </div>
             );
@@ -254,6 +259,8 @@ export function AgentsView() {
   const runs = useApp((s) => s.runs);
   const chatAgentId = useApp((s) => s.chatAgentId);
   const openChat = useApp((s) => s.openChat);
+  const info = useApp((s) => s.agentInfo);
+  const setInfo = useApp((s) => s.setAgentInfo);
   const setTab = useApp((s) => s.setTab);
   const [q, setQ] = useState("");
   const { bundles } = useMemo(() => resolveGraph(graph), [graph]);
@@ -277,7 +284,7 @@ export function AgentsView() {
       <Sidebar title="Agents" search={q} onSearch={setQ} testId="agents-sidebar" action={<button className="icon-btn sm" aria-label="New agent" data-tip="New agent" onClick={() => useApp.getState().setNewAgentOpen(true)} data-testid="agents-new"><Plus size={14} /></button>}>
         {shown.map((a) => {
           const r = last.get(a.id);
-          const preview = r ? (r.status === "running" ? "Working…" : (r.text || r.error || r.prompt).trim().split("\n")[0]) : a.data.description || "No messages yet";
+          const preview = r ? (r.status === "running" ? "Working…" : plainLine(r.text || r.error || r.prompt)) : a.data.description || "No messages yet";
           return (
             <button key={a.id} className="list-row" aria-selected={current?.id === a.id} onClick={() => openChat(a.id)} style={{ alignItems: "flex-start", padding: "10px" }} data-testid="agent-row">
               <AgentFace seed={a.data.name} size={38} status={r?.status} />
@@ -286,14 +293,19 @@ export function AgentsView() {
                   <span className="title ellipsis">{a.data.displayName || a.data.name}</span>
                   <span className="time">{r ? shortTime(r.startedAt) : ""}</span>
                 </span>
-                <span className="sub ellipsis" style={r?.status === "running" ? { color: "var(--run)" } : undefined}>{preview}</span>
+                <span className="sub ellipsis" style={r?.status === "running" ? { color: "var(--run-text)" } : undefined}>{preview}</span>
               </span>
             </button>
           );
         })}
       </Sidebar>
-      <section className="main">
-        {current ? <Thread key={current.id} agent={current} model={modelOf(current.id)} /> : (
+      <section className="main chat-main">
+        {current ? (
+          <div className="chat-split" data-info={info || undefined}>
+            <Thread key={current.id} agent={current} model={modelOf(current.id)} info={info} onInfo={() => setInfo(!info)} />
+            {info && <aside className="agent-pane" aria-label={`${current.data.displayName || current.data.name}: settings`}><AgentPage key={current.id} agent={current} where="chat" onClose={() => setInfo(false)} /></aside>}
+          </div>
+        ) : (
           <Empty title="No agents yet" action={<button className="btn light" onClick={() => useApp.getState().setNewAgentOpen(true)}><Plus size={14} /> New agent</button>}>
             Add an agent on the graph, compile, then talk to it here.
           </Empty>

@@ -120,6 +120,8 @@ Change them additively; a breaking change bumps the version.
   loopback API from a terminal; runs it starts show live in every window.
 - The tool catalog (`src/app/graph/catalog.ts`) also has hosted MCP servers that need no key
   (Exa, Parallel: `transport: http`, `url` only), so agents can search the web from minute one,
+  GitHub on GitHub's own hosted server (a hosted entry with a key sends it as
+  `Authorization: Bearer ${env:NAME}`; Hermes renders `${env:…}` in `url` and `headers`),
   and Hermes' own vetted connectors (`hermes/optional-mcps`, generated: `npm run engine:connectors`
   → `src/contracts/connectors.generated.ts`; `npm test` fails while it is stale). An OAuth one
   compiles to `auth: oauth` (+ its pinned `oauth` block) and signs in with `hermes -p <agent> mcp
@@ -131,7 +133,9 @@ Change them additively; a breaking change bumps the version.
   `hermes -p <agent> skills install official/<path> --yes` (host only). Both live in category
   folders, which the board reader skips: they are Hermes', not blocks. The Skills view
   (`views/SkillsView.tsx`, host only) shows all three per agent plus what each agent taught itself
-  (`profileSkills`); the Inspector links to it. Its one box searches every registry Hermes knows
+  (`profileSkills`) and "Suggested for <agent>" (`lib/suggestSkills.ts`, pure: what the agent is for
+  against each library skill, a starter card's own picks first); names read through `lib/names.ts`
+  (Antigravity CLI, MLOps, MCP servers); the Inspector links to it. Its one box searches every registry Hermes knows
   (`hermes skills search --json`) or, given a GitHub link or SKILL.md URL, installs it into the
   `added` category after Hermes' scan (`skillSources`: a GitHub folder tries `owner/repo/path`, then
   the raw SKILL.md). Its Plugins pane (`views/PluginsPanel.tsx`, `engine/plugins.ts`) lists the
@@ -245,32 +249,60 @@ Change them additively; a breaking change bumps the version.
   `<workspace>/exports/`, never overwriting (the browser demo downloads it);
   import always makes a new board and loads it loosely. Boards hold key names
   only, so a board file holds no secrets.
-- The engine listens on loopback and checks `Origin` and `Host` on every
-  request and WebSocket upgrade. **Share on your network** (`engine/sharing.ts`, off by
-  default) also opens port 4318 to the LAN while it is on: every request there needs an
-  allowed `Origin` and a member key (`Authorization: Bearer`, or `?key=` for WebSocket/SSE),
-  got with the invite link (`http://<address>:4318/join?code=…`: 24 h, for everyone it is sent
-  to, until "New link" replaces it or sharing stops; failed joins rate-limited); only key hashes
-  are stored (`<workspace>/sharing.json`, owner-only). `GET /join` on that port is the one
-  request without an Origin: a static page that says how to join from McBot (no data). The
-  Share sheet copies the link or emails it: McBot has no mail server, so it opens a ready-to-send
-  message to the typed address in Gmail or Outlook on the web, or the mail app (`lib/invite.ts`);
-  Join takes the pasted link. Members reach boards, compile, runs,
-  tasks, schedules, memory and cost (`guestAllowed`), never keys, files, setup, sharing or
-  the engine's controls. Agents always run on the host. A joined window keeps the host's
-  address and its key in localStorage (`src/app/lib/remote.ts`) and hides Code and Files.
+- The engine listens on loopback and checks `Origin` and `Host` on every request and WebSocket
+  upgrade. **Share** (`engine/sharing.ts`, off by default) also opens port 4318 while it is on,
+  to the LAN and, for **anyone with the link** (`reach: "internet"`, the sheet's default), through a
+  free Cloudflare quick tunnel (`engine/tunnel.ts`: `cloudflared tunnel --url`, no account;
+  cloudflared from `MCBOT_CLOUDFLARED`, the PATH, or downloaded once from its GitHub releases into
+  the tools folder and checked against the SHA256 its release notes list; its own home, since quick
+  tunnels refuse a `config.yaml`; a new `https://<words>.trycloudflare.com` each start, no SSE, 200
+  requests in flight, no uptime guarantee) or the host's own address (`ownUrl`). A link per role,
+  24 h, for everyone it is sent to, until "New link" replaces it or sharing stops: **Can edit**
+  (teammates: boards, compile, runs, tasks, schedules, memory and cost, `guestAllowed`) or **Can
+  chat** (guests, customers: only `GET /api/guest`, their own runs with the agents the link names,
+  their media; never a board, approvals or anything else). Each join trades the code for a member
+  key (`Authorization: Bearer`, or `?key=` for WebSockets); only key hashes are stored
+  (`<workspace>/sharing.json`, owner-only); failed joins are limited per person (Cloudflare's
+  `cf-connecting-ip` through the tunnel) and overall. Runs record who started them (`by`, `byName`
+  on `run.started`); a guest's events and run list hold only theirs, without this computer's paths,
+  and a guest's question compiles a stale agent quietly (they can't compile). The share port serves
+  the built app (`engine/webApp.ts`, `MCBOT_WEB_DIR`, the installer's `web/` resource; static files
+  only, a strict CSP, no Referer), so a link opens McBot in any browser, laptop or phone: the join
+  page (`shell/WebJoin.tsx`), then the app (a teammate) or `shell/GuestChat.tsx` (a guest); same-origin
+  GETs carry no Origin, so there the member key is what counts. Windows that joined get events over a
+  WebSocket (`/api/events`, quick tunnels carry no SSE). The Share sheet: Teammates | Guests (pick
+  agents; it warns when a guest could make one use files, the terminal, code, the browser, the
+  computer or wired tools, `lib/guestRisk.ts`), email chips sent through Gmail, Outlook or the mail
+  app (McBot has no mail server, `lib/invite.ts`), Copy link, a QR code for a phone
+  (`shell/QrCode.tsx`, qrcode-generator, MIT), who has access with their role. Join (desktop) takes a
+  pasted link, http or https. Agents always run on the host. A joined window keeps the host's address,
+  its key and role in localStorage (`src/app/lib/remote.ts`) and hides Code and Files.
 
 ## UI invariants
 
-- **Look:** dark, quiet, Apple-native. All colours, radii, shadows and motion are
-  tokens in `src/app/styles/tokens.css`; components use tokens, not literals.
-  Colour means identity (agents, node kinds) or state (running, ok, failed).
-  macOS system colours, flat: the accent is system blue; no gradients, glows or
+- **Look:** quiet, pro, Apple-native, and **dark, always** (owner's decision: no light or system
+  appearance). Settings → Appearance (and ⌘K) picks one of macOS's eight accent colours
+  (`lib/appearance.ts`: `data-accent` on `<html>`, kept per computer, applied before the first
+  paint; every window follows at once). Deep neutral blacks; hairline edges (`--line*`), not
+  shadows, for anything that sits in the page; shadows only for what floats; tight radii (controls
+  7–8, cards 10–12, sheets 14). A kind's colour is a tint behind its coloured glyph (`--k-*-rgb`,
+  `--k-*-ink`), a brand logo sits on its own colour (`brandTint` in `graph/Logo.tsx`), never a
+  candy block; the dock and rail are monochrome glyphs. McBot's own mark (the burger, `Logo`)
+  stands for what McBot itself does (Ask McBot); no sparkles or other stock "AI" icons. All
+  colours, radii, shadows and motion are tokens in `src/app/styles/tokens.css` (macOS's eight
+  accent colours as `--accent-rgb` / `--accent` / `--accent-text`); components use tokens, not
+  literals: overlays are `rgb(var(--tint-rgb) / a)`, state colours as text use `--*-text`
+  (`styles/tokens.test.ts` fails on a literal colour). Fixed-colour surfaces are the exceptions:
+  the island, colour tiles, swatches, note paper. `src/app/styles/pro.css` (loaded last) is the
+  finish of every shared element (buttons, fields, chips, cards, tiles, nodes, dock, composer,
+  Home). Colour means identity (agents, node kinds) or state (running, ok, failed). macOS system
+  colours, flat: the accent is the person's (system blue by default); no gradients, glows or
   gradient text (the website follows the same rule).
-- **Glass and springs** (`src/app/styles/glass.css`, loaded last): whatever floats over content
+- **Glass and springs** (`src/app/styles/glass.css`, before `pro.css`): whatever floats over content
   (sheets, menus, tooltips, the dock, board blocks, the inspector, the chat header and composer)
   is a material — `--mat-*` fill, `--mat-blur`, a hairline edge and specular top line
-  (`--mat-edge`) — never a gradient; content surfaces stay solid. Motion uses `--spring-snappy`
+  (`--mat-edge`) — never a gradient; content surfaces stay solid. The palette, menus and sheets
+  are nearly opaque (`--mat-regular`, `--mat-thick`), so nothing behind them reads through. Motion uses `--spring-snappy`
   (controls), `--spring-bouncy` (things that arrive) and `--spring-smooth` (things that move):
   real springs via CSS `linear()` where supported, cubic fallbacks in tokens.css. The rail's
   selection and segmented controls' thumbs slide. Reduced motion turns it all off.
@@ -306,7 +338,11 @@ Change them additively; a breaking change bumps the version.
   skills, Hermes' compaction), Model (main and backups), Tools (abilities, connectors, makers), Plugins, Guardrails
   (approvals, daily budget). Each row says whether the board sets it, Hermes defaults it or it is missing, and opens
   where it is changed. The loop's **steps per message** is the agent's `maxSteps`, compiled to `agent.max_turns`
-  (only when set; `OWNED` `agent.max_turns`; read back by `src/harness/read.ts`).
+  (only when set; `OWNED` `agent.max_turns`; read back by `src/harness/read.ts`). Its **thinking** is `reasoning`,
+  compiled to `agent.reasoning_effort` (`none`…`ultra`, only when set; `OWNED`; read back). A tool block's **only
+  these tools** (`toolsInclude`, and `toolsExclude` read from Hermes) compiles to `mcp_servers.<name>.tools.include`
+  / `.exclude`: fewer tool definitions, fewer tokens per message (Hermes' code-mode-like `execute_code` covers only
+  its built-in tools, not MCP ones).
 - **Board | Hermes** (top of the board): Board is what you edit; Hermes (`src/app/graph/HermesView.tsx`)
   draws the whole harness behind it: gateway, chat apps, each agent's model chain, abilities,
   tools, makers, skills, memory, schedules, the shared task board, approvals. A click on a part
@@ -316,6 +352,14 @@ Change them additively; a breaking change bumps the version.
   (never chat), tracking only origin `null`, i.e. this window's own edits, so ⌘Z / ⇧⌘Z never take
   back a teammate's or the engine's change; edits within 600 ms are one step. Created with the doc
   (`state/board.tsx`); text fields and the code editor keep their own undo.
+- **History** (`graph/HistoryPanel.tsx`, the board's "History" button, ⌘K "Harness history"; pure
+  `src/harness/versions.ts`): every compile that changes the harness (blocks and wires, never positions, notes,
+  frames or chat: `harnessHash`) keeps a version in `<workspace>/versions/<boardId>.json` (`GET /api/versions`,
+  `POST /api/versions/name`; the newest 60 plus every named one), with what changed in words (`describeChanges`).
+  Runs count against the version live when they started (`versionStats`), so two versions compare on runs,
+  success, cost, time and tokens per run. Restore puts a version's blocks and wires back in one transaction (one ⌘Z).
+  ⌘K "Copy the harness as text" (`src/harness/describe.ts`) gives any AI the whole graph in Markdown (key
+  names only). The demo seeds two versions.
 - **Live files** (`graph/LiveFiles.tsx`, the board's "Files" button, ⌘K): while you edit, the
   engine's dry-run compile (`GET /api/compile`, the real writer and config.yaml merge) is shown
   file by file, whole, with its changes against disk marked; selecting a block opens its agent's
@@ -328,7 +372,8 @@ Change them additively; a breaking change bumps the version.
 - **Harness doctor** (`graph/doctor.ts`, pure and tested; `shell/DoctorSheet.tsx`): the stethoscope
   in the title bar counts what is wrong (red: it won't run, yellow: runs badly or unseen) and its
   sheet lists every finding with one fix: compile errors, agents without a model, unsaved keys of
-  models in use, silent local servers, chat apps nobody may message, blocks wired to no agent
+  models and tools in use (a hosted tool's is an error, a local one's a warning; saved key names are
+  asked again whenever a key is saved or removed, `onKeysChanged` in `lib/engine.ts`), silent local servers, chat apps nobody may message, blocks wired to no agent
   (Remove, undoable), unpriced cloud models, paid agents with no daily budget, files that differ
   from disk, an engine not ready. ⌘K "Check the harness".
 - **Keyboard:** Tab / ⇧Tab walk the blocks (the focused block is selected), arrows nudge, F2 or
@@ -352,7 +397,7 @@ Change them additively; a breaking change bumps the version.
   with", "hands work to"); unselected wires carry no label. Chains between
   them are workflows (M10).
 - **Type:** San Francisco on a Mac (`-apple-system`; SF may not be shipped elsewhere, so Windows
-  and Linux fall back to Segoe UI or Inter). `src/app/styles/premium.css` (loaded last) holds the
+  and Linux fall back to Segoe UI or Inter). `src/app/styles/premium.css` (before `glass.css` and `pro.css`) holds the
   type scale, hairlines, layered shadows and spring motion; reduced motion turns it off.
 - **Everything structural is a graph.** The harness is the editable React Flow
   canvas; runs, memory and folders use the read-only `views/GraphCanvas.tsx`.
@@ -369,8 +414,10 @@ Change them additively; a breaking change bumps the version.
   Blobatars with `tone={0.48}` (auto tone can be near-black on dark).
 - **Logo:** the gray glass burger (`logoSvg`). The website's bots and the logo
   files (`site/assets/logo.svg`, `design/icon.svg`) are generated from the same
-  code by `npm run site:foods`; `npm test` fails when they are stale. App icons:
-  render `design/icon.svg` to `design/icon-1024.png`, then `npx tauri icon`.
+  code by `npm run site:foods`; `npm test` fails when they are stale. App icons: `npm run app:icon`
+  (`scripts/app-icon.mjs`) renders the website's glass burger (`site/assets/burger.webp`, with its eyes) on
+  a near-black tile: `design/icon-1024.png` on Apple's grid for macOS's `.icns`, `design/icon-full-1024.png`
+  filling the canvas for Windows and Linux, and the site's `icon-180.png`.
 - **Effects use block bodies.** `useEffect(() => { … })` — never a concise arrow:
   `scrollIntoView` returns a Promise in current Chromium, and an effect that
   returns a non-function crashes React on cleanup.
@@ -437,6 +484,33 @@ Change them additively; a breaking change bumps the version.
 - **Terminal:** real shells in the desktop shell (`src-tauri/src/terminal.rs`,
   portable-pty), never in the engine, so the engine stays one plain executable.
   The browser has none.
+- **Add from GitHub** (`shell/GitHubSheet.tsx`, pure parts in `engine/github.ts`; ⌘K "Add from GitHub…", a
+  GitHub link typed in ⌘K, or one pasted or dropped anywhere outside a text field; host only): the engine reads
+  the repository through GitHub's API (`GET /api/github/inspect`; a saved `GITHUB_TOKEN` /
+  `GITHUB_PERSONAL_ACCESS_TOKEN` raises the hourly limit; branch names with slashes are resolved the way
+  GitHub's pages do) and says what it is: a **skill** (SKILL.md → an agent learns it, `POST /api/skills/add`),
+  an **MCP server** (package.json on `@modelcontextprotocol/sdk` → a tool block `npx -y <package>`, or a Python
+  project on `mcp` → `uvx --from git+<repo> <script>`, wired to the agent picked), a **Hermes plugin**
+  (plugin.yaml → `POST /api/github/plugin`: `hermes -p <agent> plugins install owner/repo[/path] --enable
+  --yes-deps`, docs/HERMES.md), or a **project** (`POST /api/github/download`: GitHub's archive unpacked with
+  `tar` into the shared files folder's `github/<repo>`, 80 MB at most). Any of them can go to an agent as a
+  question instead.
+- **Browser start page** (`workbench/BrowserStart.tsx`, pure `lib/browserStore.ts`, kept per computer):
+  one big field (address or search), favorites as brand tiles (`siteLogo`: Simple Icons marks, a few
+  site keys added in `scripts/tool-logos.ts`), what answers on the usual local ports (asked of the
+  engine's frameable probe), and recently visited pages. The address bar has Home, a favorite star
+  and a key (Passwords for this site); the ask bar has one-click asks (Summarize, Key facts, Translate).
+- **Passwords** (`views/PasswordsView.tsx`, rail "…" and ⌘K; hidden for people who joined): the
+  person's site logins and the API keys (Settings' `KeysSection`). Logins live in
+  `<workspace>/logins.json` (owner-only), each password sealed with AES-256-GCM under
+  `<data>/logins.key` (owner-only, outside the workspace, so the McBot folder alone holds no readable
+  password; `engine/logins.ts`). Lists never carry a password; `POST /api/logins/reveal` gives one to
+  McBot's own window (loopback, allowed Origin) to copy or fill, never to a member (not in
+  `guestAllowed`). Fill (`browser_fill` in `src-tauri/src/browser.rs`) runs only on the native page,
+  only while it is on the login's site or a subdomain, and only over https (or this computer); it
+  types into the page's fields and submits nothing. Hermes never sees logins. `SECRET_FILES`
+  (`engine/profileEnv.ts`) keeps every file that holds keys (agents' `.env`, McBot's `secrets.json`,
+  `logins.json`, `logins.key`, `sharing.json`) out of the Files view and the editor.
 - **Browser view:** on macOS and Windows the page is a real child webview over the view's page
   area (`src-tauri/src/browser.rs`, Tauri `unstable` feature, one `page-<window>` per window), so
   sites that refuse iframes still load; it hides while a sheet or ⌘K is open (native views draw
@@ -462,8 +536,8 @@ auth, no cloud: local JSON + the filesystem.
 
 Auth, SSO, Langfuse, OpenTelemetry, a cloud tier, a marketplace, git
 integration beyond showing status and diffs, A2A. (ACP is in: M9, owner's decision.) The terminal, code editor and browser panes are planned (M8).
-Everything else on the way is ordered in `docs/PLAN.md` (M5–M15, reasons in
-`docs/NEXT.md`); build in that order. Postgres and Redis belong to the
+Everything else on the way is ordered in `docs/PLAN.md` (M5–M16, reasons in
+`docs/NEXT.md`, the strategy and competitors in `docs/STRATEGY.md`); build in that order. Postgres and Redis belong to the
 optional team server only, never the desktop app.
 
 ## Commands
@@ -494,21 +568,27 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   publishes it to GitHub Pages with the demo at `/demo/`. Download buttons read
   the latest GitHub release and show "Coming soon" until one exists.
 - The hero is the glass burger photo (`site/assets/burger.webp`, cut from a black
-  background so the glass stays see-through); `site/site.js` moves its pupils
-  (in the eye holes) toward the cursor, nothing more. The crew graph and the
-  parade use `site/foods.js`. Clean and flat like a Mac page: system font, black
-  and gray surfaces, white buttons; near-black cards with hairline borders, a floating nav, big tight type
-  (Raycast-class finish, never its look or trade dress). Owner's rule: no gradients, glows, dotted grids or status
-  dots, and no scroll-jacking. The live
-  macOS windows (`site/studio.js`, `studio.css`: the hero is a replica of the app as it opens (frameless window,
-  notch island, rail, agents, a chat that uses tools, answers and asks before acting; keep it in step with the
-  app), How it works tabs, the features grid, the ⌘K palette you can
-  type in, the island) play only while on screen, pause under the pointer, hold their final state
-  under `prefers-reduced-motion`, and use the page's flat colours; they are markup, not screenshots.
-  Page anatomy (as the product pages we compare with do it): a platform pill and a split Download button (your OS,
-  plus a menu) over the hero; cards whose bold title runs into the sentence; a two-column FAQ (`<details>`);
-  flat colour download cards with dark ink; a big footer with a one-paragraph pitch and link columns.
-  Product shots (`site/assets/*.webp`) are taken from the demo at 1440×900 @2x
-  without the Demo chip; re-shoot them when the UI they show changes.
+  background so the glass stays see-through); `site/main.js` moves its pupils (in the eye holes)
+  toward the cursor and makes it blink; a poke makes it happy. The bots in the page's windows and
+  the crew at the end use `site/foods.js`. Clean and flat like a Mac page: system font, black and
+  gray surfaces, white buttons; near-black cards with hairline borders, a floating nav, big tight
+  type (Raycast-class finish, never its look or trade dress). Owner's rule: no gradients, glows,
+  dotted grids or status dots, no gray boxes behind brand logos, and no scroll-jacking. The copy
+  sells three reasons in plain words (no filler, no placeholder company names): yours (on your
+  computer, private, never locked in), any model ("Switch models, not apps") and the harness you
+  can see and change by drawing; then what a working team needs, a comparison, three steps, a FAQ
+  and downloads. The live views (`site/main.js`, `site/style.css`: the hero window is the app as it
+  opens, with its frameless window, rail and a chat that uses a tool, answers and asks before
+  acting, so keep it in step with the app; then the model switch, the harness compiling, an
+  approval, the ⌘K palette and the terminal) play only while on screen, hold their final state
+  under `prefers-reduced-motion`, and use the page's flat colours; they are markup, not
+  screenshots. Page anatomy (as the product pages we compare with do it): a split Download button
+  (your OS, plus a menu) under the headline; moving rows of brand marks, each on its own colour
+  ("Works with…"); cards whose bold title runs into the sentence; a two-column FAQ (`<details>`);
+  download cards; a big footer with a one-paragraph pitch and link columns. Its share card
+  `site/assets/og.jpg` (1200×630: the burger, the headline, the platforms) is rendered from HTML;
+  render it again when the hero's words change. The brand rows are generated into
+  `site/index.html` (between `<!-- logos:<group> -->` markers) by `npm run site:logos` from the
+  app's own marks (`npm test` fails while they are stale).
 
 Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Skills, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘D duplicate · ⌘0 fit the board · right-click the board · ⌘N new window (desktop).

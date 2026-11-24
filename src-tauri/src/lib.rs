@@ -120,6 +120,8 @@ fn start_engine<R: Runtime>(app: &AppHandle<R>) -> Result<Option<Child>, String>
     std::fs::create_dir_all(&data).map_err(|e| e.to_string())?;
     let log = std::fs::File::create(data.join("engine.log")).map_err(|e| e.to_string())?;
     let mut cmd = Command::new(&engine);
+    // The app itself, which the engine serves to people who open a Share link in a web browser.
+    cmd.env("MCBOT_WEB_DIR", resources.join("web"));
     cmd.env("MCBOT_HERMES_BUNDLE", resources.join("hermes"))
         .env("MCBOT_DATA_DIR", &data)
         .stdin(Stdio::null())
@@ -348,7 +350,7 @@ fn new_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .title("McBot Studio")
         .inner_size(1440.0, 900.0)
         .min_inner_size(960.0, 600.0);
-    let builder = builder.theme(Some(tauri::Theme::Dark)).background_color(tauri::window::Color(21, 21, 22, 255));
+    let builder = builder.theme(Some(tauri::Theme::Dark)).background_color(tauri::window::Color(12, 12, 13, 255));
     #[cfg(target_os = "macos")]
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)
@@ -421,6 +423,7 @@ pub fn run() {
             browser::browser_bounds,
             browser::browser_hide,
             browser::browser_go,
+            browser::browser_fill,
             terminal::terminal_open,
             terminal::terminal_write,
             terminal::terminal_resize,

@@ -1,0 +1,22 @@
+name: Something is broken
+description: McBot Studio did something it should not, or did not do what it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead. Screenshots help.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: ⌘K → "Report a problem" → Copy, then paste here. Keys, tokens and your home folder are already hidden.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version and computer
+      placeholder: 0.8.0 on macOS 15 (Apple silicon)

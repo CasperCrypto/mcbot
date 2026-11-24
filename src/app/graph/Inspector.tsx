@@ -1,25 +1,24 @@
-import { ArrowUp, Check, CheckCheck, Cloud, HardDrive, LoaderCircle, LogIn, MessagesSquare, Plug, Plus, RotateCcw, Send, Sparkles, Square, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, CheckCheck, Cloud, HardDrive, LoaderCircle, LogIn, Plug, Plus, RotateCcw, Send, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { SignInView } from "../../contracts/api";
-import { removeNodes, setNodeField, updateEdge } from "../../board/ydoc";
+import { removeNodes, setNodeField } from "../../board/ydoc";
 import type { Issue } from "../../compile";
 import {
   AgentDataSchema, CAPABILITIES, ChannelDataSchema, PLATFORMS, channelKeyName, type Platform, DEFAULT_CAPABILITIES, MEDIA_PROVIDERS, MediaDataSchema, ModelDataSchema, ToolDataSchema,
   type AgentData, type Capability, type ChannelData, type GraphNode, type MediaData, type ModelData, type Skill, type ToolData,
 } from "../../contracts/graph";
-import { runAgent, stopRun } from "../actions";
 import { keyEnvFor } from "../lib/providers";
 import { REMOTE, engine } from "../lib/engine";
-import { duration, tokens as fmtTokens, usd } from "../lib/format";
 import { useBoard } from "../state/board";
 import { useDismiss } from "../lib/presence";
-import { latestRunByAgent, useApp } from "../state/store";
-import { AgentFace, Field, Issues, Segmented, TextListField } from "../ui";
+import { useApp } from "../state/store";
+import { Field, Issues, Segmented, TextListField } from "../ui";
 import { LogoTile, nodeLogo } from "./Logo";
 import { MakerIcon } from "./nodes";
+import { AgentPage } from "../agent/AgentPage";
 
 type Errors = Record<string, string>;
-function fieldErrors(schema: { safeParse(v: unknown): { success: boolean; error?: { issues: { path: PropertyKey[]; message: string }[] } } }, data: unknown): Errors {
+export function fieldErrors(schema: { safeParse(v: unknown): { success: boolean; error?: { issues: { path: PropertyKey[]; message: string }[] } } }, data: unknown): Errors {
   const r = schema.safeParse(data);
   if (r.success || !r.error) return {};
   const out: Errors = {};
@@ -30,145 +29,46 @@ function fieldErrors(schema: { safeParse(v: unknown): { success: boolean; error?
 export function Inspector({ node, issues, closing = false }: { node: GraphNode; issues: Issue[]; closing?: boolean }) {
   const { doc } = useBoard();
   const select = useApp((s) => s.select);
-  const runs = useApp((s) => s.runs);
   const set = (field: string, value: unknown) => setNodeField(doc, node.id, field, value);
   // Esc puts it away (a click on the empty board already does).
   const panel = useRef<HTMLElement>(null);
   const deselect = useCallback(() => select(null), [select]);
   useDismiss(!closing, deselect, panel, { outside: false });
-  const status = node.kind === "agent" ? latestRunByAgent(runs).get(node.id)?.status : undefined;
+  // An agent: its whole page, one scroll (agent/AgentPage.tsx), the same one the Chat view shows.
+  if (node.kind === "agent") return (
+    <aside ref={panel} data-closing={closing || undefined} className="inspector glass agent-inspector" aria-label="Agent" data-testid="inspector">
+      <AgentPage agent={node} where="board" onClose={() => select(null)} />
+    </aside>
+  );
 
-  const titleField = node.kind === "agent" ? "displayName" : "label";
-  const title = node.kind === "agent" ? node.data.displayName : node.data.label;
-  const sub = node.kind === "agent" ? `@${node.data.name || "…"}`
-    : node.kind === "model" ? (node.data.endpoint === "local" ? "Local model" : "Cloud model")
+  const title = node.data.label;
+  const sub = node.kind === "model" ? (node.data.endpoint === "local" ? "Local model" : "Cloud model")
     : node.kind === "media" ? (node.data.media === "video" ? "Video maker" : "Image maker")
     : node.kind === "channel" ? "Chat app" : "MCP server";
 
   return (
     <aside ref={panel} data-closing={closing || undefined} className="inspector glass" aria-label="Inspector" data-testid="inspector">
       <div className="inspector-head">
-        {node.kind === "agent" ? <AgentFace seed={node.data.name} size={42} status={status} />
-          : node.kind === "media" ? <LogoTile logo={nodeLogo(node)} kind="media"><MakerIcon media={node.data.media} size={16} /></LogoTile>
+        {node.kind === "media" ? <LogoTile logo={nodeLogo(node)} kind="media"><MakerIcon media={node.data.media} size={16} /></LogoTile>
           : node.kind === "channel" ? <LogoTile logo={nodeLogo(node)} kind="channel"><Send size={15} /></LogoTile>
           : <LogoTile logo={nodeLogo(node)} kind={node.kind === "tool" ? "tool" : node.data.endpoint === "local" ? "model" : "cloud"}>
             {node.kind === "tool" ? <Plug size={16} /> : node.data.endpoint === "local" ? <HardDrive size={16} /> : <Cloud size={16} />}
           </LogoTile>}
         <div className="title">
-          <input value={title} placeholder={node.data.name || "Untitled"} onChange={(e) => set(titleField, e.target.value)} aria-label="Name" data-testid="inspector-title" />
-          <small className={node.kind === "agent" ? "mono" : undefined}>{sub}</small>
+          <input value={title} placeholder={node.data.name || "Untitled"} onChange={(e) => set("label", e.target.value)} aria-label="Name" data-testid="inspector-title" />
+          <small>{sub}</small>
         </div>
         <button className="icon-btn" data-tip="Delete" data-tip-side="bottom" aria-label="Delete" onClick={() => { removeNodes(doc, [node.id]); select(null); }}><Trash2 size={15} /></button>
         <button className="icon-btn" aria-label="Close" onClick={() => select(null)}><X size={16} /></button>
       </div>
-      {node.kind === "agent" ? <AgentPanel node={node} set={set} issues={issues} /> : (
-        <div className="inspector-body">
-          <Issues issues={issues} />
-          {node.kind === "model" && <ModelFields data={node.data} set={set} />}
-          {node.kind === "tool" && <ToolFields nodeId={node.id} data={node.data} set={set} />}
-          {node.kind === "media" && <MakerFields data={node.data} set={set} />}
-          {node.kind === "channel" && <ChannelFields data={node.data} set={set} />}
-        </div>
-      )}
-    </aside>
-  );
-}
-
-type AgentTab = "setup" | "skills" | "run";
-
-function AgentPanel({ node, set, issues }: { node: Extract<GraphNode, { kind: "agent" }>; set: (f: string, v: unknown) => void; issues: Issue[] }) {
-  const [tab, setTab] = useState<AgentTab>("setup");
-  return (
-    <>
-      <div className="inspector-tabs">
-        <Segmented value={tab} onChange={setTab} options={[{ value: "setup", label: "Setup" }, { value: "skills", label: `Skills${node.data.skills.length ? ` ${node.data.skills.length}` : ""}` }, { value: "run", label: "Run" }]} />
-      </div>
       <div className="inspector-body">
         <Issues issues={issues} />
-        {tab === "setup" && <AgentSetup node={node} set={set} />}
-        {tab === "skills" && <><Skills data={node.data} set={set} />{!REMOTE && <SkillLibrary data={node.data} set={set} />}</>}
-        {tab === "run" && <RunBox agentNodeId={node.id} profile={node.data.name} />}
+        {node.kind === "model" && <ModelFields data={node.data} set={set} />}
+        {node.kind === "tool" && <ToolFields nodeId={node.id} data={node.data} set={set} />}
+        {node.kind === "media" && <MakerFields data={node.data} set={set} />}
+        {node.kind === "channel" && <ChannelFields data={node.data} set={set} />}
       </div>
-    </>
-  );
-}
-
-function AgentSetup({ node, set }: { node: Extract<GraphNode, { kind: "agent" }>; set: (f: string, v: unknown) => void }) {
-  const a = node.data;
-  const errors = fieldErrors(AgentDataSchema, a);
-  const { graph, doc } = useBoard();
-  const linked = graph.edges
-    .filter((e) => e.source === node.id || e.target === node.id)
-    .map((e) => ({ edge: e, other: graph.nodes.find((n) => n.id === (e.source === node.id ? e.target : e.source)) }))
-    .filter((x): x is { edge: typeof x.edge; other: GraphNode } => !!x.other);
-  const chain = linked.filter((x) => x.other.kind === "model").sort((x, y) => x.edge.order - y.edge.order || (x.edge.id < y.edge.id ? -1 : 1));
-  const tools = linked.filter((x) => x.other.kind === "tool" || x.other.kind === "channel");
-  const makers = linked.filter((x): x is { edge: typeof x.edge; other: Extract<GraphNode, { kind: "media" }> } => x.other.kind === "media");
-  const makePrimary = (edgeId: string) => {
-    const ordered = [chain.find((c) => c.edge.id === edgeId)!, ...chain.filter((c) => c.edge.id !== edgeId)];
-    doc.transact(() => ordered.forEach((c, i) => updateEdge(doc, c.edge.id, { order: i })));
-  };
-
-  return (
-    <>
-      <Field label="Profile" value={a.name} onChange={(v) => set("name", v)} mono error={errors.name} testId="agent-name" />
-      <Field label="Description" value={a.description} onChange={(v) => set("description", v)} multiline rows={2} />
-      <Field label="Soul" value={a.soul} onChange={(v) => set("soul", v)} multiline rows={7} placeholder={"Who this agent is.\nHow it speaks. What it avoids."} />
-      <div className="stack">
-        <span className="section-label">Models</span>
-        {chain.length === 0 ? <span className="faint">Connect a model to this agent.</span> : (
-          <div className="chain">
-            {chain.map((c, i) => (
-              <div key={c.edge.id} className="chain-item">
-                <span className="chip">{i === 0 ? "Primary" : `Fallback ${i}`}</span>
-                <span className="mono grow ellipsis">{(c.other.data as ModelData).model || c.other.data.name}</span>
-                {i > 0 && <button className="icon-btn sm" aria-label="Make primary" data-tip="Make primary" data-tip-side="top" onClick={() => makePrimary(c.edge.id)}><ArrowUp size={13} /></button>}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      {tools.length > 0 && (
-        <div className="stack">
-          <span className="section-label">Tools</span>
-          <div className="chain">
-            {tools.map((t) => (
-              <div key={t.edge.id} className="chain-item">{t.other.kind === "channel" ? <Send size={13} className="faint" /> : <Plug size={13} className="faint" />}<span className="grow ellipsis">{(t.other.data as ToolData | ChannelData).label || t.other.data.name}</span><span className="chip mono">{t.other.data.name}</span></div>
-            ))}
-          </div>
-        </div>
-      )}
-      <Budget data={a} set={set} />
-      <Loop data={a} set={set} />
-      <Abilities data={a} set={set} forced={new Set(makers.map((m): Capability => (m.other.data.media === "video" ? "video_gen" : "image_gen")))} />
-    </>
-  );
-}
-
-/** A daily spend limit. McBot-side only: it is never written to Hermes' files. */
-function Budget({ data, set }: { data: AgentData; set: (f: string, v: unknown) => void }) {
-  return (
-    <div className="stack" style={{ gap: 6 }} data-testid="budget">
-      <span className="section-label">Daily budget</span>
-      <label className="row" style={{ gap: 6 }} data-tip="Warns at 80%; at 100% new runs stop for the day (UTC). Never compiled." data-tip-side="top">
-        <span className="faint">$</span>
-        <input className="input mono" type="number" min={0} step={0.5} placeholder="No limit" data-testid="budget-input"
-          value={data.dailyBudgetUsd ?? ""} onChange={(e) => { const n = parseFloat(e.target.value); set("dailyBudgetUsd", Number.isFinite(n) && n > 0 ? n : null); }} />
-      </label>
-    </div>
-  );
-}
-
-/** The loop layer: a cap on tool-calling steps per message (compiles to `agent.max_turns`). */
-function Loop({ data, set }: { data: AgentData; set: (f: string, v: unknown) => void }) {
-  return (
-    <div className="stack" style={{ gap: 6 }} data-testid="loop">
-      <span className="section-label">Steps per message</span>
-      <label className="row" style={{ gap: 6 }} data-tip="How many tool steps one message may take before Hermes stops. Empty = no limit." data-tip-side="top">
-        <input className="input mono" type="number" min={1} max={10000} step={5} placeholder="No limit" data-testid="loop-input"
-          value={data.maxSteps ?? ""} onChange={(e) => { const n = parseInt(e.target.value, 10); set("maxSteps", Number.isFinite(n) && n > 0 ? Math.min(n, 10000) : null); }} />
-      </label>
-    </div>
+    </aside>
   );
 }
 
@@ -176,7 +76,7 @@ function Loop({ data, set }: { data: AgentData; set: (f: string, v: unknown) => 
  * The tool sets this agent may use. Untouched, it follows Hermes' default; the first
  * change pins a list (platform_toolsets.cli). A wired maker keeps its own tool set on.
  */
-function Abilities({ data, set, forced }: { data: AgentData; set: (f: string, v: unknown) => void; forced: Set<Capability> }) {
+export function Abilities({ data, set, forced, title = "Abilities" }: { data: AgentData; set: (f: string, v: unknown) => void; forced: Set<Capability>; title?: string }) {
   const on = new Set<Capability>(data.capabilities ?? DEFAULT_CAPABILITIES);
   const toggle = (k: Capability) => {
     const next = new Set(on);
@@ -187,7 +87,7 @@ function Abilities({ data, set, forced }: { data: AgentData; set: (f: string, v:
   return (
     <div className="stack" data-testid="abilities">
       <div className="row">
-        <span className="section-label grow">Abilities</span>
+        <span className="section-label grow">{title}</span>
         {on.size < CAPABILITIES.length && (
           <button className="icon-btn sm" aria-label="Turn all on" data-tip="Turn all on" data-tip-side="top" data-testid="abilities-all" onClick={() => set("capabilities", CAPABILITIES.map((c) => c.key))}><CheckCheck size={13} /></button>
         )}
@@ -282,7 +182,7 @@ function MakerFields({ data, set }: { data: MediaData; set: (f: string, v: unkno
   );
 }
 
-function Skills({ data, set }: { data: AgentData; set: (f: string, v: unknown) => void }) {
+export function Skills({ data, set }: { data: AgentData; set: (f: string, v: unknown) => void }) {
   const errors = fieldErrors(AgentDataSchema, data);
   const update = (i: number, patch: Partial<Skill>) => set("skills", data.skills.map((s, n) => (n === i ? { ...s, ...patch } : s)));
   const add = () => set("skills", [...data.skills, { name: `skill-${data.skills.length + 1}`, description: "What this skill does.", version: "1.0.0", author: "", license: "", platforms: [], tags: [], body: "" }]);
@@ -299,68 +199,6 @@ function Skills({ data, set }: { data: AgentData; set: (f: string, v: unknown) =
         </div>
       ))}
       <button className="btn" onClick={add}><Plus size={14} /> Add skill</button>
-    </>
-  );
-}
-
-/** Hermes' own skills for this agent: the built-in set, and the library in the Skills view. */
-function SkillLibrary({ data, set }: { data: AgentData; set: (f: string, v: unknown) => void }) {
-  const builtin = data.builtinSkills !== false;
-  return (
-    <div className="stack" style={{ gap: 8 }} data-testid="skill-library">
-      <span className="section-label">Hermes skills</span>
-      <div className="abilities">
-        <button type="button" className="ability" aria-pressed={builtin} onClick={() => set("builtinSkills", builtin ? false : null)} data-testid="builtin-skills"
-          data-tip="Hermes' 44 bundled skills, added when you compile" data-tip-side="top">
-          {builtin && <Check size={11} strokeWidth={2.6} />}Built-in skills
-        </button>
-      </div>
-      <button className="btn" onClick={() => useApp.getState().setTab("skills")} data-testid="open-skills"><Sparkles size={14} /> Browse the skill library</button>
-    </div>
-  );
-}
-
-function RunBox({ agentNodeId, profile }: { agentNodeId: string; profile: string }) {
-  const { boardId } = useBoard();
-  const runs = useApp((s) => s.runs);
-  const events = useApp((s) => s.events);
-  const openChat = useApp((s) => s.openChat);
-  const [prompt, setPrompt] = useState("");
-  const [busy, setBusy] = useState(false);
-  const latest = useMemo(() => latestRunByAgent(runs).get(agentNodeId) ?? null, [runs, agentNodeId]);
-  const tools = latest ? (events[latest.runId] ?? []).filter((e) => e.type === "run.tool.started") : [];
-  const running = latest?.status === "running";
-
-  const go = async () => {
-    if (!prompt.trim() || busy) return;
-    setBusy(true);
-    useApp.getState().setCompile({ compileOpen: false });
-    await runAgent(boardId, agentNodeId, prompt.trim());
-    setBusy(false);
-  };
-
-  return (
-    <>
-      <div className="composer" style={{ boxShadow: "none", background: "var(--bg-input)", maxWidth: "none", margin: 0 }}>
-        <textarea rows={2} value={prompt} placeholder={`Ask ${profile}…`} data-testid="run-prompt" onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void go(); } }} />
-        {running
-          ? <button className="send stop" aria-label="Stop" onClick={() => latest && void stopRun(latest.runId)}><Square size={12} /></button>
-          : <button className="send" aria-label="Run" disabled={!prompt.trim() || busy} onClick={go} data-testid="run-button"><ArrowUp size={16} /></button>}
-      </div>
-      {latest && (
-        <div className="stack" data-testid="run-result">
-          <div className="row" style={{ flexWrap: "wrap", gap: "4px 10px", fontSize: 13 }}>
-            <span className={`chip ${latest.status === "succeeded" ? "ok" : latest.status === "running" ? "run" : "fail"}`}>{latest.status}</span>
-            {latest.tokens && <span className="faint num">{fmtTokens(latest.tokens.input)} in · {fmtTokens(latest.tokens.output)} out</span>}
-            {latest.finishedAt && <span className="faint num">{duration(latest.finishedAt - latest.startedAt)}</span>}
-            {(latest.reportedUsd || latest.estimatedUsd) ? <span className="faint num">{usd(latest.reportedUsd || latest.estimatedUsd)}</span> : null}
-          </div>
-          {tools.length > 0 && <div className="steps">{tools.map((e) => <span key={e.seq} className="step-chip"><Plug size={11} /><span className="mono">{e.type === "run.tool.started" ? e.tool : ""}</span></span>)}</div>}
-          {(latest.text || latest.error) && <div className="bubble" style={{ background: "var(--bg-raised)", border: "1px solid var(--line)" }} data-testid="run-output">{(latest.text || latest.error || "").trim()}</div>}
-          <button className="btn ghost sm" style={{ justifySelf: "start" }} onClick={() => openChat(agentNodeId)}><MessagesSquare size={13} /> Open chat</button>
-        </div>
-      )}
     </>
   );
 }
@@ -482,6 +320,11 @@ function ToolFields({ nodeId, data, set }: { nodeId: string; data: ToolData; set
       {keys.map((k) => <KeyField key={k} name={k} label={keys.length > 1 ? k : "API key"} />)}
       <Segmented value={data.transport} onChange={(v) => set("transport", v)} options={[{ value: "stdio", label: "Local" }, { value: "http", label: "Remote" }]} />
       <Field label="Key" value={data.name} onChange={(v) => set("name", v)} mono error={errors.name} />
+      <TextListField label="Only these tools" value={(data.toolsInclude ?? []).join("\n")} rows={3}
+        placeholder={"All of its tools.\nOr one per line: search, get_*"}
+        onCommit={(t) => { const xs = t.split("\n").map((x) => x.trim()).filter(Boolean); set("toolsInclude", xs.length ? xs : undefined); }} />
+      <p className="field-note">Fewer tools, fewer tokens on every message. Names or patterns like <span className="mono">get_*</span>.</p>
+      {data.toolsExclude?.length ? <p className="field-note">Hidden from the model: <span className="mono">{data.toolsExclude.join(", ")}</span></p> : null}
       {data.transport === "stdio" ? (
         <>
           <Field label="Command" value={data.command} onChange={(v) => set("command", v)} mono placeholder="npx" />

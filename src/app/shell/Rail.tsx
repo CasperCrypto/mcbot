@@ -5,8 +5,8 @@ import { REMOTE } from "../lib/engine";
 import { useDismiss } from "../lib/presence";
 import { VIEWS } from "./Palette";
 
-/** On another computer's boards: its files, folders and skill library stay there, so Code, Files and Skills are hidden. */
-export const HIDDEN_FOR_GUESTS = new Set(["code", "files", "skills"]);
+/** On another computer's boards: its files, folders, skill library and passwords stay there, so those views are hidden. */
+export const HIDDEN_FOR_GUESTS = new Set(["code", "files", "skills", "passwords"]);
 
 /** The views the rail shows; the rest sit behind "…" (pin them there). Kept per computer. */
 const PINS_KEY = "mcbot.rail.pins";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Graph } from "../../contracts/graph";
-import { agentsWithoutModel, attachModel, chainOf } from "./models";
+import { agentsWithoutModel, attachModel, chainOf, promoteModel, usersOf } from "./models";
 
 const agent = (id: string) => ({ id, kind: "agent" as const, position: { x: 0, y: 0 }, data: { name: id, displayName: "", description: "", soul: "", skills: [], capabilities: null } });
 const model = (id: string) => ({ id, kind: "model" as const, position: { x: 0, y: 0 }, data: { name: id, label: "", endpoint: "local" as const, baseUrl: "http://127.0.0.1:11434/v1", model: "m", apiKeyEnv: "", pricing: null } });
@@ -13,6 +13,15 @@ const g: Graph = {
 describe("models on a board", () => {
   it("finds agents with no model", () => {
     expect(agentsWithoutModel(g).map((a) => a.id)).toEqual(["b"]);
+  });
+
+  it("counts a model wired either way (a wire dragged out of an agent points agent→model)", () => {
+    const g2: Graph = { ...g, edges: [{ id: "e1", source: "m1", target: "a", order: 0 }, { id: "e2", source: "b", target: "m1", order: 0 }, { id: "e3", source: "a", target: "m2", order: 1 }] };
+    expect(agentsWithoutModel(g2)).toEqual([]);
+    expect(chainOf(g2, "a").map((e) => e.id)).toEqual(["e1", "e3"]);
+    expect(usersOf(g2, "m1").map((a) => a.id)).toEqual(["a", "b"]);
+    expect(attachModel(g2, "m1", ["b"], true, () => "x")).toEqual({ add: [], reorder: [] });
+    expect(promoteModel(g2, "m2")).toEqual([{ id: "e3", order: 0 }, { id: "e1", order: 1 }]);
   });
 
   it("adds a backup at the end of the chain, or a main model in front", () => {

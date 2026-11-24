@@ -3,10 +3,11 @@ import type { Scene } from "../chat/drawing";
 import type { BoardInfo, CompileResponse, Health, SetupState } from "../../contracts/api";
 import { summarizeRun, type RunEvent, type RunSummary } from "../../contracts/run";
 import { loadIdentity, saveIdentity, type Identity } from "../lib/identity";
+import { applyAppearance, loadAppearance, saveAppearance, type Appearance } from "../lib/appearance";
 
-export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "skills" | "files" | "cost" | "team" | "settings";
+export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "skills" | "files" | "passwords" | "cost" | "team" | "settings";
 
-export type SettingsSection = "models" | "keys" | "you" | "team" | "engine" | "about";
+export type SettingsSection = "models" | "keys" | "appearance" | "you" | "team" | "engine" | "about";
 
 export interface Toast {
   id: number;
@@ -22,6 +23,8 @@ interface State {
   health: Health | null;
   engineUp: boolean | null;
   identity: Identity;
+  /** The accent colour (Settings → Appearance; kept per computer). McBot is dark, always. */
+  appearance: Appearance;
   selectedNodeId: string | null;
   selectedRunId: string | null;
   compileOpen: boolean;
@@ -49,6 +52,12 @@ interface State {
   newAgentOpen: boolean;
   /** The tool catalog. */
   catalogOpen: boolean;
+  /** The board's History panel (graph/HistoryPanel.tsx): versions of the harness and their runs. */
+  historyOpen: boolean;
+  /** The agent the tool or chat-app catalog adds to, when opened from that agent's page. */
+  catalogFor: string | null;
+  /** The Chat view shows the agent's page beside the conversation. */
+  agentInfo: boolean;
   /** The board's live files panel (what Compile would write). */
   liveFilesOpen: boolean;
   chatAppsOpen: boolean;
@@ -56,6 +65,8 @@ interface State {
   teamsOpen: boolean;
   /** Ask McBot (shell/BuilderSheet.tsx), with the words it opened with. */
   builder: { open: boolean; request: string };
+  /** Add from GitHub: null closed, else the link it opened with ("" = none yet). */
+  github: string | null;
   /** The drawing open full size (chat/DrawingSheet.tsx): a scene, and where it saves when it came from a file. */
   drawing: { scene: Scene; title: string; file?: { root: string; path: string; sha256: string | null } } | null;
   /** Bumped to ask the board to fit everything in view (after a team or a plan joins it). */
@@ -91,8 +102,15 @@ interface State {
   setCatalogOpen(open: boolean): void;
   setLiveFilesOpen(open: boolean): void;
   setChatAppsOpen(open: boolean): void;
+  /** Add a tool or a chat app to one agent (from its page): the catalog wires it there. */
+  addTo(kind: "tool" | "app", agentNodeId: string): void;
+  setAgentInfo(open: boolean): void;
+  setHistoryOpen(open: boolean): void;
+  /** Open an agent's page (its chat, with the page beside it): from Home, ⌘K, New agent. */
+  editAgent(agentNodeId: string): void;
   setTeamsOpen(open: boolean): void;
   setBuilder(open: boolean, request?: string): void;
+  setGithub(url: string | null): void;
   openDrawing(drawing: State["drawing"]): void;
   requestFit(): void;
   setShareOpen(open: boolean): void;
@@ -116,6 +134,9 @@ interface State {
   setBoards(b: BoardInfo[]): void;
   setHealth(h: Health | null, up: boolean): void;
   setIdentity(id: Identity): void;
+  setAppearance(a: Appearance): void;
+  /** Show the stored appearance again (another window changed it). */
+  syncAppearance(a?: Appearance): void;
   select(nodeId: string | null): void;
   selectRun(runId: string | null): void;
   setCompile(patch: Partial<Pick<State, "compileOpen" | "compileBusy" | "compile" | "drift" | "onDisk">>): void;
@@ -144,6 +165,7 @@ export const useApp = create<State>((set, get) => ({
   health: null,
   engineUp: null,
   identity: loadIdentity(),
+  appearance: loadAppearance(),
   selectedNodeId: null,
   selectedRunId: null,
   compileOpen: false,
@@ -169,10 +191,14 @@ export const useApp = create<State>((set, get) => ({
   newAgentOpen: false,
   setNewAgentOpen: (newAgentOpen) => set({ newAgentOpen, paletteOpen: false }),
   catalogOpen: false,
+  catalogFor: null,
+  historyOpen: false,
+  agentInfo: (() => { try { return localStorage.getItem("mcbot.agentInfo") === "1"; } catch { return false; } })(),
   liveFilesOpen: (() => { try { return localStorage.getItem("mcbot.liveFiles") === "1"; } catch { return false; } })(),
   chatAppsOpen: false,
   teamsOpen: false,
   builder: { open: false, request: "" },
+  github: null,
   drawing: null,
   fitRequest: 0,
   shareOpen: false,
@@ -208,15 +234,27 @@ export const useApp = create<State>((set, get) => ({
   setTeamsOpen: (teamsOpen) => set({ teamsOpen, paletteOpen: false, newAgentOpen: false }),
   requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),
   openDrawing: (drawing) => set({ drawing, paletteOpen: false }),
+  setGithub: (github) => set({ github, paletteOpen: false }),
   setBuilder: (open, request = "") => set((s) => ({ builder: { open, request: open ? request : s.builder.request }, paletteOpen: false, newAgentOpen: false, teamsOpen: false })),
   freshNote: null,
   setFreshNote: (freshNote) => set({ freshNote }),
-  setCatalogOpen: (catalogOpen) => set({ catalogOpen, paletteOpen: false }),
+  setCatalogOpen: (catalogOpen) => set({ catalogOpen, paletteOpen: false, ...(catalogOpen ? {} : { catalogFor: null }) }),
   setLiveFilesOpen: (liveFilesOpen) => {
     try { localStorage.setItem("mcbot.liveFiles", liveFilesOpen ? "1" : "0"); } catch { /* private window */ }
-    set({ liveFilesOpen, paletteOpen: false });
+    set({ liveFilesOpen, paletteOpen: false, ...(liveFilesOpen ? { historyOpen: false } : {}) });
   },
-  setChatAppsOpen: (chatAppsOpen) => set({ chatAppsOpen, paletteOpen: false }),
+  // History and the live files share the board's left side: one at a time.
+  setHistoryOpen: (historyOpen) => set({ historyOpen, paletteOpen: false, ...(historyOpen ? { liveFilesOpen: false } : {}) }),
+  setChatAppsOpen: (chatAppsOpen) => set({ chatAppsOpen, paletteOpen: false, ...(chatAppsOpen ? {} : { catalogFor: null }) }),
+  addTo: (kind, catalogFor) => set({ catalogFor, catalogOpen: kind === "tool", chatAppsOpen: kind === "app", paletteOpen: false }),
+  setAgentInfo: (agentInfo) => {
+    try { localStorage.setItem("mcbot.agentInfo", agentInfo ? "1" : "0"); } catch { /* private window */ }
+    set({ agentInfo });
+  },
+  editAgent: (chatAgentId) => {
+    try { localStorage.setItem("mcbot.agentInfo", "1"); } catch { /* private window */ }
+    set({ chatAgentId, tab: "agents", agentInfo: true, paletteOpen: false });
+  },
   openChat: (chatAgentId) => set({ chatAgentId, tab: "agents" }),
   openTask: null,
   showTask: (openTask, tab = true) => set(tab ? { openTask, tab: "tasks", paletteOpen: false } : { openTask }),
@@ -232,6 +270,16 @@ export const useApp = create<State>((set, get) => ({
   },
   setBoards: (boards) => set({ boards }),
   setHealth: (health, engineUp) => set({ health, engineUp }),
+  setAppearance: (appearance) => {
+    saveAppearance(appearance);
+    applyAppearance(appearance);
+    set({ appearance });
+  },
+  syncAppearance: (a) => {
+    const appearance = a ?? get().appearance;
+    applyAppearance(appearance);
+    set({ appearance });
+  },
   setIdentity: (identity) => {
     saveIdentity(identity);
     set({ identity });

@@ -11,7 +11,8 @@ import { parseInvite } from "../src/app/lib/remote";
 import { startEngine, type Engine } from "./server";
 
 const ORIGIN = "tauri://localhost";
-const SHARE_PORT = 47_000 + Math.floor(Math.random() * 2000);
+// Below 32768: no ephemeral port (an engine on port 0, an outgoing connection) can take it.
+const SHARE_PORT = 21_000 + Math.floor(Math.random() * 2000);
 const net = `http://127.0.0.1:${SHARE_PORT}`;
 let engine: Engine;
 
@@ -36,7 +37,7 @@ const remote = (path: string, init: { method?: string; key?: string; body?: unkn
 describe("share on your network", () => {
   it("is closed until the person turns it on", async () => {
     await expect(fetch(`${net}/api/health`, { headers: { origin: ORIGIN } })).rejects.toThrow();
-    expect(newCode()).toMatch(/^[A-HJ-NP-Z2-9]{3}-[A-HJ-NP-Z2-9]{3}$/);
+    expect(newCode()).toMatch(/^[A-HJ-NP-Z2-9]{3}-[A-HJ-NP-Z2-9]{3}-[A-HJ-NP-Z2-9]{3}$/);
   });
 
   let key = "";
@@ -53,7 +54,7 @@ describe("share on your network", () => {
     expect(await page.text()).not.toContain(code);
     expect((await remote("/api/health", { origin: null })).status).toBe(403);
     expect((await remote("/api/health")).status).toBe(401);
-    expect((await remote("/api/join", { body: { code: "AAA-AAA", name: "Sam" } })).status).toBe(403);
+    expect((await remote("/api/join", { body: { code: "AAA-AAA-AAA", name: "Sam" } })).status).toBe(403);
     const joined = await remote("/api/join", { body: { code: code.toLowerCase(), name: "Sam" } });
     expect(joined.status).toBe(200);
     key = ((await joined.json()) as { key: string }).key;
@@ -101,8 +102,10 @@ describe("share on your network", () => {
   });
 
   it("reads an invite pasted as a link or as address and code", () => {
-    expect(parseInvite("Join my boards: http://192.168.1.20:4318/join?code=K7Q-4XM")).toEqual({ address: "192.168.1.20:4318", code: "K7Q-4XM" });
-    expect(parseInvite("Address: 10.0.0.5:4318\nCode: k7q-4xm")).toEqual({ address: "10.0.0.5:4318", code: "K7Q-4XM" });
+    expect(parseInvite("Join my boards: http://192.168.1.20:4318/join?code=K7Q-4XM-2PD")).toEqual({ url: "http://192.168.1.20:4318", address: "192.168.1.20:4318", code: "K7Q-4XM-2PD" });
+    expect(parseInvite("Address: 10.0.0.5:4318\nCode: k7q-4xm")).toEqual({ url: "http://10.0.0.5:4318", address: "10.0.0.5:4318", code: "K7Q-4XM" });
+    // Anyone with the link: an https address, no port.
+    expect(parseInvite("https://quiet-river.trycloudflare.com/join?code=AAA-BBB-CCC")).toEqual({ url: "https://quiet-river.trycloudflare.com", address: "quiet-river.trycloudflare.com", code: "AAA-BBB-CCC" });
     expect(parseInvite("hello")).toBeNull();
   });
 

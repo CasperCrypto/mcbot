@@ -63,6 +63,8 @@ export const page = {
   bounds: (b: PageBox) => call("browser_bounds", { ...b }).catch(() => undefined),
   hide: () => call("browser_hide", {}).catch(() => undefined),
   go: (action: "back" | "forward" | "reload") => call("browser_go", { action }).catch(() => undefined),
+  /** Passwords: fill a login into the page, only while it is on that login's site (src-tauri browser_fill). */
+  fill: (host: string, username: string, password: string) => call("browser_fill", { host, username, password }),
   /** Where the page is now (links clicked inside it too). Returns the unlisten function. */
   async onUrl(fn: (url: string, loading: boolean) => void): Promise<() => void> {
     const { getCurrentWindow } = await import("@tauri-apps/api/window");

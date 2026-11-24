@@ -12,10 +12,11 @@ import type { SessionRow } from "../../../engine/hermesData";
 import { exportFileName } from "../../board/files";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
+import { addVersion, type HarnessVersion } from "../../harness/versions";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
 import { LIBRARY } from "../../contracts/library.generated";
 import type { HarnessPlan, PlanChoices } from "../../harness/plan";
-import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
@@ -36,7 +37,7 @@ const LIMITS: Record<Target, number> = { memory: 2200, user: 1375 };
 const DELIM = "\n§\n";
 const STATE_KEY = "mcbot.demo.v1";
 const boardKey = (id: string) => `mcbot.demo.board.${id}`;
-const SAMPLE_FOLDER: FsRoot = { id: "folder:sample", kind: "folder", name: "acme-support", path: "/Users/you/Projects/acme-support" };
+const SAMPLE_FOLDER: FsRoot = { id: "folder:sample", kind: "folder", name: "support-desk", path: "/Users/you/Projects/support-desk" };
 
 interface State {
   boards: BoardInfo[];
@@ -50,6 +51,8 @@ interface State {
   tasks?: TaskDetail[];
   /** Hermes' cron jobs per profile, simulated (they never fire in the browser). */
   schedules?: Record<string, ScheduleView[]>;
+  /** Harness versions per board (src/harness/versions.ts), as the engine keeps them. */
+  versions?: Record<string, HarnessVersion[]>;
   /** Setup assistant: done or not, and boards it built (their graphs until a window opens them). */
   setup?: SetupState;
   pending?: Record<string, Graph>;
@@ -268,6 +271,8 @@ function compileBoard(boardId: string, dryRun: boolean): CompileResponse {
   if (!dryRun) {
     for (const c of changes) if (c.status === "removed") delete state.disk[c.path];
     for (const f of result.files) state.disk[f.path] = f.content;
+    // As the engine: a new harness version when this compile changed it.
+    state.versions = { ...(state.versions ?? {}), [boardId]: addVersion(state.versions?.[boardId] ?? [], graph, Date.now()) };
     save();
   }
   return { ok: true, report: { graphId: result.graphId, root: ROOT, written: !dryRun, profiles: result.profiles, changes }, issues, gateway: !dryRun && configChanged ? "restart-pending" : "unchanged" };
@@ -530,6 +535,16 @@ function bundlesOf(boardId: string) {
   return resolveGraph(graphOf(boardId));
 }
 
+/** Passwords in the demo: kept in the page only, a sample to show the view. */
+let demoLogins: (LoginView & { password: string })[] = [
+  { id: "l-1", url: "https://github.com", host: "github.com", username: "you@example.com", note: "", updatedAt: Date.now() - 86_400_000, password: "demo-only-password" },
+];
+
+/** The demo can't share: Share says so, and its sheet shows who joined the demo's own board. */
+const demoShare = (members: SharingView["members"]): SharingView => ({
+  on: false, addresses: [], port: 4318, reach: "network", publicUrl: null, ownUrl: null, tunnel: { state: "off", error: null }, web: false, members, invite: null, link: null, invites: [],
+});
+
 function requireBoard(boardId: string): string {
   if (!state.boards.some((b) => b.id === boardId)) throw new EngineError(404, "no such board", {});
   return boardId;
@@ -561,7 +576,24 @@ async function load(): Promise<void> {
   state = { boards: [SEED_BOARD], disk: {}, runs: {}, memory: structuredClone(seedMemory), sessions: {}, sampleOpen: true };
   for (const f of compile(seedGraph).files) state.disk[f.path] = f.content;
   await seedHistory();
+  seedVersions();
   save();
+}
+
+/**
+ * Two versions of the sample harness, so History has something to compare: a week ago the
+ * researcher thought with the local model; three days ago it moved to the cloud one (today's board).
+ * The seeded runs fall on both sides.
+ */
+function seedVersions(): void {
+  const now = new Date();
+  const day = (ago: number) => Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ago);
+  const local: Graph = { ...seedGraph, edges: seedGraph.edges.map((e) => (e.id === "e-cloud-research" ? { ...e, source: "model-local" } : e)) };
+  const first = addVersion([], local, day(7));
+  first[0]!.name = "All local";
+  const both = addVersion(first, seedGraph, day(3));
+  both[1]!.name = "Researcher on Claude";
+  state.versions = { [SEED_BOARD.id]: both };
 }
 
 // ---------- tasks: Hermes' kanban, simulated (the desktop app runs them through Hermes) ----------
@@ -712,6 +744,15 @@ export const demoEngine = {
   }),
   compile: api((boardId: string) => compileBoard(requireBoard(boardId), false)),
   preview: api((boardId: string) => compileBoard(requireBoard(boardId), true)),
+  versions: api((boardId: string) => ({ versions: state.versions?.[requireBoard(boardId)] ?? [] })),
+  nameVersion: api((boardId: string, id: string, name: string) => {
+    const list = state.versions?.[requireBoard(boardId)] ?? [];
+    const v = list.find((x) => x.id === id);
+    if (!v) throw new EngineError(404, "no such version", {});
+    v.name = name.trim().slice(0, 80) || null;
+    save();
+    return { versions: list };
+  }),
   runs: api((boardId: string): RunSummary[] =>
     Object.values(state.runs).map((e) => summarizeRun(e)).filter((s): s is RunSummary => !!s && s.boardId === boardId).sort((a, b) => b.startedAt - a.startedAt)),
   run: api((runId: string): RunEvent[] => {
@@ -774,10 +815,27 @@ export const demoEngine = {
     const runs = Object.values(state.runs).map((e) => summarizeRun(e)).filter((s): s is RunSummary => !!s && s.boardId === boardId);
     return buildCostReport(profiles, runs, models);
   }),
-  share: api((): SharingView => ({ on: false, addresses: [], port: 4318, members: [{ id: "m-sam", name: "Sam", joinedAt: Date.now() - 6 * 86_400_000, lastSeen: Date.now() - 60_000 }, { id: "m-lee", name: "Lee", joinedAt: Date.now() - 2 * 86_400_000, lastSeen: Date.now() - 3_600_000 }], invite: null })),
-  setShare: api((_on: boolean): SharingView => { throw new EngineError(409, "Sharing with other computers works in the desktop app. Here, open a second tab: it is live too.", {}); }),
-  newInvite: api((): SharingView => ({ on: false, addresses: [], port: 4318, members: [], invite: null })),
-  removeMember: api((_id: string): SharingView => ({ on: false, addresses: [], port: 4318, members: [], invite: null })),
+  share: api((): SharingView => demoShare([{ id: "m-sam", name: "Sam", joinedAt: Date.now() - 6 * 86_400_000, lastSeen: Date.now() - 60_000, role: "edit" }, { id: "m-lee", name: "Lee", joinedAt: Date.now() - 2 * 86_400_000, lastSeen: Date.now() - 3_600_000, role: "edit" }])),
+  setShare: api((_on: boolean, _reach?: "network" | "internet"): SharingView => { throw new EngineError(409, "Sharing with other computers works in the desktop app. Here, open a second tab: it is live too.", {}); }),
+  setShareReach: api((_reach: "network" | "internet", _ownUrl?: string | null): SharingView => demoShare([])),
+  newInvite: api((_scope?: { role: "edit" | "chat"; boardId?: string; agents?: string[] }): SharingView => demoShare([])),
+  removeMember: api((_id: string): SharingView => demoShare([])),
+  guest: api((): GuestView => ({ host: "You", role: "edit", name: "You", boardId: null, agents: [] })),
+  githubInspect: api((_url: string): GitHubRepoView => { throw new EngineError(409, "Adding from GitHub works in the desktop app.", {}); }),
+  githubPlugin: api((_profile: string, _source: string): { installed: string } => { throw new EngineError(409, "Adding from GitHub works in the desktop app.", {}); }),
+  githubDownload: api((_url: string): { folder: string; path: string } => { throw new EngineError(409, "Adding from GitHub works in the desktop app.", {}); }),
+  logins: api((host?: string) => ({ logins: demoLogins.filter((l) => !host || l.host === host || host.endsWith(`.${l.host}`)).map(({ password: _p, ...v }) => v) })),
+  saveLogin: api((l: { id?: string; url: string; username: string; password?: string; note?: string }) => {
+    let url: URL;
+    try { url = new URL(/^https?:\/\//.test(l.url) ? l.url : `https://${l.url}`); } catch { throw new EngineError(400, "Use the site's address, like mail.google.com", {}); }
+    const old = demoLogins.find((x) => x.id === l.id);
+    const next = { id: old?.id ?? `l-${demoLogins.length + 1}-${Date.now().toString(36)}`, url: url.origin, host: url.hostname, username: l.username, note: l.note ?? old?.note ?? "", updatedAt: Date.now(), password: l.password || old?.password || "" };
+    demoLogins = [...demoLogins.filter((x) => x.id !== next.id), next];
+    const { password: _p, ...login } = next;
+    return { login, logins: demoLogins.map(({ password: _q, ...v }) => v) };
+  }),
+  removeLogin: api((id: string) => { demoLogins = demoLogins.filter((x) => x.id !== id); return { logins: demoLogins.map(({ password: _p, ...v }) => v) }; }),
+  revealLogin: api((id: string) => { const l = demoLogins.find((x) => x.id === id); if (!l) throw new EngineError(404, "No such login", {}); return { username: l.username, password: l.password, host: l.host }; }),
   tasks: api((boardId: string): TasksView => {
     const team = teamOf(requireBoard(boardId));
     state.tasks ??= boardId === SEED_BOARD.id ? seedTasks() : [];
@@ -918,7 +976,7 @@ export const demoEngine = {
   /** A pretend disk: the demo can't see the visitor's folders, so the picker shows a sample home. */
   browse: api((path: string | null): FsBrowse => {
     const home = "/Users/you";
-    const tree: Record<string, string[]> = { [home]: ["Desktop", "Documents", "Downloads", "Projects"], [`${home}/Projects`]: ["acme-support"] };
+    const tree: Record<string, string[]> = { [home]: ["Desktop", "Documents", "Downloads", "Projects"], [`${home}/Projects`]: ["support-desk"] };
     const at = path && tree[path.replace(/^~/, home)] ? path.replace(/^~/, home) : home;
     return {
       path: at, parent: at === home ? "/Users" : at.slice(0, at.lastIndexOf("/")),

@@ -51,6 +51,9 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     argv: z.array(z.string()),
     hermesHome: z.string(),
     cwd: z.string(),
+    /** Someone who joined this computer (Share) started it: their member id and name. Absent: the host. */
+    by: z.string().optional(),
+    byName: z.string().optional(),
   }),
   z.object({
     ...base,
@@ -146,6 +149,9 @@ export interface RunSummary {
   estimatedUsd: number | null;
   /** Hermes is waiting for the person to allow or deny this, right now. */
   approval: { promptId: string; command: string; description: string; choices: string[] } | null;
+  /** Who started it, when it wasn't the host (Share): member id and name. */
+  by?: string;
+  byName?: string;
 }
 
 export function summarizeRun(events: readonly RunEvent[]): RunSummary | null {
@@ -171,6 +177,10 @@ export function summarizeRun(events: readonly RunEvent[]): RunSummary | null {
     estimatedUsd: null,
     approval: null,
   };
+  if (start.by) {
+    s.by = start.by;
+    s.byName = start.byName;
+  }
   for (const e of events) {
     switch (e.type) {
       case "run.session":

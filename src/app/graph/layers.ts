@@ -81,6 +81,7 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
         ? [
             { label: primary.data.label || primary.data.name, detail: `${primary.data.model} · ${primary.data.endpoint === "local" ? "on this computer" : "cloud"}`, state: "set", target: { node: primary.id } },
             ...fallbacks.map((m): LayerItem => ({ label: `Backup: ${m.data.label || m.data.name}`, detail: m.data.model, state: "set", target: { node: m.id } })),
+            { label: "Thinking", detail: a.reasoning ? (a.reasoning === "none" ? "Off" : `${a.reasoning[0]!.toUpperCase()}${a.reasoning.slice(1)} effort`) : "As the model decides (Hermes' default)", state: a.reasoning ? "set" : "default", target: self },
           ]
         : [{ label: "No model", detail: "Wire a model to it on the board", state: "missing", target: self }],
     },
@@ -88,7 +89,7 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
       id: "tools", title: "Tools", what: "What it can use: abilities, connectors, makers",
       items: [
         { label: "Abilities", detail: a.capabilities ? n(caps.length, "ability", "abilities") + " chosen" : `${n(caps.length, "ability", "abilities")} (Hermes' default)`, state: a.capabilities ? "set" : "default", target: self },
-        ...b.tools.map((t): LayerItem => ({ label: t.data.label || t.data.name, detail: t.data.transport === "http" ? "Connector" : "Local tool", state: "set", target: { node: t.id } })),
+        ...b.tools.map((t): LayerItem => ({ label: t.data.label || t.data.name, detail: `${t.data.transport === "http" ? "Connector" : "Local tool"}${t.data.toolsInclude?.length ? ` · only ${t.data.toolsInclude.length} of its tools` : ""}`, state: "set", target: { node: t.id } })),
         ...[b.image, b.video].filter((m): m is NonNullable<typeof m> => !!m).map((m): LayerItem => ({ label: m.data.label || `${m.data.media === "image" ? "Image" : "Video"} maker`, detail: m.data.provider, state: "set", target: { node: m.id } })),
       ],
     },

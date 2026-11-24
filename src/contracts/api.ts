@@ -397,15 +397,42 @@ export interface AgentSchedules {
 
 // ---- share on your network (engine/sharing.ts) ----
 
+/** Who a share link lets in: teammates who edit and run the boards, or guests who only chat. */
+export type ShareRole = "edit" | "chat";
+
 export interface SharingView {
   on: boolean;
   /** Where teammates reach this computer: LAN address:port. */
   addresses: string[];
   port: number;
-  members: { id: string; name: string; joinedAt: number; lastSeen: number }[];
+  /** Who links reach: people on this network, or anyone with the link. */
+  reach: "network" | "internet";
+  /** The address for anyone with the link: the host's own (`ownUrl`) or the quick tunnel's. */
+  publicUrl: string | null;
+  /** The host's own public address for the share port, when they have one. */
+  ownUrl: string | null;
+  /** The free Cloudflare quick tunnel behind "anyone with the link" (engine/tunnel.ts). */
+  tunnel: { state: "off" | "starting" | "on" | "failed"; error: string | null };
+  /** People can join in a web browser: this McBot serves its own app on the share port. */
+  web: boolean;
+  members: { id: string; name: string; joinedAt: number; lastSeen: number; role: ShareRole; boardId?: string; agents?: string[] }[];
+  /** The teammates' link (Can edit), as before roles. */
   invite: { code: string; expiresAt: number } | null;
-  /** The invite as a link teammates open or paste into Join (`http://<address>/join?code=…`). */
+  /** The invite as a link people open or paste into Join (`http(s)://<address>/join?code=…`). */
   link?: string | null;
+  /** Every live link: who it lets in and as what. */
+  invites: { code: string; expiresAt: number; role: ShareRole; boardId?: string; agents?: string[]; link: string | null }[];
+}
+
+/** A member's own view of the computer they joined (`GET /api/guest`). */
+export interface GuestView {
+  /** Whose McBot this is. */
+  host: string;
+  role: ShareRole;
+  name: string;
+  /** A guest's board and the agents they may chat with (teammates: every board, see /api/boards). */
+  boardId: string | null;
+  agents: { id: string; name: string; displayName: string; description: string }[];
 }
 
 /** How a connector's sign-in for one agent went (`GET /api/connectors/login`). */
@@ -422,4 +449,33 @@ export interface UpdateView {
   /** The release page on github.com (null when unknown). */
   url: string | null;
   available: boolean;
+}
+
+/** A saved login to a website (Passwords), without its password. */
+export interface LoginView {
+  id: string;
+  url: string;
+  host: string;
+  username: string;
+  note: string;
+  updatedAt: number;
+}
+
+/** A GitHub repository (or a folder in it), read by Add from GitHub (engine/github.ts). */
+export interface GitHubRepoView {
+  owner: string;
+  repo: string;
+  ref: string | null;
+  path: string;
+  url: string;
+  description: string;
+  stars: number;
+  license: string | null;
+  language: string | null;
+  /** What it is: a skill, an MCP server, a Hermes plugin, or a project. */
+  kind: "skill" | "mcp" | "plugin" | "project";
+  /** How to run it as an MCP server (a tool block's command and arguments). */
+  mcp: { name: string; command: string; args: string[] } | null;
+  /** What to hand Hermes: a skill's folder link, a plugin's owner/repo[/path]. */
+  source: string;
 }

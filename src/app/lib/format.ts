@@ -24,11 +24,24 @@ export function ago(ts: number, now = Date.now()): string {
   if (s < 60) return `${s}s ago`;
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return new Date(ts).toLocaleDateString();
+  if (s < 7 * 86400) return `${Math.floor(s / 86400)}d ago`;
+  return new Date(ts).toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
 export function bytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+/** One line of an answer as plain words (a chat list's preview): no Markdown marks, links as their text. */
+export function plainLine(text: string): string {
+  const line = text.replace(/```[\s\S]*?(```|$)/g, " ").split("\n").map((l) => l.trim()).find((l) => l && !/^[-*_]{3,}$/.test(l)) ?? "";
+  return line
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/^(#{1,6}\s+|>\s*|[-*+]\s+|\d+[.)]\s+)/, "")
+    .replace(/(\*\*|__|~~|`)/g, "")
+    .replace(/(^|\W)[*_](\S(?:.*?\S)?)[*_](?=\W|$)/g, "$1$2")
+    .trim();
 }

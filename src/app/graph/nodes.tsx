@@ -8,7 +8,7 @@ import type { RunSummary } from "../../contracts/run";
 import { ago, usd } from "../lib/format";
 import type { Peer } from "../state/board";
 import { AgentFace } from "../ui";
-import { LogoTile, nodeLogo } from "./Logo";
+import { LogoTile, ModelChip, ModelMark, modelTitle, modelWhere, nodeLogo } from "./Logo";
 
 export interface FlowNodeData extends Record<string, unknown> {
   node: GraphNode;
@@ -56,8 +56,7 @@ export const AgentNodeView = memo(function AgentNodeView({ data }: NodeProps<Flo
         <div className="grow">
           <div className="name ellipsis">{a.displayName || a.name}</div>
           <div className="meta" style={{ marginTop: 5 }}>
-            <span className="chip mono">{data.chain[0] ?? "no model"}</span>
-            {data.chain.length > 1 && <span className="chip">+{data.chain.length - 1}</span>}
+            <ModelChip model={data.chain[0]} more={Math.max(0, data.chain.length - 1)} />
           </div>
         </div>
       </div>
@@ -79,10 +78,11 @@ export const ModelNodeView = memo(function ModelNodeView({ data }: NodeProps<Flo
   return (
     <div className={`node node-compact${data.hasError ? " has-error" : ""}`}>
       <Peer peer={data.peer} />
-      <LogoTile logo={nodeLogo(data.node)} kind={m.endpoint === "local" ? "model" : "cloud"}>{m.endpoint === "local" ? <HardDrive size={16} /> : <Cloud size={16} />}</LogoTile>
-      <div className="grow">
-        <div className="label ellipsis">{m.label || m.name}</div>
-        <div className="sub ellipsis">{m.model || "set a model"}</div>
+      {m.model ? <span className="tile model-tile"><ModelMark model={m.model} baseUrl={m.baseUrl} size={20} /></span>
+        : <LogoTile logo={nodeLogo(data.node)} kind={m.endpoint === "local" ? "model" : "cloud"}>{m.endpoint === "local" ? <HardDrive size={16} /> : <Cloud size={16} />}</LogoTile>}
+      <div className="grow" data-tip={m.model || undefined}>
+        <div className="label ellipsis">{m.model ? modelTitle(m) : m.label || m.name}</div>
+        <div className="sub ellipsis plain">{m.model ? modelWhere(m) : "set a model"}</div>
       </div>
       <Handle type="source" position={Position.Right} id="out" />
     </div>

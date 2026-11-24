@@ -10,6 +10,7 @@ import { useDismiss, useLingering } from "../lib/presence";
 import { useApp } from "../state/store";
 import { AgentFace, Empty } from "../ui";
 import { GraphCanvas, type GEdge, type GNode } from "./GraphCanvas";
+import { toolLabel } from "../lib/toolLabel";
 
 interface Step {
   id: string;
@@ -36,7 +37,7 @@ function stepsOf(run: RunSummary, events: RunEvent[]): Step[] {
   const open = new Map<string, Step>();
   for (const e of events) {
     if (e.type === "run.tool.started") {
-      const s: Step = { id: `t${e.seq}`, kind: "tool", title: e.tool, sub: "calling…", state: "live", detail: [{ label: "Input", body: pretty(e.input ?? {}) }] };
+      const s: Step = { id: `t${e.seq}`, kind: "tool", title: toolLabel(e.tool), sub: "calling…", state: "live", detail: [{ label: "Tool", body: e.tool }, { label: "Input", body: pretty(e.input ?? {}) }] };
       open.set(e.tool, s);
       out.push(s);
     } else if (e.type === "run.tool.finished") {
@@ -106,7 +107,7 @@ export function RunsView() {
       <>
         <span className={`tile sm ${TILE[s.kind]}`}>{s.kind === "done" && s.state === "fail" ? <CircleX size={14} /> : ICON[s.kind]}</span>
         <span className="grow" style={{ minWidth: 180 }}>
-          <span className={`label ellipsis${s.kind === "tool" ? " mono" : ""}`} style={{ display: "block" }}>{s.title}</span>
+          <span className="label ellipsis" style={{ display: "block" }}>{s.title}</span>
           <span className="sub ellipsis" style={{ display: "block" }}>{s.sub}</span>
         </span>
         {s.state === "live" && <span className="dot run" />}
@@ -133,7 +134,7 @@ export function RunsView() {
         ))}
       </Sidebar>
       <section className="main">
-        {!run ? <Empty title="Nothing yet">Every time an agent works, you see each step here: what it was asked, the tools it used, its answer and cost.</Empty> : (
+        {!run ? <Empty title="No runs yet" action={<button className="btn light" onClick={() => useApp.getState().setTab("agents")}>Message an agent</button>}>Each step an agent takes shows here.</Empty> : (
           <div className="view">
             <div className="view-head">
               <AgentFace seed={run.profile} size={26} status={run.status} />
@@ -149,7 +150,7 @@ export function RunsView() {
               <div className={`graph-area${current ? " with-panel" : ""}`}><GraphCanvas key={run.runId} nodes={nodes} edges={edges} dir="TB" selected={step} onSelect={setStep} fitSignature={`${run.runId}:${steps.length}:${!!current}`} /></div>
               {shownStep.value && (
                 <aside ref={stepPanel} className="side-panel glass" data-closing={shownStep.closing || undefined}>
-                  <div className="side-panel-head"><b className={`grow ellipsis${shownStep.value.kind === "tool" ? " mono" : ""}`}>{shownStep.value.title}</b><button className="icon-btn" aria-label="Close" onClick={() => setStep(null)}><X size={15} /></button></div>
+                  <div className="side-panel-head"><b className="grow ellipsis">{shownStep.value.title}</b><button className="icon-btn" aria-label="Close" onClick={() => setStep(null)}><X size={15} /></button></div>
                   <div className="side-panel-body stack" style={{ gap: 14 }}>
                     {shownStep.value.detail.map((d) => (
                       <div key={d.label} className="stack" style={{ gap: 6 }}>

@@ -26,6 +26,11 @@ mcp_servers:
     env:
       ALPHA: "0755"
       ZED: "1"
+    tools:
+      include:
+        - git_diff*
+        - git_log
+        - git_status
   search:
     url: https://mcp.example.com/mcp
     headers:

@@ -31,9 +31,11 @@ const ALIASES: Record<string, string> = {
 
 /** Every key the app may ask for: connectors, catalog tools, chat apps, cloud and local model services, makers. */
 function keys(): string[] {
-  const catalog = ["exa", "parallel", "brave", "tavily", "firecrawl", "context7", "notion", "knowledge", "thinking", "browser"];
+  const catalog = ["exa", "parallel", "brave", "tavily", "firecrawl", "context7", "github", "notion", "knowledge", "thinking", "browser"];
   const services = ["openrouter", "openai", "anthropic", "gemini", "groq", "deepseek", "mistral", "together", "ollama", "lmstudio", "vllm", "jan", "fal", "xai", "krea", "deepinfra"];
-  return [...new Set([...CONNECTORS.map((c) => c.name), ...catalog, ...Object.keys(PLATFORMS), ...services])].sort();
+  // The browser's favorites and recent pages (workbench/BrowserStart.tsx, lib/browserStore.ts siteKey).
+  const sites = ["gmail", "googlecalendar", "googledrive", "youtube", "wikipedia", "ycombinator", "reddit", "x", "huggingface", "stackoverflow", "producthunt", "google", "duckduckgo", "claude", "perplexity", "spotify", "zoom"];
+  return [...new Set([...CONNECTORS.map((c) => c.name), ...catalog, ...Object.keys(PLATFORMS), ...services, ...sites])].sort();
 }
 
 interface Icon { slug: string; title: string; hex: string; path: string }
@@ -43,6 +45,43 @@ const bySlug = new Map((Object.values(icons) as unknown[]).filter((i): i is Icon
 function lum(hex: string): number {
   const c = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
   return 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
+}
+
+/** A key's Simple Icons mark (null when there is none): the brand's tile colour (null = near-black) and the glyph's ink. */
+function markFor(key: string): { title: string; path: string; tile: string | null; ink: string } | null {
+  const icon = bySlug.get(ALIASES[key] ?? key.replace(/[^a-z0-9]/g, ""));
+  if (!icon) return null;
+  const l = lum(icon.hex);
+  const tile = l < 0.03 ? null : `#${icon.hex}`;
+  return { title: icon.title, path: icon.path, tile, ink: tile && l > 0.5 ? "#000" : "#fff" };
+}
+
+export const SITE = join(ROOT, "site/index.html");
+/** The website's "works with" rows: popular marks per group, between `<!-- logos:<group> -->` markers. */
+export const SITE_GROUPS: Record<string, string[]> = {
+  models: ["ollama", "lmstudio", "openrouter", "claude", "gemini", "mistral", "deepseek", "qwen", "meta", "vllm"],
+  tools: ["github", "notion", "linear", "atlassian", "figma", "stripe", "supabase", "vercel", "sentry", "gitlab", "airtable", "todoist", "dropbox", "hugging_face", "cloudflare", "postman"],
+  chat: ["telegram", "discord", "whatsapp", "signal", "matrix", "google_chat", "line", "mattermost"],
+};
+
+/**
+ * site/index.html with each group drawn from the marks above: an app-style tile in the brand's own
+ * colour (a near-black brand gets the page's dark tile), inline SVG: no requests, no script.
+ */
+export function renderSiteLogos(html: string): string {
+  let out = html;
+  for (const [group, keys] of Object.entries(SITE_GROUPS)) {
+    const items = keys.map((k) => {
+      const m = markFor(k);
+      if (!m) throw new Error(`no mark for ${k}`);
+      const tile = m.tile ? ` style="--c:${m.tile}"` : "";
+      return `<li data-key="${k}"><span class="lg${m.tile ? "" : " dark"}"${tile}><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="${m.tile ? m.ink : "#fff"}" d="${m.path}"/></svg></span><span class="lg-name">${m.title}</span></li>`;
+    });
+    const re = new RegExp(`(<!-- logos:${group} -->)[\\s\\S]*?(<!-- /logos:${group} -->)`);
+    if (!re.test(out)) continue;
+    out = out.replace(re, (_m, a: string, b: string) => `${a}\n${items.join("\n")}\n${b}`);
+  }
+  return out;
 }
 
 export function renderLogos(): string {
@@ -76,7 +115,48 @@ export function renderLogos(): string {
   ].join("\n");
 }
 
+/**
+ * Model families' marks (which model an agent thinks with), from LobeHub's icons (MIT,
+ * @lobehub/icons-static-svg, devDependency only): the brand's colour version where it has one,
+ * else its single-colour mark drawn in the app's text colour. Drawn as images, never as HTML.
+ */
+export const MODEL_OUT = join(ROOT, "src/app/lib/modelMarks.generated.ts");
+const LOBE = join(ROOT, "node_modules/@lobehub/icons-static-svg/icons");
+export const MODEL_ICONS: Record<string, string> = {
+  anthropic: "anthropic", claude: "claude-color", cohere: "cohere-color", deepseek: "deepseek-color", gemini: "gemini-color",
+  gemma: "gemma-color", grok: "grok", groq: "groq", huggingface: "huggingface-color", kimi: "kimi-color", lmstudio: "lmstudio",
+  meta: "meta-color", microsoft: "microsoft-color", minimax: "minimax-color", mistral: "mistral-color", nousresearch: "nousresearch",
+  nvidia: "nvidia-color", ollama: "ollama", openai: "openai", openrouter: "openrouter", perplexity: "perplexity-color",
+  qwen: "qwen-color", together: "together-color", vllm: "vllm-color", zhipu: "zhipu-color",
+};
+
+export function renderModelMarks(): string {
+  const rows = Object.entries(MODEL_ICONS).sort(([a], [b]) => a.localeCompare(b)).map(([key, file]) => {
+    let svg = readFileSync(join(LOBE, `${file}.svg`), "utf8").replace(/\s+/g, " ").trim();
+    const title = /<title>([^<]*)<\/title>/.exec(svg)?.[1] ?? key;
+    // An image cannot inherit the text colour: a single-colour mark is drawn in the app's text colour.
+    svg = svg.replace(/<title>[^<]*<\/title>/, "").replace(/ style="[^"]*"/, "").replace(/ height="1em"/, ' height="24"').replace(/ width="1em"/, ' width="24"').replace(/fill="currentColor"/g, 'fill="#ededf0"');
+    return `  ${JSON.stringify(key)}: { title: ${JSON.stringify(title)}, src: ${JSON.stringify(`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`)} },`;
+  });
+  return [
+    "// Generated by scripts/tool-logos.ts from LobeHub's icons (@lobehub/icons-static-svg, MIT: design/licences/lobe-icons-LICENSE). Do not edit.",
+    "// Run `npm run site:logos` after changing MODEL_ICONS; `npm test` fails while this is stale.",
+    "",
+    "/** A model family's mark, drawn as an image. */",
+    "export interface ModelMark { title: string; src: string }",
+    "",
+    "export const MODEL_MARKS: Readonly<Record<string, ModelMark>> = {",
+    ...rows,
+    "};",
+    "",
+  ].join("\n");
+}
+
 if (process.argv[1] && /tool-logos\.ts$/.test(process.argv[1])) {
   writeFileSync(OUT, renderLogos());
   console.log(`wrote ${OUT}`);
+  writeFileSync(MODEL_OUT, renderModelMarks());
+  console.log(`wrote ${MODEL_OUT}`);
+  writeFileSync(SITE, renderSiteLogos(readFileSync(SITE, "utf8")));
+  console.log(`wrote the logo wall in ${SITE}`);
 }

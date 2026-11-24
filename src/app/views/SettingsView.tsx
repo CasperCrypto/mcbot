@@ -4,7 +4,7 @@
  * Models are blocks on the board (so they compile); adding one here places it and wires it to the
  * agents picked. Keys never leave this computer: the board only names them.
  */
-import { Check, Cloud, Cpu, ExternalLink, HardDrive, Info, KeyRound, LifeBuoy, LoaderCircle, Plus, RefreshCw, RotateCw, Sparkles, Trash2, User, Users, Waypoints } from "lucide-react";
+import { Check, Cloud, Cpu, ExternalLink, HardDrive, Info, KeyRound, LifeBuoy, LoaderCircle, Palette, Plus, RefreshCw, RotateCw, Trash2, User, Users, Waypoints, Server, Compass } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { addEdge, addNode, removeNodes, updateEdge } from "../../board/ydoc";
 import type { HermesInfo, LocalServer, SharingView, UpdateView } from "../../contracts/api";
@@ -14,7 +14,8 @@ import { newId, uniqueName } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
 import { DEMO, engine, REMOTE } from "../lib/engine";
 import { PEER_COLORS, nameChosen } from "../lib/identity";
-import { agentsOf, attachModel, chainOf, modelsOf, promoteModel, usersOf, type ModelHealth } from "../lib/models";
+import { agentsOf, attachModel, chainOf, modelsOf, otherEnd, promoteModel, usersOf, type ModelHealth } from "../lib/models";
+import { ModelMark, modelTitle } from "../graph/Logo";
 import { useModelHealth } from "../lib/useModelHealth";
 import { openExternal } from "../lib/open";
 import { CLOUD_PROVIDERS, LOCAL_PRESETS, keyEnvFor, modelSlug, providerOf } from "../lib/providers";
@@ -22,13 +23,15 @@ import { Sidebar } from "../shell/Sidebar";
 import { useBoard } from "../state/board";
 import { useApp, type SettingsSection } from "../state/store";
 import { AgentFace, Field, PersonFace, Segmented } from "../ui";
+import { ACCENTS, ACCENT_SWATCH, type Accent } from "../lib/appearance";
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode; host?: boolean }[] = [
-  { id: "models", label: "Models", icon: <Sparkles size={14} /> },
+  { id: "models", label: "Models", icon: <Cpu size={14} /> },
   { id: "keys", label: "API keys", icon: <KeyRound size={14} />, host: true },
+  { id: "appearance", label: "Appearance", icon: <Palette size={14} /> },
   { id: "you", label: "You", icon: <User size={14} /> },
   { id: "team", label: "Team", icon: <Users size={14} /> },
-  { id: "engine", label: "Engine", icon: <Cpu size={14} />, host: true },
+  { id: "engine", label: "Engine", icon: <Server size={14} />, host: true },
   { id: "about", label: "About", icon: <Info size={14} /> },
 ];
 
@@ -67,13 +70,14 @@ function ModelRow({ m, graph, saved, health, onRemove, onPromote }: { m: ModelNo
   const users = usersOf(graph, m.id);
   const keyName = m.data.apiKeyEnv;
   const missingKey = m.data.endpoint === "cloud" && !!saved && !!keyName && !saved.includes(keyName);
-  const main = users.filter((a) => chainOf(graph, a.id)[0]?.source === m.id).length;
+  const main = users.filter((a) => { const first = chainOf(graph, a.id)[0]; return !!first && otherEnd(first, a.id) === m.id; }).length;
   const app = useApp.getState();
   return (
     <div className="settings-row" data-testid="settings-model">
-      <span className={`tile sm ${m.data.endpoint === "cloud" ? "cloud" : "model"}`}>{m.data.endpoint === "cloud" ? <Cloud size={14} /> : <HardDrive size={14} />}</span>
+      {m.data.model ? <span className="tile sm model-tile"><ModelMark model={m.data.model} baseUrl={m.data.baseUrl} size={18} /></span>
+        : <span className={`tile sm ${m.data.endpoint === "cloud" ? "cloud" : "model"}`}>{m.data.endpoint === "cloud" ? <Cloud size={14} /> : <HardDrive size={14} />}</span>}
       <span className="grow" style={{ display: "grid", gap: 1, minWidth: 0 }}>
-        <span className="title ellipsis">{m.data.label || m.data.name} <span className="mono faint" style={{ fontWeight: 400 }}>{m.data.model || "no model set"}</span></span>
+        <span className="title ellipsis" data-tip={m.data.model || undefined}>{m.data.model ? modelTitle(m.data) : m.data.label || m.data.name}</span>
         <span className="sub ellipsis">
           {users.length === 0 ? "No agent uses it" : `${main ? `Main for ${main}` : ""}${main && users.length - main ? " · " : ""}${users.length - main ? `Backup for ${users.length - main}` : ""}`}
           {" · "}{providerOf(m.data.baseUrl)?.label ?? m.data.baseUrl}
@@ -332,7 +336,8 @@ function ModelsSection() {
 
 // ---------------------------------------------------------------- keys
 
-function KeysSection() {
+/** API keys, names only (also on the Passwords view). */
+export function KeysSection() {
   const { graph } = useBoard();
   const [saved, setSaved] = useSecrets();
   const toast = useApp((s) => s.toast);
@@ -406,6 +411,29 @@ function KeysSection() {
   );
 }
 
+// ---------------------------------------------------------------- appearance
+
+const accentName = (a: Accent) => a.charAt(0).toUpperCase() + a.slice(1);
+
+function AppearanceSection() {
+  const appearance = useApp((s) => s.appearance);
+  const setAppearance = useApp((s) => s.setAppearance);
+  return (
+    <Card title="Appearance" sub="The colour of selections, buttons and focus. On this computer." testId="settings-appearance">
+      <div className="settings-row">
+        <span className="grow">Accent colour</span>
+        <span className="faint" style={{ fontSize: 13 }}>{accentName(appearance.accent)}</span>
+        <span className="accent-row" role="radiogroup" aria-label="Accent colour">
+          {ACCENTS.map((a) => (
+            <button key={a} role="radio" aria-checked={appearance.accent === a} aria-label={accentName(a)} data-tip={accentName(a)} className="accent-swatch"
+              style={{ background: ACCENT_SWATCH[a] }} data-testid={`accent-${a}`} onClick={() => setAppearance({ accent: a })} />
+          ))}
+        </span>
+      </div>
+    </Card>
+  );
+}
+
 // ---------------------------------------------------------------- you, team, engine, about
 
 function YouSection() {
@@ -438,10 +466,10 @@ function TeamSection() {
     if (!REMOTE && !DEMO) engine.share().then(setView).catch(() => undefined);
   }, []);
   return (
-    <Card title="Team" sub={REMOTE ? `You're on ${REMOTE.label}'s boards.` : "Teammates on your network work on these boards with you, live."} testId="settings-team">
+    <Card title="Team" sub={REMOTE ? `You're on ${REMOTE.label}'s McBot.` : "Invite teammates to work with you, or guests to chat with your agents."} testId="settings-team">
       {!REMOTE && (
         <div className="settings-row">
-          <span className="grow">{view?.on ? `Sharing · ${view.members.length} ${view.members.length === 1 ? "person" : "people"} joined` : "Not sharing"}</span>
+          <span className="grow">{view?.on ? `Sharing with ${view.reach === "internet" ? "anyone with the link" : "this network"} · ${view.members.length} ${view.members.length === 1 ? "person" : "people"} joined` : "Not sharing"}</span>
           <button className="btn sm primary" onClick={() => app.setShareOpen(true)}>Invite people</button>
         </div>
       )}
@@ -498,7 +526,7 @@ function AboutSection() {
     <>
       <Card title="Start over" sub="Answer a few questions and get a ready team on a new board." testId="settings-setup">
         <div className="settings-row"><span className="grow">Your boards stay as they are.</span>
-          <button className="btn sm primary" onClick={() => app.setSetup({ completed: false, profile: app.setup?.profile ?? null })} data-testid="settings-rerun-setup"><Sparkles size={12} /> Run setup again</button></div>
+          <button className="btn sm primary" onClick={() => app.setSetup({ completed: false, profile: app.setup?.profile ?? null })} data-testid="settings-rerun-setup"><Compass size={12} /> Run setup again</button></div>
       </Card>
       <Card title="About McBot Studio" sub={`Version ${health?.version ?? "…"} · free and open source (MIT)`}>
         {update?.available && update.url && (
@@ -532,6 +560,7 @@ export function SettingsView() {
           <div className="settings-page" key={current}>
             {current === "models" && <ModelsSection />}
             {current === "keys" && <KeysSection />}
+            {current === "appearance" && <AppearanceSection />}
             {current === "you" && <YouSection />}
             {current === "team" && <TeamSection />}
             {current === "engine" && <EngineSection />}

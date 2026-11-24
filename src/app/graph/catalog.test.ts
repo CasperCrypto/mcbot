@@ -19,6 +19,21 @@ describe("the tool catalog", () => {
   });
 });
 
+describe("connector names", () => {
+  it("spell brands their own way", async () => {
+    const { titled } = await import("./catalog");
+    expect(["gitlab", "deepwiki", "circleci", "n8n-official", "aws-knowledge", "microsoft-learn"].map(titled)).toEqual(["GitLab", "DeepWiki", "CircleCI", "n8n", "AWS Knowledge", "Microsoft Learn"]);
+  });
+});
+
+describe("GitHub", () => {
+  it("is GitHub's hosted server with the token in its header, by name only", () => {
+    const node = catalogNode(CATALOG.find((t) => t.id === "github")!, new Set(), { x: 0, y: 0 });
+    const data = ToolDataSchema.parse(node.data);
+    expect(mcpServerEntry(data)).toEqual({ url: "https://api.githubcopilot.com/mcp/", headers: { Authorization: "Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}" } });
+  });
+});
+
 describe("connectors from Hermes' catalog", () => {
   it("make an http tool that signs in through Hermes", async () => {
     const { CONNECTOR_TOOLS, catalogNode: make } = await import("./catalog");
@@ -28,5 +43,13 @@ describe("connectors from Hermes' catalog", () => {
     expect(n.data).toMatchObject({ name: "linear", transport: "http", auth: "oauth" });
     const keyless = CONNECTOR_TOOLS.find((t) => t.name === "deepwiki")!;
     expect("auth" in make(keyless, new Set(), { x: 0, y: 0 }).data).toBe(false);
+  });
+});
+
+describe("brand tiles", () => {
+  it("tint a brand's colour behind its mark and lift a dark one so it reads on black", async () => {
+    const { brandTint } = await import("./Logo");
+    expect(brandTint("#26A5E4")).toEqual({ background: "rgb(38 165 228 / 0.16)", color: "rgb(38 165 228)", boxShadow: "inset 0 0 0 0.5px rgb(38 165 228 / 0.34)" });
+    expect(brandTint("#0052CC").color).toBe("rgb(115 160 227)");
   });
 });
