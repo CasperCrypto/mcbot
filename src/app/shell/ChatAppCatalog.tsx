@@ -21,7 +21,8 @@ export function ChatAppCatalog() {
   const [q, setQ] = useState("");
   const agents = useMemo(() => graph.nodes.filter((n): n is AgentNode => n.kind === "agent"), [graph]);
   const selected = useApp((s) => s.selectedNodeId);
-  const target = agents.find((a) => a.id === selected) ?? (agents.length === 1 ? agents[0] : undefined);
+  const catalogFor = useApp((s) => s.catalogFor);
+  const target = agents.find((a) => a.id === (catalogFor ?? selected)) ?? (agents.length === 1 ? agents[0] : undefined);
 
   useEffect(() => {
     if (!open) return;
@@ -42,8 +43,11 @@ export function ChatAppCatalog() {
     });
     setOpen(false);
     const app = useApp.getState();
-    app.setTab("graph");
-    app.select(node.id);
+    // From an agent's page the person stays there; from the board, the new block is selected.
+    if (!catalogFor) {
+      app.setTab("graph");
+      app.select(node.id);
+    }
     app.toast({ kind: "ok", text: target ? `${PLATFORMS[platform].label} added to ${target.data.displayName || target.data.name}. Fill it in, then compile.` : `${PLATFORMS[platform].label} added. Wire it to an agent.` });
   };
   const words = q.trim().toLowerCase();

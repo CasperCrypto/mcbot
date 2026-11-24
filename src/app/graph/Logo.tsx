@@ -3,9 +3,12 @@
  * design/logos (drawn as an image, never as HTML). Unknown brands keep the kind's own tile.
  * Brand colours are content (the brand's identity), like note paper, not UI chrome.
  */
+import { Cpu } from "lucide-react";
 import type { ReactNode } from "react";
-import type { GraphNode } from "../../contracts/graph";
+import type { GraphNode, ModelData } from "../../contracts/graph";
 import { LOGOS, type Logo } from "../lib/logos.generated";
+import { MODEL_MARKS } from "../lib/modelMarks.generated";
+import { modelFamily, modelName } from "../lib/modelName";
 
 /** Local model servers by their usual port (the setup assistant's list). */
 const PORTS: Record<string, string> = { "11434": "ollama", "1234": "lmstudio", "8000": "vllm", "1337": "jan" };
@@ -63,4 +66,37 @@ export function nodeLogo(n: GraphNode): Logo | null {
     case "media": return logoFor([n.data.provider]);
     default: return null;
   }
+}
+
+/** The mark of the family a model belongs to (Claude, GPT, Llama…), else of the server it runs on. */
+export function ModelMark({ model, baseUrl, size = 16 }: { model: string; baseUrl?: string; size?: number }) {
+  const key = modelFamily(model, baseUrl);
+  const mark = key ? MODEL_MARKS[key] : undefined;
+  if (!mark) return <span className="model-mark none" style={{ width: size, height: size }} aria-hidden><Cpu size={Math.round(size * 0.72)} /></span>;
+  return <img className="model-mark" src={mark.src} width={size} height={size} alt="" draggable={false} />;
+}
+
+/** A model as a chip: its family's mark and the name people say; the full id in the tooltip. */
+export function ModelChip({ model, baseUrl, more = 0 }: { model: string | undefined; baseUrl?: string; more?: number }) {
+  if (!model) return <span className="model-chip empty">No model</span>;
+  return (
+    <span className="model-chip" data-tip={more ? `${model} · ${more} backup${more > 1 ? "s" : ""}` : model}>
+      <ModelMark model={model} baseUrl={baseUrl} size={14} />
+      <span className="ellipsis">{modelName(model)}</span>
+      {more > 0 && <span className="model-more">+{more}</span>}
+    </span>
+  );
+}
+
+/** A model block's title: the person's own label, else the model's name ("Cloud model" says nothing). */
+export function modelTitle(m: ModelData): string {
+  const own = m.label.trim();
+  return own && !/^(cloud|local) model$/i.test(own) ? own : modelName(m.model) || own || m.name;
+}
+
+/** Where a model runs, in words: "On this computer · Ollama", "OpenRouter". */
+export function modelWhere(m: ModelData): string {
+  const server = logoFor([], m.baseUrl);
+  const name = server && "title" in server ? server.title : null;
+  return m.endpoint === "local" ? `On this computer${name ? ` · ${name}` : ""}` : name ?? "Cloud";
 }

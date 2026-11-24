@@ -25,6 +25,8 @@ import {
   type Note,
   type Skill,
   type ToolData,
+  REASONING_LEVELS,
+  type Reasoning,
 } from "../contracts/graph";
 
 /** One Hermes profile as files: `profiles/<name>/…`, or the root itself for `default`. */
@@ -230,6 +232,10 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
         ? { name, label: "", transport: "http", command: "", args: [], env: {}, url: str(s.url), headers: strMap(s.headers),
           ...(oauth ? { auth: "oauth" as const } : {}), ...(oauth && isObj(s.oauth) ? { oauth: Object.fromEntries(Object.entries(s.oauth).filter((e): e is [string, string | number] => typeof e[1] === "string" || typeof e[1] === "number")) } : {}) }
         : { name, label: "", transport: "stdio", command: str(s.command), args: strs(s.args), env: strMap(s.env), url: "", headers: {} };
+      // Which of its tools reach the model (`tools.include` / `tools.exclude`), kept as written.
+      const filter = isObj(s.tools) ? s.tools : {};
+      if (Array.isArray(filter.include)) data.toolsInclude = strs(filter.include);
+      if (Array.isArray(filter.exclude)) data.toolsExclude = strs(filter.exclude);
       const id = shared(`tool ${JSON.stringify(data)}`, () => ({ id: `n-tool-${name}${byKeyCount("tool", name)}`, kind: "tool", position: { x: SIDE_X, y: sideY++ * 120 }, data }));
       edge(agentId, id);
     }
@@ -287,8 +293,11 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
     // The loop layer: agent.max_turns as a positive whole number; Hermes' other agent.* keys stay in Hermes.
     const agentCfg = isObj(cfg.agent) ? cfg.agent : {};
     const maxSteps = typeof agentCfg.max_turns === "number" && Number.isInteger(agentCfg.max_turns) && agentCfg.max_turns > 0 ? agentCfg.max_turns : null;
+    const effort = typeof agentCfg.reasoning_effort === "string" ? agentCfg.reasoning_effort.trim().toLowerCase() : "";
+    const reasoning = (REASONING_LEVELS as readonly string[]).includes(effort) ? (effort as Reasoning) : null;
     for (const k of Object.keys(agentCfg)) {
-      if (k !== "max_turns" || maxSteps === null) unshown.push({ profile: p.name, what: `config.yaml: agent.${k}`, why: "kept in Hermes; not on the board yet" });
+      const shown = (k === "max_turns" && maxSteps !== null) || (k === "reasoning_effort" && reasoning !== null);
+      if (!shown) unshown.push({ profile: p.name, what: `config.yaml: agent.${k}`, why: "kept in Hermes; not on the board yet" });
     }
 
     const data: AgentData = {
@@ -300,6 +309,7 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
       capabilities,
       browser,
       ...(maxSteps ? { maxSteps } : {}),
+      ...(reasoning ? { reasoning } : {}),
     };
     nodes.push({ id: agentId, kind: "agent", position: { x: AGENT_X, y }, data });
   });

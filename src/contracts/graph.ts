@@ -93,6 +93,11 @@ export const DEFAULT_CAPABILITIES: readonly Capability[] = [
   "session_search", "skills", "todo", "clarify", "delegation", "cronjob", "computer_use", "connections",
 ];
 
+/** Hermes' reasoning effort ladder (hermes_constants.py VALID_REASONING_EFFORTS, plus "none" = off). */
+export const REASONING_LEVELS = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"] as const;
+export const ReasoningSchema = z.enum(REASONING_LEVELS);
+export type Reasoning = z.infer<typeof ReasoningSchema>;
+
 export const AgentDataSchema = z.object({
   /** The Hermes profile id: runs as `hermes -p <name>`. */
   name: z.string().regex(PROFILE_NAME_RE, "lowercase profile id: a-z, 0-9, - or _ (max 64)"),
@@ -119,6 +124,11 @@ export const AgentDataSchema = z.object({
    * null/unset = Hermes' default (no limit).
    */
   maxSteps: z.number().int().min(1).max(10_000).nullish(),
+  /**
+   * How hard it thinks before answering (`agent.reasoning_effort`, read by the gateway through
+   * hermes_constants.resolve_reasoning_config): "none" turns thinking off; null/unset = the model's default.
+   */
+  reasoning: ReasoningSchema.nullish(),
   /** How its browser runs (Hermes' `browser:` settings); null = Hermes' defaults. */
   browser: z.object({
     /** A visible window you can watch (`browser.headed`). */
@@ -163,6 +173,13 @@ export const ToolDataSchema = z.object({
   auth: z.literal("oauth").optional(),
   /** A pre-registered OAuth client a connector pins (`mcp_servers.<name>.oauth`). */
   oauth: z.record(z.string().min(1), z.union([z.string(), z.number()])).optional(),
+  /**
+   * Only these of its tools reach the model (`mcp_servers.<name>.tools.include`: exact names or
+   * globs like `search_*`): fewer tool definitions, fewer tokens on every message. Unset = all.
+   */
+  toolsInclude: z.array(z.string().min(1)).optional(),
+  /** Its tools the model never sees (`mcp_servers.<name>.tools.exclude`); include wins over it. */
+  toolsExclude: z.array(z.string().min(1)).optional(),
 });
 export type ToolData = z.infer<typeof ToolDataSchema>;
 

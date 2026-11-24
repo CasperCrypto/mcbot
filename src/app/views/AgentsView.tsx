@@ -1,5 +1,5 @@
 import { starterPrompts } from "../chat/starters";
-import { ArrowUp, Download, Plug, Plus, Square, Waypoints, X } from "lucide-react";
+import { ArrowUp, Download, PanelRight, Plug, Plus, Square, Waypoints, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentNode, ModelData } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
@@ -15,6 +15,8 @@ import { toolLabel } from "../lib/toolLabel";
 import { ApprovalCard } from "../approvals/ApprovalCard";
 import { screenCaptures } from "../chat/screen";
 import { RichText } from "../chat/RichText";
+import { AgentPage } from "../agent/AgentPage";
+import { ModelChip } from "../graph/Logo";
 
 function shortTime(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -131,7 +133,7 @@ function AgentMessage({ run, events, name, onChoose }: { run: RunSummary; events
   );
 }
 
-function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
+function Thread({ agent, model, info, onInfo }: { agent: AgentNode; model: string | null; info: boolean; onInfo: () => void }) {
   const { boardId } = useBoard();
   const runs = useApp((s) => s.runs);
   const events = useApp((s) => s.events);
@@ -187,11 +189,13 @@ function Thread({ agent, model }: { agent: AgentNode; model: string | null }) {
   return (
     <div className="thread page-enter">
       <div className="thread-head">
-        <AgentFace seed={agent.data.name} size={30} status={running ? "running" : thread.at(-1)?.status} />
-        <div className="grow">
-          <div className="name">{name}</div>
-        </div>
-        {model && <span className="chip mono">{model}</span>}
+        <button className="thread-who" onClick={onInfo} data-tip={info ? undefined : "Its settings"} data-testid="thread-who">
+          <AgentFace seed={agent.data.name} size={30} status={running ? "running" : thread.at(-1)?.status} />
+          <span className="name">{name}</span>
+        </button>
+        <span className="grow" />
+        {model && <ModelChip model={model} />}
+        <button className="icon-btn" aria-label={info ? "Hide its settings" : "Show its settings"} aria-pressed={info} data-tip={info ? "Hide settings" : "Settings"} onClick={onInfo} data-testid="agent-info"><PanelRight size={16} /></button>
       </div>
       <div className="thread-scroll" ref={scroller}>
         <div className="thread-inner" data-testid="thread">
@@ -254,6 +258,8 @@ export function AgentsView() {
   const runs = useApp((s) => s.runs);
   const chatAgentId = useApp((s) => s.chatAgentId);
   const openChat = useApp((s) => s.openChat);
+  const info = useApp((s) => s.agentInfo);
+  const setInfo = useApp((s) => s.setAgentInfo);
   const setTab = useApp((s) => s.setTab);
   const [q, setQ] = useState("");
   const { bundles } = useMemo(() => resolveGraph(graph), [graph]);
@@ -292,8 +298,13 @@ export function AgentsView() {
           );
         })}
       </Sidebar>
-      <section className="main">
-        {current ? <Thread key={current.id} agent={current} model={modelOf(current.id)} /> : (
+      <section className="main chat-main">
+        {current ? (
+          <div className="chat-split" data-info={info || undefined}>
+            <Thread key={current.id} agent={current} model={modelOf(current.id)} info={info} onInfo={() => setInfo(!info)} />
+            {info && <aside className="agent-pane" aria-label={`${current.data.displayName || current.data.name}: settings`}><AgentPage key={current.id} agent={current} where="chat" onClose={() => setInfo(false)} /></aside>}
+          </div>
+        ) : (
           <Empty title="No agents yet" action={<button className="btn light" onClick={() => useApp.getState().setNewAgentOpen(true)}><Plus size={14} /> New agent</button>}>
             Add an agent on the graph, compile, then talk to it here.
           </Empty>

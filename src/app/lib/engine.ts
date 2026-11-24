@@ -1,5 +1,6 @@
 /** Thin client for the local engine (engine/server.ts). */
 import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView } from "../../contracts/api";
+import type { HarnessVersion } from "../../harness/versions";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 
@@ -64,6 +65,9 @@ const http = {
   importBoard: (graph: unknown, fallbackName?: string) => call<BoardInfo>("POST", "/api/boards/import", { graph, fallbackName }),
   compile: (boardId: string) => call<CompileResponse>("POST", "/api/compile", { boardId }),
   preview: (boardId: string) => call<CompileResponse>("GET", `/api/compile?boardId=${encodeURIComponent(boardId)}`),
+  /** The board's harness versions (one per compile that changed it), oldest first. */
+  versions: (boardId: string) => call<{ versions: HarnessVersion[] }>("GET", `/api/versions?boardId=${encodeURIComponent(boardId)}`),
+  nameVersion: (boardId: string, id: string, name: string) => call<{ versions: HarnessVersion[] }>("POST", "/api/versions/name", { boardId, id, name }),
   runs: (boardId: string) => call<RunSummary[]>("GET", `/api/runs?boardId=${encodeURIComponent(boardId)}`),
   run: (runId: string) => call<RunEvent[]>("GET", `/api/runs/${runId}`),
   startRun: (boardId: string, agentNodeId: string, prompt: string) => call<{ runId: string }>("POST", "/api/runs", { boardId, agentNodeId, prompt }),

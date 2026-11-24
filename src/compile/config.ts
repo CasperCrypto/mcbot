@@ -41,6 +41,24 @@ function providerEntry(model: ModelNode): Record<string, unknown> {
 
 /** One `mcp_servers.<name>` entry (website/docs/reference/mcp-config-reference.md). */
 export function mcpServerEntry(tool: ToolData): Record<string, unknown> {
+  return { ...serverEntry(tool), ...toolFilter(tool) };
+}
+
+/**
+ * Which of a server's tools reach the model (tools/mcp_tool_registration.py:251-265: `include` is a
+ * whitelist, `exclude` a blacklist, exact names or fnmatch globs, include wins). Written only when set.
+ */
+function toolFilter(tool: ToolData): Record<string, unknown> {
+  const tidy = (xs: string[] | undefined) => [...new Set((xs ?? []).map((x) => x.trim()).filter(Boolean))].sort();
+  const include = tidy(tool.toolsInclude);
+  const exclude = tidy(tool.toolsExclude);
+  const tools: Record<string, unknown> = {};
+  if (include.length) tools.include = include;
+  if (exclude.length) tools.exclude = exclude;
+  return Object.keys(tools).length ? { tools } : {};
+}
+
+function serverEntry(tool: ToolData): Record<string, unknown> {
   if (tool.transport === "http") {
     const entry: Record<string, unknown> = { url: tool.url };
     if (Object.keys(tool.headers).length) entry.headers = sortedRecord(tool.headers);
@@ -108,7 +126,11 @@ export function renderConfig(graph: Graph, bundle: AgentBundle): string {
   if (Object.keys(browser).length) doc.browser = browser;
   // The loop layer: a cap on tool-calling steps per message (hermes_cli/config_defaults.py
   // `agent.max_turns`; unset = no cap). Only written when the board sets one.
-  if (bundle.agent.data.maxSteps) doc.agent = { max_turns: bundle.agent.data.maxSteps };
+  // How hard it thinks (hermes_constants.py `parse_reasoning_effort`; unset = the model's default).
+  const agent: Record<string, unknown> = {};
+  if (bundle.agent.data.maxSteps) agent.max_turns = bundle.agent.data.maxSteps;
+  if (bundle.agent.data.reasoning) agent.reasoning_effort = bundle.agent.data.reasoning;
+  if (Object.keys(agent).length) doc.agent = agent;
   if (bundle.image) doc.image_gen = makerEntry(bundle.image);
   if (bundle.video) doc.video_gen = makerEntry(bundle.video);
   // A chat app's token and allowed users live in the agent's .env (written by the engine, never

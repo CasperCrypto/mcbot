@@ -12,6 +12,7 @@ import type { SessionRow } from "../../../engine/hermesData";
 import { exportFileName } from "../../board/files";
 import { graphFromDoc, loadGraphIntoDoc } from "../../board/ydoc";
 import { compile, mcpToolPrefix, PROFILE_DIRS, resolveGraph, type AgentBundle } from "../../compile/index";
+import { addVersion, type HarnessVersion } from "../../harness/versions";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
 import { LIBRARY } from "../../contracts/library.generated";
 import type { HarnessPlan, PlanChoices } from "../../harness/plan";
@@ -36,7 +37,7 @@ const LIMITS: Record<Target, number> = { memory: 2200, user: 1375 };
 const DELIM = "\n§\n";
 const STATE_KEY = "mcbot.demo.v1";
 const boardKey = (id: string) => `mcbot.demo.board.${id}`;
-const SAMPLE_FOLDER: FsRoot = { id: "folder:sample", kind: "folder", name: "acme-support", path: "/Users/you/Projects/acme-support" };
+const SAMPLE_FOLDER: FsRoot = { id: "folder:sample", kind: "folder", name: "support-desk", path: "/Users/you/Projects/support-desk" };
 
 interface State {
   boards: BoardInfo[];
@@ -50,6 +51,8 @@ interface State {
   tasks?: TaskDetail[];
   /** Hermes' cron jobs per profile, simulated (they never fire in the browser). */
   schedules?: Record<string, ScheduleView[]>;
+  /** Harness versions per board (src/harness/versions.ts), as the engine keeps them. */
+  versions?: Record<string, HarnessVersion[]>;
   /** Setup assistant: done or not, and boards it built (their graphs until a window opens them). */
   setup?: SetupState;
   pending?: Record<string, Graph>;
@@ -268,6 +271,8 @@ function compileBoard(boardId: string, dryRun: boolean): CompileResponse {
   if (!dryRun) {
     for (const c of changes) if (c.status === "removed") delete state.disk[c.path];
     for (const f of result.files) state.disk[f.path] = f.content;
+    // As the engine: a new harness version when this compile changed it.
+    state.versions = { ...(state.versions ?? {}), [boardId]: addVersion(state.versions?.[boardId] ?? [], graph, Date.now()) };
     save();
   }
   return { ok: true, report: { graphId: result.graphId, root: ROOT, written: !dryRun, profiles: result.profiles, changes }, issues, gateway: !dryRun && configChanged ? "restart-pending" : "unchanged" };
@@ -561,7 +566,24 @@ async function load(): Promise<void> {
   state = { boards: [SEED_BOARD], disk: {}, runs: {}, memory: structuredClone(seedMemory), sessions: {}, sampleOpen: true };
   for (const f of compile(seedGraph).files) state.disk[f.path] = f.content;
   await seedHistory();
+  seedVersions();
   save();
+}
+
+/**
+ * Two versions of the sample harness, so History has something to compare: a week ago the
+ * researcher thought with the local model; three days ago it moved to the cloud one (today's board).
+ * The seeded runs fall on both sides.
+ */
+function seedVersions(): void {
+  const now = new Date();
+  const day = (ago: number) => Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ago);
+  const local: Graph = { ...seedGraph, edges: seedGraph.edges.map((e) => (e.id === "e-cloud-research" ? { ...e, source: "model-local" } : e)) };
+  const first = addVersion([], local, day(7));
+  first[0]!.name = "All local";
+  const both = addVersion(first, seedGraph, day(3));
+  both[1]!.name = "Researcher on Claude";
+  state.versions = { [SEED_BOARD.id]: both };
 }
 
 // ---------- tasks: Hermes' kanban, simulated (the desktop app runs them through Hermes) ----------
@@ -712,6 +734,15 @@ export const demoEngine = {
   }),
   compile: api((boardId: string) => compileBoard(requireBoard(boardId), false)),
   preview: api((boardId: string) => compileBoard(requireBoard(boardId), true)),
+  versions: api((boardId: string) => ({ versions: state.versions?.[requireBoard(boardId)] ?? [] })),
+  nameVersion: api((boardId: string, id: string, name: string) => {
+    const list = state.versions?.[requireBoard(boardId)] ?? [];
+    const v = list.find((x) => x.id === id);
+    if (!v) throw new EngineError(404, "no such version", {});
+    v.name = name.trim().slice(0, 80) || null;
+    save();
+    return { versions: list };
+  }),
   runs: api((boardId: string): RunSummary[] =>
     Object.values(state.runs).map((e) => summarizeRun(e)).filter((s): s is RunSummary => !!s && s.boardId === boardId).sort((a, b) => b.startedAt - a.startedAt)),
   run: api((runId: string): RunEvent[] => {
@@ -918,7 +949,7 @@ export const demoEngine = {
   /** A pretend disk: the demo can't see the visitor's folders, so the picker shows a sample home. */
   browse: api((path: string | null): FsBrowse => {
     const home = "/Users/you";
-    const tree: Record<string, string[]> = { [home]: ["Desktop", "Documents", "Downloads", "Projects"], [`${home}/Projects`]: ["acme-support"] };
+    const tree: Record<string, string[]> = { [home]: ["Desktop", "Documents", "Downloads", "Projects"], [`${home}/Projects`]: ["support-desk"] };
     const at = path && tree[path.replace(/^~/, home)] ? path.replace(/^~/, home) : home;
     return {
       path: at, parent: at === home ? "/Users" : at.slice(0, at.lastIndexOf("/")),

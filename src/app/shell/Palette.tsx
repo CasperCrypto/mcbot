@@ -1,6 +1,9 @@
 import {
+  ClipboardCopy,
+  History as HistoryIcon,
   BookOpen, Bot, FileCode2, History, Palette as PaletteIcon, Stethoscope, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Upload, Users, Waypoints, Workflow, GraduationCap, Compass,
 } from "lucide-react";
+import { describeHarness } from "../../harness/describe";
 import { Logo } from "../faces/FoodFace";
 import { redo, undo } from "../../board/undo";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -97,6 +100,14 @@ function useCommands(close: () => void): Command[] {
       { id: "undo", group: "Actions", label: "Undo", hint: "Your last change to the board", icon: <Undo2 size={15} />, keys: ["⌘", "Z"], run: () => { close(); if (!undo(doc)) app.toast({ kind: "ok", text: "Nothing to undo" }); } },
       { id: "redo", group: "Actions", label: "Redo", icon: <Redo2 size={15} />, keys: ["⇧", "⌘", "Z"], run: () => { close(); if (!redo(doc)) app.toast({ kind: "ok", text: "Nothing to redo" }); } },
       { id: "doctor", group: "Actions", label: "Check the harness", hint: "Models, keys, wires, budgets, files: what's wrong and the fix", icon: <Stethoscope size={15} />, run: () => { close(); app.setDoctorOpen(true); } },
+      { id: "history", group: "Actions", label: "Harness history", hint: "Every version, how its runs went, compare two", icon: <HistoryIcon size={15} />, run: () => { close(); app.setTab("graph"); app.setHistoryOpen(true); } },
+      { id: "copy-harness", group: "Actions", label: "Copy the harness as text", hint: "Agents, models, tools and wires, for any AI to read", icon: <ClipboardCopy size={15} />, run: () => {
+        close();
+        void navigator.clipboard.writeText(describeHarness(graph)).then(
+          () => app.toast({ kind: "ok", text: "The harness is on the clipboard as text" }),
+          () => app.toast({ kind: "fail", text: "Couldn't copy: the clipboard is blocked" }),
+        );
+      } },
       { id: "compile", group: "Actions", label: "Compile", icon: <Hammer size={15} />, keys: ["⌘", "S"], run: () => { close(); void compileBoard(boardId); } },
       { id: "live-files", group: "Actions", label: "Live files", hint: "Watch the files this board writes change as you edit", icon: <FileCode2 size={15} />, run: () => { close(); app.setTab("graph"); app.setLiveFilesOpen(!useApp.getState().liveFilesOpen); } },
       { id: "compile-files", group: "Actions", label: "Compiled files", hint: "What the last compile wrote, file by file", icon: <FolderOpen size={15} />, run: () => { close(); app.setTab("graph"); app.setCompile({ compileOpen: true }); } },

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { ModelMark } from "../graph/Logo";
+import { modelName } from "../lib/modelName";
 import type { BudgetStatus, CostReport, CostRow, CostSource } from "../../contracts/api";
 import { ago, tokens, usd } from "../lib/format";
 import { dailySeries, dayLabel } from "../lib/series";
@@ -83,7 +85,7 @@ const agentName = (graph: Graph, profile: string) => {
   return a?.kind === "agent" ? a.data.displayName || a.data.name : profile;
 };
 
-function Rollup({ title, rows, face, name }: { title: string; rows: CostRow[]; face?: boolean; name?: (key: string) => string }) {
+function Rollup({ title, rows, face, name, model }: { title: string; rows: CostRow[]; face?: boolean; name?: (key: string) => string; model?: boolean }) {
   return (
     <div className="card table-card">
       <h3>{title}</h3>
@@ -92,7 +94,9 @@ function Rollup({ title, rows, face, name }: { title: string; rows: CostRow[]; f
         <tbody>
           {rows.map((r) => (
             <tr key={r.key}>
-              <td><span className="row">{face && <AgentFace seed={r.key} size={22} />}<span className={face ? "" : "mono"}>{name ? name(r.key) : r.label}</span></span></td>
+              <td>{model
+                ? <span className="row" data-tip={r.label}><ModelMark model={r.label} size={18} /><span>{modelName(r.label)}</span></span>
+                : <span className="row">{face && <AgentFace seed={r.key} size={22} />}<span className={face ? "" : "mono"}>{name ? name(r.key) : r.label}</span></span>}</td>
               <td className="right num">{r.sessions}</td>
               <td className="right num">{tokens(r.inputTokens)}</td>
               <td className="right num">{tokens(r.outputTokens)}</td>
@@ -151,7 +155,7 @@ export function CostView() {
           <Daily rows={report.byDay} />
           <div className="two-col">
             <Rollup title="By agent" rows={report.byAgent} face name={nameOf} />
-            <Rollup title="By model" rows={report.byModel} />
+            <Rollup title="By model" rows={report.byModel} model />
           </div>
           <div className="card table-card" style={{ marginTop: 14 }}>
             <h3>Sessions</h3>
@@ -162,7 +166,7 @@ export function CostView() {
                   <tr key={`${s.profile}/${s.id}`}>
                     <td className="faint">{ago(s.startedAt * 1000)}</td>
                     <td><span className="row"><AgentFace seed={s.profile} size={20} />{nameOf(s.profile)}</span></td>
-                    <td className="mono">{s.model ?? "—"}</td>
+                    <td>{s.model ? <span className="row" data-tip={s.model}><ModelMark model={s.model} size={16} /><span>{modelName(s.model)}</span></span> : "—"}</td>
                     <td className="right num">{tokens(s.inputTokens)}</td>
                     <td className="right num">{tokens(s.outputTokens)}</td>
                     <td>{s.runStatus ? <span className={`chip ${s.runStatus === "succeeded" ? "ok" : "fail"}`}>{s.runStatus}</span> : <span className="faint" data-tip="Started outside McBot (cron, chat, gateway)" data-tip-side="top">external</span>}</td>

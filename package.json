@@ -25,6 +25,7 @@
     "desktop": "tauri dev",
     "engine:patches": "tsx scripts/hermes-patches.ts",
     "site:foods": "tsx scripts/site-foods.ts",
+    "app:icon": "node scripts/app-icon.mjs",
     "engine:platforms": "tsx scripts/hermes-platforms.ts",
     "mcbot": "tsx scripts/mcbot.ts",
     "engine:connectors": "tsx scripts/hermes-connectors.ts",
@@ -57,6 +58,7 @@
     "zustand": "5.0.16"
   },
   "devDependencies": {
+    "@lobehub/icons-static-svg": "^1.106.0",
     "@tauri-apps/api": "2.12.4",
     "@tauri-apps/cli": "2.12.4",
     "@types/node": "26.6.6",

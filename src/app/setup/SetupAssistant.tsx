@@ -242,7 +242,7 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
               <Field label="Your name" value={profile.name} onChange={(v) => setProfile({ ...profile, name: v })} testId="setup-name" />
               {company ? (
                 <>
-                  <Field label="Company" value={profile.company} onChange={(v) => setProfile({ ...profile, company: v })} placeholder="Acme" testId="setup-company" />
+                  <Field label="Company" value={profile.company} onChange={(v) => setProfile({ ...profile, company: v })} placeholder="Your company" testId="setup-company" />
                   <Field label="What it does" value={profile.about} onChange={(v) => setProfile({ ...profile, about: v })} placeholder="Invoicing software for small shops" testId="setup-about" />
                   <Field label="Your role" value={profile.role} onChange={(v) => setProfile({ ...profile, role: v })} placeholder="Head of support" testId="setup-role" />
                 </>

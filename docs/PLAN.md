@@ -11,6 +11,9 @@ in [NEXT.md](NEXT.md). Updated 2026-11-06 from the owner's vision: an
 orchestration app and AI command center, with a code editor, a terminal and an
 AI browser built in.
 
+The strategy as of 2026-11-24 (features, Hermes coverage, competitors, graph engineering,
+customisation, open models and training, security) is in [STRATEGY.md](STRATEGY.md).
+
 Status: ● working today · ◐ started · ○ planned
 
 ## Where McBot stands
@@ -240,6 +243,7 @@ whether setup works.
 | **M13** ○ | Packs and starter teams; import from other agents | A "Dev team" pack installs into a new space and runs |
 | **M14** ○ | Phones | Approve an agent's action from an iPhone |
 | **M15** ◐ | Polish: the dark design ● (macOS's accent colours; the light theme dropped by the owner), layouts, shortcuts, accessibility, languages (brand and agent icons ● done) | Each person arranges McBot their way, and it remembers |
+| **M16** ○ | Model lab: datasets from your best runs (Hermes' trajectory format), fine-tuning on your own hardware (MLX-LM, Unsloth), serving with Ollama, compared in History (STRATEGY.md) | Your own model beats the cloud one on your work, and runs free |
 
 "Now" runs before and alongside M6. Hermes upstream syncs happen whenever the
 daily watchdog opens an issue.

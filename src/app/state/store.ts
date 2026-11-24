@@ -52,6 +52,12 @@ interface State {
   newAgentOpen: boolean;
   /** The tool catalog. */
   catalogOpen: boolean;
+  /** The board's History panel (graph/HistoryPanel.tsx): versions of the harness and their runs. */
+  historyOpen: boolean;
+  /** The agent the tool or chat-app catalog adds to, when opened from that agent's page. */
+  catalogFor: string | null;
+  /** The Chat view shows the agent's page beside the conversation. */
+  agentInfo: boolean;
   /** The board's live files panel (what Compile would write). */
   liveFilesOpen: boolean;
   chatAppsOpen: boolean;
@@ -94,6 +100,12 @@ interface State {
   setCatalogOpen(open: boolean): void;
   setLiveFilesOpen(open: boolean): void;
   setChatAppsOpen(open: boolean): void;
+  /** Add a tool or a chat app to one agent (from its page): the catalog wires it there. */
+  addTo(kind: "tool" | "app", agentNodeId: string): void;
+  setAgentInfo(open: boolean): void;
+  setHistoryOpen(open: boolean): void;
+  /** Open an agent's page (its chat, with the page beside it): from Home, ⌘K, New agent. */
+  editAgent(agentNodeId: string): void;
   setTeamsOpen(open: boolean): void;
   setBuilder(open: boolean, request?: string): void;
   openDrawing(drawing: State["drawing"]): void;
@@ -176,6 +188,9 @@ export const useApp = create<State>((set, get) => ({
   newAgentOpen: false,
   setNewAgentOpen: (newAgentOpen) => set({ newAgentOpen, paletteOpen: false }),
   catalogOpen: false,
+  catalogFor: null,
+  historyOpen: false,
+  agentInfo: (() => { try { return localStorage.getItem("mcbot.agentInfo") === "1"; } catch { return false; } })(),
   liveFilesOpen: (() => { try { return localStorage.getItem("mcbot.liveFiles") === "1"; } catch { return false; } })(),
   chatAppsOpen: false,
   teamsOpen: false,
@@ -218,12 +233,23 @@ export const useApp = create<State>((set, get) => ({
   setBuilder: (open, request = "") => set((s) => ({ builder: { open, request: open ? request : s.builder.request }, paletteOpen: false, newAgentOpen: false, teamsOpen: false })),
   freshNote: null,
   setFreshNote: (freshNote) => set({ freshNote }),
-  setCatalogOpen: (catalogOpen) => set({ catalogOpen, paletteOpen: false }),
+  setCatalogOpen: (catalogOpen) => set({ catalogOpen, paletteOpen: false, ...(catalogOpen ? {} : { catalogFor: null }) }),
   setLiveFilesOpen: (liveFilesOpen) => {
     try { localStorage.setItem("mcbot.liveFiles", liveFilesOpen ? "1" : "0"); } catch { /* private window */ }
-    set({ liveFilesOpen, paletteOpen: false });
+    set({ liveFilesOpen, paletteOpen: false, ...(liveFilesOpen ? { historyOpen: false } : {}) });
   },
-  setChatAppsOpen: (chatAppsOpen) => set({ chatAppsOpen, paletteOpen: false }),
+  // History and the live files share the board's left side: one at a time.
+  setHistoryOpen: (historyOpen) => set({ historyOpen, paletteOpen: false, ...(historyOpen ? { liveFilesOpen: false } : {}) }),
+  setChatAppsOpen: (chatAppsOpen) => set({ chatAppsOpen, paletteOpen: false, ...(chatAppsOpen ? {} : { catalogFor: null }) }),
+  addTo: (kind, catalogFor) => set({ catalogFor, catalogOpen: kind === "tool", chatAppsOpen: kind === "app", paletteOpen: false }),
+  setAgentInfo: (agentInfo) => {
+    try { localStorage.setItem("mcbot.agentInfo", agentInfo ? "1" : "0"); } catch { /* private window */ }
+    set({ agentInfo });
+  },
+  editAgent: (chatAgentId) => {
+    try { localStorage.setItem("mcbot.agentInfo", "1"); } catch { /* private window */ }
+    set({ chatAgentId, tab: "agents", agentInfo: true, paletteOpen: false });
+  },
   openChat: (chatAgentId) => set({ chatAgentId, tab: "agents" }),
   openTask: null,
   showTask: (openTask, tab = true) => set(tab ? { openTask, tab: "tasks", paletteOpen: false } : { openTask }),

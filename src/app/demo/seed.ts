@@ -30,7 +30,7 @@ export const seedGraph: Graph = {
       id: "agent-research", kind: "agent", position: { x: 0, y: 250 },
       data: {
         name: "researcher", displayName: "Researcher", description: "Answers product questions from the docs.",
-        soul: "You answer product questions from Acme's docs.\nQuote the doc you used.", skills: [], capabilities: null,
+        soul: "You answer product questions from our docs.\nQuote the doc you used.", skills: [], capabilities: null,
       },
     },
     {
@@ -74,10 +74,10 @@ export const seedGraph: Graph = {
 
 export const seedMemory: Record<string, { memory: string[]; user: string[] }> = {
   triage: {
-    memory: ["Billing tickets go to Sam; outages page the on-call.", "Acme's SLA: first reply within 4 hours."],
+    memory: ["Billing tickets go to Sam; outages page the on-call.", "Our SLA: first reply within 4 hours."],
     user: ["Maya runs support and prefers short answers."],
   },
-  researcher: { memory: ["Product docs live in ~/Projects/acme-support/docs."], user: [] },
+  researcher: { memory: ["Product docs live in ~/Projects/support-desk/docs."], user: [] },
 };
 
 /** [profile, prompt, days ago, hour UTC] — replayed through the demo runner at first load. */
@@ -86,24 +86,24 @@ export const seedRuns: [string, string, number, number][] = [
   ["researcher", "How does ticket routing work?", 6, 11],
   ["triage", "Status page shows EU latency, three tickets in a row.", 5, 14],
   ["researcher", "What is our SLA for first replies?", 4, 10],
-  ["triage", "call:mcp__files__list_directory {\"path\": \"tickets\"}", 4, 15],
+  ["triage", "List the open tickets", 4, 15],
   ["researcher", "Summarise docs/routing.md for a new hire.", 3, 9],
   ["triage", "Who handles a refund request?", 2, 13],
   ["researcher", "Can a customer export their data?", 1, 10],
-  ["triage", "what is 2+2", 0, 8],
+  ["triage", "Who handles billing questions?", 0, 8],
 ];
 
 export const sharedFiles: Record<string, string> = {
   "readme.txt": "Files every agent on this board can read.\n",
   "escalation.md": "# Escalation\n\n- Billing: Sam\n- Outage: on-call (pager)\n- Everything else: researcher\n",
-  "tickets/4471-double-charge.md": "Invoice #4471 was charged twice on 3 Nov.\nCustomer: Northwind.\n",
+  "tickets/4471-double-charge.md": "Invoice #4471 was charged twice on 3 Nov.\nCustomer: a small online shop.\n",
   "tickets/4472-eu-latency.md": "EU dashboard loads in 9s since 07:40 UTC.\n",
   "tickets/4473-data-export.md": "Can we export all tickets as CSV?\n",
 };
 
 export const sampleProject: Record<string, string> = {
-  "README.md": "# acme-support\n\nTicket router for Acme's support inbox.\n",
-  "package.json": "{\n  \"name\": \"acme-support\",\n  \"version\": \"0.4.0\",\n  \"type\": \"module\"\n}\n",
+  "README.md": "# support-desk\n\nTicket router for our support inbox.\n",
+  "package.json": "{\n  \"name\": \"support-desk\",\n  \"version\": \"0.4.0\",\n  \"type\": \"module\"\n}\n",
   "src/index.ts": "import { route } from \"./router\";\n\nexport { route };\n",
   "src/router.ts": "export function route(ticket: { subject: string }): string {\n  if (/invoice|refund|charge/i.test(ticket.subject)) return \"billing\";\n  if (/down|latency|outage/i.test(ticket.subject)) return \"on-call\";\n  return \"researcher\";\n}\n",
   "src/handlers/billing.ts": "export const owner = \"sam\";\n",

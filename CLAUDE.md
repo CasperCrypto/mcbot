@@ -324,7 +324,11 @@ Change them additively; a breaking change bumps the version.
   skills, Hermes' compaction), Model (main and backups), Tools (abilities, connectors, makers), Plugins, Guardrails
   (approvals, daily budget). Each row says whether the board sets it, Hermes defaults it or it is missing, and opens
   where it is changed. The loop's **steps per message** is the agent's `maxSteps`, compiled to `agent.max_turns`
-  (only when set; `OWNED` `agent.max_turns`; read back by `src/harness/read.ts`).
+  (only when set; `OWNED` `agent.max_turns`; read back by `src/harness/read.ts`). Its **thinking** is `reasoning`,
+  compiled to `agent.reasoning_effort` (`none`…`ultra`, only when set; `OWNED`; read back). A tool block's **only
+  these tools** (`toolsInclude`, and `toolsExclude` read from Hermes) compiles to `mcp_servers.<name>.tools.include`
+  / `.exclude`: fewer tool definitions, fewer tokens per message (Hermes' code-mode-like `execute_code` covers only
+  its built-in tools, not MCP ones).
 - **Board | Hermes** (top of the board): Board is what you edit; Hermes (`src/app/graph/HermesView.tsx`)
   draws the whole harness behind it: gateway, chat apps, each agent's model chain, abilities,
   tools, makers, skills, memory, schedules, the shared task board, approvals. A click on a part
@@ -334,6 +338,14 @@ Change them additively; a breaking change bumps the version.
   (never chat), tracking only origin `null`, i.e. this window's own edits, so ⌘Z / ⇧⌘Z never take
   back a teammate's or the engine's change; edits within 600 ms are one step. Created with the doc
   (`state/board.tsx`); text fields and the code editor keep their own undo.
+- **History** (`graph/HistoryPanel.tsx`, the board's "History" button, ⌘K "Harness history"; pure
+  `src/harness/versions.ts`): every compile that changes the harness (blocks and wires, never positions, notes,
+  frames or chat: `harnessHash`) keeps a version in `<workspace>/versions/<boardId>.json` (`GET /api/versions`,
+  `POST /api/versions/name`; the newest 60 plus every named one), with what changed in words (`describeChanges`).
+  Runs count against the version live when they started (`versionStats`), so two versions compare on runs,
+  success, cost, time and tokens per run. Restore puts a version's blocks and wires back in one transaction (one ⌘Z).
+  ⌘K "Copy the harness as text" (`src/harness/describe.ts`) gives any AI the whole graph in Markdown (key
+  names only). The demo seeds two versions.
 - **Live files** (`graph/LiveFiles.tsx`, the board's "Files" button, ⌘K): while you edit, the
   engine's dry-run compile (`GET /api/compile`, the real writer and config.yaml merge) is shown
   file by file, whole, with its changes against disk marked; selecting a block opens its agent's
@@ -388,8 +400,10 @@ Change them additively; a breaking change bumps the version.
   Blobatars with `tone={0.48}` (auto tone can be near-black on dark).
 - **Logo:** the gray glass burger (`logoSvg`). The website's bots and the logo
   files (`site/assets/logo.svg`, `design/icon.svg`) are generated from the same
-  code by `npm run site:foods`; `npm test` fails when they are stale. App icons:
-  render `design/icon.svg` to `design/icon-1024.png`, then `npx tauri icon`.
+  code by `npm run site:foods`; `npm test` fails when they are stale. App icons: `npm run app:icon`
+  (`scripts/app-icon.mjs`) renders the website's glass burger (`site/assets/burger.webp`, with its eyes) on
+  a near-black tile: `design/icon-1024.png` on Apple's grid for macOS's `.icns`, `design/icon-full-1024.png`
+  filling the canvas for Windows and Linux, and the site's `icon-180.png`.
 - **Effects use block bodies.** `useEffect(() => { … })` — never a concise arrow:
   `scrollIntoView` returns a Promise in current Chromium, and an effect that
   returns a non-function crashes React on cleanup.
@@ -481,8 +495,8 @@ auth, no cloud: local JSON + the filesystem.
 
 Auth, SSO, Langfuse, OpenTelemetry, a cloud tier, a marketplace, git
 integration beyond showing status and diffs, A2A. (ACP is in: M9, owner's decision.) The terminal, code editor and browser panes are planned (M8).
-Everything else on the way is ordered in `docs/PLAN.md` (M5–M15, reasons in
-`docs/NEXT.md`); build in that order. Postgres and Redis belong to the
+Everything else on the way is ordered in `docs/PLAN.md` (M5–M16, reasons in
+`docs/NEXT.md`, the strategy and competitors in `docs/STRATEGY.md`); build in that order. Postgres and Redis belong to the
 optional team server only, never the desktop app.
 
 ## Commands
@@ -513,24 +527,27 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   publishes it to GitHub Pages with the demo at `/demo/`. Download buttons read
   the latest GitHub release and show "Coming soon" until one exists.
 - The hero is the glass burger photo (`site/assets/burger.webp`, cut from a black
-  background so the glass stays see-through); `site/site.js` moves its pupils
-  (in the eye holes) toward the cursor, nothing more. The crew graph and the
-  parade use `site/foods.js`. Clean and flat like a Mac page: system font, black
-  and gray surfaces, white buttons; near-black cards with hairline borders, a floating nav, big tight type
-  (Raycast-class finish, never its look or trade dress). Owner's rule: no gradients, glows, dotted grids or status
-  dots, and no scroll-jacking. The live
-  macOS windows (`site/studio.js`, `studio.css`: the hero is a replica of the app as it opens (frameless window,
-  notch island, rail, agents, a chat that uses tools, answers and asks before acting; keep it in step with the
-  app), How it works tabs, the features grid, the ⌘K palette you can
-  type in, the island) play only while on screen, pause under the pointer, hold their final state
-  under `prefers-reduced-motion`, and use the page's flat colours; they are markup, not screenshots.
-  Page anatomy (as the product pages we compare with do it): a platform pill and a split Download button (your OS,
-  plus a menu) over the hero; cards whose bold title runs into the sentence; a two-column FAQ (`<details>`);
-  flat colour download cards with dark ink; a big footer with a one-paragraph pitch and link columns.
-  The page has no product screenshots (its windows are markup); its share card `site/assets/og.jpg`
-  (1200×630: the burger, the headline, the platforms) is rendered from HTML; render it again when
-  the hero's words change. "Ask McBot" and "Connect" show the builder and what plugs in; the Connect
-  logo wall is generated into `site/index.html` by `npm run site:logos` from the app's own marks
-  (`npm test` fails while it is stale).
+  background so the glass stays see-through); `site/main.js` moves its pupils (in the eye holes)
+  toward the cursor and makes it blink; a poke makes it happy. The bots in the page's windows and
+  the crew at the end use `site/foods.js`. Clean and flat like a Mac page: system font, black and
+  gray surfaces, white buttons; near-black cards with hairline borders, a floating nav, big tight
+  type (Raycast-class finish, never its look or trade dress). Owner's rule: no gradients, glows,
+  dotted grids or status dots, no gray boxes behind brand logos, and no scroll-jacking. The copy
+  sells three reasons in plain words (no filler, no placeholder company names): yours (on your
+  computer, private, never locked in), any model ("Switch models, not apps") and the harness you
+  can see and change by drawing; then what a working team needs, a comparison, three steps, a FAQ
+  and downloads. The live views (`site/main.js`, `site/style.css`: the hero window is the app as it
+  opens, with its frameless window, rail and a chat that uses a tool, answers and asks before
+  acting, so keep it in step with the app; then the model switch, the harness compiling, an
+  approval, the ⌘K palette and the terminal) play only while on screen, hold their final state
+  under `prefers-reduced-motion`, and use the page's flat colours; they are markup, not
+  screenshots. Page anatomy (as the product pages we compare with do it): a split Download button
+  (your OS, plus a menu) under the headline; moving rows of brand marks, each on its own colour
+  ("Works with…"); cards whose bold title runs into the sentence; a two-column FAQ (`<details>`);
+  download cards; a big footer with a one-paragraph pitch and link columns. Its share card
+  `site/assets/og.jpg` (1200×630: the burger, the headline, the platforms) is rendered from HTML;
+  render it again when the hero's words change. The brand rows are generated into
+  `site/index.html` (between `<!-- logos:<group> -->` markers) by `npm run site:logos` from the
+  app's own marks (`npm test` fails while they are stale).
 
 Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Skills, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘D duplicate · ⌘0 fit the board · right-click the board · ⌘N new window (desktop).

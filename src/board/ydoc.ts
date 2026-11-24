@@ -110,6 +110,20 @@ export function loadGraphIntoDoc(doc: Y.Doc, graph: Graph): void {
   });
 }
 
+/**
+ * Put back a harness version's blocks and wires (src/harness/versions.ts), in one transaction so one
+ * ⌘Z takes it back; notes, frames, chat and the board's name stay as they are.
+ */
+export function restoreHarness(doc: Y.Doc, graph: Pick<Graph, "nodes" | "edges">): void {
+  const { nodes, edges } = boardMaps(doc);
+  doc.transact(() => {
+    for (const id of [...edges.keys()]) if (!graph.edges.some((e) => e.id === id)) edges.delete(id);
+    for (const id of [...nodes.keys()]) if (!graph.nodes.some((n) => n.id === id)) nodes.delete(id);
+    for (const n of graph.nodes) nodes.set(n.id, nodeToY(n));
+    for (const e of graph.edges) edges.set(e.id, { ...e });
+  });
+}
+
 // ---- edits used by the UI (each one transaction, origin = local user) ----
 
 export function addNode(doc: Y.Doc, node: GraphNode): void {
@@ -122,7 +136,10 @@ export function moveNode(doc: Y.Doc, id: string, position: { x: number; y: numbe
 
 export function setNodeField(doc: Y.Doc, id: string, field: string, value: unknown): void {
   const data = boardMaps(doc).nodes.get(id)?.get("data");
-  if (data instanceof Y.Map) data.set(field, structuredClone(value));
+  if (!(data instanceof Y.Map)) return;
+  // `undefined` takes an optional field off the block (an unset field is absent, not null).
+  if (value === undefined) data.delete(field);
+  else data.set(field, structuredClone(value));
 }
 
 export function removeNodes(doc: Y.Doc, ids: readonly string[]): void {

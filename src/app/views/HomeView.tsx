@@ -1,11 +1,12 @@
-import { ArrowUp, Check, CircleDashed, Clock, Cpu, Hammer, KeyRound, ListChecks, Pause, Play, Plus, RotateCcw, Square, Trash2, X, StickyNote as StickyNoteIcon } from "lucide-react";
+import { ArrowUp, Bell, CalendarClock, Check, ChevronDown, ChevronRight, CircleDashed, Clock, Cpu, Hammer, History, KeyRound, ListChecks, Pause, Play, Plus, RotateCcw, SlidersHorizontal, Square, Trash2, Wallet, X, StickyNote as StickyNoteIcon } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AgentSchedules, CostReport, TaskView } from "../../contracts/api";
-import type { AgentNode } from "../../contracts/graph";
+import type { AgentNode, ModelData } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 import { compileBoard, openHermesSetup, runAgent, stopRun } from "../actions";
 import { engine, onKeysChanged } from "../lib/engine";
 import { ago, usd } from "../lib/format";
+import { dailySeries, utcDay } from "../lib/series";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, Segmented } from "../ui";
@@ -15,9 +16,12 @@ import { newId } from "../graph/defaults";
 import { StickyNote } from "../notes/StickyNote";
 import { useTasks } from "./TasksView";
 import { ApprovalCard } from "../approvals/ApprovalCard";
-import { agentsWithoutModel, modelsOf } from "../lib/models";
+import { agentsWithoutModel, chainOf, modelsOf, otherEnd } from "../lib/models";
+import { ModelMark } from "../graph/Logo";
+import { modelName } from "../lib/modelName";
 import { useModelHealth } from "../lib/useModelHealth";
 import { nameChosen } from "../lib/identity";
+import { latestRunByAgent } from "../state/store";
 import { REMOTE } from "../lib/engine";
 
 const DAY = 86_400_000;
@@ -78,28 +82,64 @@ function Ask({ agents }: { agents: AgentNode[] }) {
       setBusy(false);
     }
   };
-  if (agents.length === 0) return null;
+  if (agents.length === 0 || !chosen) return null;
+  const who = chosen.data.displayName || chosen.data.name;
   return (
-    <div className="ask" data-testid="home-ask">
-      <div className="ask-agents" role="radiogroup" aria-label="Agent">
-        {agents.map((a) => (
-          <button key={a.id} role="radio" aria-checked={a.id === agent} className="ask-agent" onClick={() => setAgent(a.id)}>
-            <AgentFace seed={a.data.name} size={20} />
-            <span>{a.data.displayName || a.data.name}</span>
-          </button>
-        ))}
-      </div>
-      <div className="composer">
-        <textarea rows={1} value={text} onChange={(e) => setText(e.target.value)} data-testid="home-ask-input"
-          placeholder={chosen ? `${mode === "ask" ? "Ask" : "Give"} ${chosen.data.displayName || chosen.data.name}${mode === "ask" ? "…" : " a task…"}` : ""}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }} />
-        <div style={{ width: 132 }}><Segmented value={mode} onChange={setMode} options={[{ value: "ask", label: "Ask" }, { value: "task", label: "Task" }]} /></div>
-        <button className="send" aria-label="Send" disabled={!text.trim() || busy} onClick={() => void send()}><ArrowUp size={16} /></button>
-      </div>
+    <div className="composer dash-ask" data-testid="home-ask">
+      <label className="ask-who" data-tip="Who to ask">
+        <AgentFace seed={chosen.data.name} size={22} />
+        <select value={agent} onChange={(e) => setAgent(e.target.value)} aria-label="Agent" data-testid="home-ask-agent">
+          {agents.map((a) => <option key={a.id} value={a.id}>{a.data.displayName || a.data.name}</option>)}
+        </select>
+        <ChevronDown size={12} />
+      </label>
+      <textarea rows={1} value={text} onChange={(e) => setText(e.target.value)} data-testid="home-ask-input"
+        placeholder={mode === "ask" ? `Ask ${who} anything…` : `Give ${who} a task…`}
+        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }} />
+      <div className="ask-mode"><Segmented value={mode} onChange={setMode} options={[{ value: "ask", label: "Ask" }, { value: "task", label: "Task" }]} /></div>
+      <button className="send" aria-label="Send" disabled={!text.trim() || busy} onClick={() => void send()}><ArrowUp size={16} /></button>
     </div>
   );
 }
 
+/** One agent as a tile, the way a home app shows a room's lights: who, and what it is doing now. */
+function AgentTile({ agent, live, runId, step, failed, asks, noModel, last, model }: { agent: AgentNode; live: boolean; runId: string | null; step: string; failed: boolean; asks: boolean; noModel: boolean; last: number | null; model: ModelData | null }) {
+  const name = agent.data.displayName || agent.data.name;
+  const state = asks ? "warn" : live ? "run" : noModel ? "warn" : failed ? "fail" : "idle";
+  const line = asks ? "Asks before acting" : live ? step : noModel ? "No model yet" : failed ? "Last run failed" : last ? `Free · ${ago(last)}` : agent.data.description || "Free";
+  const app = useApp.getState();
+  return (
+    <div className="agent-tile" data-state={state} data-testid="home-agent">
+      <button className="agent-tile-main" onClick={() => app.openChat(agent.id)} data-tip="Chat">
+        <AgentFace seed={agent.data.name} size={34} status={live ? "running" : failed ? "failed" : undefined} />
+        <span className="t"><b>{name}{model && <span className="tile-model" data-tip={modelName(model.model)}><ModelMark model={model.model} baseUrl={model.baseUrl} size={13} /></span>}</b><small>{line}</small></span>
+      </button>
+      {runId
+        ? <button className="agent-tile-edit shown" aria-label={`Stop ${name}`} data-tip="Stop" onClick={() => void stopRun(runId)}><Square size={10} /></button>
+        : <button className="agent-tile-edit" aria-label={`${name}: settings`} data-tip="Settings" onClick={() => app.editAgent(agent.id)}><SlidersHorizontal size={13} /></button>}
+    </div>
+  );
+}
+
+/** Today's spend, big, over the last seven days as small bars (UTC days, as Cost counts them). */
+function SpendWidget({ cost }: { cost: CostReport | null }) {
+  const now = Date.now();
+  const days = dailySeries(cost?.byDay ?? [], now, 7, 7);
+  const today = days.at(-1);
+  const week = days.reduce((n, d) => n + d.usd, 0);
+  const max = Math.max(...days.map((d) => d.usd), 0.000001);
+  const over = (cost?.budgets ?? []).filter((b) => b.state !== "ok").length;
+  return (
+    <button className="widget spend-widget" onClick={() => useApp.getState().setTab("cost")} data-testid="home-spend">
+      <div className="widget-head"><Wallet size={13} /><h2>Spent today</h2></div>
+      <b className="spend-now num">{usd(today?.usd ?? 0)}</b>
+      <div className="spend-bars" aria-hidden>
+        {days.map((d) => <i key={d.key} data-today={d.key === utcDay(now) || undefined} style={{ height: `${d.usd > 0 ? Math.max(8, (d.usd / max) * 100) : 4}%` }} />)}
+      </div>
+      <small className="widget-foot">{usd(week)} this week{today?.source === "estimate" ? " · est." : ""}{over ? ` · ${over} near budget` : ""}</small>
+    </button>
+  );
+}
 
 /** Hermes' schedule grammar ('every 2h', '0 9 * * *'): the common ones as presets. */
 const WHEN = [
@@ -157,9 +197,9 @@ function Schedules({ agents }: { agents: AgentNode[] }) {
     .sort((a, b) => Number(b.enabled) - Number(a.enabled) || (a.nextRunAt ?? Infinity) - (b.nextRunAt ?? Infinity));
   const nameOf = (p: string) => agents.find((a) => a.data.name === p)?.data.displayName || p;
   return (
-    <section className="card home-card" data-testid="home-schedules">
-      <div className="home-card-head">
-        <h2>Scheduled</h2><span className="grow" />
+    <section className="widget" data-testid="home-schedules">
+      <div className="widget-head">
+        <CalendarClock size={13} /><h2>Up next</h2><span className="grow" />
         <button className="icon-btn sm" aria-label={adding ? "Close" : "New schedule"} data-tip={adding ? undefined : "New schedule"} onClick={() => setAdding(!adding)} data-testid="schedule-add">{adding ? <X size={13} /> : <Plus size={14} />}</button>
       </div>
       {adding && (
@@ -173,7 +213,7 @@ function Schedules({ agents }: { agents: AgentNode[] }) {
           <div className="row"><span className="grow" /><button className="btn sm primary" disabled={!prompt.trim() || (preset === "custom" && !custom.trim())} onClick={() => void add()} data-testid="schedule-create">Schedule</button></div>
         </div>
       )}
-      {jobs.length === 0 && !adding ? <div className="home-empty"><Clock size={14} /> Nothing scheduled</div> : jobs.map((j) => (
+      {jobs.length === 0 && !adding ? <div className="home-empty">Nothing scheduled</div> : jobs.map((j) => (
         <div key={j.id} className="home-row schedule-row" data-enabled={j.enabled}>
           <div className="home-row-main" data-tip={j.lastError ?? undefined}>
             <AgentFace seed={j.profile} size={30} status={j.lastStatus === "error" ? "failed" : null} />
@@ -209,6 +249,7 @@ function GettingStarted({ agents, keys, runs, silent }: { agents: AgentNode[]; k
   const health = useApp((s) => s.health);
   const app = useApp.getState();
   const [hidden, setHidden] = useState(hiddenStart);
+  const [all, setAll] = useState(false);
   const identity = useApp((s) => s.identity);
   const noModel = agentsWithoutModel(graph);
   const missingKeys = modelsOf(graph).filter((m) => m.data.endpoint === "cloud" && m.data.apiKeyEnv && keys && !keys.includes(m.data.apiKeyEnv));
@@ -226,15 +267,15 @@ function GettingStarted({ agents, keys, runs, silent }: { agents: AgentNode[]; k
   const next = steps.find((s) => !s.done);
   const done = steps.filter((s) => s.done).length;
   return (
-    <section className="card home-card start-card" data-testid="getting-started">
-      <div className="home-card-head">
+    <section className="widget start-card" data-testid="getting-started">
+      <div className="widget-head">
         <h2>Get started</h2>
         <span className="start-progress" role="progressbar" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={done} aria-label={`${done} of ${steps.length} done`}><i style={{ width: `${(done / steps.length) * 100}%` }} /></span>
         <span className="faint num" style={{ fontSize: 12 }}>{done} of {steps.length}</span><span className="grow" />
         <button className="icon-btn sm" aria-label="Hide" data-tip="Hide" onClick={() => { try { localStorage.setItem(STARTED, "1"); } catch { /* this session */ } setHidden(true); }}><X size={13} /></button>
       </div>
       <ol className="start-steps">
-        {steps.map((s) => (
+        {steps.filter((s) => all || s === next).map((s) => (
           <li key={s.id} data-done={s.done || undefined} data-next={s === next || undefined}>
             <span className="start-mark">{s.done ? <Check size={12} strokeWidth={3} /> : null}</span>
             <span className="grow"><span className="title">{s.label}</span>{s.sub && !s.done && <span className="sub"> · {s.sub}</span>}</span>
@@ -242,6 +283,7 @@ function GettingStarted({ agents, keys, runs, silent }: { agents: AgentNode[]; k
           </li>
         ))}
       </ol>
+      <button className="btn ghost sm start-all" onClick={() => setAll(!all)} aria-expanded={all} data-testid="start-all">{all ? "Fewer" : `All ${steps.length} steps`}</button>
     </section>
   );
 }
@@ -372,29 +414,45 @@ export function HomeView() {
     ...(tasks ?? []).filter((t) => t.status === "done").slice(0, 6).map((t) => ({ key: t.id, at: t.completedAt ?? t.createdAt, profile: t.assignee ?? "task", title: t.title, sub: t.result ?? "Done", open: () => app.showTask(t.id) })),
   ].sort((a, b) => b.at - a.at).slice(0, 6);
 
-  const today = cost?.byDay.find((d) => d.key === new Date().toISOString().slice(0, 10));
+  const today = cost?.byDay.find((d) => d.key === utcDay(Date.now()));
   const runsToday = list.filter((r) => r.startedAt > new Date().setHours(0, 0, 0, 0)).length;
   const doneToday = (tasks ?? []).filter((t) => t.status === "done" && (t.completedAt ?? 0) > new Date().setHours(0, 0, 0, 0)).length;
+  const asking = list.filter((r) => r.approval);
+  const needs = inbox.length + asking.length;
+  const latest = latestRunByAgent(runs);
+  const busyTask = (profile: string) => working.find((t) => t.assignee === profile);
+  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const mainModel = (agentId: string): ModelData | null => {
+    const first = chainOf(graph, agentId)[0];
+    const n = first ? graph.nodes.find((x) => x.id === otherEnd(first, agentId)) : undefined;
+    return n?.kind === "model" ? n.data : null;
+  };
 
   return (
     <section className="main flush-left">
       <div className="scroll-page home" data-testid="home">
-        <div className="home-inner">
-          <header className="home-hello" data-testid="home-hello">
-            <div>
-              <h1>Today</h1>
-              <span className="home-date">{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}{live.length ? ` · ${live.length} at work` : ""}</span>
+        <div className="home-inner dash">
+          <header className="dash-head" data-testid="home-hello">
+            <div className="dash-title">
+              <span className="dash-date">{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</span>
+              <h1>Home</h1>
             </div>
-            <div className="home-stats" data-testid="home-today">
-              <div><b className="num">{today ? usd(today.usd) : "$0.00"}</b><small data-tip={today?.source === "estimate" ? "Includes McBot estimates" : "As Hermes priced it"}>Spent{today?.source === "estimate" ? " (est.)" : ""}</small></div>
-              <div><b className="num">{runsToday}</b><small>Runs</small></div>
-              <div><b className="num">{doneToday}</b><small>Tasks done</small></div>
-            </div>
-            <button className="btn sm ghost note-btn" onClick={addNoteNow} data-testid="note-add" data-tip="Pin a note for the team"><StickyNoteIcon size={13} /> Note</button>
+            <span className="grow" />
+            <button className="btn sm ghost" onClick={addNoteNow} data-testid="note-add" data-tip="Pin a note for the team"><StickyNoteIcon size={13} /> Note</button>
+            <button className="btn sm" onClick={() => app.setNewAgentOpen(true)} data-testid="home-new-agent"><Plus size={13} /> Agent</button>
           </header>
+
+          <div className="dash-pills" data-testid="home-today">
+            {live.length + working.length > 0 && <button className="dash-pill" data-tone="run" onClick={() => go("home-agents")}><i />{live.length + working.length} at work</button>}
+            {needs > 0 && <button className="dash-pill" data-tone="warn" onClick={() => go("home-inbox")}><Bell size={12} />{needs} need{needs === 1 ? "s" : ""} you</button>}
+            <button className="dash-pill" onClick={() => app.setTab("cost")} data-tip={today?.source === "estimate" ? "Includes McBot estimates" : "As Hermes priced it"}><b className="num">{today ? usd(today.usd) : "$0.00"}</b> today</button>
+            <button className="dash-pill" onClick={() => app.setTab("workflows")}><b className="num">{runsToday}</b> run{runsToday === 1 ? "" : "s"}</button>
+            <button className="dash-pill" onClick={() => app.setTab("tasks")}><b className="num">{doneToday}</b> done</button>
+          </div>
+
           {agents.length === 0 ? (
             // An empty board: the first thing to do is the only thing shown big.
-            <section className="card home-start" data-testid="home-start">
+            <section className="widget home-start" data-testid="home-start">
               <h2>Start this board</h2>
               <span className="faint">Pick a ready team, make one agent, or bring the agents you already run in Hermes.</span>
               <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
@@ -404,85 +462,73 @@ export function HomeView() {
               </div>
             </section>
           ) : <Ask agents={agents} />}
+
+          {agents.length > 0 && (
+            <section className="dash-section" id="home-agents" data-testid="home-live">
+              <div className="dash-section-head"><h2>Agents</h2><span className="grow" /><button className="btn ghost sm" onClick={() => app.setTab("graph")}>Board <ChevronRight size={12} /></button></div>
+              <div className="agent-tiles">
+                {agents.map((a) => {
+                  const r = latest.get(a.id);
+                  const run = live.find((x) => x.agentNodeId === a.id);
+                  const task = busyTask(a.data.name);
+                  return (
+                    <AgentTile key={a.id} agent={a} live={!!run || !!task} runId={run?.runId ?? null} step={run ? stepOf(events[run.runId]) : task ? task.title : ""}
+                      failed={r?.status === "failed"} asks={!!r?.approval} noModel={chainOf(graph, a.id).length === 0} last={r ? r.finishedAt ?? r.startedAt : null}
+                      model={mainModel(a.id)} />
+                  );
+                })}
+                <button className="agent-tile add" onClick={() => app.setNewAgentOpen(true)} data-testid="home-tile-new"><Plus size={16} /><span>New agent</span></button>
+              </div>
+            </section>
+          )}
+
           {agents.length > 0 && <GettingStarted agents={agents} keys={keys} runs={list.length} silent={silent.length} />}
           <Notes />
 
-          <div className="home-grid">
-            <div className="stack" style={{ gap: 14 }}>
-              <section className="card home-card" data-testid="home-inbox">
-                <div className="home-card-head"><h2>Needs you</h2>{inbox.length + list.filter((r) => r.approval).length > 0 && <span className="chip warn num">{inbox.length + list.filter((r) => r.approval).length}</span>}</div>
-                {list.filter((r) => r.approval).map((r) => (
-                  <div key={`ask-${r.runId}`} className="home-ask-row" data-testid="home-approval">
-                    <div className="row" style={{ gap: 8, padding: "2px 2px 6px" }}>
-                      <AgentFace seed={r.profile} size={22} status="running" />
-                      <span className="title ellipsis grow">{nameOf(r.profile)} asks before acting</span>
-                      <button className="btn sm ghost" onClick={() => app.openChat(r.agentNodeId)}>Open chat</button>
-                    </div>
-                    <ApprovalCard run={r} compact />
+          <div className="dash-grid">
+            <section className="widget wide" id="home-inbox" data-testid="home-inbox">
+              <div className="widget-head"><Bell size={13} /><h2>Needs you</h2>{needs > 0 && <span className="chip warn num">{needs}</span>}</div>
+              {asking.map((r) => (
+                <div key={`ask-${r.runId}`} className="home-ask-row" data-testid="home-approval">
+                  <div className="row" style={{ gap: 8, padding: "2px 2px 6px" }}>
+                    <AgentFace seed={r.profile} size={22} status="running" />
+                    <span className="title ellipsis grow">{nameOf(r.profile)} asks before acting</span>
+                    <button className="btn sm ghost" onClick={() => app.openChat(r.agentNodeId)}>Open chat</button>
                   </div>
-                ))}
-                {inbox.length === 0 && !list.some((r) => r.approval) ? <div className="home-empty"><Check size={14} /> Nothing waiting on you</div> : inbox.map((i) => (
-                  <div key={i.key} className="home-row" data-tone={i.tone}>
-                    <button className="home-row-main" onClick={i.open}>
-                      {i.face}
-                      <span className="grow" style={{ display: "grid", gap: 1 }}>
-                        <span className="title ellipsis">{i.title}</span>
-                        <span className="sub ellipsis">{i.sub}</span>
-                      </span>
-                    </button>
-                    {i.action && <button className={`btn sm${i.tone === "warn" ? " primary" : ""}`} onClick={i.action.run}>{i.action.icon}{i.action.label}</button>}
-                  </div>
-                ))}
-              </section>
-
-              <section className="card home-card">
-                <div className="home-card-head"><h2>Finished</h2></div>
-                {recent.length === 0 ? <div className="home-empty">Answers and done tasks show up here</div> : recent.map((r) => (
-                  <button key={r.key} className="home-row home-row-main" onClick={r.open}>
-                    <AgentFace seed={r.profile} size={30} status="succeeded" />
+                  <ApprovalCard run={r} compact />
+                </div>
+              ))}
+              {needs === 0 ? <div className="home-empty widget-calm"><Check size={14} /> Nothing waiting on you</div> : inbox.map((i) => (
+                <div key={i.key} className="home-row need-row" data-tone={i.tone}>
+                  <button className="home-row-main" onClick={i.open}>
+                    {i.face}
                     <span className="grow" style={{ display: "grid", gap: 1 }}>
-                      <span className="title ellipsis">{r.title}</span>
-                      <span className="sub ellipsis">{r.sub}</span>
+                      <span className="title ellipsis">{i.title}</span>
+                      <span className="sub ellipsis">{i.sub}</span>
                     </span>
-                    <span className="faint" style={{ fontSize: 12 }}>{ago(r.at)}</span>
                   </button>
-                ))}
-              </section>
-            </div>
+                  {i.action && <button className={`btn sm${i.tone === "warn" ? " primary" : ""}`} onClick={i.action.run}>{i.action.icon}{i.action.label}</button>}
+                </div>
+              ))}
+            </section>
 
-            <div className="stack" style={{ gap: 14 }}>
-              <section className="card home-card" data-testid="home-live">
-                <div className="home-card-head"><h2>Working now</h2>{live.length + working.length > 0 && <span className="dot run" />}</div>
-                {live.length + working.length === 0 ? <div className="home-empty">Everyone is free</div> : (
-                  <>
-                    {live.map((r) => (
-                      <div key={r.runId} className="home-row">
-                        <button className="home-row-main" onClick={() => app.openChat(r.agentNodeId)}>
-                          <AgentFace seed={r.profile} size={30} status="running" />
-                          <span className="grow" style={{ display: "grid", gap: 1 }}>
-                            <span className="title ellipsis">{nameOf(r.profile)}</span>
-                            <span className="sub ellipsis">{stepOf(events[r.runId])}</span>
-                          </span>
-                        </button>
-                        <button className="icon-btn sm" aria-label="Stop" data-tip="Stop" onClick={() => void stopRun(r.runId)}><Square size={11} /></button>
-                      </div>
-                    ))}
-                    {working.map((t) => (
-                      <button key={t.id} className="home-row home-row-main" onClick={() => app.showTask(t.id)}>
-                        <AgentFace seed={t.assignee ?? "task"} size={30} status="running" />
-                        <span className="grow" style={{ display: "grid", gap: 1 }}>
-                          <span className="title ellipsis">{nameOf(t.assignee)}</span>
-                          <span className="sub ellipsis">{t.title}</span>
-                        </span>
-                      </button>
-                    ))}
-                  </>
-                )}
-              </section>
+            <SpendWidget cost={cost} />
 
-              <Schedules agents={agents} />
+            <section className="widget wide" data-testid="home-recent">
+              <div className="widget-head"><History size={13} /><h2>Lately</h2></div>
+              {recent.length === 0 ? <div className="home-empty">Answers and finished tasks show up here</div> : recent.map((r) => (
+                <button key={r.key} className="home-row home-row-main" onClick={r.open}>
+                  <AgentFace seed={r.profile} size={28} status="succeeded" />
+                  <span className="grow" style={{ display: "grid", gap: 1 }}>
+                    <span className="title ellipsis">{r.title}</span>
+                    <span className="sub ellipsis">{r.sub}</span>
+                  </span>
+                  <span className="faint" style={{ fontSize: 12 }}>{ago(r.at)}</span>
+                </button>
+              ))}
+            </section>
 
-            </div>
+            <Schedules agents={agents} />
           </div>
         </div>
       </div>

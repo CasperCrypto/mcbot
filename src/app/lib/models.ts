@@ -8,10 +8,16 @@ import type { AgentNode, Graph, GraphEdge, ModelNode } from "../../contracts/gra
 export const agentsOf = (g: Graph): AgentNode[] => g.nodes.filter((n): n is AgentNode => n.kind === "agent");
 export const modelsOf = (g: Graph): ModelNode[] => g.nodes.filter((n): n is ModelNode => n.kind === "model");
 
-/** The model edges into one agent, main first. */
+/**
+ * The other end of an edge, seen from one node. An agent's model may be wired either way: McBot's
+ * sheets draw model→agent, a wire dragged out of an agent on the board is agent→model.
+ */
+export const otherEnd = (e: GraphEdge, id: string): string | null => (e.source === id ? e.target : e.target === id ? e.source : null);
+
+/** The model edges of one agent, main first. */
 export function chainOf(g: Graph, agentId: string): GraphEdge[] {
   const models = new Set(modelsOf(g).map((m) => m.id));
-  return g.edges.filter((e) => e.target === agentId && models.has(e.source)).sort((a, b) => a.order - b.order);
+  return g.edges.filter((e) => models.has(otherEnd(e, agentId) ?? "")).sort((a, b) => a.order - b.order);
 }
 
 /** Agents with no model at all: they cannot run until one is connected. */
@@ -19,7 +25,7 @@ export const agentsWithoutModel = (g: Graph): AgentNode[] => agentsOf(g).filter(
 
 /** Which agents use a model. */
 export const usersOf = (g: Graph, modelId: string): AgentNode[] => {
-  const ids = new Set(g.edges.filter((e) => e.source === modelId).map((e) => e.target));
+  const ids = new Set(g.edges.map((e) => otherEnd(e, modelId)));
   return agentsOf(g).filter((a) => ids.has(a.id));
 };
 
@@ -33,7 +39,7 @@ export function attachModel(g: Graph, modelId: string, agentIds: readonly string
   const reorder: { id: string; order: number }[] = [];
   for (const agentId of agentIds) {
     const chain = chainOf(g, agentId);
-    if (chain.some((e) => e.source === modelId)) continue;
+    if (chain.some((e) => otherEnd(e, agentId) === modelId)) continue;
     if (main) {
       chain.forEach((e, i) => reorder.push({ id: e.id, order: i + 1 }));
       add.push({ id: newId(), source: modelId, target: agentId, order: 0 });
@@ -59,7 +65,7 @@ export function promoteModel(g: Graph, modelId: string): { id: string; order: nu
   const out: { id: string; order: number }[] = [];
   for (const a of usersOf(g, modelId)) {
     const chain = chainOf(g, a.id);
-    const mine = chain.find((e) => e.source === modelId)!;
+    const mine = chain.find((e) => otherEnd(e, a.id) === modelId)!;
     [mine, ...chain.filter((e) => e !== mine)].forEach((e, i) => { if (e.order !== i) out.push({ id: e.id, order: i }); });
   }
   return out;
