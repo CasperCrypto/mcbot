@@ -20,6 +20,8 @@ export const PlanAgentSchema = z.object({
   tools: z.array(z.string()).max(6).default([]),
   /** Chat app platform ids (src/contracts/platforms.generated.ts). */
   chatApps: z.array(z.string()).max(3).default([]),
+  /** Makers it makes things with itself: "image" (pictures for posts, designs) and "video". */
+  makers: z.array(z.enum(["image", "video"])).max(2).default([]),
   /** The loop layer: steps per message (agent.max_turns); absent = no limit. */
   maxSteps: z.number().int().min(1).max(10_000).nullish(),
 });
@@ -52,13 +54,14 @@ export function builderMessages(request: string, choices: PlanChoices): { role: 
     "You design AI agent harnesses for McBot Studio. A harness is a small team of agents; each agent has layers:",
     "context (who it is: name, about, soul), tools, chat apps, skills, and a loop (steps per message), plus hand-offs between agents.",
     "Answer with ONE JSON object and nothing else, in this shape:",
-    '{"summary":"...","agents":[{"name":"Researcher","about":"Finds sources","soul":"Two or three short lines on how it works.","skills":["official/..."],"tools":["exa"],"chatApps":["slack"],"maxSteps":40}],"handoffs":[["Lead","Researcher"]]}',
+    '{"summary":"...","agents":[{"name":"Researcher","about":"Finds sources","soul":"Two or three short lines on how it works.","skills":["official/..."],"tools":["exa"],"chatApps":["slack"],"makers":[],"maxSteps":40}],"handoffs":[["Lead","Researcher"]]}',
     "Rules: 1 to 6 agents; with 3 or more, the first is a lead that hands work to the others. Short names (1-3 words).",
     "Use only ids from these lists; leave a list empty when nothing fits. Never invent ids.",
     `Tools: ${choices.tools.map((t) => `${t.id} (${t.does})`).join("; ")}`,
     `Chat apps: ${choices.chatApps.join(", ")}`,
     `Skills: ${choices.skills.map((s) => `${s.id} (${s.does})`).join("; ")}`,
     "Add a chat app only when the request names one. Souls say how to behave, never secrets.",
+    'Agents must be able to do the work, not only describe it: give "makers":["image"] to an agent that makes pictures (post images, designs, thumbnails) and "makers":["video"] to one that makes videos, and say in its soul that it makes them itself with its image or video tool. Give web search ("exa") to agents that research.',
   ].join("\n");
   return [{ role: "system", content: system }, { role: "user", content: request }];
 }
@@ -96,6 +99,7 @@ export function restrictPlan(plan: HarnessPlan, choices: PlanChoices): HarnessPl
     tools: [...new Set(a.tools.filter((t) => tools.has(t)))],
     chatApps: [...new Set(a.chatApps.filter((c) => apps.has(c)))],
     skills: [...new Set(a.skills.filter((s) => skills.has(s)))],
+    makers: [...new Set(a.makers ?? [])],
   }));
   const names = new Set(agents.map((a) => a.name.toLowerCase()));
   const handoffs = plan.handoffs.filter(([f, t]) => f.toLowerCase() !== t.toLowerCase() && names.has(f.toLowerCase()) && names.has(t.toLowerCase()));

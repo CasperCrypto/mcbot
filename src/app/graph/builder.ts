@@ -12,6 +12,7 @@ import { withRichAnswers } from "../chat/rich";
 import { AGENT_SUGGESTIONS, agentIdFor } from "../shell/agentSuggestions";
 import { CATALOG, CONNECTOR_TOOLS, catalogNode } from "./catalog";
 import { newChannel } from "./defaults";
+import { makerProvider } from "./teams";
 
 const TOOLS = [...CATALOG, ...CONNECTOR_TOOLS];
 
@@ -21,11 +22,11 @@ export const PLAN_CHOICES: PlanChoices = {
   skills: LIBRARY.map((s) => ({ id: s.id, does: s.description })),
 };
 
-const card = (name: string, rename?: string): PlanAgent => {
+const card = (name: string, rename?: string, makers: PlanAgent["makers"] = []): PlanAgent => {
   const s = AGENT_SUGGESTIONS.find((x) => x.name === name)!;
-  return { name: rename ?? s.name, about: s.about, soul: s.soul, skills: [...(s.skills ?? [])], tools: [], chatApps: [] };
+  return { name: rename ?? s.name, about: s.about, soul: s.soul, skills: [...(s.skills ?? [])], tools: [], chatApps: [], makers };
 };
-const own = (name: string, about: string, soul: string, skills: string[] = []): PlanAgent => ({ name, about, soul, skills, tools: [], chatApps: [] });
+const own = (name: string, about: string, soul: string, skills: string[] = []): PlanAgent => ({ name, about, soul, skills, tools: [], chatApps: [], makers: [] });
 
 /** Words → roles, most specific first. Each role is a starting card or a small agent of its own. */
 const ROLES: { match: RegExp; agent: () => PlanAgent; tools?: string[] }[] = [
@@ -34,9 +35,10 @@ const ROLES: { match: RegExp; agent: () => PlanAgent; tools?: string[] }[] = [
   { match: /hir(e|ing)|recruit|candidate|interview/i, agent: () => own("Recruiter", "Screens candidates and schedules interviews.", "Compare candidates against the role's must-haves.\nBe fair and specific; never decide for a person.") },
   { match: /code|review|pull request|\bprs?\b|github|bug|developer|engineering/i, agent: () => card("Code Reviewer"), tools: ["context7"] },
   { match: /website|landing|web ?page|\bsite\b/i, agent: () => card("Web Builder") },
-  { match: /video|youtube|reel|tiktok/i, agent: () => card("Video Maker") },
+  { match: /video|youtube|reel|tiktok/i, agent: () => card("Video Maker", undefined, ["video"]) },
   { match: /social|\bposts?\b|instagram|linkedin|twitter|\bx\b|campaign|marketing/i, agent: () => card("Social Media Manager") },
-  { match: /design|image|illustrat|mockup|diagram|logo/i, agent: () => card("Designer") },
+  // Posts need pictures: a social or marketing request gets a designer that makes them.
+  { match: /design|image|picture|visual|graphic|illustrat|mockup|diagram|logo|thumbnail|banner|social|\bposts?\b|instagram|campaign|marketing/i, agent: () => card("Designer", undefined, ["image"]) },
   { match: /\bnews\b|\bfeeds?\b|monitor|\bwatch|\brss\b/i, agent: () => card("News Watcher") },
   { match: /research|sources|competitor|analy[sz]e|investigate/i, agent: () => card("Researcher"), tools: ["exa"] },
   { match: /write|writing|blog|newsletter|copy|article|content/i, agent: () => card("Writing Partner", "Writer") },
@@ -111,6 +113,9 @@ export function planToBoard(plan: HarnessPlan, graph: Graph, model: ModelNode | 
   const workGraph: Graph = { ...graph, nodes: [...graph.nodes] };
   /** One block per tool, shared by every agent in the plan that uses it. */
   const toolBlocks = new Map<string, string>();
+  /** One maker per kind, shared the same way. */
+  const makerBlocks = new Map<string, string>();
+  const makerNames = new Set(graph.nodes.filter((n) => n.kind === "media").map((n) => String(n.data.name)));
   const others = p.agents.length - 1;
 
   p.agents.forEach((a, i) => {
@@ -129,6 +134,18 @@ export function planToBoard(plan: HarnessPlan, graph: Graph, model: ModelNode | 
         toolNames.add(String(node.data.name));
         nodes.push(node);
         toolBlocks.set(t, (block = node.id));
+      }
+      edges.push({ id: `edge-${uid()}`, source: id, target: block, order: 0 });
+    });
+    a.makers.forEach((media, k) => {
+      let block = makerBlocks.get(media);
+      if (!block) {
+        let name = media === "image" ? "images" : "videos";
+        for (let n = 2; makerNames.has(name); n++) name = `${media === "image" ? "images" : "videos"}-${n}`;
+        makerNames.add(name);
+        block = `maker-${uid()}`;
+        nodes.push({ id: block, kind: "media", position: { x: position.x + 60 + k * 30, y: position.y + 170 + (a.tools.length + k) * 70 }, data: { name, label: media === "image" ? "Images" : "Videos", media, provider: makerProvider({ nodes: [...graph.nodes, ...nodes] }, media), model: "" } });
+        makerBlocks.set(media, block);
       }
       edges.push({ id: `edge-${uid()}`, source: id, target: block, order: 0 });
     });

@@ -30,6 +30,7 @@
   --lift-hover: inset 0 1px 0 rgba(255, 255, 255, 0.055), 0 2px 4px rgba(0, 0, 0, 0.26), 0 12px 32px rgba(0, 0, 0, 0.22);
   /* Row dividers inside a group. */
   --divide: inset 0 0.5px 0 rgba(255, 255, 255, 0.06);
+  --divide-bottom: inset 0 -0.5px 0 rgba(255, 255, 255, 0.06);
   --bg-glass: rgba(24, 24, 27, 0.78);
   /* Panels that hold text (inspector, sheets): nearly opaque, so the canvas never reads through. */
   --bg-panel: rgba(23, 23, 26, 0.97);

@@ -102,10 +102,11 @@ export function LayersView({ onEdit }: { onEdit: (nodeId: string) => void }) {
   const layers = harnessLayers(current, {
     memory: memory.find((m) => m.nodeId === current.agent.id) ?? null,
     schedules: schedules.find((s) => s.agentNodeId === current.agent.id)?.schedules ?? null,
-    plugins, installedSkills: installed,
+    plugins, installedSkills: installed, brief: graph.brief ?? null,
   });
   const open = (t: LayerTarget) => {
     if ("node" in t) onEdit(t.node);
+    else if ("sheet" in t) useApp.getState().setKnowledgeOpen(true);
     else useApp.getState().setTab(t.tab);
   };
   const a = current.agent.data;

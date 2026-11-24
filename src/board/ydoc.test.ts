@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import { GraphSchema } from "../contracts/graph";
 import { compile } from "../compile";
-import { addFrame, addNote, graphFromDoc, loadGraphIntoDoc, moveNode, removeFrame, removeNodes, setFrameField, setNodeField, setNoteField } from "./ydoc";
+import { addFrame, addNote, graphFromDoc, loadGraphIntoDoc, moveNode, removeFrame, removeNodes, setBriefField, setFrameField, setNodeField, setNoteField } from "./ydoc";
 
 const fixture = GraphSchema.parse(JSON.parse(readFileSync(join(import.meta.dirname, "../../test/fixtures/full.graph.json"), "utf8")));
 
@@ -14,6 +14,25 @@ function sync(a: Y.Doc, b: Y.Doc) {
 }
 
 describe("board ydoc", () => {
+  it("keeps the brief field by field, merges two people's edits, and leaves a board without one as it was", () => {
+    const a = new Y.Doc();
+    const b = new Y.Doc();
+    loadGraphIntoDoc(a, fixture);
+    expect(graphFromDoc(a).brief).toBeUndefined();
+    sync(a, b);
+    setBriefField(a, "who", "Northwind Bakery");
+    setBriefField(b, "goals", "Grow the newsletter");
+    sync(a, b);
+    expect(graphFromDoc(b).brief).toMatchObject({ who: "Northwind Bakery", goals: "Grow the newsletter", notes: "" });
+    // The brief reaches every agent's SOUL.md.
+    const souls = compile(GraphSchema.parse(graphFromDoc(b))).files.filter((f) => f.path.endsWith("SOUL.md"));
+    expect(souls.length).toBeGreaterThan(0);
+    for (const f of souls) expect(f.content).toContain("**Who:** Northwind Bakery");
+    setBriefField(a, "who", "");
+    setBriefField(a, "goals", "");
+    expect(graphFromDoc(a).brief).toBeUndefined();
+  });
+
   it("round-trips a graph losslessly and compiles identically", () => {
     const doc = new Y.Doc();
     loadGraphIntoDoc(doc, fixture);

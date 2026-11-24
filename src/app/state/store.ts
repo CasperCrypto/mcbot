@@ -63,6 +63,8 @@ interface State {
   chatAppsOpen: boolean;
   /** Starter teams. */
   teamsOpen: boolean;
+  /** Team knowledge (shell/KnowledgeSheet.tsx): what every agent knows about the business. */
+  knowledgeOpen: boolean;
   /** Ask McBot (shell/BuilderSheet.tsx), with the words it opened with. */
   builder: { open: boolean; request: string };
   /** Add from GitHub: null closed, else the link it opened with ("" = none yet). */
@@ -109,6 +111,7 @@ interface State {
   /** Open an agent's page (its chat, with the page beside it): from Home, ⌘K, New agent. */
   editAgent(agentNodeId: string): void;
   setTeamsOpen(open: boolean): void;
+  setKnowledgeOpen(open: boolean): void;
   setBuilder(open: boolean, request?: string): void;
   setGithub(url: string | null): void;
   openDrawing(drawing: State["drawing"]): void;
@@ -197,6 +200,7 @@ export const useApp = create<State>((set, get) => ({
   liveFilesOpen: (() => { try { return localStorage.getItem("mcbot.liveFiles") === "1"; } catch { return false; } })(),
   chatAppsOpen: false,
   teamsOpen: false,
+  knowledgeOpen: false,
   builder: { open: false, request: "" },
   github: null,
   drawing: null,
@@ -232,6 +236,7 @@ export const useApp = create<State>((set, get) => ({
   setFolderPickerOpen: (folderPickerOpen) => set({ folderPickerOpen, paletteOpen: false }),
   folderOpened: (id) => set({ openedFolder: { id, at: Date.now() }, folderPickerOpen: false }),
   setTeamsOpen: (teamsOpen) => set({ teamsOpen, paletteOpen: false, newAgentOpen: false }),
+  setKnowledgeOpen: (knowledgeOpen) => set({ knowledgeOpen, paletteOpen: false }),
   requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),
   openDrawing: (drawing) => set({ drawing, paletteOpen: false }),
   setGithub: (github) => set({ github, paletteOpen: false }),

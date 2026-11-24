@@ -8,6 +8,7 @@
  *   notes  Y.Map  noteId -> Y.Map { text, color, position, pinned, author, at }  (sticky notes)
  *   messages Y.Map messageId -> { id, author, color, agent, text, at }  (team chat)
  *   frames Y.Map  frameId -> Y.Map { title, color, position, size }  (areas grouping blocks)
+ *   brief  Y.Map  field -> text  (what every agent knows about the business; compiled into SOUL.md)
  *
  * Everything is keyed by id (never a Y.Array), so a relay restarted from the
  * JSON file and a window still holding the old document merge without
@@ -15,7 +16,7 @@
  * editing different fields of one node both keep their change.
  */
 import * as Y from "yjs";
-import { GRAPH_SCHEMA, MESSAGES_KEPT, type Frame, type Graph, type GraphEdge, type GraphNode, type Message, type Note } from "../contracts/graph";
+import { BRIEF_FIELDS, GRAPH_SCHEMA, MESSAGES_KEPT, briefHasContent, emptyBrief, type Brief, type Frame, type Graph, type GraphEdge, type GraphNode, type Message, type Note } from "../contracts/graph";
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -27,6 +28,7 @@ export function boardMaps(doc: Y.Doc) {
     notes: doc.getMap<Y.Map<unknown>>("notes"),
     messages: doc.getMap<Message>("messages"),
     frames: doc.getMap<Y.Map<unknown>>("frames"),
+    brief: doc.getMap<string>("brief"),
   };
 }
 
@@ -74,7 +76,7 @@ function frameFromY(id: string, m: Y.Map<unknown>): Frame {
 
 /** Read the graph out of the doc (unvalidated: the compiler validates). Sorted by id. */
 export function graphFromDoc(doc: Y.Doc): Graph {
-  const { meta, nodes, edges, notes, messages, frames } = boardMaps(doc);
+  const { meta, nodes, edges, notes, messages, frames, brief } = boardMaps(doc);
   const byId = <T extends { id: string }>(a: T, b: T) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const graph: Graph = {
     schema: GRAPH_SCHEMA,
@@ -87,13 +89,29 @@ export function graphFromDoc(doc: Y.Doc): Graph {
   if (notes.size) graph.notes = [...notes.entries()].map(([id, m]) => noteFromY(id, m)).sort(byId);
   if (frames.size) graph.frames = [...frames.entries()].map(([id, m]) => frameFromY(id, m)).sort(byId);
   if (messages.size) graph.messages = [...messages.values()].map((m) => ({ ...m })).sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : 1)).slice(-MESSAGES_KEPT);
+  const b = briefFromMap(brief);
+  if (briefHasContent(b)) graph.brief = b;
   return graph;
+}
+
+function briefFromMap(m: Y.Map<string>): Brief {
+  const b = emptyBrief();
+  for (const k of BRIEF_FIELDS) {
+    const v = m.get(k);
+    if (typeof v === "string") b[k] = v;
+  }
+  return b;
 }
 
 /** Replace the doc's content with `graph` in one transaction. */
 export function loadGraphIntoDoc(doc: Y.Doc, graph: Graph): void {
-  const { meta, nodes, edges, notes, messages, frames } = boardMaps(doc);
+  const { meta, nodes, edges, notes, messages, frames, brief } = boardMaps(doc);
   doc.transact(() => {
+    for (const k of BRIEF_FIELDS) {
+      const v = graph.brief?.[k] ?? "";
+      if (v) brief.set(k, v);
+      else if (brief.has(k)) brief.delete(k);
+    }
     for (const id of [...frames.keys()]) if (!(graph.frames ?? []).some((f) => f.id === id)) frames.delete(id);
     for (const f of graph.frames ?? []) frames.set(f.id, frameToY(f));
     for (const id of [...messages.keys()]) if (!(graph.messages ?? []).some((m) => m.id === id)) messages.delete(id);
@@ -163,6 +181,13 @@ export function updateEdge(doc: Y.Doc, id: string, patch: Partial<Omit<GraphEdge
 export function removeEdges(doc: Y.Doc, ids: readonly string[]): void {
   const { edges } = boardMaps(doc);
   doc.transact(() => ids.forEach((id) => edges.delete(id)));
+}
+
+/** One field of the board's brief (an empty text takes it off). */
+export function setBriefField(doc: Y.Doc, field: keyof Brief, value: string): void {
+  const { brief } = boardMaps(doc);
+  if (value) brief.set(field, value);
+  else brief.delete(field);
 }
 
 export function renameBoard(doc: Y.Doc, name: string): void {

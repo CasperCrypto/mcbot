@@ -137,6 +137,7 @@ export function BuilderSheet() {
                     {team(a.name).length > 0 && <span className="chip" data-tip="Loop: hands work to">→ {team(a.name).join(", ")}</span>}
                     {a.tools.map((t) => <span key={t} className="chip" data-tip="Tool">{toolLabel(t)}</span>)}
                     {a.chatApps.map((c) => <span key={c} className="chip" data-tip="Chat app">{appLabel(c)}</span>)}
+                    {(a.makers ?? []).map((m) => <span key={m} className="chip" data-tip={m === "image" ? "Makes the images itself" : "Makes the videos itself"}>{m === "image" ? "Makes images" : "Makes videos"}</span>)}
                     {a.skills.length > 0 && <span className="chip" data-tip={a.skills.map(skillName).join(", ")}>{a.skills.length} Hermes skill{a.skills.length === 1 ? "" : "s"}</span>}
                     {a.maxSteps ? <span className="chip" data-tip="Loop: steps per message">≤ {a.maxSteps} steps</span> : null}
                   </div>

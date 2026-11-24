@@ -351,3 +351,13 @@ button.chip:hover { filter: brightness(1.2); }
 .gnode.live::after { background: var(--run); }
 .gnode.more { box-shadow: none; background: rgb(var(--tint-rgb) / 0.05); }
 .tile.logo.dropped { background: rgb(var(--tint-rgb) / 0.07); }
+
+/* Team knowledge (shell/KnowledgeSheet.tsx): a tall sheet of plain fields, scrolling inside. */
+.hermes-sheet.knowledge-sheet { width: min(680px, calc(100vw - 32px)); top: 7vh; max-height: calc(100dvh - 14vh); display: flex; flex-direction: column; }
+.knowledge-body { flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 14px; padding: 6px 20px 18px; }
+.knowledge-body textarea { resize: vertical; min-height: 44px; line-height: 1.5; }
+.knowledge-foot { display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 20px; box-shadow: var(--divide); font-size: 13px; }
+/* The sheets' own edges: no rim (v3); the frosted material and its top light set them apart. */
+.palette, .hermes-sheet { border: 0; }
+.palette-input, .sheet-head, .hermes-sheet header { border-bottom: 0; box-shadow: var(--divide-bottom); }
+.palette-foot { border-top: 0; box-shadow: var(--divide); }

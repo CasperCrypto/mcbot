@@ -5,13 +5,13 @@
  * where it is changed, so the Layers view only ever links to what compiles (or to Hermes' own state).
  */
 import type { AgentBundle } from "../../compile/validate";
-import { DEFAULT_CAPABILITIES } from "../../contracts/graph";
+import { BRIEF_FIELDS, DEFAULT_CAPABILITIES, type Brief } from "../../contracts/graph";
 import type { AgentMemoryView, InstalledPlugin, ScheduleView } from "../../contracts/api";
 
 export type LayerId = "surfaces" | "loop" | "context" | "model" | "tools" | "plugins" | "guardrails";
 
 /** Where an item is changed: a block on the board, or a view. */
-export type LayerTarget = { node: string } | { tab: "skills" | "memory" | "home" | "tasks" | "settings" | "agents" };
+export type LayerTarget = { node: string } | { tab: "skills" | "memory" | "home" | "tasks" | "settings" | "agents" } | { sheet: "knowledge" };
 
 export interface LayerItem {
   label: string;
@@ -37,6 +37,8 @@ export interface LayerFacts {
   plugins?: InstalledPlugin[] | null;
   /** Library skills installed in the profile (names). */
   installedSkills?: string[] | null;
+  /** The board's brief: what every agent knows about the business. */
+  brief?: Brief | null;
 }
 
 const n = (k: number, one: string, many = `${one}s`) => `${k} ${k === 1 ? one : many}`;
@@ -49,6 +51,7 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
   const soulLines = a.soul.split("\n").filter((l) => l.trim()).length;
   const memEntries = facts.memory ? facts.memory.memory.entries.length + facts.memory.user.entries.length : null;
   const enabledPlugins = facts.plugins?.filter((p) => p.enabled) ?? null;
+  const briefFilled = facts.brief ? BRIEF_FIELDS.filter((k) => facts.brief![k].trim()).length : 0;
 
   return [
     {
@@ -72,6 +75,7 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
       id: "context", title: "Context", what: "What it knows before it answers: who it is, memory, skills",
       items: [
         { label: "Identity", detail: soulLines ? `${n(soulLines, "line")} in SOUL.md` : "Empty: say who it is and how it works", state: soulLines ? "set" : "missing", target: self },
+        { label: "Team knowledge", detail: briefFilled ? `${briefFilled} of ${BRIEF_FIELDS.length} filled, shared by every agent` : "Empty: tell your agents about the business", state: briefFilled ? "set" : "default", target: { sheet: "knowledge" } },
         { label: "Memory", detail: memEntries == null ? "—" : memEntries ? n(memEntries, "memory", "memories") : "Nothing yet", state: memEntries ? "set" : "default", target: { tab: "memory" } },
         { label: "Skills", detail: [a.skills.length ? n(a.skills.length, "own") : "", a.builtinSkills === false ? "built-in off" : "44 built-in", facts.installedSkills?.length ? `${facts.installedSkills.length} from the library` : ""].filter(Boolean).join(" · "), state: a.skills.length || facts.installedSkills?.length ? "set" : "default", target: { tab: "skills" } },
         { label: "Long chats", detail: "Hermes compacts the conversation when it fills half the window", state: "default", target: { tab: "settings" } },
