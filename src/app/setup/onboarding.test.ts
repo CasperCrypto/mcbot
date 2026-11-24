@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compile, resolveGraph } from "../../compile";
 import type { SetupProfile } from "../../contracts/api";
-import { GOALS, briefFromSetup, buildSetupBoard, emptyAnswers, listed, memberKey, setupNeeds, teamsFor, toggleListed } from "./onboarding";
+import { GOALS, HUGGING_FACE, briefFromSetup, buildSetupBoard, emptyAnswers, listed, memberKey, setupNeeds, teamsFor, toggleListed } from "./onboarding";
 import type { ModelChoice } from "./presets";
 import { TEAMS } from "../graph/teams";
 
@@ -55,5 +55,14 @@ describe("onboarding", () => {
     expect(toggleListed("Instagram, LinkedIn", "linkedin")).toBe("Instagram");
     expect(toggleListed("", "TikTok")).toBe("TikTok");
     expect(listed("Instagram, TikTok", "tiktok")).toBe(true);
+  });
+  it("makes pictures through Hugging Face's connector instead of a maker when that is the choice", () => {
+    const { graph } = buildSetupBoard({ profile: company, brief: briefFromSetup(company, emptyAnswers()), teams: teamsFor(["social"]), models: [local], workspace: "/w", maker: HUGGING_FACE });
+    const { bundles, issues } = resolveGraph(graph);
+    expect(issues.filter((i) => i.level === "error")).toEqual([]);
+    const designer = bundles.find((b) => b.agent.data.name === "designer")!;
+    expect(designer.image).toBeNull();
+    expect(designer.tools.map((t) => t.data.name)).toContain("hugging_face");
+    expect(graph.nodes.filter((n) => n.kind === "media")).toHaveLength(0);
   });
 });

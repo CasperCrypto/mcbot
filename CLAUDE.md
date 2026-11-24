@@ -118,7 +118,8 @@ Change them additively; a breaking change bumps the version.
   when it is free (`queue`, dispatched in App.tsx). A message that cannot start goes back first
   and the queue waits for the person. `scripts/mcbot.ts` (`npm run mcbot`) drives the same
   loopback API from a terminal; runs it starts show live in every window.
-- The tool catalog (`src/app/graph/catalog.ts`) also has hosted MCP servers that need no key
+- The tool catalog (`src/app/graph/catalog.ts`) opens on **Images & video** (Hugging Face's and Comfy Cloud's
+  connectors, `MEDIA_CONNECTORS`). It also has hosted MCP servers that need no key
   (Exa, Parallel: `transport: http`, `url` only), so agents can search the web from minute one,
   GitHub on GitHub's own hosted server (a hosted entry with a key sends it as
   `Authorization: Bearer ${env:NAME}`; Hermes renders `${env:…}` in `url` and `headers`),
@@ -157,7 +158,8 @@ Change them additively; a breaking change bumps the version.
   and the home folder are left out (`redact`). Training itself happens elsewhere (MLX, Unsloth, hosted fine-tuning);
   the model comes back as a model block.
 - Cost comes from each profile's `state.db`; Hermes-priced vs McBot-estimated is
-  always labelled. Hermes reports no GPU time — do not fabricate it.
+  always labelled. Hermes reports no GPU time — do not fabricate it. A session on a local model is
+  **Free** (`local` on the session), never "unpriced": only cloud models are asked for a price.
 - API keys typed into McBot live in `<workspace>/secrets.json` (owner-only); boards
   and compiled files carry only the variable's name, and the engine never returns a
   key's value. Hermes' gateway reads a served profile's keys from `<profile>/.env`
@@ -193,8 +195,9 @@ Change them additively; a breaking change bumps the version.
 - First launch runs the setup assistant (`src/app/setup/`, pure parts in `setup/onboarding.ts`), step by
   step: who it is for, you, your business (what you do, offer, customers, links), what the agents should
   get done (goals → starter teams), voice and channels, the team (members can be left out), a model,
-  and the tools that team needs (an image service and its key, unless the cloud model's key already
-  runs it; web search needs none). The answers become the board's **brief** (every agent's SOUL.md)
+  and the tools that team needs: images and video through Hugging Face (its own connector,
+  `hermes/optional-mcps/hugging_face`, signed in at the end; the default without a cloud key) or a
+  maker service and its key (unless the cloud model's key already runs it); web search needs none. The answers become the board's **brief** (every agent's SOUL.md)
   and USER.md memory; the team is built with its tools, makers and shared files, compiled, and its
   Hermes skills installed; `<workspace>/setup.json` records that it ran. Local model servers are found by asking the usual
   addresses for `/v1/models` (Ollama :11434, LM Studio :1234, llama.cpp :8080, vLLM :8000,
@@ -313,9 +316,12 @@ Change them additively; a breaking change bumps the version.
   sheets 14). State colours are muted (`--ok-rgb`, `--warn-rgb`, `--fail-rgb`), shown as a small dot or
   glyph, never a tinted block: chips are neutral with a dot, counts are the accent, progress is
   neutral. The main action is a light button (`.btn.primary`, the send button), not a saturated
-  block; the accent marks selection, focus and switches. A kind's colour is a calm tint behind its
-  glyph (`--k-*-rgb`, `--k-*-ink`), a brand logo sits on its own colour (`brandTint` in
-  `graph/Logo.tsx`, no rim), never a candy block; the dock and rail are monochrome glyphs. McBot's own mark (the burger, `Logo`)
+  block; the accent marks selection, focus and switches. A kind's tile and a brand's logo are **solid colour, like app
+  icons** (owner's decision: colour that helps you recognise things; the website's brand rows): a kind
+  on its `--k-*` colour, a brand on its own colour with the ink that reads on it (`LogoTile` in
+  `graph/Logo.tsx`), a near-black brand on the dark tile, all with `--icon-lift`. The board's dock is
+  those colour tiles (48px), growing under the pointer and its neighbours a little, like macOS's; the
+  rail stays monochrome glyphs. McBot's own mark (the burger, `Logo`)
   stands for what McBot itself does (Ask McBot); no sparkles or other stock "AI" icons. All
   colours, radii, shadows and motion are tokens in `src/app/styles/tokens.css` (macOS's eight
   accent colours as `--accent-rgb` / `--accent` / `--accent-text`); components use tokens, not

@@ -17,7 +17,7 @@ export interface CatalogTool {
   label: string;
   /** One line: what an agent can do with it. */
   does: string;
-  group: "Web" | "Work apps" | "Thinking" | "Your computer" | "Connectors";
+  group: "Images & video" | "Web" | "Work apps" | "Thinking" | "Your computer" | "Connectors";
   /** The tool node's name (its `mcp_servers:` key; tools appear as mcp__<name>__*). */
   name: string;
   /** npx arguments for a local server; empty for a remote one. */
@@ -59,8 +59,11 @@ export const titled = (name: string) => BRANDS[name] ?? name.split(/[-_]/).map((
  * Hermes' own vetted connectors (hermes/optional-mcps, generated): hosted MCP servers, most of them
  * signed in to with the service's own login (OAuth, through Hermes), none needing a key in McBot.
  */
+/** Connectors that make pictures and video (Hugging Face's Spaces, Comfy Cloud): first in the catalog, and offered in setup. */
+export const MEDIA_CONNECTORS = new Set(["hugging_face", "comfy-cloud"]);
 export const CONNECTOR_TOOLS: readonly CatalogTool[] = CONNECTORS.map((c) => ({
-  id: `connector-${c.name}`, label: titled(c.name), does: c.does, group: "Connectors", name: c.name, args: [], url: c.url,
+  id: `connector-${c.name}`, label: titled(c.name), does: c.name === "hugging_face" ? "Make images and video with Spaces (FLUX and more), and find models. Free with an account" : c.does,
+  group: MEDIA_CONNECTORS.has(c.name) ? "Images & video" as const : "Connectors" as const, name: c.name, args: [], url: c.url,
   ...(c.auth === "oauth" ? { oauth: c.oauth ?? true } : {}),
 }));
 

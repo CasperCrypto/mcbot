@@ -4,7 +4,7 @@
  * Brand colours are content (the brand's identity), like note paper, not UI chrome.
  */
 import { Cpu } from "lucide-react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { GraphNode, ModelData } from "../../contracts/graph";
 import { LOGOS, type Logo } from "../lib/logos.generated";
 import { MODEL_MARKS } from "../lib/modelMarks.generated";
@@ -33,27 +33,15 @@ export function logoFor(keys: (string | null | undefined)[], url?: string): Logo
   return null;
 }
 
-/**
- * A brand's colour as a soft tint behind its mark, the mark in the colour itself, lifted toward white
- * when the colour would sink into the dark (as kind tiles are drawn: pro.css `.tile.*`).
- */
-export function brandTint(hex: string): { background: string; color: string } {
-  const n = parseInt(hex.replace("#", ""), 16);
-  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  const lift = (c: number) => Math.round(c + (255 - c) * (lum < 0.38 ? 0.45 : 0));
-  // No rim (v3): the tint alone sets the tile apart.
-  return { background: `rgb(${r} ${g} ${b} / 0.16)`, color: `rgb(${lift(r)} ${lift(g)} ${lift(b)})` };
-}
-
 export function LogoTile({ logo, kind, sm, children }: { logo: Logo | null; kind: string; sm?: boolean; children: ReactNode }) {
   const cls = `tile${sm ? " sm" : ""}`;
   if (!logo) return <span className={`${cls} ${kind}`}>{children}</span>;
   if ("src" in logo) return <span className={`${cls} logo dropped`}><img src={logo.src} alt="" draggable={false} /></span>;
+  // The brand's own colour as the tile, its glyph in the ink that reads on it (as the website draws them);
+  // a near-black brand sits on the dark tile in white.
   return (
-    <span className={`${cls} logo${logo.tile ? "" : " neutral"}`} style={logo.tile ? brandTint(logo.tile) : undefined} data-tip={logo.title} data-tip-side="top">
-      {/* A near-black mark has no colour of its own: it takes the text colour. */}
-      <svg viewBox="0 0 24 24" width={sm ? 14 : 17} height={sm ? 14 : 17} aria-hidden fill="currentColor"><path d={logo.path} /></svg>
+    <span className={`${cls} logo ${logo.tile ? "brand" : "neutral"}`} style={logo.tile ? ({ "--c": logo.tile, color: logo.ink } as CSSProperties) : undefined} data-tip={logo.title} data-tip-side="top">
+      <svg viewBox="0 0 24 24" aria-hidden fill="currentColor"><path d={logo.path} /></svg>
     </span>
   );
 }

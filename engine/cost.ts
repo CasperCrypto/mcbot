@@ -76,6 +76,7 @@ export function buildCostReport(profiles: readonly ProfileSessions[], runs: read
         costStatus: s.costStatus,
         runId: run?.runId ?? null,
         runStatus: run?.status ?? null,
+        local: localUrls.has(norm(s.billingBaseUrl)),
       };
     }),
   ).sort((a, b) => b.startedAt - a.startedAt);

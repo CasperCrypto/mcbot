@@ -49,6 +49,8 @@ describe("buildCostReport", () => {
     expect(report.byAgent.map((r) => [r.key, r.sessions, r.source])).toEqual([["triage", 3, "estimate"]]);
     expect(report.byDay.map((r) => r.key)).toEqual(["2026-11-04", "2026-11-03"]);
     expect(report.localInferenceSeconds).toBe(4);
+    // A local model is free, not unpriced.
+    expect(report.sessions.some((s) => s.local)).toBe(true);
     expect(report.sessions.find((s) => s.id === "s2")).toMatchObject({ runId: "r2", runStatus: "failed" });
   });
 });

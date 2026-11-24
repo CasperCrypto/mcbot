@@ -16,7 +16,7 @@ import { nameChosen } from "../lib/identity";
 import { AgentFace, Field } from "../ui";
 import { CLOUD_PROVIDERS } from "../lib/providers";
 import { boardName, userFacts, type ModelChoice } from "./presets";
-import { CHANNELS, GOALS, VOICES, briefFromSetup, buildSetupBoard, defaultGoals, emptyAnswers, listed, memberKey, setupNeeds, teamsFor, toggleListed, withoutSkipped, type SetupAnswers } from "./onboarding";
+import { CHANNELS, GOALS, HUGGING_FACE, VOICES, briefFromSetup, buildSetupBoard, defaultGoals, emptyAnswers, listed, memberKey, setupNeeds, teamsFor, toggleListed, withoutSkipped, type SetupAnswers } from "./onboarding";
 import { MEDIA_PROVIDERS } from "../../contracts/graph";
 import { learnTeamSkills } from "../actions";
 import { REMOTE } from "../lib/engine";
@@ -67,6 +67,9 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
   const [skip, setSkip] = useState<Set<string>>(new Set());
   const [maker, setMaker] = useState<string | null>(null);
   const [makerKey, setMakerKey] = useState({ value: "", saved: false, error: "" });
+  /** The agent that makes images through Hugging Face, to sign in once the team is built. */
+  const hfAgent = useRef<string | null>(null);
+  const [hfSigning, setHfSigning] = useState<"idle" | "busy" | "started" | "failed">("idle");
   const [detect, setDetect] = useState<SetupDetect | null>(null);
   const [local, setLocal] = useState<{ server: LocalServer; model: string } | null>(null);
   const [cloudId, setCloudId] = useState<CloudId>("openrouter");
@@ -156,9 +159,12 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
   // The image service: the one the cloud model's key also runs, unless the person picks another.
   const KEY_SERVICE: Record<string, string> = { OPENROUTER_API_KEY: "openrouter", OPENAI_API_KEY: "openai", XAI_API_KEY: "xai" };
   const sharedService = models.map((m) => KEY_SERVICE[m.apiKeyEnv]).find(Boolean) ?? null;
-  const service = (maker ?? sharedService ?? "openrouter") as keyof typeof MEDIA_PROVIDERS.image;
+  // No cloud key that also makes images: Hugging Face, free with an account.
+  const choice = maker ?? sharedService ?? HUGGING_FACE;
+  const viaHf = choice === HUGGING_FACE;
+  const service = (viaHf ? "openrouter" : choice) as keyof typeof MEDIA_PROVIDERS.image;
   const serviceKey = MEDIA_PROVIDERS.image[service].keyEnv;
-  const serviceKeySaved = makerKey.saved || !!detect?.secrets.includes(serviceKey) || (cloud.saved && provider.key === serviceKey);
+  const serviceKeySaved = viaHf || makerKey.saved || !!detect?.secrets.includes(serviceKey) || (cloud.saved && provider.key === serviceKey);
   useEffect(() => {
     setMakerKey((k) => ({ ...k, saved: false, error: "" }));
   }, [service]);
@@ -195,7 +201,8 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
       }
       set(1, { status: "busy" });
       const brief = briefFromSetup(profile, answers);
-      const { graph, lead, skills } = buildSetupBoard({ profile, brief, teams, skip, models: withModels, workspace, maker: service });
+      const { graph, lead, skills } = buildSetupBoard({ profile, brief, teams, skip, models: withModels, workspace, maker: choice });
+      hfAgent.current = viaHf ? (graph.nodes.find((n) => n.kind === "agent" && graph.edges.some((e) => e.source === n.id && graph.nodes.find((t) => t.id === e.target && t.kind === "tool" && t.data.name === "hugging_face")))?.data as { name?: string } | undefined)?.name ?? null : null;
       const board = await engine.setupBoard(boardName(profile), graph);
       await pause(350);
       const agentCount = graph.nodes.filter((n) => n.kind === "agent").length;
@@ -300,7 +307,6 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
         {step === "business" && (
           <>
             <h1>{company ? `What ${profile.company.trim() || "your company"} does` : "What you do"}</h1>
-            <p className="setup-lead">Every agent will know this, so their work fits your business.</p>
             <div className="setup-form">
               <label className="field">
                 <span>{company ? "What you do" : "What you do, and what you'd like help with"}</span>
@@ -361,7 +367,6 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
         {step === "team" && (
           <>
             <h1>Your team</h1>
-            <p className="setup-lead">Each one does real work: the designer makes the images, the researcher searches the web. Click to leave one out.</p>
             <div className="setup-teams">
               {teams.map((t) => (
                 <section key={t.id} className="setup-team">
@@ -461,18 +466,20 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
 
         {step === "tools" && (
           <>
-            <h1>Tools for the work</h1>
-            <p className="setup-lead">So your agents can do things, not just write about them.</p>
+            <h1>Tools</h1>
             {(needs.image || needs.video) && (
               <section className="setup-section" data-testid="setup-images">
-                <header><ImageIcon size={14} /> Making images{needs.video ? " and videos" : ""}</header>
+                <header><ImageIcon size={14} /> Images{needs.video ? " and video" : ""}</header>
                 <div className="provider-grid" role="radiogroup" aria-label="Image service">
+                  <button role="radio" aria-checked={viaHf} className="provider-pick" onClick={() => setMaker(HUGGING_FACE)} data-testid="setup-maker-hf">Hugging Face</button>
                   {IMAGE_SERVICES.map((sv) => (
-                    <button key={sv.id} role="radio" aria-checked={service === sv.id} className="provider-pick" onClick={() => setMaker(sv.id)}>{MEDIA_PROVIDERS.image[sv.id].label}</button>
+                    <button key={sv.id} role="radio" aria-checked={!viaHf && service === sv.id} className="provider-pick" onClick={() => setMaker(sv.id)}>{MEDIA_PROVIDERS.image[sv.id].label}</button>
                   ))}
                 </div>
-                {serviceKeySaved ? (
-                  <div className="setup-row"><Check size={14} className="ok-text" /> <span className="grow">{cloud.saved && provider.key === serviceKey ? `Uses your ${MEDIA_PROVIDERS.image[service].label} key` : "Key saved on this computer"}</span></div>
+                {viaHf ? (
+                  <div className="setup-row"><Check size={14} className="ok-text" /> <span className="grow">Free with a Hugging Face account</span><small className="faint">Sign in at the end</small></div>
+                ) : serviceKeySaved ? (
+                  <div className="setup-row"><Check size={14} className="ok-text" /> <span className="grow">{cloud.saved && provider.key === serviceKey ? `Uses your ${MEDIA_PROVIDERS.image[service].label} key` : "Key saved"}</span></div>
                 ) : (
                   <div className="setup-key">
                     <Field label={`${MEDIA_PROVIDERS.image[service].label} key`} type="password" value={makerKey.value} onChange={(v) => setMakerKey({ ...makerKey, value: v, error: "" })} placeholder="Paste your key" error={makerKey.error || null} testId="setup-maker-key"
@@ -486,7 +493,7 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
               {needs.web && <div className="setup-row"><Globe size={15} className="faint" /><span className="grow">Web search</span><small className="faint">Exa · free, no key</small><Check size={14} className="ok-text" /></div>}
               <div className="setup-row"><FolderOpen size={15} className="faint" /><span className="grow">Shared files</span><small className="faint mono">{(health?.workspace ?? "~/McBot").replace(/[\\/]+$/, "")}/files</small><Check size={14} className="ok-text" /></div>
             </section>
-            {!(needs.image || needs.video) && <p className="setup-note">Nothing else to set up. Add tools any time from the board.</p>}
+
           </>
         )}
 
@@ -526,9 +533,17 @@ export function SetupAssistant({ onDone }: { onDone: (boardId: string | null, ag
           ) : <span />}
           <Dots index={index} />
           {step === "build" ? (
-            <button className="btn primary lg" disabled={!result} onClick={() => result && onDone(result.boardId, result.agentNodeId)} data-testid="setup-finish">
-              {result?.agentNodeId ? "Start chatting" : "Open McBot Studio"}
-            </button>
+            <div className="row">
+              {result && hfAgent.current && (
+                <button className="btn lg" disabled={hfSigning === "busy"} data-testid="setup-hf-signin" onClick={() => {
+                  setHfSigning("busy");
+                  engine.signIn(hfAgent.current!, "hugging_face").then(() => setHfSigning("started")).catch(() => setHfSigning("failed"));
+                }}>{hfSigning === "started" ? "Finish in your browser" : hfSigning === "failed" ? "Sign in from the board" : "Sign in to Hugging Face"}</button>
+              )}
+              <button className="btn primary lg" disabled={!result} onClick={() => result && onDone(result.boardId, result.agentNodeId)} data-testid="setup-finish">
+                {result?.agentNodeId ? "Start chatting" : "Open McBot Studio"}
+              </button>
+            </div>
           ) : (
             <div className="row">
               {step === "brain" && <button className="btn ghost" onClick={() => void build([])} data-testid="setup-later">Later</button>}

@@ -192,7 +192,7 @@ export function AgentPage({ agent, where, onClose }: { agent: AgentNode; where: 
 
       {issues.length > 0 && <Issues issues={issues} />}
 
-      <Group title="Personality" testId="agent-soul" foot="Who it is, how it talks, what it never does. Goes into its SOUL.md.">
+      <Group title="Personality" testId="agent-soul">
         <textarea className="ap-soul" value={a.soul} onChange={(e) => set("soul", e.target.value)} rows={5} aria-label="Personality" placeholder={"Who this agent is.\nHow it speaks. What it avoids."} />
       </Group>
 

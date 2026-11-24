@@ -56,7 +56,7 @@ import { Ratings, agentConversations, learnAgent, writeDataset } from "./learn";
 import type { Rating } from "../src/harness/learn";
 import { renderSoul } from "../src/compile/soul";
 
-export const ENGINE_VERSION = "0.7.0";
+export const ENGINE_VERSION = "0.8.0";
 
 export interface EngineConfig {
   workspace: string;

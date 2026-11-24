@@ -127,19 +127,6 @@ button.chip:hover { filter: brightness(1.2); }
 .menu button, .rail-menu-row > button[role="menuitem"] { border-radius: 6px; }
 [data-tip]::after { border-radius: 6px; font-size: 12px; }
 
-/* ---------- Tiles: a kind's colour is a tint behind its glyph, never a candy block ---------- */
-.tile { box-shadow: inset 0 0 0 0.5px rgb(var(--tint-rgb) / 0.08); color: var(--text-2); }
-.tile.agent { background: rgb(var(--k-agent-rgb) / 0.16); color: var(--k-agent-ink); }
-.tile.model { background: rgb(var(--k-model-rgb) / 0.15); color: var(--k-model-ink); box-shadow: inset 0 0 0 0.5px rgb(var(--k-model-rgb) / 0.3); }
-.tile.cloud { background: rgb(var(--k-model-cloud-rgb) / 0.16); color: var(--k-cloud-ink); box-shadow: inset 0 0 0 0.5px rgb(var(--k-model-cloud-rgb) / 0.32); }
-.tile.tool { background: rgb(var(--k-tool-rgb) / 0.15); color: var(--k-tool-ink); box-shadow: inset 0 0 0 0.5px rgb(var(--k-tool-rgb) / 0.3); }
-.tile.media { background: rgb(var(--k-media-rgb) / 0.15); color: var(--k-media-ink); box-shadow: inset 0 0 0 0.5px rgb(var(--k-media-rgb) / 0.3); }
-.tile.channel { background: rgb(var(--k-channel-rgb) / 0.14); color: var(--k-channel-ink); box-shadow: inset 0 0 0 0.5px rgb(var(--k-channel-rgb) / 0.3); }
-.tile.folder { background: rgb(var(--k-folder-rgb) / 0.16); color: var(--k-folder-ink); box-shadow: inset 0 0 0 0.5px rgb(var(--k-folder-rgb) / 0.3); }
-.tile.file { background: rgb(var(--tint-rgb) / 0.06); color: var(--text-2); box-shadow: inset 0 0 0 0.5px var(--line-2); }
-.tile.note { background: rgb(245 224 138 / 0.14); color: var(--note-yellow); box-shadow: inset 0 0 0 0.5px rgb(245 224 138 / 0.3); }
-.tile.logo { box-shadow: inset 0 0 0 0.5px rgb(var(--tint-rgb) / 0.1); }
-
 /* ---------- The board ---------- */
 .node { border-radius: var(--r-lg); background: var(--bg-node); box-shadow: 0 8px 24px rgb(0 0 0 / 0.4), inset 0 0 0 0.5px var(--line-2); }
 .react-flow__node:hover .node { box-shadow: 0 8px 24px rgb(0 0 0 / 0.4), inset 0 0 0 0.5px var(--line-3); }
@@ -153,19 +140,6 @@ button.chip:hover { filter: brightness(1.2); }
 .node-compact .label { font-size: 13.5px; }
 .node-compact .sub { font-size: 11.5px; }
 .react-flow__controls { border-radius: var(--r); box-shadow: 0 6px 18px rgb(0 0 0 / 0.4), var(--mat-edge-strong); }
-
-/* The dock: a quiet toolbar of glyphs, not a row of sweets. */
-.dock { gap: 2px; padding: 6px; border-radius: var(--r-xl); box-shadow: 0 16px 40px rgb(0 0 0 / 0.5), var(--mat-edge-strong); }
-.dock-item, .dock-item:hover, .dock-item:active, .dock-item:hover + .dock-item, .dock-item:has(+ .dock-item:hover) { transform: none; }
-.dock-item .tile, .dock-item .tile.agent, .dock-item .tile.model, .dock-item .tile.cloud, .dock-item .tile.tool, .dock-item .tile.media, .dock-item .tile.channel, .dock-item .tile.note, .dock-item .tile.file {
-  width: 38px; height: 38px; border-radius: var(--r); background: transparent; box-shadow: none; color: var(--text-2); transition: background var(--t-fast) var(--ease), color var(--t-fast);
-}
-.dock-item .tile svg { width: 18px; height: 18px; }
-.dock-item:hover .tile { background: rgb(var(--tint-rgb) / 0.08); color: var(--text); }
-.dock-item:active .tile { background: rgb(var(--tint-rgb) / 0.12); }
-.dock-item .tile .brand-mark { width: 20px; height: 20px; }
-.dock-sep { height: 22px; margin: 0 5px; background: var(--line-2); }
-.dock-item .label { bottom: calc(100% + 10px); border-radius: 6px; font-size: 12px; }
 
 /* ---------- Chat ---------- */
 .thread-head { height: 52px; }
@@ -331,8 +305,6 @@ button.chip:hover { filter: brightness(1.2); }
 .composer:focus-within { box-shadow: 0 12px 34px rgb(0 0 0 / 0.38), inset 0 1px 0 rgb(var(--spec-rgb) / 0.06), 0 0 0 3px var(--accent-soft); }
 .team-compose, .team-compose:focus-within { box-shadow: none; background: var(--surface-2); }
 
-/* Tiles: the kind's calm tint behind its glyph, no rim. */
-.tile, .tile.model, .tile.cloud, .tile.tool, .tile.media, .tile.channel, .tile.folder, .tile.note, .tile.logo { box-shadow: none; }
 
 /* Board blocks: glass slabs with a top light, no rim. */
 .node { background: var(--bg-node); box-shadow: inset 0 1px 0 rgb(var(--spec-rgb) / 0.06), 0 10px 28px rgb(0 0 0 / 0.42), 0 1px 2px rgb(0 0 0 / 0.3); }
@@ -422,3 +394,65 @@ button.chip:hover { filter: brightness(1.2); }
 .plan-items li[data-status="in_progress"] { color: var(--text); }
 .plan-items li[data-status="in_progress"] .plan-mark { box-shadow: inset 0 0 0 1.5px var(--accent); color: var(--accent-text); }
 .plan-items li[data-status="cancelled"] .plan-text { color: var(--text-4); text-decoration: line-through; }
+
+/* ======================================================================
+   Colour where it helps you find things (owner's decision): a kind's tile and a brand's logo are
+   solid colour, like app icons (the website's brand rows), with a top light and a soft shadow.
+   Colour still never marks state in the chrome (that stays muted dots).
+   ====================================================================== */
+.tile { color: var(--icon-ink); box-shadow: var(--icon-lift); }
+.tile.agent { background: var(--k-agent); }
+.tile.model { background: var(--k-model); }
+.tile.cloud { background: var(--k-model-cloud); }
+.tile.tool { background: var(--k-tool); }
+.tile.media { background: var(--k-media); }
+.tile.channel { background: var(--k-channel); }
+.tile.folder { background: var(--k-folder); }
+.tile.note { background: var(--note-yellow); color: var(--note-ink); }
+.tile.file { background: var(--surface-3); color: var(--text); }
+.tile.model-tile { background: var(--surface-3); }
+/* A brand: its own colour, its glyph in the ink that reads on it; a near-black brand on the dark tile. */
+.tile.logo.brand { background: var(--c); }
+.tile.logo.neutral { background: var(--icon-dark); color: var(--icon-ink); }
+.tile.logo.dropped { background: var(--icon-dark); padding: 6px; }
+.tile.logo svg { width: 58%; height: 58%; }
+.palette-row .tile.logo.brand, .palette-row .tile.logo.neutral { box-shadow: var(--icon-lift); }
+
+/* The dock: colour tiles that grow under the pointer, their neighbours a little, like macOS. */
+.dock { gap: 6px; padding: 8px 10px; border-radius: 24px; }
+.dock-item .tile { width: 48px; height: 48px; border-radius: 13px; }
+.dock-item .tile svg { width: 22px; height: 22px; }
+.dock-item .tile .brand-mark { width: 26px; height: 26px; }
+.dock-item { transition: transform var(--t-spring) var(--spring-bouncy); transform-origin: bottom center; }
+.dock-item:hover { transform: translateY(-8px) scale(1.2); }
+.dock-item:hover + .dock-item, .dock-item:has(+ .dock-item:hover) { transform: translateY(-3px) scale(1.08); }
+.dock-item:active { transform: translateY(-4px) scale(1.08); transition-duration: var(--t-fast); }
+.dock-sep { height: 30px; margin: 0 4px; background: rgb(var(--tint-rgb) / 0.12); }
+.dock-item .label { bottom: calc(100% + 14px); border-radius: 7px; font-size: 12.5px; }
+@media (prefers-reduced-motion: reduce) {
+  .dock-item:hover, .dock-item:hover + .dock-item, .dock-item:has(+ .dock-item:hover), .dock-item:active { transform: none; }
+}
+
+
+/* Room to breathe (owner's ask): looser pages, groups and rows. */
+.scroll-page { padding: 40px 48px 64px; }
+.dash-grid, .home-grid, .two-col { gap: 18px; }
+.widget { padding: 16px 14px 14px; gap: 6px; }
+.home-row-main { padding: 9px 10px; }
+.list-row { padding-top: 9px; padding-bottom: 9px; }
+.sidebar-group { padding-top: 18px; }
+.kpis { gap: 14px; }
+.card.kpi { padding: 16px 18px; }
+.settings-card { padding: 18px 20px 20px; }
+.layers-view { gap: 18px; padding-top: 72px; }
+.layers-stack { gap: 18px; }
+.learn-view { gap: 18px; padding-top: 44px; }
+.catalog-grid { gap: 10px; }
+.catalog-card { padding: 12px 14px; }
+@media (max-width: 760px) { .scroll-page { padding: 24px 18px 48px; } }
+/* Type: tight, even headings; tabular numbers where they line up. */
+h1, h2, h3 { text-wrap: balance; }
+.view-head h1, .home-hello h1, .learn-hero h1 { letter-spacing: -0.022em; }
+/* Tables in answers break between words, never inside one ("Wed", not "We / d"). */
+.rich-table th, .rich-table td { word-break: normal; overflow-wrap: normal; hyphens: manual; }
+.rich-table td:first-child, .rich-table th:first-child { white-space: nowrap; }

@@ -94,6 +94,10 @@ export function setupNeeds(teams: readonly StarterTeam[]): { image: boolean; vid
   };
 }
 
+/** The setup's free image and video choice: Hugging Face's own connector (hermes/optional-mcps/hugging_face). */
+export const HUGGING_FACE = "huggingface";
+export const HF_TOOL = "connector-hugging_face";
+
 let seq = 0;
 const nid = (p: string) => `${p}-${(++seq).toString(36)}`;
 
@@ -110,6 +114,7 @@ export function buildSetupBoard(opts: {
   skip?: ReadonlySet<string>;
   models: readonly ModelChoice[];
   workspace: string;
+  /** The image/video service: one of Hermes' maker services, or "huggingface" (its connector instead of a maker). */
   maker?: string | null;
 }): { graph: Graph; lead: string | null; skills: { profile: string; who: string; ids: readonly string[] }[] } {
   const graph: Graph = { schema: GRAPH_SCHEMA, id: "setup", name: boardName(opts.profile), nodes: [], edges: [] };
@@ -125,7 +130,10 @@ export function buildSetupBoard(opts: {
     id: nid("model"), kind: "model", position,
     data: { name: "local", label: "Local model", endpoint: "local", baseUrl: "http://127.0.0.1:11434/v1", model: "", apiKeyEnv: "", pricing: null },
   });
-  for (const t of opts.teams) {
+  // Hugging Face makes pictures and video through its Spaces: members that would get a maker get its connector.
+  const viaHf = opts.maker === HUGGING_FACE;
+  for (const t0 of opts.teams) {
+    const t = viaHf ? { ...t0, members: t0.members.map((m) => (m.makers?.length ? { ...m, makers: [], tools: [...(m.tools ?? []), HF_TOOL] } : m)) } : t0;
     const team = withoutSkipped(t, opts.skip ?? new Set());
     if (!team) continue;
     const primary = graph.nodes.find((n): n is ModelNode => n.kind === "model") ?? null;
