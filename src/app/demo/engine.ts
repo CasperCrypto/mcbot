@@ -37,7 +37,7 @@ const LIMITS: Record<Target, number> = { memory: 2200, user: 1375 };
 const DELIM = "\n§\n";
 const STATE_KEY = "mcbot.demo.v1";
 const boardKey = (id: string) => `mcbot.demo.board.${id}`;
-const SAMPLE_FOLDER: FsRoot = { id: "folder:sample", kind: "folder", name: "acme-support", path: "/Users/you/Projects/acme-support" };
+const SAMPLE_FOLDER: FsRoot = { id: "folder:sample", kind: "folder", name: "support-desk", path: "/Users/you/Projects/support-desk" };
 
 interface State {
   boards: BoardInfo[];
@@ -949,7 +949,7 @@ export const demoEngine = {
   /** A pretend disk: the demo can't see the visitor's folders, so the picker shows a sample home. */
   browse: api((path: string | null): FsBrowse => {
     const home = "/Users/you";
-    const tree: Record<string, string[]> = { [home]: ["Desktop", "Documents", "Downloads", "Projects"], [`${home}/Projects`]: ["acme-support"] };
+    const tree: Record<string, string[]> = { [home]: ["Desktop", "Documents", "Downloads", "Projects"], [`${home}/Projects`]: ["support-desk"] };
     const at = path && tree[path.replace(/^~/, home)] ? path.replace(/^~/, home) : home;
     return {
       path: at, parent: at === home ? "/Users" : at.slice(0, at.lastIndexOf("/")),
