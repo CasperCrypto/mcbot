@@ -495,8 +495,8 @@ auth, no cloud: local JSON + the filesystem.
 
 Auth, SSO, Langfuse, OpenTelemetry, a cloud tier, a marketplace, git
 integration beyond showing status and diffs, A2A. (ACP is in: M9, owner's decision.) The terminal, code editor and browser panes are planned (M8).
-Everything else on the way is ordered in `docs/PLAN.md` (M5–M15, reasons in
-`docs/NEXT.md`); build in that order. Postgres and Redis belong to the
+Everything else on the way is ordered in `docs/PLAN.md` (M5–M16, reasons in
+`docs/NEXT.md`, the strategy and competitors in `docs/STRATEGY.md`); build in that order. Postgres and Redis belong to the
 optional team server only, never the desktop app.
 
 ## Commands

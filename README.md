@@ -1,6 +1,6 @@
 # McBot Studio
 
-**Draw your AI team. Get real files. Watch it work.**
+**AI agents that stay yours.** Draw your team, use any model, and see exactly how every agent works.
 
 [mcbot.studio](https://mcbot.studio) · [Try it in your browser](https://mcbot.studio/demo/) · [Download](https://github.com/CasperCrypto/mcbot/releases/latest)
 
@@ -28,6 +28,13 @@ edit and own, as plain files.
   (⌘S). **Layers** shows each agent's harness from the outside in; **Hermes** draws the whole engine
   behind the board. The **harness doctor** finds what would fail (a missing key, a silent model
   server, a chat app nobody may message) and fixes it in one click.
+- **History**: every compile that changes the harness is a version, with what changed in words and how
+  its runs went (success, cost, time, tokens per run). Compare two, keep the better one, restore in a
+  click. ⌘K "Copy the harness as text" gives any AI the whole graph.
+- **Agents**: one page per agent (personality, models, tools, chat apps, skills, abilities, thinking
+  level, budget), beside its chat or on the board. Models show by name and logo (Claude Sonnet 4.5,
+  Qwen3 8B), and a tool can offer only the few tools an agent needs, so every message costs less.
+- **Home**: your agents as live tiles, what needs you, today's spend, what's next, one Ask box.
 - **Chat**: message an agent; tool calls, answer, time, tokens and cost land in the thread. Answers
   can carry tables, charts, choices and drawings. Risky commands stop and ask you (approval cards,
   also in the island at the top of the screen).
@@ -45,9 +52,11 @@ edit and own, as plain files.
 - **Engine updates**: the engine (Hermes Agent, MIT) ships inside; a weekly job merges each new
   stable release, runs every test and opens a pull request, so updates arrive tested.
 
-| Chat | Runs |
+| Home | History: compare two versions |
 |---|---|
-| ![Chat](docs/screenshots/agents.png) | ![Runs](docs/screenshots/runs.png) |
+| ![Home](docs/screenshots/home.png) | ![History](docs/screenshots/history.png) |
+| **An agent's page beside its chat** | **Runs** |
+| ![Agent page](docs/screenshots/agents.png) | ![Runs](docs/screenshots/runs.png) |
 | **Skills that fit each agent** | **Cost** |
 | ![Skills](docs/screenshots/skills.png) | ![Cost](docs/screenshots/cost.png) |
 | **Files: any folder as a graph** | **Memory** |
