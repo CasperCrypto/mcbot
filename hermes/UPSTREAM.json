@@ -1,7 +1,7 @@
 {
   "upstream": "https://github.com/NousResearch/hermes-agent.git",
-  "commit": "ae2a81ccc00e9b7c06301523e5bb09608397149c",
-  "date": "2026-11-16T11:28:45-08:00",
+  "commit": "caafe5389ae585ef77387a962aee05b1bcf17029",
+  "date": "2026-11-19T12:51:15-08:00",
   "exclude": [
     "tests/",
     "tests-js/",
