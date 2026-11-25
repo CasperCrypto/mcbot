@@ -698,5 +698,11 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   render it again when the hero's words change. The brand rows are generated into
   `site/index.html` (between `<!-- logos:<group> -->` markers) by `npm run site:logos` from the
   app's own marks (`npm test` fails while they are stale).
+- The **launch video** is markup too (`design/video/`: `index.html`, `style.css`, `scenes.js`): the site's colours
+  and rules (no gradients or glows), the app's bots (`site/foods.js`) and brand marks (`render.ts` passes them in).
+  `scenes.js` draws every frame from its time alone (CSS transitions off, CSS animations set to the clock), so
+  `npx tsx design/video/render.ts` screenshots each frame with Playwright and encodes it with ffmpeg into
+  `design/video/out/` (ignored; `--still 12.5` for one frame, `--gif 4 11` for a clip). Its copy shows what the
+  app does; when a flow it shows changes, change the scene.
 
 Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Knowledge, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘D duplicate · ⌘0 fit the board · right-click the board · ⌘N new window (desktop).

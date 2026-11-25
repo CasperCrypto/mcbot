@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>McBot Studio launch video</title>
+<!--
+  The launch video, as markup. `npx tsx design/video/render.ts` renders it frame by frame (render.ts says how);
+  opening this file in a browser plays it (add #t=12.5 to hold one moment). The bots are the app's own
+  (site/foods.js), the brand marks are the app's own (render.ts passes them in as window.LOGOS).
+-->
+<link rel="stylesheet" href="../../site/foods.css">
+<link rel="stylesheet" href="style.css">
+<script src="../../site/foods.js"></script>
+</head>
+<body>
+<div id="stage">
+
+  <!-- 1 · Intro -->
+  <section class="scene" id="intro">
+    <div class="bot" id="intro-bot" style="left: 795px; top: 168px; width: 330px;"><img src="../../site/assets/burger.webp" alt=""><span class="eye l"><i></i></span><span class="eye r"><i></i></span></div>
+    <div class="sub" id="intro-name" style="top: 548px; color: var(--t2); font-weight: 600;">McBot Studio</div>
+    <h1 class="hl" id="intro-hl" data-words style="top: 606px; font-size: 118px;">AI agents that stay yours.</h1>
+  </section>
+
+  <!-- 2 · Describe a team -->
+  <section class="scene" id="describe">
+    <h2 class="hl" data-words>Describe the team you need.</h2>
+    <div class="sheet" id="ask-sheet" style="left: 360px; top: 300px; width: 1200px;">
+      <div class="sheet-head"><span class="face" data-mcbot style="width: 34px; height: 34px;"></span>Ask McBot<span class="grow"></span><span class="kbd">⌘K</span></div>
+      <div class="field"><span id="ask-text"></span><span class="caret" id="ask-caret"></span><span class="ph" id="ask-ph">What should your agents do?</span></div>
+      <div class="plan">
+        <div class="pc"><span class="face" data-agent="triage" data-size="64"></span><b>Triage desk</b><small>Sorts every message</small><div class="chips"><span class="chip"><span class="lg" data-logo="slack"></span>Slack</span><span class="chip text">→ Researcher</span></div></div>
+        <div class="pc"><span class="face" data-agent="researcher" data-size="64"></span><b>Researcher</b><small>Finds answers in your docs</small><div class="chips"><span class="chip"><span class="lg" data-logo="notion"></span>Notion</span><span class="chip"><span class="lg" data-logo="exa"></span>Web search</span></div></div>
+        <div class="pc"><span class="face" data-agent="writer" data-size="64"></span><b>Writer</b><small>Drafts every reply</small><div class="chips"><span class="chip"><span class="lg" data-logo="gmail"></span>Gmail</span><span class="chip"><span class="lg" data-logo="github"></span>GitHub</span></div></div>
+      </div>
+      <div class="sheet-foot"><span id="plan-note">3 agents · 5 tools · 2 hand-offs</span><span class="grow"></span><span class="btn" id="plan-cancel">Cancel</span><span class="btn light" id="plan-add">Add to board</span></div>
+    </div>
+  </section>
+
+  <!-- 3 · The harness, drawn; Compile -->
+  <section class="scene" id="board">
+    <h2 class="hl" data-words>See how every agent works.</h2>
+    <p class="sub" id="board-sub-1" data-words>Change it by drawing.</p>
+    <p class="sub" id="board-sub-2" data-words>Compile, and it's real files on your computer.</p>
+    <div class="win" id="board-win" style="left: 210px; top: 298px; width: 1500px; height: 724px;">
+      <div class="win-bar"><span class="lights"><i></i><i></i><i></i></span>Support desk<span class="compile" id="compile-btn"><span id="compile-label">Compile</span></span></div>
+      <div class="win-body" id="board-body">
+        <svg class="wires" id="wires"></svg>
+        <div class="bn" data-n="m1" style="left: 70px; top: 122px;"><span class="lg mid" data-logo="claude"></span><span class="t"><b>Claude Sonnet 4.5</b><small>Main model</small></span></div>
+        <div class="bn" data-n="m2" style="left: 70px; top: 436px;"><span class="lg mid" data-logo="ollama"></span><span class="t"><b>Llama 3.3</b><small>Backup, on this computer</small></span></div>
+        <div class="bn agent" data-n="a1" style="left: 585px; top: 56px;"><span class="face" data-agent="triage" data-size="56"></span><span class="t"><b>Triage desk</b><small>Sorts every message</small></span></div>
+        <div class="bn agent" data-n="a2" style="left: 585px; top: 283px;"><span class="face" data-agent="researcher" data-size="56"></span><span class="t"><b>Researcher</b><small>Finds answers in your docs</small></span></div>
+        <div class="bn agent" data-n="a3" style="left: 585px; top: 510px;"><span class="face" data-agent="writer" data-size="56"></span><span class="t"><b>Writer</b><small>Drafts every reply</small></span></div>
+        <div class="bn" data-n="t1" style="left: 1100px; top: 62px;"><span class="lg mid" data-logo="slack"></span><span class="t"><b>Slack</b><small>Answers here</small></span></div>
+        <div class="bn" data-n="t2" style="left: 1100px; top: 289px;"><span class="lg mid" data-logo="notion"></span><span class="t"><b>Notion</b><small>Tool</small></span></div>
+        <div class="bn" data-n="t3" style="left: 1100px; top: 516px;"><span class="lg mid" data-logo="github"></span><span class="t"><b>GitHub</b><small>Tool</small></span></div>
+        <span class="wl" data-wl="m1-a2">thinks with</span>
+        <span class="wl" data-wl="m2-a2">falls back to</span>
+        <span class="wl" data-wl="a2-t2">uses</span>
+        <span class="wl" data-wl="a1-a2">hands work to</span>
+        <div class="files" id="files">
+          <div class="f-head">profiles/researcher</div>
+          <div class="f"><span class="check">✓</span>SOUL.md</div>
+          <div class="f"><span class="check">✓</span>config.yaml</div>
+          <div class="f"><span class="check">✓</span>skills/</div>
+          <div class="f"><span class="check">✓</span>.env<small>keys, owner-only</small></div>
+          <div class="f-done" id="files-done">Ready to run</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · Any model -->
+  <section class="scene" id="models">
+    <h2 class="hl" data-words>Any model. Switch in one click.</h2>
+    <p class="sub" data-words>Local or cloud. Your agents keep everything they know.</p>
+    <div class="agentcard" id="mod-card" style="left: 380px; top: 404px; width: 1160px;">
+      <span class="face" data-agent="researcher" data-size="84"></span>
+      <span class="t"><b>Researcher</b><small>Finds answers in your docs</small></span>
+      <span class="grow"></span>
+      <span class="faint" style="font: 600 19px var(--font); margin-right: 6px;">Thinks with</span>
+      <span class="mchip" id="mchip">
+        <span class="lg mid" id="mchip-logo" data-logo="claude"></span>
+        <span class="mt"><b id="mchip-name">Claude Sonnet 4.5</b><small id="mchip-where">Cloud · through OpenRouter</small></span>
+        <span class="chev">⌄</span>
+      </span>
+    </div>
+    <div class="menu" id="mod-menu">
+      <div class="mi" data-mi="0"><span class="lg" data-logo="claude"></span><b>Claude Sonnet 4.5</b><small>Cloud</small></div>
+      <div class="mi" data-mi="1"><span class="lg" data-logo="gemini"></span><b>Gemini 2.5 Pro</b><small>Cloud</small></div>
+      <div class="mi" data-mi="2"><span class="lg" data-logo="deepseek"></span><b>DeepSeek V3</b><small>Cloud</small></div>
+      <div class="mi" data-mi="3"><span class="lg" data-logo="ollama"></span><b>Llama 3.3</b><small>On this computer</small></div>
+    </div>
+    <div class="kept" id="kept" style="top: 690px;">
+      <div class="kp"><span class="check">✓</span>Memory<small>24 notes</small></div>
+      <div class="kp"><span class="check">✓</span>Skills<small>9</small></div>
+      <div class="kp"><span class="check">✓</span>Tools<small>3</small></div>
+      <div class="kp"><span class="check">✓</span>Every chat</div>
+    </div>
+  </section>
+
+  <!-- 5 · Knowledge: documents every agent reads -->
+  <section class="scene" id="knowledge">
+    <h2 class="hl" data-words>It knows your business.</h2>
+    <p class="sub" data-words>Drop in PDFs, Word and Excel files. Every agent can read them.</p>
+    <div class="docs" id="kn-docs" style="left: 250px; top: 320px; width: 620px; height: 560px;">
+      <h3>Documents</h3>
+      <div class="drop">Add documents</div>
+      <div class="doc" data-doc="0"><span class="ic" style="--c: #d93a2b;">PDF</span><span class="t"><b>Price list 2026.pdf</b><small>12 pages</small></span></div>
+      <div class="doc" data-doc="1"><span class="ic" style="--c: #185abd;">DOC</span><span class="t"><b>Brand voice.docx</b><small>4 pages</small></span></div>
+      <div class="doc" data-doc="2"><span class="ic" style="--c: #107c41;">XLS</span><span class="t"><b>Customers.xlsx</b><small>3 sheets</small></span></div>
+    </div>
+    <div class="chat" id="kn-chat" style="left: 910px; top: 320px; width: 760px; height: 560px;">
+      <h3>Chat</h3>
+      <div class="msg me" id="kn-q"><span class="bubble">How much is a box of six pastries?</span></div>
+      <div class="who" id="kn-who"><span class="face" data-agent="researcher" data-size="34"></span>Researcher</div>
+      <div class="reply">
+        <div id="kn-dots" class="dots"><i></i><i></i><i></i></div>
+        <div id="kn-a">
+          <div class="bubble" style="display: inline-block;">£17 for a box of six, from your price list. It's £3.20 each on its own.</div>
+          <div><span class="cite"><span class="ic" style="--c: #d93a2b;">PDF</span>Price list 2026.pdf</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Asks before it guesses -->
+  <section class="scene" id="ask">
+    <h2 class="hl" data-words>It asks before it guesses.</h2>
+    <p class="sub" data-words>Pick an answer, or say it in your own words.</p>
+    <div class="chat" id="ask-chat" style="left: 440px; top: 330px; width: 1040px; height: 560px;">
+      <div class="msg me" id="ask-me" style="margin-top: 0;"><span class="bubble">Draft Friday's launch post.</span></div>
+      <div class="who" id="ask-who"><span class="face" data-agent="writer" data-size="34"></span>Writer asks</div>
+      <div class="qcard" id="ask-q">
+        <div class="q">Which tone for the launch post?</div>
+        <div class="choices"><span class="qc" data-qc="0">Playful</span><span class="qc" data-qc="1">Calm <small>Suggested</small></span><span class="qc" data-qc="2">Bold</span></div>
+        <div class="other">Something else…</div>
+      </div>
+      <div class="who" id="ask-who2"><span class="face" data-agent="writer" data-size="34"></span>Writer</div>
+      <div class="bubble" id="ask-a" style="display: inline-block;">Calm it is. Writing it now.</div>
+    </div>
+  </section>
+
+  <!-- 7 · Until done -->
+  <section class="scene" id="until">
+    <h2 class="hl" data-words>It keeps going until it's done.</h2>
+    <p class="sub" data-words>A check reads every round. You review the result.</p>
+    <div class="task" id="task" style="left: 460px; top: 352px; width: 1000px;">
+      <div class="task-head">
+        <span style="position: relative; width: 46px; height: 46px;"><span class="face abs" id="task-face-w" data-agent="writer" data-size="46" data-exp="thinking"></span><span class="face abs" id="task-face-h" data-agent="writer" data-size="46" data-exp="happy"></span></span>
+        <b>Launch post for Friday</b><span class="state" id="task-state">Working</span>
+      </div>
+      <div class="round" data-r="0"><span class="n">1</span><b>Wrote the post</b><span class="v">Not yet: no image</span></div>
+      <div class="round" data-r="1"><span class="n">2</span><b>Made the image</b><span class="v">Not yet: the price is missing</span></div>
+      <div class="round" data-r="2"><span class="n">3</span><b>Added the price</b><span class="v ok">Done</span></div>
+      <div class="task-foot" id="task-foot"><span class="btn">Send back</span><span class="btn light">Approve</span></div>
+    </div>
+  </section>
+
+  <!-- 8 · Asks before it acts; guardrails -->
+  <section class="scene" id="guard">
+    <h2 class="hl" data-words>It asks before it acts.</h2>
+    <p class="sub" data-words>Choose how careful each agent is.</p>
+    <div class="appr" id="appr" style="left: 460px; top: 350px; width: 1000px;">
+      <div class="who"><span class="face" data-agent="researcher" data-size="34"></span><b>Researcher</b>&nbsp;wants to run</div>
+      <code>gh issue create --title "Login loop on Safari"</code>
+      <div class="slot">
+        <div class="row" id="appr-row"><span class="btn light" id="appr-allow">Allow once</span><span class="btn">Allow for this chat</span><span class="btn">Deny</span></div>
+        <div class="ok-line" id="appr-ok">Allowed. Issue #482 is open.</div>
+      </div>
+    </div>
+    <div class="guards" id="guards" style="top: 690px;">
+      <div class="gd"><small>Approvals</small><b>Smart</b></div>
+      <div class="gd"><small>Never run</small><code>git push --force*</code></div>
+      <div class="gd"><small>Blocked websites</small><b>2 sites</b></div>
+      <div class="gd"><small>Daily budget</small><b>$5.00</b></div>
+    </div>
+  </section>
+
+  <!-- 9 · A model of your own -->
+  <section class="scene" id="train">
+    <h2 class="hl" data-words>It trains a model of your own.</h2>
+    <p class="sub" data-words>On your agents' best work. In the cloud, or on your computer.</p>
+    <div class="pipe" id="pipe" style="left: 290px; top: 404px;">
+      <div class="step" data-s="0"><span class="k">Your best work</span><b>48 conversations</b><small>Rated good or passed their checks</small></div>
+      <div class="step" data-s="1"><span class="k">Training</span><b>On this computer</b><div class="bar"><i id="train-bar"></i></div></div>
+      <div class="step" data-s="2"><span class="k">Ready</span><b>Writer's own model</b><span class="btn light use" id="train-use" style="height: 46px; font-size: 19px;">Use it</span></div>
+    </div>
+    <div class="abs" style="left: 0; right: 0; top: 690px; display: flex; justify-content: center;">
+      <div class="toast" id="train-toast" style="position: relative;"><span class="face" data-agent="writer" data-size="44" data-exp="happy"></span>Writer now thinks with its own model</div>
+    </div>
+  </section>
+
+  <!-- 10 · Invite anyone -->
+  <section class="scene" id="share">
+    <h2 class="hl" data-words>Invite anyone with a link.</h2>
+    <p class="sub" data-words>Teammates build with you. Customers just chat.</p>
+    <div class="share" id="share-card" style="left: 400px; top: 318px; width: 700px;">
+      <div class="seg"><span id="seg-a">Teammates</span><span id="seg-b">Guests</span></div>
+      <div class="linkrow"><span class="url">https://calm-river-tide.trycloudflare.com/join</span><span class="btn light" style="height: 54px;">Copy link</span></div>
+      <div class="qrwrap"><div class="qr" id="qr"></div><p>Scan with a phone.<br>Nothing to install,<br>no account.</p></div>
+      <div class="people" id="people"><span class="pa" style="--c: #5e5ce6;">M</span><span class="pa" style="--c: #30b0c7;">S</span><span class="pa" style="--c: #ff9f0a;">L</span></div>
+    </div>
+    <div class="phone" id="phone" style="left: 1160px; top: 306px; width: 360px; height: 640px;">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="ph-head"><span class="face" data-agent="triage" data-size="58"></span><b>Triage desk</b><small>Chat with us</small></div>
+        <div class="ph-body">
+          <div class="msg me" id="ph-q"><span class="bubble">Do you deliver on Sundays?</span></div>
+          <div class="msg" id="ph-a"><span class="bubble">Yes, before 10:00, within 5 km. Want me to book one?</span></div>
+          <div class="msg me" id="ph-q2"><span class="bubble">Yes please, Sunday at 9.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 · End card -->
+  <section class="scene" id="end">
+    <div class="bot" id="end-bot" style="left: 830px; top: 252px; width: 260px;"><img src="../../site/assets/burger.webp" alt=""><span class="eye l"><i></i></span><span class="eye r"><i></i></span></div>
+    <h2 class="end-name" data-words>McBot Studio</h2>
+    <div class="end-line" data-words>Free and open source. macOS, Windows and Linux.</div>
+    <div class="end-cta" id="end-cta"><span class="btn light">mcbot.studio</span><span class="btn">Star on GitHub</span></div>
+  </section>
+
+  <div id="cursor"><svg viewBox="0 0 32 32"><path d="M3 2.5v23.6l6.2-6 4.4 9.6 4.3-1.9-4.3-9.5h8.6z" fill="#fff" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+</div>
+<script src="scenes.js"></script>
+</body>
+</html>
