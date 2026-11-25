@@ -424,8 +424,9 @@ Change them additively; a breaking change bumps the version.
   sheet lists every finding with one fix: compile errors, agents without a model, unsaved keys of
   models and tools in use (a hosted tool's is an error, a local one's a warning; saved key names are
   asked again whenever a key is saved or removed, `onKeysChanged` in `lib/engine.ts`), silent local servers, chat apps nobody may message, blocks wired to no agent
-  (Remove, undoable), unpriced cloud models, paid agents with no daily budget, files that differ
-  from disk, an engine not ready. ⌘K "Check the harness".
+  (Remove, undoable), unpriced cloud models, paid agents with no daily budget, two agents with the same
+  name (Rename), a lead that hands work to a team on a small local model (`sizeB` ≤ 14B: it tends to
+  answer itself), files that differ from disk, an engine not ready. ⌘K "Check the harness".
 - **Keyboard:** Tab / ⇧Tab walk the blocks (the focused block is selected), arrows nudge, F2 or
   Enter names it, ⌘D duplicates, ⌫ deletes, Esc deselects.
 - **Compile** says how it went in a notice (with "Fix" on the first block with a problem); the
