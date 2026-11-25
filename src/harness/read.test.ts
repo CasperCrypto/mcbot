@@ -56,6 +56,22 @@ describe("Hermes setup → board", () => {
     expect((graph.nodes[0]!.data as { capabilities: string[] }).capabilities).toEqual(["web"]);
   });
 
+  it("reads how careful an agent is from approvals.mode, and keeps the other approvals keys in Hermes", () => {
+    const read = (approvals: string) => readHermes({ id: "b", name: "B" }, [{
+      name: "helper", config: `approvals:\n${approvals}`, soul: "# Helper\n", profileYaml: null, skills: {},
+    }]);
+    const careOf = (r: ReturnType<typeof read>) => (r.graph.nodes[0]!.data as { approvals?: string }).approvals;
+    // A bare off is false in YAML 1.1; Hermes takes it as "off" (tools/approval_context.py _normalize_approval_mode).
+    expect(careOf(read("  mode: off\n"))).toBe("off");
+    expect(careOf(read("  mode: Manual\n"))).toBe("manual");
+    const odd = read("  mode: auto\n  timeout: 60\n");
+    expect(careOf(odd)).toBeUndefined();
+    expect(odd.unshown.map((u) => u.what)).toEqual(["config.yaml: approvals.mode", "config.yaml: approvals.timeout"]);
+    const kept = read("  mode: smart\n  cron_mode: approve\n");
+    expect(careOf(kept)).toBe("smart");
+    expect(kept.unshown.map((u) => u.what)).toEqual(["config.yaml: approvals.cron_mode"]);
+  });
+
   it("splits the compiled Team section from the agent's own words", () => {
     const soul = "# Lead\n\nRuns the desk.\n\n## Team\n\nYou can hand work to these agents.\n\n- `writer` (Writer): drafts\n- `editor`";
     expect(splitSoul(soul)).toEqual({ own: "# Lead\n\nRuns the desk.", team: ["writer", "editor"], brief: null });

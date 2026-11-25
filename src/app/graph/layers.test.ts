@@ -28,6 +28,12 @@ describe("harness layers", () => {
     expect(item("guardrails", "Daily budget").detail).toBe("$2 a day");
     expect(harnessLayers(bundle(graph({}))).find((l) => l.id === "loop")!.items[0]).toMatchObject({ state: "default", detail: "No limit (Hermes' default)" });
   });
+  it("says how careful the agent is, and changes it in the row", () => {
+    const care = (approvals?: string) => harnessLayers(bundle(graph(approvals ? { approvals } : {}))).find((l) => l.id === "guardrails")!.items.find((i) => i.label === "Approvals")!;
+    expect(care()).toMatchObject({ state: "default", edit: "approvals", detail: "Asks you when its safety check isn't sure (Hermes' default)" });
+    expect(care("manual")).toMatchObject({ state: "set", detail: "Asks you before every risky command" });
+    expect(care("off")).toMatchObject({ state: "set", detail: "Never asks: runs risky commands itself" });
+  });
   it("marks what it can't work without", () => {
     const layers = harnessLayers(bundle(graph({ soul: "" }, false)));
     expect(layers.find((l) => l.id === "model")!.items[0]!.state).toBe("missing");

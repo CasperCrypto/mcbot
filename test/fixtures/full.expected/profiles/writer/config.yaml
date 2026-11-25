@@ -27,6 +27,8 @@ browser:
 agent:
   max_turns: 40
   reasoning_effort: high
+approvals:
+  mode: manual
 image_gen:
   provider: openrouter
 platforms:

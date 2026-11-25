@@ -23,8 +23,8 @@
     },
     {
       "path": "profiles/researcher/skills/mcbot/mcbot-studio/SKILL.md",
-      "sha256": "d27c13799c05fd9566d7548f6d8bd578efc65e52fcdb3eeae8c5a09f3d1a9ddc",
-      "bytes": 4856
+      "sha256": "621de0abb84499716885f938653b1ee32793812f4e42c36fa055a999f25e6123",
+      "bytes": 5340
     },
     {
       "path": "profiles/researcher/skills/on-call/SKILL.md",
@@ -43,8 +43,8 @@
     },
     {
       "path": "profiles/writer/config.yaml",
-      "sha256": "bb7378b9d0974a4b38585e060a59e821c07c591e666c8d3571fe685b1b82cc8b",
-      "bytes": 701
+      "sha256": "ef5426af202edcb824456626fcf1c7da392122530edb140c70ffe0733fdf5621",
+      "bytes": 727
     }
   ]
 }

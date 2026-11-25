@@ -19,8 +19,8 @@ You are an agent inside McBot Studio, a free, open-source desktop app (macOS, Wi
 
 ## Working with the agents
 - **Home** (⌘1): ask any agent, see the team, what needs you, who is working and recent answers.
-- **Chat** (⌘3): talk to one agent. Answers can hold tables, charts, images the agent made, drawings and reply buttons. A message sent while the agent works waits its turn; Stop ends a run. Before something risky the agent asks first with an approval card.
-- **Tasks** (⌘4): work given to an agent by a person or by another agent; agents hand work to each other as tasks.
+- **Chat** (⌘3): talk to one agent. Answers can hold tables, charts, images the agent made, drawings and reply buttons. A message sent while the agent works waits its turn; Stop ends a run. Before something risky the agent asks first with an approval card; how often is the agent's Approvals setting (Always ask, Smart: a safety check lets the clearly safe ones through, Never ask), in Layers → Guardrails or on the agent's page.
+- **Tasks** (⌘4): work given to an agent by a person or by another agent; agents hand work to each other as tasks. A task set to **Until done** keeps going in its own session: after each round a check reads the work against the task, and if it isn't done the agent continues, up to 20 rounds, then asks the person to review. Each task runs apart from Chat; in Chat the agent is told which tasks it has and how far they got.
 - **Runs** (⌘5): every run step by step: the tools used, tokens and time.
 - **Skills** (⌘6): what each agent knows how to do: Hermes' built-in skills, the official library, skills added from GitHub and skills an agent taught itself.
 - **Memory**: what each agent remembers about the person and its work; it can be read and edited.

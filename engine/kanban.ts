@@ -55,6 +55,7 @@ function toView(r: Row, profiles: ReadonlyMap<string, string>, links: Row[], com
     parents: links.filter((l) => l.child_id === id).map((l) => String(l.parent_id)).sort(),
     children: links.filter((l) => l.parent_id === id).map((l) => String(l.child_id)).sort(),
     comments: comments.get(id) ?? 0,
+    ...(Number(r.goal_mode ?? 0) ? { goal: true } : {}),
   };
 }
 
@@ -126,6 +127,12 @@ export interface NewTask {
   parents?: string[];
   /** The board it belongs to (`--tenant`, `boardTenant`). */
   tenant?: string;
+  /**
+   * Keep working until done (`--goal`, hermes_cli/kanban_parser.py): after each turn a judge on the
+   * agent's own model checks the work against the title and details; not done → another turn in the same
+   * session, up to Hermes' 20; still not done → the card is blocked for a person to review.
+   */
+  goal?: boolean;
 }
 
 /**
@@ -137,6 +144,7 @@ export function createArgv(t: NewTask): string[] {
   if (t.tenant) argv.push("--tenant", t.tenant);
   if (t.assignee) argv.push("--assignee", t.assignee);
   for (const p of t.parents ?? []) argv.push("--parent", p);
+  if (t.goal) argv.push("--goal");
   return [...argv, "--", t.title];
 }
 
@@ -148,14 +156,16 @@ export function actionArgv(id: string, a: TaskAction, author: string): string[] 
     case "assign":
       return ["kanban", "assign", id, a.profile ?? "none"];
     case "complete":
-      return ["kanban", "complete", id, ...(a.text ? ["--result", a.text] : [])];
+      // Always a person's verdict: --force makes it the human override that skips the goal judge
+      // (hermes/MCBOT.md, as Hermes' dashboard). `--result=` so a text starting with "-" is no flag.
+      return ["kanban", "complete", id, "--force", ...(a.text ? [`--result=${a.text}`] : [])];
     case "block":
       return ["kanban", "block", id, ...(a.text ? ["--", a.text] : [])];
     case "unblock":
       return ["kanban", "unblock", id];
     case "changes":
       // A person's review verdict: back to its agent with the reason as a comment (review → ready).
-      return ["kanban", "reopen-review", id, "--reason", a.text];
+      return ["kanban", "reopen-review", id, `--reason=${a.text}`];
     case "archive":
       return ["kanban", "archive", id];
   }

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { bundledHermes, chatArgv, findHermes, hermesCommand, prepareHermes, setupEnv, setupHome } from "./hermes";
+import { bundledHermes, chatArgv, findHermes, hermesCommand, hermesEnv, prepareHermes, setupEnv, setupHome } from "./hermes";
 
 /**
  * A stand-in hermes/: its "Python" answers `-m pm.environments --format json` like Hermes' package
@@ -37,6 +37,13 @@ function fakeHermesDir(withPython: boolean, setupSeconds = 0): string {
   }
   return dir;
 }
+
+describe("the environment McBot gives Hermes", () => {
+  it("never passes on a worker scope McBot was started in", () => {
+    const env = hermesEnv("/r", { PATH: "/bin", HERMES_KANBAN_TASK: "t_1", HERMES_KANBAN_RUN_ID: "4", HERMES_PROFILE: "coder", HERMES_SESSION_SOURCE: "kanban", HERMES_TENANT: "x", HERMES_HOME: "/elsewhere", HERMES_RUNTIME_DIR: "/rt" });
+    expect(env).toEqual({ PATH: "/bin", HERMES_HOME: "/r", HERMES_RUNTIME_DIR: "/rt" });
+  });
+});
 
 describe("McBot's own Hermes", () => {
   it("is used once its tools exist: its own Python running the hermes launcher", async () => {

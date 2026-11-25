@@ -285,6 +285,11 @@ export function AgentPage({ agent, where, onClose }: { agent: AgentNode; where: 
             <input type="number" min={1} max={10000} step={5} placeholder="Any" data-testid="loop-input" aria-label="Steps per message"
               value={a.maxSteps ?? ""} onChange={(e) => { const n = parseInt(e.target.value, 10); set("maxSteps", Number.isFinite(n) && n > 0 ? Math.min(n, 10000) : null); }} /></span>
         </label>
+        <label className="ap-row" data-testid="agent-approvals" data-tip="When it asks you before a risky command (approvals.mode). Smart lets a safety check pass the clearly safe ones.">
+          <span className="t"><b>Approvals</b><small>{a.approvals === "manual" ? "Before every risky command" : a.approvals === "off" ? "Never asks" : "Asks when its safety check isn't sure"}</small></span>
+          <Picker sm className="ap-select" label="Approvals" value={a.approvals && a.approvals !== "smart" ? a.approvals : ""} onChange={(v) => set("approvals", v || null)}
+            options={[{ value: "manual", label: "Always ask" }, { value: "", label: "Smart" }, { value: "off", label: "Never ask" }]} />
+        </label>
       </Group>
 
       <Group title="Advanced" foot={errors.name ?? "Its folder in Hermes: profiles/<name>. Letters, numbers and dashes."}>

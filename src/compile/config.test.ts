@@ -202,3 +202,25 @@ describe("config.yaml: the loop layer", () => {
     expect(renderConfig(graph!, bundles.find((b) => b.agent.data.name === "c")!)).not.toContain("max_turns");
   });
 });
+
+describe("config.yaml: guardrails", () => {
+  it("says when the agent asks before a risky command with approvals.mode, only when the board sets it", async () => {
+    const { resolveGraph } = await import("./validate");
+    const g = {
+      schema: "mcbot.graph/v1", id: "b", name: "B",
+      nodes: [
+        { id: "m", kind: "model", position: { x: 0, y: 0 }, data: { name: "local", endpoint: "local", baseUrl: "http://127.0.0.1:11434/v1", model: "qwen3:8b" } },
+        { id: "a", kind: "agent", position: { x: 0, y: 0 }, data: { name: "a", approvals: "manual" } },
+        { id: "o", kind: "agent", position: { x: 0, y: 0 }, data: { name: "o", approvals: "off" } },
+        { id: "c", kind: "agent", position: { x: 0, y: 0 }, data: { name: "c" } },
+      ],
+      edges: [{ id: "e1", source: "m", target: "a" }, { id: "e2", source: "m", target: "o" }, { id: "e3", source: "m", target: "c" }],
+    };
+    const { graph, bundles } = resolveGraph(g);
+    const of = (name: string) => renderConfig(graph!, bundles.find((b) => b.agent.data.name === name)!);
+    expect(of("a")).toContain("\napprovals:\n  mode: manual\n");
+    // YAML 1.1 reads a bare off as false: quoted, so Hermes gets the word.
+    expect(of("o")).toContain("\napprovals:\n  mode: \"off\"\n");
+    expect(of("c")).not.toContain("approvals");
+  });
+});

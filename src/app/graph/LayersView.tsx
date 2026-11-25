@@ -1,7 +1,7 @@
 /**
  * The harness in layers (graph/layers.ts): pick an agent, see its surfaces, loop, context, model,
  * tools, plugins and guardrails stacked outside in, and change them right there. The agent's own
- * settings (steps per message, helpers, thinking, daily budget) are controls in their row; every
+ * settings (steps per message, helpers, thinking, approvals, daily budget) are controls in their row; every
  * other row opens what changes it: the block on the Board (its inspector) or the view that holds it.
  */
 import { Brain, ChevronRight, Cpu, MessageSquare, Puzzle, Radio, Repeat, ShieldCheck, Wrench } from "lucide-react";
@@ -51,6 +51,16 @@ function Editor({ item, bundle }: { item: LayerItem; bundle: AgentBundle }) {
       return (
         <Picker sm className="layer-select" label="Thinking" value={a.reasoning ?? ""} testId="layer-edit-reasoning" onChange={(v) => set("reasoning", v || null)}
           options={[{ value: "", label: "As the model decides" }, ...REASONING_LEVELS.map((l) => ({ value: l, label: THINKING[l] ?? l }))]} />
+      );
+    case "approvals":
+      // "Smart" is Hermes' default, so it is the unset value; a board that says "smart" shows it too.
+      return (
+        <Picker sm className="layer-select" label="Approvals" value={a.approvals && a.approvals !== "smart" ? a.approvals : ""} testId="layer-edit-approvals" onChange={(v) => set("approvals", v || null)}
+          options={[
+            { value: "manual", label: "Always ask", sub: "Before every risky command" },
+            { value: "", label: "Smart", sub: "Asks when its safety check isn't sure" },
+            { value: "off", label: "Never ask", sub: "Runs risky commands itself" },
+          ]} />
       );
     case "helpers": {
       const caps = a.capabilities ?? DEFAULT_CAPABILITIES;

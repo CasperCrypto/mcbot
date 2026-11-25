@@ -917,13 +917,14 @@ export const demoEngine = {
     return { tasks: tasks.map((t) => taskView(t, team)).sort((a, b) => b.createdAt - a.createdAt), gateway: true };
   }),
   task: api((boardId: string, id: string): TaskDetail => taskView(findTask(id), teamOf(requireBoard(boardId)))),
-  createTask: api((boardId: string, input: { title: string; body: string; assignee: string | null; by: string; parents?: string[] }): TaskView => {
+  createTask: api((boardId: string, input: { title: string; body: string; assignee: string | null; by: string; parents?: string[]; goal?: boolean }): TaskView => {
     const team = teamOf(requireBoard(boardId));
     if (input.assignee !== null && !team.has(input.assignee)) throw new EngineError(409, `${input.assignee} isn't a compiled agent on this board. Compile, then give it tasks.`, {});
     const t: TaskDetail & { board: string } = {
       board: boardId,
       id: taskId(), title: input.title.trim(), body: input.body, assignee: input.assignee, agentNodeId: null, status: input.assignee ? "ready" : "todo", priority: 0,
       createdBy: input.by, createdAt: Date.now(), startedAt: null, completedAt: null, result: null, error: null, parents: input.parents ?? [], children: [], comments: 0, thread: [], attempts: [],
+      ...(input.goal ? { goal: true } : {}),
     };
     (state.tasks ??= []).push(t);
     save();
@@ -941,7 +942,7 @@ export const demoEngine = {
         t.assignee = a.profile;
         if (t.status === "todo" && a.profile) t.status = "ready";
         break;
-      case "complete": Object.assign(t, { status: "done", completedAt: Date.now(), result: a.text || t.result }); break;
+      case "complete": Object.assign(t, { status: "done", completedAt: Date.now(), result: a.text || t.result || (t.status === "review" ? null : `Marked done by ${by}`) }); break;
       case "block":
         if (!["ready", "todo", "running", "triage"].includes(t.status)) refuse(`cannot block ${id}: it is ${t.status}`);
         t.status = "blocked";

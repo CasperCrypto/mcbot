@@ -512,6 +512,9 @@ h1, h2, h3 { text-wrap: balance; }
 
 /* A task's progress (TasksView Work): how long, how many steps, the newest steps, its last words. */
 .task-work-head { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+.task-until { gap: 12px; padding: 10px 12px; border-radius: var(--r-md); background: var(--surface-1); }
+.task-until > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; }
+.task-until small { font-size: 12px; }
 .task-steps { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .task-steps li { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 5px 8px; border-radius: var(--r-sm); background: var(--surface-1); font-size: 12.5px; }
 .task-steps li b { flex: none; font-weight: 600; }

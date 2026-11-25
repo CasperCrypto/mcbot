@@ -123,7 +123,7 @@ const http = {
   revealLogin: (id: string) => call<{ username: string; password: string; host: string }>("POST", "/api/logins/reveal", { id }),
   tasks: (boardId: string) => call<TasksView>("GET", `/api/tasks?boardId=${encodeURIComponent(boardId)}`),
   task: (boardId: string, id: string) => call<TaskDetail>("GET", `/api/tasks/one?boardId=${encodeURIComponent(boardId)}&id=${encodeURIComponent(id)}`),
-  createTask: (boardId: string, t: { title: string; body: string; assignee: string | null; by: string; parents?: string[] }) => call<TaskView>("POST", "/api/tasks", { boardId, ...t }),
+  createTask: (boardId: string, t: { title: string; body: string; assignee: string | null; by: string; parents?: string[]; goal?: boolean }) => call<TaskView>("POST", "/api/tasks", { boardId, ...t }),
   schedules: (boardId: string) => call<AgentSchedules[]>("GET", `/api/schedules?boardId=${encodeURIComponent(boardId)}`),
   createSchedule: (boardId: string, s: { profile: string; when: string; prompt: string; name: string }) => call<AgentSchedules>("POST", "/api/schedules", { boardId, ...s }),
   actOnSchedule: (boardId: string, profile: string, id: string, action: "pause" | "resume" | "run" | "remove") => call<AgentSchedules>("POST", "/api/schedules/act", { boardId, profile, id, action }),

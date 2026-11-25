@@ -47,6 +47,11 @@ describe("what an agent knows right now", () => {
     expect(text).not.toContain("Someone else's");
   });
 
+  it("says when a task keeps going until it is done", () => {
+    const text = liveContext({ profile: "coder", now: NOW, nameOf, tasks: [task({ status: "running", startedAt: NOW - 5 * MIN, goal: true })] })!;
+    expect(text).toContain(`- "make new tab sheets" (t_ab12): you are working on it in its own run, for 5 min, and it keeps going until a check agrees it is done. From Kacper`);
+  });
+
   it("says nothing when the agent has no work on the board", () => {
     expect(liveContext({ profile: "coder", now: NOW, nameOf, tasks: [task({ assignee: "writer" })] })).toBeNull();
     expect(liveContext({ profile: "coder", now: NOW, nameOf, tasks: [] })).toBeNull();

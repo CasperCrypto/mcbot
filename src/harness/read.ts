@@ -31,6 +31,8 @@ import {
   type Skill,
   type ToolData,
   REASONING_LEVELS,
+  APPROVAL_MODES,
+  type ApprovalMode,
   type Reasoning,
 } from "../contracts/graph";
 
@@ -60,7 +62,7 @@ export interface ReadResult {
 }
 
 /** Keys of config.yaml the board shows (src/compile/config.ts writes exactly these). */
-const SHOWN_KEYS = new Set(["model", "providers", "fallback_providers", "mcp_servers", "platform_toolsets", "browser", "image_gen", "video_gen", "platforms", "agent"]);
+const SHOWN_KEYS = new Set(["model", "providers", "fallback_providers", "mcp_servers", "platform_toolsets", "browser", "image_gen", "video_gen", "platforms", "agent", "approvals"]);
 const CAP_KEYS = new Set<string>(CAPABILITIES.map((c) => c.key));
 const TEAM_HEAD = "## Team";
 const TEAM_LINE = /^- `([a-z0-9][a-z0-9_-]{0,63})`/;
@@ -354,6 +356,15 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
       if (!shown) unshown.push({ profile: p.name, what: `config.yaml: agent.${k}`, why: "kept in Hermes; not on the board yet" });
     }
 
+    // When it asks before a risky command: approvals.mode. YAML 1.1 reads a bare `off` as false, and
+    // Hermes takes that as "off" (tools/approval_context.py `_normalize_approval_mode`); its other approvals.* keys stay in Hermes.
+    const ap = isObj(cfg.approvals) ? cfg.approvals : {};
+    const mode = ap.mode === false ? "off" : typeof ap.mode === "string" ? ap.mode.trim().toLowerCase() : "";
+    const approvals = (APPROVAL_MODES as readonly string[]).includes(mode) ? (mode as ApprovalMode) : null;
+    for (const k of Object.keys(ap)) {
+      if (!(k === "mode" && approvals)) unshown.push({ profile: p.name, what: `config.yaml: approvals.${k}`, why: "kept in Hermes; not on the board yet" });
+    }
+
     const data: AgentData = {
       name: p.name,
       displayName: str(meta.display_name),
@@ -364,6 +375,7 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
       browser,
       ...(maxSteps ? { maxSteps } : {}),
       ...(reasoning ? { reasoning } : {}),
+      ...(approvals ? { approvals } : {}),
     };
     nodes.push({ id: agentId, kind: "agent", position: { x: AGENT_X, y }, data });
   });

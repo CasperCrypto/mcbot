@@ -93,6 +93,15 @@ export const DEFAULT_CAPABILITIES: readonly Capability[] = [
   "session_search", "skills", "todo", "clarify", "delegation", "cronjob", "computer_use", "connections",
 ];
 
+/**
+ * How careful an agent is before a risky command (`approvals.mode`, tools/approval_context.py `_VALID_MODES`):
+ * "manual" always asks, "smart" lets a guardian model decide and ask when unsure (Hermes' default,
+ * hermes_cli/config_defaults.py `approvals.mode`), "off" never asks.
+ */
+export const APPROVAL_MODES = ["manual", "smart", "off"] as const;
+export const ApprovalModeSchema = z.enum(APPROVAL_MODES);
+export type ApprovalMode = z.infer<typeof ApprovalModeSchema>;
+
 /** Hermes' reasoning effort ladder (hermes_constants.py VALID_REASONING_EFFORTS, plus "none" = off). */
 export const REASONING_LEVELS = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"] as const;
 export const ReasoningSchema = z.enum(REASONING_LEVELS);
@@ -144,6 +153,8 @@ export const AgentDataSchema = z.object({
    * hermes_constants.resolve_reasoning_config): "none" turns thinking off; null/unset = the model's default.
    */
   reasoning: ReasoningSchema.nullish(),
+  /** When it asks before a risky command (`approvals.mode`); null/unset = Hermes' default ("smart"). */
+  approvals: ApprovalModeSchema.nullish(),
   /** How its browser runs (Hermes' `browser:` settings); null = Hermes' defaults. */
   browser: z.object({
     /** A visible window you can watch (`browser.headed`). */

@@ -131,6 +131,8 @@ export function renderConfig(graph: Graph, bundle: AgentBundle): string {
   if (bundle.agent.data.maxSteps) agent.max_turns = bundle.agent.data.maxSteps;
   if (bundle.agent.data.reasoning) agent.reasoning_effort = bundle.agent.data.reasoning;
   if (Object.keys(agent).length) doc.agent = agent;
+  // When it asks before a risky command (tools/approval_context.py `_VALID_MODES`; unset = Hermes' "smart").
+  if (bundle.agent.data.approvals) doc.approvals = { mode: bundle.agent.data.approvals };
   if (bundle.image) doc.image_gen = makerEntry(bundle.image);
   if (bundle.video) doc.video_gen = makerEntry(bundle.video);
   // A chat app's token and allowed users live in the agent's .env (written by the engine, never

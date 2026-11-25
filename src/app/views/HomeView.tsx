@@ -62,7 +62,7 @@ function Ask({ agents }: { agents: AgentNode[] }) {
           useApp.getState().openChat(chosen.id);
         }
       } else {
-        const t = await engine.createTask(boardId, { title: text.trim().split("\n")[0]!.slice(0, 300), body: text.trim(), assignee: chosen.data.name, by: identity.name });
+        const t = await engine.createTask(boardId, { title: text.trim().split("\n")[0]!.slice(0, 300), body: text.trim(), assignee: chosen.data.name, by: identity.name, goal: true });
         setText("");
         useApp.getState().toast({ kind: "ok", text: `Task added for ${chosen.data.displayName || chosen.data.name}`, action: { label: "Open", run: () => useApp.getState().showTask(t.id) } });
       }
