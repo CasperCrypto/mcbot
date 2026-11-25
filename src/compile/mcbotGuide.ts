@@ -52,6 +52,7 @@ You are an agent inside McBot Studio, a free, open-source desktop app (macOS, Wi
 4. Train: **In the cloud** sends the good conversations to the board's cloud provider as a fine-tuning job (OpenAI-compatible; at least 10 conversations), shows it under Models, and **Use it** makes the new model the agent's main one, the old one its backup. **On this computer** gives a Trainer agent (Hermes' Unsloth and llama.cpp skills) an Until-done task: it fine-tunes a small open model and serves it at http://127.0.0.1:8080, where Settings → Models finds it.
 
 ## Sharing and cost
+- **Team** (⌘K → Team): the person's name, what they do and their colour, who is here now and in which view, everyone with access (their role, when they were last here; the host can remove them), Invite, and the team chat, where "@agent …" asks an agent.
 - **Share** (the icon in the title bar): a link for teammates (Can edit) or for guests and customers (Can chat, with the agents picked). It works in any browser, even on a phone; the agents still run on this computer.
 - **Cost** (⌘K → Cost): spend per agent and per day; models on this computer are free. An agent can have a daily budget; once it is used up, McBot starts no more runs for that agent that day.
 - **Settings** (⌘,): models, API keys, the person's name, appearance and the engine.

@@ -16,6 +16,7 @@ export interface Peer {
   clientId: number;
   name: string;
   color: string;
+  title?: string;
   cursor: { x: number; y: number } | null;
   selection: string | null;
   tab: Tab | null;
@@ -60,7 +61,7 @@ function readPeers(provider: Link): Peer[] {
   const out: Peer[] = [];
   provider.awareness.getStates().forEach((s, clientId) => {
     if (clientId === self || !s.user) return;
-    out.push({ clientId, name: s.user.name, color: s.user.color, cursor: s.cursor ?? null, selection: s.selection ?? null, tab: s.tab ?? null });
+    out.push({ clientId, name: s.user.name, color: s.user.color, ...(typeof s.user.title === "string" && s.user.title ? { title: s.user.title.slice(0, 60) } : {}), cursor: s.cursor ?? null, selection: s.selection ?? null, tab: s.tab ?? null });
   });
   return out.sort((a, b) => a.clientId - b.clientId);
 }

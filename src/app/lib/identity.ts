@@ -6,6 +6,8 @@ const NAMES = ["Ada", "Grace", "Alan", "Linus", "Hedy", "Ken", "Barbara", "Edsge
 export interface Identity {
   name: string;
   color: string;
+  /** What the person does ("Founder", "Designer"): teammates see it beside their name. */
+  title?: string;
   /** The person typed this name (setup, Settings). A made-up one is never used to greet them. */
   chosen?: boolean;
 }
