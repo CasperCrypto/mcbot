@@ -8,6 +8,7 @@ import { DatabaseSync } from "node:sqlite";
 import { existsSync } from "node:fs";
 import { sha256Hex } from "../src/compile/text";
 import { atomicWrite, readTextOrNull, resolveInside } from "./fsutil";
+import type { TaskWork } from "../src/contracts/api";
 
 /** tools/memory_tool_store.py ENTRY_DELIMITER */
 export const MEMORY_DELIMITER = "\n§\n";
@@ -149,5 +150,65 @@ export function readSession(root: string, profile: string, id: string): SessionR
   return withDb(root, profile, (db) => {
     const r = db.prepare("SELECT * FROM sessions WHERE id = ?").get(id) as Row | undefined;
     return r ? toSession(r) : null;
+  });
+}
+
+/** The text of a message's content, which Hermes stores as text or as JSON parts. */
+function textOf(content: unknown): string {
+  if (typeof content !== "string") return "";
+  if (!content.startsWith("[")) return content;
+  try {
+    const parts = JSON.parse(content) as { type?: string; text?: string }[];
+    return Array.isArray(parts) ? parts.filter((p) => p?.type === "text" && typeof p.text === "string").map((p) => p.text).join(" ") : content;
+  } catch {
+    return content;
+  }
+}
+
+/** What a tool was called on, in a few words: the first short string argument (a path, a command, a query). */
+function detailOf(args: unknown): string {
+  let parsed: unknown = args;
+  if (typeof args === "string") {
+    try {
+      parsed = JSON.parse(args);
+    } catch {
+      return args.slice(0, 80);
+    }
+  }
+  if (!parsed || typeof parsed !== "object") return "";
+  const first = Object.values(parsed as Record<string, unknown>).find((v) => typeof v === "string" && v.trim());
+  return typeof first === "string" ? first.replace(/\s+/g, " ").trim().slice(0, 80) : "";
+}
+
+/**
+ * A task's work so far: its session in the assignee's state.db is the one whose opening turn is
+ * "work kanban task <id>" (gateway/session_kanban.py:142, stored as the dispatcher's turn, :383-386).
+ * Its tool calls and the agent's last words, the home folder as ~ and tokens hidden; null before
+ * the first attempt or when Hermes kept no such session.
+ */
+export function readTaskWork(root: string, profile: string, taskId: string, hide: (text: string) => string = (t) => t): TaskWork | null {
+  return withDb(root, profile, (db) => {
+    const opening = db.prepare("SELECT session_id FROM messages WHERE role = 'user' AND content LIKE ? ORDER BY id DESC LIMIT 1").get(`work kanban task ${taskId}%`) as Row | undefined;
+    if (!opening) return null;
+    const rows = db.prepare("SELECT role, content, tool_calls, timestamp FROM messages WHERE session_id = ? ORDER BY id").all(String(opening.session_id)) as Row[];
+    const steps: TaskWork["recent"] = [];
+    let said: string | null = null;
+    let lastAt: number | null = null;
+    for (const r of rows) {
+      const at = Math.round(num(r.timestamp) * 1000);
+      if (r.role !== "assistant") continue;
+      lastAt = at;
+      let calls: unknown = null;
+      try {
+        calls = typeof r.tool_calls === "string" ? JSON.parse(r.tool_calls) : null;
+      } catch { /* not JSON */ }
+      for (const c of Array.isArray(calls) ? calls : []) {
+        const fn = (c as { function?: { name?: unknown; arguments?: unknown } }).function;
+        if (typeof fn?.name === "string") steps.push({ tool: fn.name, detail: hide(detailOf(fn.arguments)), at });
+      }
+      const text = textOf(r.content).replace(/\s+/g, " ").trim();
+      if (text) said = hide(text.slice(0, 300));
+    }
+    return { steps: steps.length, recent: steps.slice(-5), said, lastAt };
   });
 }

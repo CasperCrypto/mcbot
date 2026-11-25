@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { MemoryConflict, parseMemory, readMemory, readSessions, renderMemory, writeMemory } from "./hermesData";
+import { MemoryConflict, parseMemory, readMemory, readSessions, readTaskWork, renderMemory, writeMemory } from "./hermesData";
 
 let root: string;
 beforeEach(() => {
@@ -57,5 +57,37 @@ describe("readSessions", () => {
   });
   it("returns nothing for a profile that never ran", () => {
     expect(readSessions(root, "triage")).toEqual([]);
+  });
+});
+
+describe("readTaskWork", () => {
+  it("finds a task's session by its opening turn and reads its steps and last words", () => {
+    const db = new DatabaseSync(join(root, "profiles/triage/state.db"));
+    db.exec(`CREATE TABLE messages (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL, role TEXT NOT NULL, content TEXT,
+      tool_call_id TEXT, tool_calls TEXT, tool_name TEXT, timestamp REAL NOT NULL)`);
+    const put = db.prepare("INSERT INTO messages (session_id, role, content, tool_calls, tool_name, timestamp) VALUES (?,?,?,?,?,?)");
+    const call = (name: string, args: Record<string, unknown>) => JSON.stringify([{ id: "c", type: "function", function: { name, arguments: JSON.stringify(args) } }]);
+    put.run("chat-1", "user", "work on the chat", null, null, 1793750000);
+    put.run("kb-1", "user", "work kanban task t_ab12", null, null, 1793750010);
+    put.run("kb-1", "assistant", "", call("read_file", { path: "/home/me/McBot/files/plan.md" }), null, 1793750020);
+    put.run("kb-1", "tool", "the plan", null, "read_file", 1793750021);
+    put.run("kb-1", "assistant", "", call("terminal", { command: "npm run build", timeout: 60 }), null, 1793750030);
+    put.run("kb-1", "assistant", "Building the **Sheets** tab now.", null, null, 1793750040);
+    db.close();
+    const work = readTaskWork(root, "triage", "t_ab12", (t) => t.replace("/home/me", "~"));
+    expect(work).toEqual({
+      steps: 2,
+      recent: [
+        { tool: "read_file", detail: "~/McBot/files/plan.md", at: 1793750020000 },
+        { tool: "terminal", detail: "npm run build", at: 1793750030000 },
+      ],
+      said: "Building the **Sheets** tab now.",
+      lastAt: 1793750040000,
+    });
+    expect(readTaskWork(root, "triage", "t_ffff")).toBeNull();
+  });
+
+  it("is null for a profile that never ran", () => {
+    expect(readTaskWork(root, "triage", "t_ab12")).toBeNull();
   });
 });

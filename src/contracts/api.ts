@@ -277,11 +277,27 @@ export interface TaskAttempt {
   error: string | null;
   startedAt: number;
   endedAt: number | null;
+  /** The worker's last sign of life (task_runs.last_heartbeat_at), Unix ms. */
+  heartbeatAt?: number | null;
+}
+
+/** A task's work so far, from its Hermes session in the assignee's state.db (engine/hermesData.ts readTaskWork). */
+export interface TaskWork {
+  /** Tool calls so far. */
+  steps: number;
+  /** The newest steps, oldest first: the tool and what it was called on (home folder as ~, tokens hidden). */
+  recent: { tool: string; detail: string; at: number }[];
+  /** What the agent last said, plain and short. */
+  said: string | null;
+  /** When it last did anything, Unix ms. */
+  lastAt: number | null;
 }
 
 export interface TaskDetail extends TaskView {
   thread: TaskComment[];
   attempts: TaskAttempt[];
+  /** What its agent has done on it so far (absent before the first attempt, or in a window that joined). */
+  work?: TaskWork | null;
 }
 
 /** One of Hermes' official optional skills (hermes/optional-skills), installable per agent. */

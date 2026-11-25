@@ -31,7 +31,7 @@ import { buildCostReport } from "./cost";
 import { atomicWrite } from "./fsutil";
 import { FolderError, Folders, browseFolders } from "./folders";
 import { bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, setupHome, stopGateway } from "./hermes";
-import { MemoryConflict, readMemory, readSessions, writeMemory } from "./hermesData";
+import { MemoryConflict, readMemory, readSessions, readTaskWork, writeMemory } from "./hermesData";
 import { JOB_ID_RE, createScheduleArgv, readSchedules, scheduleActionArgv } from "./schedules";
 import { SEED_ARGV, SKILL_ID_RE, SKILL_NAME_RE, addSkillArgv, bundledSeeded, installArgv, installedSkills, listLibrary, parseSkillSearch, profileSkills, searchSkillsArgv, skillSources, uninstallArgv, updateArgv } from "./skills";
 import { PLUGIN_NAME_RE, disablePluginArgv, enablePluginArgv, installPluginArgv, listPluginCatalog, listPluginsArgv, parsePluginList, removePluginArgv } from "./plugins";
@@ -55,6 +55,7 @@ import { frameable } from "./web";
 import { Ratings, agentConversations, learnAgent, writeDataset } from "./learn";
 import type { Rating } from "../src/harness/learn";
 import { renderSoul } from "../src/compile/soul";
+import { liveContext } from "../src/harness/liveContext";
 
 export const ENGINE_VERSION = "0.8.0";
 
@@ -480,8 +481,21 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
         const [b] = buildCostReport([{ profile: name, agentNodeId: bundle.agent.id, sessions: readSessions(cfg.hermesHome, name), dailyBudgetUsd: limit }], [], bundle.models).budgets;
         if (b?.state === "over") throw new HttpError(409, `${bundle.agent.data.displayName || name} reached today's budget ($${b.spentTodayUsd.toFixed(2)} of $${limit.toFixed(2)}). Raise it to keep going.`, { budget: b });
       }
+      // What is true right now about this agent's tasks, which run in sessions of their own
+      // (src/harness/liveContext.ts). A guest's run carries none of the board's work.
+      let instructions: string | undefined;
+      if (who?.role !== "chat") {
+        const profile = bundle.agent.data.name;
+        const tasks = readTasks(cfg.hermesHome, await teamOf(boardId), boardId);
+        const saved = Object.values(await secrets.env());
+        const work = new Map(tasks.filter((t) => t.assignee === profile && t.status === "running")
+          .map((t) => [t.id, readTaskWork(cfg.hermesHome, profile, t.id, (x) => redact(x, saved))] as const)
+          .filter((e): e is readonly [string, NonNullable<typeof e[1]>] => !!e[1]));
+        const names = new Map(bundles.map((b) => [b.agent.data.name, b.agent.data.displayName || b.agent.data.name]));
+        instructions = liveContext({ profile, tasks, work, nameOf: (w) => names.get(w) ?? w, now: Date.now() }) ?? undefined;
+      }
       const runId = await runner.start({
-        boardId, agentNodeId: bundle.agent.id, profile: bundle.agent.data.name, prompt: body.prompt,
+        boardId, agentNodeId: bundle.agent.id, profile: bundle.agent.data.name, prompt: body.prompt, ...(instructions ? { instructions } : {}),
         toolNodes: bundle.tools.map((t) => ({ id: t.id, name: t.data.name })), models: bundle.models,
         env: envEntriesFor(bundle),
         ...(who ? { by: { id: who.id, name: who.name } } : {}),
@@ -697,11 +711,15 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const boardId = await requireBoard(url.searchParams.get("boardId"));
       return { tasks: readTasks(cfg.hermesHome, team, boardId), gateway: (await gatewayStatus(cfg.hermesHome)).running };
     },
-    "GET /api/tasks/one": async (_req, url): Promise<TaskDetail> => {
+    "GET /api/tasks/one": async (req, url): Promise<TaskDetail> => {
       const team = await teamOf(await requireBoard(url.searchParams.get("boardId")));
       const task = readTask(cfg.hermesHome, url.searchParams.get("id") ?? "", team);
       if (!task) throw new HttpError(404, "no such task");
-      return task;
+      // What its agent has done so far, from its Hermes session: this computer's windows only.
+      const profile = task.attempts.at(-1)?.profile ?? task.assignee;
+      if (memberOf.get(req) || !profile || !task.attempts.length) return task;
+      const saved = Object.values(await secrets.env());
+      return { ...task, work: readTaskWork(cfg.hermesHome, profile, task.id, (t) => redact(t, saved)) };
     },
     "POST /api/tasks": async (req): Promise<TaskView> => {
       const body = parse(z.object({

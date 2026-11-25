@@ -106,7 +106,7 @@ export function readTask(root: string, id: string, profiles: ReadonlyMap<string,
     }));
     const attempts: TaskAttempt[] = (db.prepare("SELECT * FROM task_runs WHERE task_id = ? ORDER BY id").all(id) as Row[]).map((r) => ({
       id: Number(r.id), profile: str(r.profile), status: String(r.status ?? ""), outcome: str(r.outcome), summary: str(r.summary), error: str(r.error),
-      startedAt: ms(r.started_at) ?? 0, endedAt: ms(r.ended_at),
+      startedAt: ms(r.started_at) ?? 0, endedAt: ms(r.ended_at), heartbeatAt: ms(r.last_heartbeat_at),
     }));
     return { ...task, thread, attempts };
   });

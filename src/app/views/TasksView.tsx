@@ -10,6 +10,8 @@ import { useApp } from "../state/store";
 import { AgentFace, Empty, PersonFace } from "../ui";
 import { Picker } from "../Picker";
 import { agentOptions } from "../lib/agentOptions";
+import { toolLabel } from "../lib/toolLabel";
+import { span } from "../../harness/liveContext";
 
 /** Hermes' columns (hermes_cli/kanban_workflow.py); the first three show only when they hold tasks. */
 const LANES: { status: TaskStatus; label: string; always: boolean }[] = [
@@ -119,6 +121,37 @@ function NewTask({ agents, onClose, onCreated }: { agents: AgentNode[]; onClose:
   );
 }
 
+/** No step for this long while a task runs: it looks stuck. */
+const STUCK_MS = 10 * 60_000;
+
+/** What the agent has done on the task so far, from its Hermes session: live while it runs. */
+function Work({ task, agents }: { task: TaskDetail; agents: AgentNode[] }) {
+  const w = task.work;
+  const attempt = task.attempts.at(-1);
+  if (!w || !attempt) return null;
+  const now = Date.now();
+  const running = task.status === "running";
+  const last = Math.max(w.lastAt ?? 0, attempt.heartbeatAt ?? 0) || null;
+  const stuck = running && last !== null && now - last > STUCK_MS;
+  const agent = agents.find((a) => a.data.name === attempt.profile);
+  return (
+    <div className="stack" style={{ gap: 8 }} data-testid="task-work">
+      <span className="section-label">Progress</span>
+      <div className="task-work-head">
+        <span className="grow num">{running ? `Working ${span(now - attempt.startedAt)}` : `Took ${span((attempt.endedAt ?? now) - attempt.startedAt)}`} · {w.steps} step{w.steps === 1 ? "" : "s"}{last ? ` · last ${ago(last)}` : ""}</span>
+        {stuck && <span className="chip warn" data-tip="No step for over 10 minutes" data-testid="task-stuck">Looks stuck</span>}
+      </div>
+      {w.recent.length > 0 && (
+        <ol className="task-steps">
+          {w.recent.map((x, i) => <li key={`${x.at}-${i}`}><b>{toolLabel(x.tool)}</b>{x.detail && <span className="mono ellipsis">{x.detail}</span>}<span className="faint num">{ago(x.at)}</span></li>)}
+        </ol>
+      )}
+      {w.said && <p className="task-said">{w.said}</p>}
+      {agent && <div className="row"><button className="btn sm" onClick={() => useApp.getState().openChat(agent.id)}><MessageSquare size={13} /> Ask {agent.data.displayName || agent.data.name}</button></div>}
+    </div>
+  );
+}
+
 function Detail({ id, agents, onClose, onChanged, closing = false }: { id: string; agents: AgentNode[]; onClose: () => void; onChanged: () => void; closing?: boolean }) {
   const { boardId } = useBoard();
   const identity = useApp((s) => s.identity);
@@ -174,6 +207,7 @@ function Detail({ id, agents, onClose, onChanged, closing = false }: { id: strin
           <span className="faint">From</span><Who name={task.createdBy} agents={agents} />
           <span className="faint">Added</span><span>{ago(task.createdAt)}</span>
         </div>
+        <Work task={task} agents={agents} />
         {task.result && (
           <div className="stack" style={{ gap: 6 }}>
             <span className="section-label">Result</span>

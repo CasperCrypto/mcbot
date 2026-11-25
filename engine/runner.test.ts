@@ -87,6 +87,24 @@ describe("a gateway that is restarting", () => {
   }, 15_000);
 });
 
+describe("what is true right now", () => {
+  it("goes to Hermes with the run as its instructions, and not when there is none", async () => {
+    const { root, store } = setup();
+    const sent: (string | undefined)[] = [];
+    const runs = {
+      up: async () => true,
+      start: async (_p: string, _prompt: string, instructions?: string) => { sent.push(instructions); return `run_i${sent.length}`; },
+      stop: async () => undefined,
+      sessionOf: async () => null,
+      events: async function* () { yield { event: "run.completed", output: "ok" }; },
+    } as unknown as HermesRuns;
+    const runner = new Runner({ store, root, managedRoot: false, api: { runs, env: {} }, findHermes: async () => ({ path: "hermes", shell: false, kind: "bundled" }) });
+    await finishedOf(store, await runner.start({ ...req, instructions: "## Right now (from McBot)\n- a task" }), 8000);
+    await finishedOf(store, await runner.start(req), 8000);
+    expect(sent).toEqual(["## Right now (from McBot)\n- a task", undefined]);
+  }, 20_000);
+});
+
 describe("stopping a run", () => {
   it("stops a one-shot Hermes that ignores SIGINT", async () => {
     const { root, store } = setup();
