@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView, LearnExport, LearnView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView, LearnExport, LearnView, DocUpload, TrainJob } from "../../contracts/api";
 import type { HarnessVersion } from "../../harness/versions";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
@@ -41,6 +41,19 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   return data as T;
 }
 
+/** Send a file's bytes as the body (a document for the agents). */
+async function upload<T>(path: string, data: Blob): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${ENGINE_HTTP}${path}`, { method: "POST", headers: { ...auth(), "content-type": "application/octet-stream" }, body: data });
+  } catch {
+    throw new EngineError(0, "The McBot engine is not reachable.", {});
+  }
+  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) throw new EngineError(res.status, String(body.error ?? res.statusText), body);
+  return body as T;
+}
+
 /** A file the engine streams as itself (images and videos agents made). */
 async function blob(path: string): Promise<Blob> {
   let res: Response;
@@ -73,6 +86,14 @@ const http = {
   run: (runId: string) => call<RunEvent[]>("GET", `/api/runs/${runId}`),
   startRun: (boardId: string, agentNodeId: string, prompt: string) => call<{ runId: string }>("POST", "/api/runs", { boardId, agentNodeId, prompt }),
   answerRun: (runId: string, choice: string) => call<{ answered: string }>("POST", `/api/runs/${runId}/approval`, { choice }),
+  /** Training in the cloud: the board's jobs (their state asked of the provider), start one, cancel one. */
+  trainJobs: (boardId: string) => call<TrainJob[]>("GET", `/api/train?boardId=${encodeURIComponent(boardId)}`),
+  startTraining: (boardId: string, agentNodeId: string, modelNodeId: string, baseModel: string, pick: DatasetPick) => call<TrainJob>("POST", "/api/train", { boardId, agentNodeId, modelNodeId, baseModel, pick }),
+  cancelTraining: (id: string) => call<TrainJob>("POST", "/api/train/cancel", { id }),
+  /** A document for the agents: kept in files/knowledge, read to text (PDF and Office files by Hermes). */
+  addDoc: (name: string, data: Blob) => upload<DocUpload>(`/api/knowledge/doc?name=${encodeURIComponent(name)}`, data),
+  /** The board's knowledge as Markdown, saved in <workspace>/exports (never over an earlier file). */
+  exportKnowledge: (boardId: string, markdown: string) => call<{ path: string }>("POST", "/api/knowledge/export", { boardId, markdown }),
   /** Answer what the agent asked (approvals/question.ts encodeAnswer). */
   replyRun: (runId: string, promptId: string, answer: string) => call<{ answered: string }>("POST", `/api/runs/${runId}/reply`, { promptId, answer }),
   cancelRun: (runId: string) => call<{ cancelled: boolean }>("POST", `/api/runs/${runId}/cancel`, {}),

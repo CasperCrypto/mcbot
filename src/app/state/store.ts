@@ -6,7 +6,10 @@ import { loadIdentity, saveIdentity, type Identity } from "../lib/identity";
 import { applyAppearance, loadAppearance, saveAppearance, type Appearance } from "../lib/appearance";
 import type { Rating } from "../../harness/learn";
 
-export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "memory" | "skills" | "files" | "passwords" | "cost" | "learn" | "team" | "settings";
+export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "knowledge" | "memory" | "skills" | "files" | "passwords" | "cost" | "learn" | "team" | "settings";
+
+/** Memory, Skills and Training are segments of Knowledge: the view (and the rail) they belong to. */
+export const viewOf = (t: Tab): Tab => (t === "memory" || t === "skills" || t === "learn" ? "knowledge" : t);
 
 export type SettingsSection = "models" | "keys" | "appearance" | "you" | "team" | "engine" | "about";
 

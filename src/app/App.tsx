@@ -29,7 +29,7 @@ import { useSignals } from "./state/signals";
 import { engineRestart, engineStatus, inApp, onSummon, type EngineStatus } from "./lib/desktop";
 import { stepScale } from "./lib/appearance";
 import { engineDetails, engineVerdict } from "./lib/engineHealth";
-import { useApp } from "./state/store";
+import { useApp, viewOf } from "./state/store";
 import { useTasks } from "./views/TasksView";
 import { AgentsView } from "./views/AgentsView";
 import { HomeView } from "./views/HomeView";
@@ -67,11 +67,9 @@ function prefetchViews() {
 
 const GraphView = lazyView(() => import("./graph/GraphView"), (m) => m.GraphView);
 const RunsView = lazyView(() => import("./views/RunsView"), (m) => m.RunsView);
-const MemoryView = lazyView(() => import("./views/MemoryView"), (m) => m.MemoryView);
-const SkillsView = lazyView(() => import("./views/SkillsView"), (m) => m.SkillsView);
+const KnowledgeView = lazyView(() => import("./views/KnowledgeView"), (m) => m.KnowledgeView);
 const FilesView = lazyView(() => import("./views/FilesView"), (m) => m.FilesView);
 const CostView = lazyView(() => import("./views/CostView"), (m) => m.CostView);
-const LearnView = lazyView(() => import("./views/LearnView"), (m) => m.LearnView);
 const TeamView = lazyView(() => import("./views/TeamView"), (m) => m.TeamView);
 const SettingsView = lazyView(() => import("./views/SettingsView"), (m) => m.SettingsView);
 const BrowserTab = lazyView(() => import("./workbench/BrowserView"), (m) => m.default);
@@ -87,12 +85,13 @@ const VIEW_COMPONENTS = {
   code: CodeTab,
   browser: BrowserTab,
   workflows: RunsView,
-  memory: MemoryView,
-  skills: SkillsView,
+  knowledge: KnowledgeView,
+  memory: KnowledgeView,
+  skills: KnowledgeView,
   files: FilesView,
   passwords: PasswordsView,
   cost: CostView,
-  learn: LearnView,
+  learn: KnowledgeView,
   team: TeamView,
   settings: SettingsView,
 } as const;
@@ -198,7 +197,7 @@ function Shell() {
       <TitleBar />
       <div className="app-body">
         <Rail />
-        <div className="frame" key={tab} data-tab={tab}>
+        <div className="frame" key={viewOf(tab)} data-tab={tab}>
           <Boundary resetKey={tab}>
             <View />
           </Boundary>

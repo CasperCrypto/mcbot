@@ -137,7 +137,15 @@ export function renderConfig(graph: Graph, bundle: AgentBundle): string {
   if (bundle.agent.data.reasoning) agent.reasoning_effort = bundle.agent.data.reasoning;
   if (Object.keys(agent).length) doc.agent = agent;
   // When it asks before a risky command (tools/approval_context.py `_VALID_MODES`; unset = Hermes' "smart").
-  if (bundle.agent.data.approvals) doc.approvals = { mode: bundle.agent.data.approvals };
+  // …and what it may never run (tools/approval_floors.py `approvals.deny`, checked before any bypass).
+  const approvals: Record<string, unknown> = {};
+  if (bundle.agent.data.approvals) approvals.mode = bundle.agent.data.approvals;
+  const neverRun = [...new Set((bundle.agent.data.neverRun ?? []).map((c) => c.trim()).filter(Boolean))];
+  if (neverRun.length) approvals.deny = neverRun;
+  if (Object.keys(approvals).length) doc.approvals = approvals;
+  // Websites its tools may not open (tools/website_policy.py `security.website_blocklist`).
+  const sites = [...new Set((bundle.agent.data.blockedSites ?? []).map((d) => d.trim().toLowerCase()).filter(Boolean))];
+  if (sites.length) doc.security = { website_blocklist: { enabled: true, domains: sites } };
   if (bundle.image) doc.image_gen = makerEntry(bundle.image);
   if (bundle.video) doc.video_gen = makerEntry(bundle.video);
   // A chat app's token and allowed users live in the agent's .env (written by the engine, never

@@ -211,6 +211,26 @@ describe("config.yaml: the loop layer", () => {
   });
 });
 
+describe("config.yaml: what an agent may never do", () => {
+  it("writes commands it may never run and websites it may not open, only when the board sets them", async () => {
+    const { resolveGraph } = await import("./validate");
+    const g = {
+      schema: "mcbot.graph/v1", id: "b", name: "B",
+      nodes: [
+        { id: "m", kind: "model", position: { x: 0, y: 0 }, data: { name: "local", endpoint: "local", baseUrl: "http://127.0.0.1:11434/v1", model: "qwen3:8b" } },
+        { id: "a", kind: "agent", position: { x: 0, y: 0 }, data: { name: "a", approvals: "off", neverRun: ["git push --force*", " rm -rf / ", "git push --force*"], blockedSites: ["Facebook.com", "*.tiktok.com"] } },
+        { id: "c", kind: "agent", position: { x: 0, y: 0 }, data: { name: "c", neverRun: [], blockedSites: [] } },
+      ],
+      edges: [{ id: "e1", source: "m", target: "a" }, { id: "e2", source: "m", target: "c" }],
+    };
+    const { graph, bundles } = resolveGraph(g);
+    const of = (name: string) => renderConfig(graph!, bundles.find((b) => b.agent.data.name === name)!);
+    expect(of("a")).toContain('\napprovals:\n  mode: "off"\n  deny:\n    - git push --force*\n    - rm -rf /\nsecurity:\n  website_blocklist:\n    enabled: true\n    domains:\n      - facebook.com\n      - "*.tiktok.com"\n');
+    expect(of("c")).not.toContain("approvals");
+    expect(of("c")).not.toContain("security");
+  });
+});
+
 describe("config.yaml: guardrails", () => {
   it("says when the agent asks before a risky command with approvals.mode, only when the board sets it", async () => {
     const { resolveGraph } = await import("./validate");

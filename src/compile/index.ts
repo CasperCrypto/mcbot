@@ -15,6 +15,7 @@ import {
 import { DEFAULT_CAPABILITIES, MEDIA_PROVIDERS, type MediaNode, type ModelData } from "../contracts/graph";
 import { renderConfig } from "./config";
 import { GUIDE_CATEGORY, GUIDE_NAME, GUIDE_PATH, renderMcbotGuide } from "./mcbotGuide";
+import { DOCS_DIR, renderDocsSkill } from "./docs";
 import { buildManifest, renderManifest } from "./manifest";
 import { renderProfileMeta } from "./profileMeta";
 import { renderSkill } from "./skill";
@@ -115,6 +116,13 @@ export function compile(graphInput: unknown): CompileResult {
       dirs.add(`${dir}/skills/${GUIDE_CATEGORY}`);
       dirs.add(`${dir}/skills/${GUIDE_CATEGORY}/${GUIDE_NAME}`);
       files.push(file(`${dir}/${GUIDE_PATH}`, renderMcbotGuide(), "skill", agent.id));
+      // The board's documents, read with skill_view when a question needs them (compile/docs.ts).
+      const docs = renderDocsSkill(graph.docs);
+      if (docs.length) {
+        dirs.add(`${dir}/${DOCS_DIR}`);
+        dirs.add(`${dir}/${DOCS_DIR}/references`);
+      }
+      for (const d of docs) files.push(file(`${dir}/${d.path}`, d.content, "skill", agent.id));
     }
     for (const skill of agent.data.skills) {
       dirs.add(`${dir}/skills/${skill.name}`);

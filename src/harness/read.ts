@@ -62,7 +62,7 @@ export interface ReadResult {
 }
 
 /** Keys of config.yaml the board shows (src/compile/config.ts writes exactly these). */
-const SHOWN_KEYS = new Set(["model", "providers", "fallback_providers", "mcp_servers", "platform_toolsets", "browser", "image_gen", "video_gen", "platforms", "agent", "approvals"]);
+const SHOWN_KEYS = new Set(["model", "providers", "fallback_providers", "mcp_servers", "platform_toolsets", "browser", "image_gen", "video_gen", "platforms", "agent", "approvals", "security"]);
 const CAP_KEYS = new Set<string>(CAPABILITIES.map((c) => c.key));
 const TEAM_HEAD = "## Team";
 const TEAM_LINE = /^- `([a-z0-9][a-z0-9_-]{0,63})`/;
@@ -361,8 +361,22 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
     const ap = isObj(cfg.approvals) ? cfg.approvals : {};
     const mode = ap.mode === false ? "off" : typeof ap.mode === "string" ? ap.mode.trim().toLowerCase() : "";
     const approvals = (APPROVAL_MODES as readonly string[]).includes(mode) ? (mode as ApprovalMode) : null;
+    // What it may never run: approvals.deny, a list of globs (tools/approval_floors.py).
+    const neverRun = Array.isArray(ap.deny) && ap.deny.every((d) => typeof d === "string") ? (ap.deny as string[]).map((d) => d.trim()).filter(Boolean) : null;
     for (const k of Object.keys(ap)) {
-      if (!(k === "mode" && approvals)) unshown.push({ profile: p.name, what: `config.yaml: approvals.${k}`, why: "kept in Hermes; not on the board yet" });
+      const shown = (k === "mode" && approvals) || (k === "deny" && neverRun);
+      if (!shown) unshown.push({ profile: p.name, what: `config.yaml: approvals.${k}`, why: "kept in Hermes; not on the board yet" });
+    }
+    // Websites it may not open: security.website_blocklist, when on (tools/website_policy.py); the rest of security stays in Hermes.
+    const sec = isObj(cfg.security) ? cfg.security : {};
+    const wb = isObj(sec.website_blocklist) ? sec.website_blocklist : {};
+    const blockedSites = wb.enabled === true && Array.isArray(wb.domains) && wb.domains.every((d) => typeof d === "string") ? (wb.domains as string[]).map((d) => d.trim().toLowerCase()).filter(Boolean) : null;
+    for (const k of Object.keys(sec)) {
+      if (k !== "website_blocklist") unshown.push({ profile: p.name, what: `config.yaml: security.${k}`, why: "kept in Hermes; not on the board yet" });
+    }
+    for (const k of Object.keys(wb)) {
+      const shown = blockedSites !== null && (k === "enabled" || k === "domains");
+      if (!shown) unshown.push({ profile: p.name, what: `config.yaml: security.website_blocklist.${k}`, why: "kept in Hermes; not on the board yet" });
     }
 
     const data: AgentData = {
@@ -376,6 +390,8 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
       ...(maxSteps ? { maxSteps } : {}),
       ...(reasoning ? { reasoning } : {}),
       ...(approvals ? { approvals } : {}),
+      ...(neverRun?.length ? { neverRun } : {}),
+      ...(blockedSites?.length ? { blockedSites } : {}),
     };
     nodes.push({ id: agentId, kind: "agent", position: { x: AGENT_X, y }, data });
   });

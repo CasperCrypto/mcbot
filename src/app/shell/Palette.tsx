@@ -1,7 +1,7 @@
 import {
   ClipboardCopy,
   History as HistoryIcon,
-  BookOpen, Bot, FileCode2, FolderGit2, History, Palette as PaletteIcon, Stethoscope, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Upload, Users, Waypoints, Workflow, GraduationCap, Compass, Dumbbell, Star } from "lucide-react";
+  BookOpen, Bot, FileCode2, FolderGit2, History, Palette as PaletteIcon, Stethoscope, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Upload, Users, Waypoints, Workflow, GraduationCap, Compass, Dumbbell, Library, Star } from "lucide-react";
 import { describeHarness } from "../../harness/describe";
 import { Logo } from "../faces/FoodFace";
 import { redo, undo } from "../../board/undo";
@@ -48,14 +48,12 @@ export const VIEWS: { tab: Tab; label: string; icon: ReactNode; group: number; t
   { tab: "agents", label: "Chat", icon: <MessagesSquare size={15} />, group: 0, tip: "Talk to your agents" },
   { tab: "tasks", label: "Tasks", icon: <ListChecks size={15} />, group: 1 },
   { tab: "workflows", label: "Runs", icon: <History size={15} />, group: 1 },
-  { tab: "skills", label: "Skills", icon: <GraduationCap size={15} />, group: 1, tip: "Skills and plugins" },
+  { tab: "knowledge", label: "Knowledge", icon: <Library size={15} />, group: 1, tip: "What your agents know: business, documents, memory, skills, training" },
   { tab: "code", label: "Code", icon: <Code2 size={15} />, group: 2 },
   { tab: "browser", label: "Browser", icon: <Globe size={15} />, group: 2 },
   { tab: "files", label: "Files", icon: <FolderOpen size={15} />, group: 2 },
   { tab: "passwords", label: "Passwords", icon: <KeyRound size={15} />, group: 2, tip: "Logins and API keys" },
-  { tab: "memory", label: "Memory", icon: <Brain size={15} />, group: 3 },
   { tab: "cost", label: "Cost", icon: <ChartColumnBig size={15} />, group: 3 },
-  { tab: "learn", label: "Learn", icon: <Dumbbell size={15} />, group: 3, tip: "Train your own model on your agents' work" },
   { tab: "team", label: "Team", icon: <Users size={15} />, group: 3 },
 ];
 
@@ -145,6 +143,10 @@ function useCommands(close: () => void): Command[] {
       { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Compass size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: app.setup?.profile ?? null }); } },
       ...(DEMO ? [{ id: "reset-demo", group: "Actions", label: "Reset demo", hint: "Start over with the sample board", icon: <RotateCcw size={15} />, run: resetDemo }] : []),
       ...VIEWS.map((v, i) => ({ id: `go-${v.tab}`, group: "Go to", label: v.label, hint: v.tip, icon: v.icon, keys: i < 9 ? ["⌘", String(i + 1)] : undefined, run: () => { app.setTab(v.tab); close(); } })),
+      // Knowledge's segments, by name.
+      { id: "go-memory", group: "Go to", label: "Memory", hint: "What each agent remembers", icon: <Brain size={15} />, run: () => { app.setTab("memory"); close(); } },
+      { id: "go-skills", group: "Go to", label: "Skills", hint: "Skills and plugins", icon: <GraduationCap size={15} />, run: () => { app.setTab("skills"); close(); } },
+      { id: "go-learn", group: "Go to", label: "Training", hint: "Train a model of your own on your agents' work", icon: <Dumbbell size={15} />, run: () => { app.setTab("learn"); close(); } },
       // Ask an agent straight from ⌘K (and so from anywhere, with the launcher shortcut).
       ...graph.nodes.filter((n) => n.kind === "agent").map((n): Command => ({
         id: `ask-${n.id}`, group: "Agents", label: `Ask ${n.data.displayName || n.data.name}…`, hint: `@${n.data.name}`,

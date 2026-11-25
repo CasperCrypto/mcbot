@@ -289,6 +289,7 @@ const EDIT_ROUTES = new Set([
   "GET /api/tasks", "GET /api/tasks/one", "POST /api/tasks", "POST /api/tasks/act",
   "GET /api/schedules", "POST /api/schedules", "POST /api/schedules/act",
   "GET /api/events", "GET /api/media", "GET /api/ratings", "POST /api/ratings", "GET /api/learn",
+  "POST /api/knowledge/doc",
 ]);
 
 /** A guest (Can chat): their chat with the agents they were given, nothing else. */

@@ -27,23 +27,51 @@ export const BRIEF_FORM: { key: keyof Brief; label: string; placeholder: string;
 ];
 
 
-export function KnowledgeSheet() {
-  const open = useApp((s) => s.knowledgeOpen);
-  const setOpen = useApp((s) => s.setKnowledgeOpen);
-  const { doc, graph, boardId } = useBoard();
+/**
+ * The team knowledge fields, live: each goes into the shared board as it is typed (one entry per field,
+ * so two people editing two fields both keep theirs), and a teammate's edit arrives except in the field
+ * being typed in here. Used by the sheet and Knowledge → Business.
+ */
+export function BriefFields({ testPrefix = "brief" }: { testPrefix?: string }) {
+  const { doc, graph } = useBoard();
   const brief = graph.brief ?? emptyBrief();
-  // What is typed shows at once; the board gets it as it is typed (each field its own entry, so two
-  // people editing two fields both keep theirs).
   const [draft, setDraft] = useState<Brief>(brief);
   const focused = useRef<keyof Brief | null>(null);
   useEffect(() => {
-    // Someone else's edit arrives: take it, except in the field being typed in here.
     setDraft((d) => {
       const next = { ...brief };
       if (focused.current) next[focused.current] = d[focused.current];
       return next;
     });
   }, [JSON.stringify(brief)]); // eslint-disable-line react-hooks/exhaustive-deps
+  const set = (k: keyof Brief, v: string) => {
+    const value = v.slice(0, BRIEF_MAX[k]);
+    setDraft((d) => ({ ...d, [k]: value }));
+    setBriefField(doc, k, value);
+  };
+  return (
+    <>
+      {BRIEF_FORM.map((f) => (
+        <label key={f.key} className="field">
+          <span>{f.label}</span>
+          {f.rows ? (
+            <textarea rows={f.rows} value={draft[f.key]} placeholder={f.placeholder} onChange={(e) => set(f.key, e.target.value)}
+              onFocus={() => { focused.current = f.key; }} onBlur={() => { focused.current = null; }} data-testid={`${testPrefix}-${f.key}`} />
+          ) : (
+            <input value={draft[f.key]} placeholder={f.placeholder} onChange={(e) => set(f.key, e.target.value)}
+              onFocus={() => { focused.current = f.key; }} onBlur={() => { focused.current = null; }} data-testid={`${testPrefix}-${f.key}`} />
+          )}
+        </label>
+      ))}
+    </>
+  );
+}
+
+export function KnowledgeSheet() {
+  const open = useApp((s) => s.knowledgeOpen);
+  const setOpen = useApp((s) => s.setKnowledgeOpen);
+  const { graph, boardId } = useBoard();
+  const brief = graph.brief ?? emptyBrief();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
@@ -53,12 +81,7 @@ export function KnowledgeSheet() {
   const presence = usePresence(open);
   if (!presence.mounted) return null;
 
-  const set = (k: keyof Brief, v: string) => {
-    const value = v.slice(0, BRIEF_MAX[k]);
-    setDraft((d) => ({ ...d, [k]: value }));
-    setBriefField(doc, k, value);
-  };
-  const filled = BRIEF_FORM.filter((f) => draft[f.key].trim()).length;
+  const filled = BRIEF_FORM.filter((f) => brief[f.key].trim()).length;
   const done = () => {
     setOpen(false);
     // The agents get it with their next compile; do it now so a chat right after already knows.
@@ -78,18 +101,7 @@ export function KnowledgeSheet() {
           <button className="icon-btn" aria-label="Close" onClick={done}><X size={15} /></button>
         </header>
         <div className="knowledge-body">
-          {BRIEF_FORM.map((f) => (
-            <label key={f.key} className="field">
-              <span>{f.label}</span>
-              {f.rows ? (
-                <textarea rows={f.rows} value={draft[f.key]} placeholder={f.placeholder} onChange={(e) => set(f.key, e.target.value)}
-                  onFocus={() => { focused.current = f.key; }} onBlur={() => { focused.current = null; }} data-testid={`brief-${f.key}`} />
-              ) : (
-                <input value={draft[f.key]} placeholder={f.placeholder} onChange={(e) => set(f.key, e.target.value)}
-                  onFocus={() => { focused.current = f.key; }} onBlur={() => { focused.current = null; }} data-testid={`brief-${f.key}`} />
-              )}
-            </label>
-          ))}
+          <BriefFields />
         </div>
         <footer className="knowledge-foot">
           <span className="grow" />
