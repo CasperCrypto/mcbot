@@ -32,6 +32,8 @@ export interface StartRun {
   env?: EnvEntry[];
   /** Someone who joined this computer (Share) asked: their member id and name. */
   by?: { id: string; name: string };
+  /** What is true right now (src/harness/liveContext.ts), added to the system prompt for this run only. */
+  instructions?: string;
 }
 
 export interface RunnerOptions {
@@ -232,7 +234,7 @@ export class Runner {
     const entry = this.active.get(runId);
     let hermesRunId: string;
     try {
-      hermesRunId = await api.runs.start(req.profile, req.prompt);
+      hermesRunId = await api.runs.start(req.profile, req.prompt, req.instructions);
     } catch (err) {
       const message = (err as Error).message;
       if (GATEWAY_BUSY.test(message) || NOT_LISTENING.test(message)) return message;

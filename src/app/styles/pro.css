@@ -509,3 +509,12 @@ h1, h2, h3 { text-wrap: balance; }
 .hm .home-empty { padding: 4px 8px; font-size: 13px; }
 @media (max-width: 760px) { .hm-pair { grid-template-columns: minmax(0, 1fr); } .hm-hello h1 { font-size: 26px; } .roster { margin-top: -10px; } }
 @media (prefers-reduced-motion: reduce) { .roster-chip[data-state="run"] .roster-dot { animation: none; } }
+
+/* A task's progress (TasksView Work): how long, how many steps, the newest steps, its last words. */
+.task-work-head { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+.task-steps { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.task-steps li { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 5px 8px; border-radius: var(--r-sm); background: var(--surface-1); font-size: 12.5px; }
+.task-steps li b { flex: none; font-weight: 600; }
+.task-steps li .mono { flex: 1; min-width: 0; color: var(--text-2); font-size: 12px; }
+.task-steps li .faint { flex: none; margin-left: auto; font-size: 11.5px; }
+.task-said { margin: 0; padding: 8px 10px; border-radius: var(--r-sm); background: var(--surface-1); color: var(--text-2); font-size: 13px; line-height: 1.45; }

@@ -76,8 +76,12 @@ export class HermesRuns {
     }
   }
 
-  async start(profile: string, prompt: string): Promise<string> {
-    const res = await fetch(this.url(profile, "/v1/runs"), { method: "POST", headers: this.headers(), body: JSON.stringify({ input: prompt }) });
+  /**
+   * `instructions` is added to the system prompt for this run only and never stored
+   * (gateway/platforms/api_server_runs.py:499,873 → `ephemeral_system_prompt`; agent/system_prompt.py:806).
+   */
+  async start(profile: string, prompt: string, instructions?: string): Promise<string> {
+    const res = await fetch(this.url(profile, "/v1/runs"), { method: "POST", headers: this.headers(), body: JSON.stringify(instructions ? { input: prompt, instructions } : { input: prompt }) });
     const body = (await res.json().catch(() => ({}))) as { run_id?: string; error?: { message?: string } };
     if (!res.ok || !body.run_id) throw new Error(body.error?.message ?? `Hermes refused the run (${res.status})`);
     return body.run_id;

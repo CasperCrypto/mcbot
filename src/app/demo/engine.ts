@@ -641,14 +641,20 @@ async function dispatch(t: TaskDetail, boardId: string): Promise<void> {
   if (t.status !== "ready") return;
   const attempt = { id: t.attempts.length + 1, profile: t.assignee, status: "running", outcome: null, summary: null, error: null, startedAt: Date.now(), endedAt: null };
   t.attempts.push(attempt);
-  Object.assign(t, { status: "running", startedAt: Date.now() });
+  // Its work so far, as the task panel shows a real one (engine/hermesData.ts readTaskWork).
+  const step = (tool: string, detail: string) => ({ tool, detail, at: Date.now() });
+  Object.assign(t, { status: "running", startedAt: Date.now(), work: { steps: 1, recent: [step("read_file", "tickets/today.md")], said: null, lastAt: Date.now() } });
   save();
-  await sleep(2600);
+  await sleep(1300);
+  if ((t.status as string) !== "running") return;
+  t.work = { steps: 2, recent: [...(t.work?.recent ?? []), step("search_files", t.title.slice(0, 60))], said: "Reading the tickets and sorting them by team.", lastAt: Date.now() };
+  save();
+  await sleep(1300);
   // A person may have blocked or finished it meanwhile.
   if ((t.status as string) !== "running") return;
   const summary = script(`${t.title}\n${t.body}`.trim(), bundle).text;
   Object.assign(attempt, { status: "done", outcome: "completed", summary, endedAt: Date.now() });
-  Object.assign(t, { status: "done", completedAt: Date.now(), result: summary });
+  Object.assign(t, { status: "done", completedAt: Date.now(), result: summary, work: { ...t.work!, said: summary.split("\n")[0]!.slice(0, 300), lastAt: Date.now() } });
   save();
 }
 

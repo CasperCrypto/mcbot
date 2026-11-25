@@ -119,6 +119,12 @@ Change them additively; a breaking change bumps the version.
   `.env` after a compile, a saved key, a board save and at start, and runs
   `hermes gateway ensure` while any compiled agent has a bot with everything filled in.
   No allowed users = nobody can message it (Hermes refuses unknown senders).
+- **Chat knows the agent's tasks.** A task runs in a session of its own (Hermes' kanban), so every chat run McBot
+  starts carries what is true right now as the runs API's `instructions` (`src/harness/liveContext.ts`, pure: its open
+  tasks with how long and how far its run got, what it finished today, work it gave others; nothing when it has none;
+  never in a guest's run). Hermes adds it for that call only and never stores it. The task panel shows the work so far
+  from the assignee's `state.db` (`readTaskWork`: the session opened by "work kanban task <id>", its steps and last
+  words, tokens and the home folder hidden; this computer's windows only) and "Looks stuck" after 10 quiet minutes.
 - Run is refused (409) if the agent's files on disk differ from the board — compile first.
 - **Stop** (`Runner.cancel`, every Stop button through `stopRun` in `actions.ts`) always ends a run
   within `STOP_GRACE_MS` (4 s): it asks Hermes (`/v1/runs/<id>/stop`, which only acts between steps)
