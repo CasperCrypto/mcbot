@@ -80,16 +80,19 @@ export const seedMemory: Record<string, { memory: string[]; user: string[] }> = 
   researcher: { memory: ["Product docs live in ~/Projects/support-desk/docs."], user: [] },
 };
 
-/** [profile, prompt, days ago, hour UTC] — replayed through the demo runner at first load. */
-export const seedRuns: [string, string, number, number][] = [
-  ["triage", "Customer says invoice #4471 charged them twice.", 6, 9],
-  ["researcher", "How does ticket routing work?", 6, 11],
-  ["triage", "Status page shows EU latency, three tickets in a row.", 5, 14],
-  ["researcher", "What is our SLA for first replies?", 4, 10],
+/**
+ * [profile, prompt, days ago, hour UTC, the person's rating] — replayed through the demo runner at first
+ * load, so Chat, Runs, Cost and Training have a week behind them.
+ */
+export const seedRuns: [string, string, number, number, (0 | 1)?][] = [
+  ["triage", "Customer says invoice #4471 charged them twice.", 6, 9, 1],
+  ["researcher", "How does ticket routing work?", 6, 11, 1],
+  ["triage", "Status page shows EU latency, three tickets in a row.", 5, 14, 1],
+  ["researcher", "What is our SLA for first replies?", 4, 10, 0],
   ["triage", "List the open tickets", 4, 15],
-  ["researcher", "Summarise docs/routing.md for a new hire.", 3, 9],
-  ["triage", "Who handles a refund request?", 2, 13],
-  ["researcher", "Can a customer export their data?", 1, 10],
+  ["researcher", "Summarise docs/routing.md for a new hire.", 3, 9, 1],
+  ["triage", "Who handles a refund request?", 2, 13, 1],
+  ["researcher", "Can a customer export their data?", 1, 10, 1],
   ["triage", "Who handles billing questions?", 0, 8],
 ];
 

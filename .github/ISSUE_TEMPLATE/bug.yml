@@ -19,4 +19,4 @@ body:
     id: version
     attributes:
       label: Version and computer
-      placeholder: 0.8.0 on macOS 15 (Apple silicon)
+      placeholder: 0.9.0 on macOS 15 (Apple silicon)

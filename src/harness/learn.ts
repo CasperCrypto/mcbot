@@ -31,6 +31,9 @@ export const CHECK_LABELS: Record<CheckKind, { label: string; placeholder: strin
   json: { label: "Answers with valid JSON", placeholder: "" },
 };
 
+/** Fine-tuning APIs refuse fewer examples than this (OpenAI's minimum); the engine and the demo both hold to it. */
+export const MIN_TRAIN_EXAMPLES = 10;
+
 export const RatingSchema = z.object({
   score: z.union([z.literal(0), z.literal(1)]),
   note: z.string().max(500).optional(),

@@ -1,7 +1,7 @@
 /*
  * McBot Studio's website: the burger's eyes, the bots (foods.js, the same code the app draws them
  * with), the moving brand rows, and the small live views: the app's chat, the model switch, the
- * harness compiling, an approval, ⌘K. Each one plays only while it is on screen; with reduced
+ * harness compiling, a task that runs until done, a question, training, an approval, ⌘K. Each one plays only while it is on screen; with reduced
  * motion each one shows its final state. Downloads come from the latest GitHub release.
  */
 document.documentElement.classList.add("js");
@@ -341,6 +341,58 @@ document.documentElement.classList.add("js");
     approve.classList.add("done");
     await sleep(2600);
   }, () => approve.classList.add("done"));
+
+  /* ---------- until done: each round is checked, the last one passes ---------- */
+  const goal = $("[data-goal]");
+  scene(goal, async (sleep) => {
+    const rounds = $$(".gl-round", goal);
+    const state = $("[data-gl-state]", goal);
+    goal.classList.toggle("done", false);
+    rounds.forEach((r) => { r.classList.toggle("on", false); r.classList.toggle("judged", false); });
+    state.textContent = "Working";
+    await sleep(600);
+    for (const r of rounds) {
+      r.classList.add("on");
+      state.textContent = "Working";
+      await sleep(1000);
+      state.textContent = "Checking";
+      await sleep(700);
+      r.classList.add("judged");
+      await sleep(500);
+    }
+    goal.classList.add("done");
+    state.textContent = "Ready for review";
+    await sleep(3200);
+  }, () => {
+    $$(".gl-round", goal).forEach((r) => r.classList.add("on", "judged"));
+    goal.classList.add("done");
+    $("[data-gl-state]", goal).textContent = "Ready for review";
+  });
+
+  /* ---------- asks before it guesses ---------- */
+  const ask = $("[data-ask]");
+  scene(ask, async (sleep) => {
+    ask.classList.toggle("done", false);
+    await sleep(2000);
+    const pick = $("[data-pick]", ask);
+    pick.classList.add("press");
+    await sleep(170);
+    pick.classList.toggle("press", false);
+    ask.classList.add("done");
+    await sleep(2800);
+  }, () => ask.classList.add("done"));
+
+  /* ---------- a model of your own: the good work, training, ready ---------- */
+  const train = $("[data-train]");
+  scene(train, async (sleep) => {
+    train.classList.toggle("trained", false);
+    train.classList.toggle("ready", false);
+    await sleep(1000);
+    train.classList.add("trained");
+    await sleep(1900);
+    train.classList.add("ready");
+    await sleep(3200);
+  }, () => train.classList.add("trained", "ready"));
 
   /* ---------- ⌘K ---------- */
   const palette = $("[data-palette]");

@@ -60,7 +60,7 @@ import type { Rating } from "../src/harness/learn";
 import { renderSoul } from "../src/compile/soul";
 import { liveContext } from "../src/harness/liveContext";
 
-export const ENGINE_VERSION = "0.8.0";
+export const ENGINE_VERSION = "0.9.0";
 
 export interface EngineConfig {
   workspace: string;

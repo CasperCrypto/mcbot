@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { addEdge, addNode, setNodeField, updateEdge } from "../../board/ydoc";
 import type { LearnAgentView, LearnView as LearnData, TrainJob } from "../../contracts/api";
 import type { AgentNode, Check, GraphNode } from "../../contracts/graph";
-import { CHECK_KINDS, CHECK_LABELS, type DatasetFormat, type DatasetPick } from "../../harness/learn";
+import { CHECK_KINDS, CHECK_LABELS, MIN_TRAIN_EXAMPLES, type DatasetFormat, type DatasetPick } from "../../harness/learn";
 import { compileBoard, learnSkills } from "../actions";
 import { newId, uniqueName } from "../graph/defaults";
 import { freeSpot } from "../graph/place";
@@ -120,9 +120,14 @@ function Train({ agent, stats, onStarted }: { agent: AgentNode; stats: LearnAgen
   const [modelId, setModelId] = useState(main?.id ?? clouds[0]?.id ?? "");
   const chosen = clouds.find((m) => m.id === modelId);
   const [base, setBase] = useState(chosen?.data.model ?? "");
+  // On this computer the Trainer starts from an open model: never the cloud model's id.
+  const [localBase, setLocalBase] = useState("");
   const [pick, setPick] = useState<DatasetPick>("good");
   const [busy, setBusy] = useState(false);
   const name = agent.data.displayName || agent.data.name;
+  // What the cloud would get, against the fine-tuning APIs' minimum (the engine refuses fewer too).
+  const have = pick === "good" ? stats.good : stats.conversations;
+  const enough = have >= MIN_TRAIN_EXAMPLES;
 
   const cloud = async () => {
     if (!chosen || !base.trim()) return;
@@ -160,7 +165,7 @@ function Train({ agent, stats, onStarted }: { agent: AgentNode; stats: LearnAgen
       }
       if (!(await compileBoard(boardId, { quiet: true }))) throw new Error("Compile the board first (⌘S), then try again");
       await learnSkills(TRAINER_NAME, "Trainer", TRAINER_SKILLS, true);
-      const { title, body } = trainerTask({ agent: name, dataset: data.path, examples: data.examples, baseModel: base });
+      const { title, body } = trainerTask({ agent: name, dataset: data.path, examples: data.examples, baseModel: localBase });
       const task = await engine.createTask(boardId, { title, body, assignee: TRAINER_NAME, by: identity.name, goal: true });
       app.toast({ kind: "ok", text: `Trainer is on it: ${data.examples} conversations`, action: { label: "Open", run: () => useApp.getState().showTask(task.id) } });
       onStarted();
@@ -184,12 +189,13 @@ function Train({ agent, stats, onStarted }: { agent: AgentNode; stats: LearnAgen
               <input className="grow" value={base} onChange={(e) => setBase(e.target.value)} placeholder="Model to start from" aria-label="Model to start from" data-tip="One your provider can fine-tune" data-testid="train-base" />
             </div>
             <div className="learn-export-row"><Segmented value={pick} onChange={setPick} options={[{ value: "good", label: "The good ones" }, { value: "all", label: "All" }]} /><span className="grow" />
-              <button className="btn primary sm" disabled={busy || !base.trim()} onClick={() => void cloud()} data-testid="train-start" data-tip={`${stats.good} good conversation${stats.good === 1 ? "" : "s"}; fine-tuning needs 10 or more`}>Start training</button></div>
+              {!enough && <span className="faint learn-need" data-tip="Rate answers in Chat or add checks" data-testid="train-need">{have} of {MIN_TRAIN_EXAMPLES}</span>}
+              <button className="btn primary sm" disabled={busy || !base.trim() || !enough} onClick={() => void cloud()} data-testid="train-start" data-tip={enough ? `${have} conversation${have === 1 ? "" : "s"}` : `Fine-tuning needs ${MIN_TRAIN_EXAMPLES} or more`}>Start training</button></div>
           </>
         )
       ) : (
         <>
-          <div className="learn-export-row"><input className="grow" value={base} onChange={(e) => setBase(e.target.value)} placeholder="Model to start from (the Trainer picks one if empty)" aria-label="Model to start from" data-testid="train-base-here" /></div>
+          <div className="learn-export-row"><input className="grow" value={localBase} onChange={(e) => setLocalBase(e.target.value)} placeholder="Open model to start from (the Trainer picks one if empty)" aria-label="Model to start from" data-testid="train-base-here" /></div>
           <div className="learn-export-row"><Segmented value={pick} onChange={setPick} options={[{ value: "good", label: "The good ones" }, { value: "all", label: "All" }]} /><span className="grow" />
             <button className="btn primary sm" disabled={busy} onClick={() => void here()} data-testid="train-here" data-tip="A Trainer agent fine-tunes it with Unsloth and serves it with llama.cpp, until it's done">Give it to the Trainer</button></div>
         </>

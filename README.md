@@ -69,17 +69,31 @@ nothing to install, no account.
 - **Guests**, such as your customers, get a chat with just the agents you pick, and see only their own
   conversations.
 
-Agents run on your computer, with your keys.
+Agents run on your computer, with your keys. **Team** shows everyone with access and their role, and removes
+anyone in a click; you set your name, what you do and your colour.
 
 | Share: teammates or guests | A customer on their phone |
 |---|---|
 | ![Share sheet](docs/screenshots/share.png) | ![Joining from a phone, then chatting](docs/screenshots/guest-phone.png) |
 
-### Teach it your business, then train your own model
-Setup asks what you do, who your customers are, your goals and your voice; every agent knows it (Team knowledge,
-⌘K). Rate answers with 👍 / 👎, add checks that grade every answer, and **Learn** exports your agents' best work as
-training data (OpenAI fine-tuning format, with scores, or Hermes' own), so you can fine-tune a model of your own on
-your real work and plug it back in.
+### Everything it knows, in one place
+**Knowledge** (⌘6) holds what your agents know: your business (what you do, your offer, customers, goals and
+voice, every agent knows it from setup), **documents** (drop in a PDF, Word, Excel or PowerPoint file and every
+agent can read it), their memory, their skills, and training. Export it all as one Markdown file.
+
+### Train a model of your own
+Rate answers with 👍 / 👎 and add checks that grade every answer. Then **Train**: in the cloud, through your
+provider's fine-tuning API, or on this computer, where a Trainer agent fine-tunes an open model with Unsloth and
+serves it with llama.cpp. **Use it** makes the new model the agent's own, with the old one as its backup. Or export
+the data (OpenAI's fine-tuning format, with scores, or Hermes' own) and train anywhere.
+
+### Work that gets finished
+- **Until done**: a task keeps going until a check on the agent's own model agrees it's done, then asks you to
+  review it.
+- **Agents ask you**: when something is unclear, an agent asks in the chat, with choices or room for your own
+  words, and carries on with your answer.
+- **Live context**: every message carries the agent's open tasks and what it finished today, so chat and tasks
+  stay one conversation.
 
 ### Know which setup works better
 Every compile that changes the harness is kept in **History**, with what changed in plain words and how its runs
@@ -94,8 +108,9 @@ any in a click.
 - **Chat apps**: Telegram, Slack, Discord, WhatsApp and every other platform the engine ships, one bot per agent.
 - **Skills**: what each agent taught itself, 44 built-in skills, a library of 140+ with suggestions that fit each
   agent, and any skill on GitHub.
-- **Safety rails**: risky commands stop and ask you, Stop always works within seconds, and a daily budget
-  stops spending at the limit.
+- **Guardrails**: per agent, ask before risky commands always, smartly or never; commands it may never run (held
+  even when it never asks); websites it may not open; a daily budget that stops spending at the limit. Stop always
+  works within seconds.
 
 ### A browser, Passwords and GitHub, built in
 - **Browser**: a start page with your favorites, and one-click Summarize, Key facts or Translate for any page.
@@ -112,10 +127,12 @@ any in a click.
 | ![Browser](docs/screenshots/browser.png) | ![Passwords](docs/screenshots/passwords.png) |
 | **Runs: every step on screen** | **Cost and budgets** |
 | ![Runs](docs/screenshots/runs.png) | ![Cost](docs/screenshots/cost.png) |
-| **Learn: your work, as training data** | **The agent's plan, live** |
-| ![Learn](docs/screenshots/learn.png) | ![An answer with its plan](docs/screenshots/plan.png) |
+| **Knowledge: business, documents, memory, skills** | **Training: a model of your own** |
+| ![Knowledge](docs/screenshots/knowledge.png) | ![Training](docs/screenshots/learn.png) |
+| **An agent asks before it guesses** | **The agent's plan, live** |
+| ![A question in the chat](docs/screenshots/question.png) | ![An answer with its plan](docs/screenshots/plan.png) |
 
-And: **Home** with your agents as live tiles, **Tasks** and **schedules**, **Memory** you can read and edit,
+And: **Home** with what needs you and who is at work, **Tasks** and **schedules**, **Memory** you can read and edit,
 **Files** and **Code** (editor and terminal), a calm dark design with your accent colour, ⌘K for everything,
 ⌘⇧Space from any app, and a menu bar icon with notifications.
 
@@ -140,6 +157,12 @@ And: **Home** with your agents as live tiles, **Tasks** and **schedules**, **Mem
 | model (primary) | `config.yaml` → `model:` + `providers.mcbot-<name>` |
 | model (fallbacks) | `config.yaml` → `fallback_providers:` |
 | thinking | `config.yaml` → `agent.reasoning_effort` |
+| steps per message | `config.yaml` → `agent.max_turns` |
+| approvals (Always ask / Smart / Never ask) | `config.yaml` → `approvals.mode` |
+| never run | `config.yaml` → `approvals.deny` |
+| blocked websites | `config.yaml` → `security.website_blocklist` |
+| team knowledge | `SOUL.md` → a "Shared knowledge" section in every agent |
+| documents | `skills/business-files/` (`SKILL.md` and one `references/<doc>.md` each) |
 | tool | `config.yaml` → `mcp_servers.<name>` (stdio command or URL; `tools.include` for only some) |
 | agent abilities | `config.yaml` → `platform_toolsets` (left out = the engine's defaults) |
 | image / video maker | `config.yaml` → `image_gen` / `video_gen` `{ provider, model }` |

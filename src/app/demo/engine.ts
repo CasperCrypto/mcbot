@@ -18,6 +18,7 @@ import { LIBRARY } from "../../contracts/library.generated";
 import type { HarnessPlan, PlanChoices } from "../../harness/plan";
 import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView, LearnExport, LearnView, DocUpload, TrainJob } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
+import { version as APP_VERSION } from "../../../package.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { DOC_TEXT_MAX, GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
 import { applyToDoc, agentEditable } from "../../harness/live";
@@ -27,7 +28,7 @@ import { followChanges } from "../../harness/reconcile";
 import { RUN_EVENT_VERSION, summarizeRun, type RunEvent, type RunEventInput, type RunSummary } from "../../contracts/run";
 import { EngineError } from "../lib/engineError";
 import { ROOT, SEED_BOARD, WORKSPACE, sampleProject, seedGraph, seedMemory, seedRuns, sharedFiles } from "./seed";
-import { agentStats, conversationsOf, datasetLines, rewardOf, toolsUsed, type ConversationInput, type DatasetFormat, type DatasetPick, type Rating } from "../../harness/learn";
+import { MIN_TRAIN_EXAMPLES, agentStats, conversationsOf, datasetLines, rewardOf, toolsUsed, type ConversationInput, type DatasetFormat, type DatasetPick, type Rating } from "../../harness/learn";
 import { renderSoul } from "../../compile/soul";
 
 type Target = "memory" | "user";
@@ -587,11 +588,14 @@ function requireBoard(boardId: string): string {
 async function seedHistory(): Promise<void> {
   const { bundles } = resolveGraph(seedGraph);
   const now = new Date();
-  for (const [profile, prompt, daysAgo, hour] of seedRuns) {
+  const ratings: Record<string, Rating> = {};
+  for (const [profile, prompt, daysAgo, hour, score] of seedRuns) {
     const bundle = bundles.find((b) => b.agent.data.name === profile)!;
-    const at = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo, daysAgo === 0 ? Math.min(hour, now.getUTCHours()) : hour, 12);
-    await play(SEED_BOARD.id, bundle, prompt, { at: Math.min(at, Date.now() - 60_000) });
+    const at = Math.min(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo, daysAgo === 0 ? Math.min(hour, now.getUTCHours()) : hour, 12), Date.now() - 60_000);
+    const runId = await play(SEED_BOARD.id, bundle, prompt, { at });
+    if (score !== undefined) ratings[runId] = { score, by: "Maya", at: at + 60_000 };
   }
+  state.ratings = ratings;
 }
 
 /** Loaded on first use, so importing this module (the desktop build does) costs nothing. */
@@ -773,7 +777,7 @@ function learnAgentView(b: AgentBundle, convs: readonly ConversationInput[], rat
 }
 
 export const demoEngine = {
-  health: api((): Health => ({ ok: true, version: "0.2.0", workspace: WORKSPACE, hermesHome: ROOT, managedRoot: true, hermes: { found: true, path: "simulated in this browser", kind: "bundled" } })),
+  health: api((): Health => ({ ok: true, version: APP_VERSION, workspace: WORKSPACE, hermesHome: ROOT, managedRoot: true, hermes: { found: true, path: "simulated in this browser", kind: "bundled" } })),
   hermes: api((): HermesInfo => demoHermes()),
   diagnostics: api((): Diagnostics => ({
     text: [
@@ -842,21 +846,30 @@ export const demoEngine = {
     resolve(choice);
     return { answered: choice };
   }),
-  // Training in the cloud, simulated: a job that validates, runs and succeeds in about half a minute.
+  // Training in the cloud, simulated: a job that validates, runs and succeeds in about half a minute. It is
+  // refused as the engine refuses it: fewer than MIN_TRAIN_EXAMPLES conversations, or a provider without
+  // OpenAI's fine-tuning API (the engine learns that from a 404; the demo, which asks nobody, from the host).
   trainJobs: async (boardId: string): Promise<TrainJob[]> => demoTrain.filter((j) => j.boardId === boardId).map((j) => {
     const age = Date.now() - j.createdAt;
     const status: TrainJob["status"] = j.status === "cancelled" ? "cancelled" : age < 5000 ? "validating" : age < 12_000 ? "queued" : age < 30_000 ? "running" : "succeeded";
     return { ...j, status, model: status === "succeeded" ? `ft:${j.baseModel}:demo::${j.profile}` : null, updatedAt: Date.now() };
   }),
-  startTraining: async (boardId: string, agentNodeId: string, modelNodeId: string, baseModel: string): Promise<TrainJob> => {
+  startTraining: async (boardId: string, agentNodeId: string, modelNodeId: string, baseModel: string, pick: DatasetPick = "good"): Promise<TrainJob> => {
     const graph = graphOf(requireBoard(boardId));
     const agent = graph.nodes.find((n) => n.id === agentNodeId && n.kind === "agent");
     const model = graph.nodes.find((n) => n.id === modelNodeId && n.kind === "model");
     if (!agent || !model || model.kind !== "model" || model.data.endpoint !== "cloud") throw new EngineError(409, "Pick one of the board's cloud models to train with", {});
+    const bundle = resolveGraph(graph).bundles.find((b) => b.agent.id === agentNodeId);
+    if (!bundle) throw new EngineError(404, "No such agent on this board", {});
+    const { lines } = datasetLines(demoConversations(bundle, boardRuns(boardId), state.ratings ?? {}), { format: "chat", pick, system: "", model: null, at: "" });
+    const name = bundle.agent.data.displayName || bundle.agent.data.name;
+    if (lines.length < MIN_TRAIN_EXAMPLES) throw new EngineError(409, `Fine-tuning needs at least ${MIN_TRAIN_EXAMPLES} ${pick === "good" ? "good " : ""}conversations; ${name} has ${lines.length}. Rate answers in Chat or add checks`, {});
+    const provider = model.data.label || new URL(model.data.baseUrl).hostname;
+    if (new URL(model.data.baseUrl).hostname !== "api.openai.com") throw new EngineError(409, `${provider} doesn't take fine-tuning jobs through the OpenAI API. Use one that does (OpenAI), or train on this computer`, {});
     const now = Date.now();
     const job: TrainJob = {
-      id: `train_demo_${now.toString(36)}`, boardId, agentNodeId, profile: (agent.data as { name: string }).name, provider: model.data.label || "Cloud", baseUrl: model.data.baseUrl, keyEnv: model.data.apiKeyEnv,
-      baseModel, model: null, remoteId: `ftjob-demo-${now}`, status: "validating", error: null, examples: 12, dataset: "demo.jsonl", createdAt: now, updatedAt: now,
+      id: `train_demo_${now.toString(36)}`, boardId, agentNodeId, profile: bundle.agent.data.name, provider, baseUrl: model.data.baseUrl, keyEnv: model.data.apiKeyEnv,
+      baseModel, model: null, remoteId: `ftjob-demo-${now}`, status: "validating", error: null, examples: lines.length, dataset: `${bundle.agent.data.name}-chat.jsonl`, createdAt: now, updatedAt: now,
     };
     demoTrain.unshift(job);
     return job;

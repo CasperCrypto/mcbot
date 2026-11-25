@@ -1,9 +1,9 @@
 # Training your own model on your agents' work
 
 Your agents already do your real work: your customers' questions, your posts, your reports. That
-work is the best training data you will ever have. McBot keeps it, grades it, and hands it to the
-tools that turn it into a model of your own. You train that model with the tools below, then plug
-it back in as an agent's model.
+work is the best training data you will ever have. McBot keeps it, grades it and trains a model of
+your own on it, in the cloud or on this computer, then wires that model back to the agent. It all
+lives in **Knowledge → Training** (⌘6).
 
 ## What McBot does today
 
@@ -14,9 +14,12 @@ it back in as an agent's model.
 | Ratings | `~/McBot/ratings.json` | Thumbs up or down on any answer in Chat |
 | Checks | on the board (an agent's `checks`, never compiled) | Automatic graders: mentions, never mentions, used a tool, at least / at most N words, valid JSON |
 | Reward | `src/harness/learn.ts` `rewardOf` | 0 to 1: the person's rating, else the share of checks passed; failed or stopped runs are 0 |
-| Datasets | Learn → Export → `~/McBot/datasets/` | One agent's conversations (runs of one session together) in three formats, keys and tokens left out |
+| Datasets | Training → Export → `~/McBot/datasets/` | One agent's conversations (runs of one session together) in three formats, keys and tokens left out |
+| Training in the cloud | Training → Train → In the cloud (`engine/train.ts`) | The good conversations go to a board cloud model's OpenAI fine-tuning API; McBot follows the job |
+| Training on this computer | Training → Train → On this computer (`src/app/lib/trainer.ts`) | A Trainer agent gets an Until-done task: fine-tune with Unsloth, serve with llama.cpp |
+| Using the result | Training → Models → Use it | The trained model becomes the agent's main model; the old one stays as its backup |
 
-The three formats:
+The three export formats:
 
 - **Chat**: OpenAI's fine-tuning format, `{"messages": [...]}` with `tool_calls` and tool results.
   OpenAI and Together fine-tuning, Unsloth, Hugging Face TRL and MLX-LM read it as is.
@@ -28,20 +31,33 @@ The three formats:
 
 ## Train it
 
-1. **Rate a week of answers** in Chat, and give each agent two or three checks in Learn (a designer:
-   "Used the tool: image_generate"; a support agent: "Never mentions: refund guaranteed").
-2. **Export** "Chat", "Only the good ones". Fifty to a few hundred good conversations are enough
-   to teach a small model your tone, your formats and your tools.
-3. **Train a LoRA** on an open model (Qwen, Llama, Gemma, Mistral):
-   - On a Mac with Apple silicon: [MLX-LM](https://github.com/ml-explore/mlx-lm/blob/main/mlx_lm/LORA.md).
-     Put the file in a folder as `train.jsonl` and run `mlx_lm.lora --model <model> --train --data <folder>`.
-   - On a free GPU: [Unsloth's notebooks](https://docs.unsloth.ai/get-started/fine-tuning-llms-guide).
-   - Hosted: [OpenAI](https://platform.openai.com/docs/guides/supervised-fine-tuning) or Together
-     fine-tuning take the "Chat" file directly.
-4. **Use it**: serve the result with Ollama, LM Studio or vLLM (or the provider's endpoint) and add
-   it in Settings → Models. Wire it to the agent; keep the old model as its backup.
-5. **Compare**: History keeps every version of the harness with its runs' success, cost and time,
+1. **Rate a week of answers** in Chat, and give each agent two or three checks in Training (a
+   designer: "Used the tool: image_generate"; a support agent: "Never mentions: refund guaranteed").
+   Fifty to a few hundred good conversations teach a small model your tone, your formats and your
+   tools; the cloud needs at least 10.
+2. **Train**, on the agent's card in Training:
+   - **In the cloud**: pick one of the board's cloud models (its key is already saved) and the model
+     to start from, one your provider can fine-tune (its fine-tuning docs list them). McBot uploads the good conversations (`POST /files`), starts the job
+     (`POST /fine_tuning/jobs`), and asks how it is going while Training is open. The dataset and
+     the key go only to that provider. A provider without the fine-tuning API says so and nothing
+     is sent after the refusal.
+   - **On this computer**: McBot adds a **Trainer** agent (same models as the agent, Hermes'
+     `official/mlops/training/unsloth` and `official/mlops/inference/llama-cpp` skills) and gives it
+     an Until-done task with the dataset. It checks the hardware, trains a LoRA, exports GGUF and
+     serves it at `http://127.0.0.1:8080`, where Settings → Models finds it. The data never leaves the
+     computer. It needs a GPU or Apple silicon with enough memory; if it can't, it says so and stops.
+3. **Use it**: when a cloud job is Ready, **Use it** places the trained model on the board as the
+   agent's main model and keeps the old one as its backup (compile to apply). A model the Trainer
+   serves is added like any local model: Settings → Models → it is found at :8080.
+4. **Compare**: History keeps every version of the harness with its runs' success, cost and time,
    so you can see whether your model does the job better or cheaper than the one before.
+
+Prefer your own tools? Export "Chat", "The good ones" and train anywhere:
+[MLX-LM](https://github.com/ml-explore/mlx-lm/blob/main/mlx_lm/LORA.md) on a Mac with Apple silicon
+(`mlx_lm.lora --model <model> --train --data <folder>` with the file as `train.jsonl`),
+[Unsloth's notebooks](https://docs.unsloth.ai/get-started/fine-tuning-llms-guide) on a free GPU, or a
+hosted fine-tuning service. Serve the result with Ollama, LM Studio or vLLM and add it in Settings →
+Models.
 
 ## The plan: from a log of work to a self-improving loop
 
@@ -50,8 +66,8 @@ loop. Here is where each one stands, and the next steps, in order.
 
 ### 1. Trajectory logging (done, keep extending)
 
-Done: every run is recorded as structured events; Learn exports them as chat, reward and Hermes
-trajectory JSONL.
+Done: every run is recorded as structured events; Training exports them as chat, reward and
+Hermes trajectory JSONL.
 
 Next:
 - Parquet next to JSONL, for Hugging Face datasets of many thousands of rows.
@@ -103,8 +119,9 @@ The loop, with McBot as the place you set it up and watch it:
 5. **Compare and promote**: the new model goes on the board as a model block; History compares
    its runs with the old one's; keep the winner.
 
-McBot's job is steps 1, 2, 3 and 5, on the desktop. Step 4 runs where the GPUs are: a rented cloud
-GPU, a workstation, or a fine-tuning API.
+McBot's job is steps 1, 2, 3 and 5, on the desktop. Step 4 runs where the GPUs are: today, a
+fine-tuning API (Training → In the cloud) or this computer's own GPU (the Trainer agent); later a
+rented cloud GPU for RL.
 
 ## The repositories that came up
 
