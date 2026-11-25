@@ -9,13 +9,14 @@
  */
 import { randomBytes } from "node:crypto";
 import { atomicWrite, readTextOrNull } from "./fsutil";
+import { MIN_TRAIN_EXAMPLES } from "../src/harness/learn";
 
 import type { TrainJob, TrainStatus } from "../src/contracts/api";
 
 export type { TrainJob, TrainStatus };
 
 /** Fine-tuning APIs refuse fewer examples than this (OpenAI's minimum). */
-export const MIN_EXAMPLES = 10;
+export const MIN_EXAMPLES = MIN_TRAIN_EXAMPLES;
 
 export class TrainError extends Error {
   constructor(public readonly status: number, message: string) {

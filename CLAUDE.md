@@ -195,9 +195,11 @@ Change them additively; a breaking change bumps the version.
   OpenAI chat JSONL, the same with rewards, or Hermes' own trajectory format; saved key values, token-shaped strings
   and the home folder are left out (`redact`). **Train** makes the model: in the cloud through a board cloud model's
   OpenAI fine-tuning API (`engine/train.ts`: `/files`, `/fine_tuning/jobs`, plain HTTP; jobs in
-  `<workspace>/training.json`, `GET/POST /api/train`, host only; at least 10 conversations; "Use it" makes the trained
-  model the agent's main, the old one its backup), or on this computer by a Trainer agent (`lib/trainer.ts`: Hermes'
-  Unsloth and llama.cpp skills, an Until-done task, served at 127.0.0.1:8080).
+  `<workspace>/training.json`, `GET/POST /api/train`, host only; at least `MIN_TRAIN_EXAMPLES` (10) conversations, and
+  the panel says "3 of 10" until then; "Use it" makes the trained model the agent's main, the old one its backup), or
+  on this computer by a Trainer agent (`lib/trainer.ts`: Hermes' Unsloth and llama.cpp skills, an Until-done task,
+  served at 127.0.0.1:8080; it starts from an open model, never the cloud model's id). The demo refuses as the engine
+  does (too few conversations; a provider without the fine-tuning API, by its host) and seeds a week of rated runs.
 - Cost comes from each profile's `state.db`; Hermes-priced vs McBot-estimated is
   always labelled. Hermes reports no GPU time — do not fabricate it. A session on a local model is
   **Free** (`local` on the session), never "unpriced": only cloud models are asked for a price.
@@ -273,7 +275,8 @@ Change them additively; a breaking change bumps the version.
   every `import.meta` (it is empty in the bundle).
 - Unsigned on purpose (free and open source): macOS ad-hoc (`signingIdentity: "-"`),
   Windows unsigned. `.github/workflows/release.yml` builds draft releases from
-  `v*` tags (or by hand) for macOS (arm64, x64), Windows and Linux; `publish-release.yml` (by hand, a tag)
+  `v*` tags (or by hand) for macOS (arm64, x64), Windows and Linux (a tag push whose release is already published
+  builds nothing: publishing a draft creates its tag); `publish-release.yml` (by hand, a tag)
   checks every installer is there, adds `docs/releases/<tag>.md` and publishes the draft; the website explains the
   one-time "Open Anyway" / "Run anyway". On a Mac with no Developer ID, the free way
   without a prompt is `site/install.sh` (`curl … | sh`): curl sets no quarantine flag,
@@ -684,8 +687,8 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   can see and change by drawing; then what a working team needs, a comparison, three steps, a FAQ
   and downloads. The live views (`site/main.js`, `site/style.css`: the hero window is the app as it
   opens, with its frameless window, rail and a chat that uses a tool, answers and asks before
-  acting, so keep it in step with the app; then the model switch, the harness compiling, an
-  approval, the ⌘K palette and the terminal) play only while on screen, hold their final state
+  acting, so keep it in step with the app; then the model switch, the harness compiling, a task
+  that runs until done, a question, documents, training, an approval, the ⌘K palette and the terminal) play only while on screen, hold their final state
   under `prefers-reduced-motion`, and use the page's flat colours; they are markup, not
   screenshots. Page anatomy (as the product pages we compare with do it): a split Download button
   (your OS, plus a menu) under the headline; moving rows of brand marks, each on its own colour

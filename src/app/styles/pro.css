@@ -372,6 +372,7 @@ button.chip:hover { filter: brightness(1.2); }
 .learn-checks > .btn { justify-self: start; }
 .learn-export-row { display: flex; align-items: center; gap: 12px; font-size: 13px; }
 .learn-export-row > span:first-child:not(.grow) { width: 56px; color: var(--text-3); }
+.learn-need { font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .learn-sub { margin: 14px 0 0; font-size: 15px; font-weight: 650; }
 .learn-train-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 16px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background var(--t-fast); }
 .learn-train-row:hover { background: rgb(var(--tint-rgb) / 0.035); }
