@@ -19,7 +19,8 @@ import { openExternal } from "../lib/open";
 import { usePresence } from "../lib/presence";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
-import { AgentFace } from "../ui";
+import { Picker } from "../Picker";
+import { agentOptions } from "../lib/agentOptions";
 
 /** A GitHub repository link in some text, or null. */
 export const githubLink = (text: string): string | null => /(?:https?:\/\/)?(?:www\.)?github\.com\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+[^\s"'<>)]*/i.exec(text.trim())?.[0] ?? null;
@@ -178,11 +179,7 @@ export function GitHubSheet() {
               {repo.mcp && <code className="gh-cmd mono">{[repo.mcp.command, ...repo.mcp.args].join(" ")}</code>}
               <div className="gh-actions">
                 {(needsAgent || agents.length > 0) && (agents.length ? (
-                  <label className="gh-agent"><AgentFace seed={agent!.data.name} size={18} />
-                    <select value={agent!.id} onChange={(e) => setAgentId(e.target.value)} aria-label="Agent">
-                      {agents.map((a) => <option key={a.id} value={a.id}>{a.data.displayName || a.data.name}</option>)}
-                    </select>
-                  </label>
+                  <Picker label="Agent" value={agent!.id} onChange={setAgentId} options={agentOptions(agents)} testId="gh-agent" />
                 ) : <span className="faint">Add an agent first.</span>)}
                 <span className="grow" />
                 {agents.length > 0 && <button className="btn" disabled={!!busy} onClick={() => void ask()}><MessageSquare size={13} /> Ask about it</button>}

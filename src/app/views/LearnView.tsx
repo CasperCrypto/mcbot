@@ -16,6 +16,7 @@ import { canReveal, openExternal, revealFile } from "../lib/open";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, Segmented, SkeletonCards } from "../ui";
+import { Picker } from "../Picker";
 
 const FORMATS: { value: DatasetFormat; label: string; tip: string }[] = [
   { value: "chat", label: "Chat", tip: "OpenAI chat format: OpenAI and Together fine-tuning, Unsloth, Hugging Face TRL, MLX" },
@@ -40,9 +41,8 @@ function Checks({ agent }: { agent: AgentNode }) {
     <div className="learn-checks" data-testid="learn-checks">
       {checks.map((c, i) => (
         <div key={c.id} className="learn-check">
-          <select value={c.kind} aria-label="Check" onChange={(e) => write(checks.map((x, j) => (j === i ? { ...x, kind: e.target.value as Check["kind"] } : x)))}>
-            {CHECK_KINDS.map((k) => <option key={k} value={k}>{CHECK_LABELS[k].label}</option>)}
-          </select>
+          <Picker sm label="Check" value={c.kind} onChange={(v) => write(checks.map((x, j) => (j === i ? { ...x, kind: v } : x)))}
+            options={CHECK_KINDS.map((k) => ({ value: k, label: CHECK_LABELS[k].label }))} />
           {c.kind !== "json" && (
             <input value={c.value} placeholder={CHECK_LABELS[c.kind].placeholder} aria-label="Value" maxLength={400}
               onChange={(e) => write(checks.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))} />

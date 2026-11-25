@@ -53,8 +53,8 @@
 .ap-row .chip { flex: none; }
 .ap-row.add { color: var(--accent-text); font-size: 13.5px; font-weight: 500; }
 button.ap-row.add:hover, label.ap-row.add:hover { background: rgb(var(--tint-rgb) / 0.035); }
-.ap-row.add select { flex: 1; min-width: 0; height: 28px; margin: -4px 0; padding: 0; border: 0; background: transparent; color: var(--accent-text); font: inherit; font-weight: 500; outline: none; appearance: none; }
-.ap-row.add select option { color: var(--text); background: var(--bg-raised); }
+.ap-row.add .picker.ap-add-picker { flex: 1; height: 28px; margin: -4px 0; padding: 0; background: transparent; box-shadow: none; color: var(--accent-text); font-weight: 500; }
+.ap-row.add .picker.ap-add-picker .picker-chev { display: none; }
 .ap-adds { gap: 6px; flex-wrap: wrap; }
 .ap-hint { font-size: 12px; margin-left: 4px; }
 .ap-soul { display: block; width: 100%; min-height: 112px; padding: 11px 12px; border: 0; resize: vertical; background: transparent; color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.55; outline: none; }
@@ -212,8 +212,7 @@ button.ap-row:hover { background: rgb(var(--tint-rgb) / 0.035); }
 }
 .agent-tile-main b { display: flex; align-items: center; gap: 6px; }
 .tile-model { display: inline-grid; place-items: center; opacity: 0.9; }
-.ap-select { flex: none; height: 28px; max-width: 132px; padding: 0 8px; border: 0; border-radius: var(--r-sm); background: var(--bg-input); box-shadow: inset 0 0 0 0.5px var(--line-2); color: var(--text); font: inherit; font-size: 13px; outline: none; }
-.ap-select:focus { box-shadow: inset 0 0 0 1px var(--accent-line), 0 0 0 3px var(--accent-soft); }
+.picker.ap-select { flex: none; max-width: 150px; }
 
 /* ---------- The board's History (graph/HistoryPanel.tsx): versions of the harness, compared ---------- */
 /* Files and History sit right of the Board | Layers switch. */

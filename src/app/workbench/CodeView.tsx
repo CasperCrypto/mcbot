@@ -12,6 +12,8 @@ import { useApp } from "../state/store";
 import { AgentFace, Empty, Kbd } from "../ui";
 import { applyMonacoTheme, languageOf, monaco } from "./monaco";
 import { TerminalPanel } from "./TerminalPanel";
+import { agentOptions } from "../lib/agentOptions";
+import { Picker } from "../Picker";
 
 interface Doc {
   key: string;
@@ -268,9 +270,7 @@ export default function CodeView() {
           {doc && agents.length > 0 && (
             <div className="code-ask">
               <MessageSquare size={13} className="faint" />
-              <select value={askAgent || agents[0]!.id} onChange={(e) => setAskAgent(e.target.value)} aria-label="Agent">
-                {agents.map((a) => <option key={a.id} value={a.id}>{a.data.displayName || a.data.name}</option>)}
-              </select>
+              <Picker sm label="Agent" value={askAgent || agents[0]!.id} onChange={setAskAgent} options={agentOptions(agents)} />
               <input value={ask} onChange={(e) => setAsk(e.target.value)} placeholder="Ask about the selection: explain this, fix this…" onKeyDown={(e) => { if (e.key === "Enter") void askAbout(); }} data-testid="code-ask" />
             </div>
           )}

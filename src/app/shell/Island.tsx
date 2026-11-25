@@ -15,6 +15,8 @@ import { Logo } from "../faces/FoodFace";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, PersonFace, clock, useNow } from "../ui";
+import { Picker } from "../Picker";
+import { agentOptions } from "../lib/agentOptions";
 
 /**
  * The dynamic island: always there, in the middle of the title bar.
@@ -148,7 +150,13 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
   openRef.current = open;
   useEffect(() => {
     if (!open) return;
-    const away = (e: MouseEvent) => { if (!shell.current?.contains(e.target as Node)) { byHover.current = false; setOpen(false); } };
+    // A click in its own menu (a picker's list is drawn on the page, outside the island) keeps it open.
+    const away = (e: MouseEvent) => {
+      const t = e.target as Element | null;
+      if (shell.current?.contains(t) || t?.closest?.(".menu")) return;
+      byHover.current = false;
+      setOpen(false);
+    };
     const key = (e: KeyboardEvent) => { if (e.key === "Escape") { byHover.current = false; setOpen(false); } };
     window.addEventListener("mousedown", away);
     window.addEventListener("keydown", key);
@@ -173,6 +181,7 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
       leaveT = setTimeout(() => {
         // Typing in its field, or a menu of its own open: stay.
         if (el.contains(document.activeElement) && document.activeElement !== el) return;
+        if (document.activeElement?.closest(".picker-menu")) return;
         byHover.current = false;
         setOpen(false);
       }, CLOSE_AFTER_MS);
@@ -220,12 +229,7 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
 
         {agents.length > 0 && (
           <form className="island-ask" onSubmit={(e) => { e.preventDefault(); void ask(); }} data-testid="island-ask">
-            <label className="island-ask-who" data-tip="Who to ask">
-              {target && <AgentFace seed={target.data.name} size={22} />}
-              <select value={target?.id ?? ""} onChange={(e) => setAskTo(e.target.value)} aria-label="Agent">
-                {agents.map((a) => <option key={a.id} value={a.id}>{a.data.displayName || a.data.name}</option>)}
-              </select>
-            </label>
+            <Picker sm className="island-picker" label="Agent" tip="Who to ask" value={target?.id ?? ""} onChange={setAskTo} options={agentOptions(agents)} />
             <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={`Ask ${target ? target.data.displayName || target.data.name : "an agent"}…`} aria-label="Ask" data-testid="island-ask-input" />
             <button type="submit" className="island-send" disabled={!draft.trim()} aria-label="Send"><ArrowUp size={15} /></button>
           </form>

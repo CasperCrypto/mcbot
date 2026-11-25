@@ -24,6 +24,7 @@ import { suggestSkills } from "../lib/suggestSkills";
 import { useBoard } from "../state/board";
 import { latestRunByAgent, useApp } from "../state/store";
 import { AgentFace, Issues } from "../ui";
+import { Picker } from "../Picker";
 
 /** Hermes' reasoning levels as people pick them (the ladder's ends kept for models that offer them). */
 const THINKING: { value: Reasoning; label: string; hint: string }[] = [
@@ -207,23 +208,18 @@ export function AgentPage({ agent, where, onClose }: { agent: AgentNode; where: 
           </div>
         ))}
         {spare.length > 0 || models.length === 0 ? (
-          <label className="ap-row add">
+          <div className="ap-row add">
             <Plus size={14} />
-            <select value="" onChange={(e) => addModel(e.target.value)} aria-label={chain.length ? "Add a backup model" : "Pick a model"} data-testid="agent-add-model">
-              <option value="" disabled>{chain.length ? "Add a backup model" : "Pick a model"}</option>
-              {spare.map((m) => <option key={m.id} value={m.id}>{modelTitle(m.data)} · {modelWhere(m.data)}</option>)}
-              <option value="new">New model…</option>
-            </select>
-          </label>
+            <Picker className="ap-add-picker" label={chain.length ? "Add a backup model" : "Pick a model"} placeholder={chain.length ? "Add a backup model" : "Pick a model"} value="" onChange={addModel} testId="agent-add-model"
+              options={[...spare.map((m) => ({ value: m.id, label: modelTitle(m.data), sub: modelWhere(m.data), icon: <ModelMark model={m.data.model} baseUrl={m.data.baseUrl} size={16} /> })), { value: "new", label: "New model…", icon: <Plus size={14} /> }]} />
+          </div>
         ) : (
           <button className="ap-row add" onClick={() => app.openSettings("models")}><Plus size={14} /><span>New model…</span></button>
         )}
         <label className="ap-row" data-testid="agent-reasoning" data-tip="How hard it thinks before it answers (agent.reasoning_effort). Deeper costs more and takes longer; models that cannot think ignore it.">
           <span className="t"><b>Thinking</b><small>{a.reasoning ? THINKING.find((t) => t.value === a.reasoning)?.hint ?? a.reasoning : "As the model decides"}</small></span>
-          <select className="ap-select" value={a.reasoning ?? ""} onChange={(e) => set("reasoning", e.target.value || null)} aria-label="Thinking">
-            <option value="">Default</option>
-            {THINKING.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
+          <Picker sm className="ap-select" label="Thinking" value={a.reasoning ?? ""} onChange={(v) => set("reasoning", v || null)}
+            options={[{ value: "", label: "Default" }, ...THINKING.map((t) => ({ value: t.value, label: t.label }))]} />
         </label>
       </Group>
 

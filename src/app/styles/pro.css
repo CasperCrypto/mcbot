@@ -365,10 +365,10 @@ button.chip:hover { filter: brightness(1.2); }
 .learn-ready b { color: var(--text); font-size: 15px; margin-right: 3px; }
 .learn-checks, .learn-export { display: grid; gap: 8px; padding: 2px 14px 14px 60px; }
 .learn-check { display: flex; align-items: center; gap: 8px; }
-.learn-check select, .learn-check input { height: 30px; border: 0; border-radius: var(--r-sm); background: var(--bg-input); color: var(--text); font: inherit; font-size: 13.5px; padding: 0 10px; outline: none; }
-.learn-check select { width: 210px; cursor: pointer; }
+.learn-check input { height: 30px; border: 0; border-radius: var(--r-sm); background: var(--bg-input); color: var(--text); font: inherit; font-size: 13.5px; padding: 0 10px; outline: none; }
+.learn-check .picker { width: 210px; }
 .learn-check input { flex: 1; min-width: 0; }
-.learn-check select:focus, .learn-check input:focus { box-shadow: 0 0 0 3px var(--accent-soft); }
+.learn-check input:focus { box-shadow: 0 0 0 3px var(--accent-soft); }
 .learn-checks > .btn { justify-self: start; }
 .learn-export-row { display: flex; align-items: center; gap: 12px; font-size: 13px; }
 .learn-export-row > span:first-child:not(.grow) { width: 56px; color: var(--text-3); }
@@ -378,7 +378,7 @@ button.chip:hover { filter: brightness(1.2); }
 .learn-train-row b { display: block; font-size: 14px; }
 .learn-train-row small { display: block; color: var(--text-3); font-size: 12.5px; margin-top: 1px; }
 .learn-folder { font-size: 12.5px; margin: 2px 4px 0; }
-@media (max-width: 720px) { .learn-agent-head { flex-wrap: wrap; } .learn-checks, .learn-export { padding-left: 14px; } .learn-check select { width: 150px; } }
+@media (max-width: 720px) { .learn-agent-head { flex-wrap: wrap; } .learn-checks, .learn-export { padding-left: 14px; } .learn-check .picker { width: 150px; } }
 
 /* The agent's plan in its answer (views/AgentsView.tsx Plan, chat/plan.ts). */
 .plan { display: grid; gap: 6px; margin: 2px 0 8px; padding: 10px 12px; border-radius: var(--r-lg); background: var(--surface-1); box-shadow: var(--lift); max-width: 560px; }
@@ -456,3 +456,24 @@ h1, h2, h3 { text-wrap: balance; }
 /* Tables in answers break between words, never inside one ("Wed", not "We / d"). */
 .rich-table th, .rich-table td { word-break: normal; overflow-wrap: normal; hyphens: manual; }
 .rich-table td:first-child, .rich-table th:first-child { white-space: nowrap; }
+
+/* Pop-up buttons (Picker.tsx): a filled button with the choice and macOS's up-down chevrons, and the
+   glass menu it opens (the app's .menu): check on the left, the row under the pointer in the accent. */
+.picker { display: inline-flex; align-items: center; gap: 7px; min-width: 0; max-width: 100%; height: 30px; padding: 0 8px 0 10px; border: 0; border-radius: var(--r); background: var(--surface-3); color: var(--text); font: inherit; font-size: 13px; font-weight: 500; text-align: left; cursor: default; box-shadow: var(--lift); transition: background var(--t-fast); }
+.picker:hover, .picker[aria-expanded="true"] { background: rgb(var(--tint-rgb) / 0.1); }
+.picker:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.picker:disabled { opacity: 0.45; }
+.picker.sm { height: 26px; gap: 6px; padding: 0 6px 0 8px; font-size: 12.5px; }
+.picker-value { flex: 1; min-width: 0; }
+.picker-chev { flex: none; color: var(--text-3); }
+.picker .food-face, .picker-option .food-face { flex: none; }
+.picker-menu { z-index: 200; max-width: min(380px, calc(100vw - 16px)); max-height: min(380px, 62vh); overflow-y: auto; outline: none; overscroll-behavior: contain; }
+.picker-option { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 4px 12px 4px 6px; border-radius: 6px; color: var(--text); cursor: default; user-select: none; }
+.picker-option.active { background: var(--accent); color: var(--on-accent); }
+.picker-option[aria-disabled="true"] { opacity: 0.4; }
+.picker-check { display: grid; place-items: center; flex: none; width: 15px; }
+.picker-text { display: grid; min-width: 0; line-height: 1.25; }
+.picker-text small { color: var(--text-3); font-size: 11.5px; }
+.picker-option.active .picker-text small { color: inherit; opacity: 0.78; }
+/* In a field row or a form, a picker takes the field's width. */
+.field > .picker, .stack > .picker, .schedule-form > .picker { width: 100%; height: 34px; }

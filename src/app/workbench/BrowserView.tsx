@@ -8,11 +8,12 @@ import { nativePage, openBrowser, page, type PageBox } from "../lib/desktop";
 import { DEMO, engine, REMOTE } from "../lib/engine";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
-import { AgentFace } from "../ui";
 import { addRecent, isFavorite, loadFavorites, toggleFavorite, type Site } from "../lib/browserStore";
 import { BrowserStart } from "./BrowserStart";
 
 import { framedUrl, toUrl } from "../lib/pageUrl";
+import { agentOptions } from "../lib/agentOptions";
+import { Picker } from "../Picker";
 
 const hostOf = (u: string) => {
   try {
@@ -331,10 +332,7 @@ export default function BrowserView() {
       {url && agents.length > 0 && (
         <div className="code-ask browser-ask">
           <MessageSquare size={13} className="faint" />
-          <select value={agentId || agents[0]!.id} onChange={(e) => setAgentId(e.target.value)} aria-label="Agent">
-            {agents.map((a) => <option key={a.id} value={a.id}>{a.data.displayName || a.data.name}</option>)}
-          </select>
-          <AgentFace seed={agents.find((a) => a.id === (agentId || agents[0]!.id))?.data.name ?? "agent"} size={20} />
+          <Picker sm label="Agent" value={agentId || agents[0]!.id} onChange={setAgentId} options={agentOptions(agents)} />
           <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask about this page: find the price, fill the form…"
             onKeyDown={(e) => { if (e.key === "Enter") void ask(); }} data-testid="browser-ask" />
           <div className="browser-quick">

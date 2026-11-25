@@ -17,6 +17,7 @@ import { useApp } from "../state/store";
 import { AgentFace } from "../ui";
 import { ModelChip } from "./Logo";
 import { harnessLayers, type LayerId, type LayerItem, type LayerTarget } from "./layers";
+import { Picker } from "../Picker";
 
 const ICONS: Record<LayerId, ReactNode> = {
   surfaces: <Radio size={16} />, loop: <Repeat size={16} />, context: <Brain size={16} />, model: <Cpu size={16} />,
@@ -48,10 +49,8 @@ function Editor({ item, bundle }: { item: LayerItem; bundle: AgentBundle }) {
       );
     case "reasoning":
       return (
-        <select className="layer-select" value={a.reasoning ?? ""} aria-label="Thinking" data-testid="layer-edit-reasoning" onChange={(e) => set("reasoning", e.target.value || null)}>
-          <option value="">As the model decides</option>
-          {REASONING_LEVELS.map((l) => <option key={l} value={l}>{THINKING[l] ?? l}</option>)}
-        </select>
+        <Picker sm className="layer-select" label="Thinking" value={a.reasoning ?? ""} testId="layer-edit-reasoning" onChange={(v) => set("reasoning", v || null)}
+          options={[{ value: "", label: "As the model decides" }, ...REASONING_LEVELS.map((l) => ({ value: l, label: THINKING[l] ?? l }))]} />
       );
     case "helpers": {
       const caps = a.capabilities ?? DEFAULT_CAPABILITIES;

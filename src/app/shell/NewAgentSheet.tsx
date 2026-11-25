@@ -17,6 +17,9 @@ import { Logo } from "../faces/FoodFace";
 import { usePresence } from "../lib/presence";
 import { AGENT_GROUPS, AGENT_SUGGESTIONS, agentIdFor } from "./agentSuggestions";
 import { REMOTE } from "../lib/engine";
+import { Picker } from "../Picker";
+import { ModelMark } from "../graph/Logo";
+import { modelName } from "../lib/modelName";
 
 export { agentIdFor };
 
@@ -130,10 +133,9 @@ export function NewAgentSheet() {
         </div>
         <div className="na-setup">
           <label className="na-row"><span>Thinks with</span>
-            <select value={model} onChange={(e) => setModel(e.target.value)} data-testid="new-agent-model" aria-label="Thinks with">
-              {models.map((m) => <option key={m.id} value={m.id}>{m.data.label || m.data.name} · {m.data.model}</option>)}
-              {models.length === 0 && <><option value="new-local">A model on this computer</option><option value="new-cloud">A cloud model</option></>}
-            </select>
+            <Picker label="Thinks with" value={model} onChange={setModel} testId="new-agent-model"
+              options={models.length ? models.map((m) => ({ value: m.id, label: modelName(m.data.model) || m.data.label || m.data.name, sub: m.data.label || m.data.name, icon: <ModelMark model={m.data.model} baseUrl={m.data.baseUrl} size={16} /> }))
+                : [{ value: "new-local", label: "A model on this computer" }, { value: "new-cloud", label: "A cloud model" }]} />
           </label>
           {skills.length > 0 && (
             <div className="na-row" data-testid="new-agent-skills"><span>Starts with</span>
