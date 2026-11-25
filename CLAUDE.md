@@ -84,6 +84,9 @@ Change them additively; a breaking change bumps the version.
   (approval cards: `run.approval`, answered with `POST /api/runs/:id/approval`). The key and
   port live in `<workspace>/gateway.json` and go into the root's and each profile's `.env`.
   Those runs read `platform_toolsets.api_server`, so abilities compile to `cli` and `api_server`.
+  A run Hermes refuses because its gateway is restarting (`gateway_draining`, `runtime_draining`:
+  `GATEWAY_BUSY` in `engine/runner.ts`) waits and is sent again, up to a minute, only if it was refused
+  before it said or did anything. People read a failure's reason in words (`lib/runError.ts`).
 - An external Hermes runs as `HERMES_HOME=<root> hermes -p <agent> chat --query-file - --oneshot --format stream-json`,
   cwd `<profile>/workspace`, prompt on stdin, no `--source` (upstream rejects unknown
   sources); it never asks (one-shot runs deny instead).
@@ -340,6 +343,10 @@ Change them additively; a breaking change bumps the version.
   (controls), `--spring-bouncy` (things that arrive) and `--spring-smooth` (things that move):
   real springs via CSS `linear()` where supported, cubic fallbacks in tokens.css. The rail's
   selection and segmented controls' thumbs slide. Reduced motion turns it all off.
+- **Pop-up buttons, never a native `<select>`** (its list is a plain grey box on Windows and Linux):
+  `Picker.tsx` is the button and the glass menu (`.menu`, classes `pick-*`; ↑ ↓, Enter, Esc, type-ahead;
+  portalled, closes on scroll, one open at a time). Agents show their face (`lib/agentOptions.tsx`), and
+  two agents with the same name also say what each is for.
 - **Popups come and go like iOS** (`src/app/lib/presence.ts`): `usePresence` keeps a closed
   sheet, palette or panel mounted 200 ms with `data-closing` so it leaves the way it came
   (glass.css "Leaving"); `useDismiss` closes on a click anywhere outside and on Esc (the popup
@@ -353,6 +360,15 @@ Change them additively; a breaking change bumps the version.
   (`SkeletonCards`, `.skeleton`), never "Loading…".
 - **Less text.** No explanatory paragraphs in the UI. Labels are short; detail
   lives in tooltips (`data-tip`). Empty states are one line plus one action.
+- **Home** (`views/HomeView.tsx`) has one job: a greeting and the ask field, the team as a row of faces
+  (a dot when one works, asks or is stuck), then only sections with something in them (Needs you, At
+  work, Recent), and Up next beside the pinned notes. No counters that repeat a section, no spend card
+  (today's cloud spend shows in the header when there is any), no empty notes.
+- **No two agents show the same name:** `freeDisplayName` (`graph/defaults.ts`) makes a second Writer
+  "Writer 2" for teams, Ask McBot's plans, New agent and Duplicate; the doctor renames twins a board has.
+- **Star and follow:** `lib/links.ts` holds McBot's places (the repo, mcbot.studio, x.com/McBotstudio).
+  Settings → About and ⌘K have Star on GitHub and Follow on X; McBot asks once for a star after five good
+  answers, never in a joined window or the demo.
 - **Settings** (`views/SettingsView.tsx`, ⌘, and the gear in the rail): models (local servers
   found or at any address, cloud presets in `lib/providers.ts`, all OpenAI-compatible; adding one
   places a model block and wires it to the agents picked, main or backup), API keys (names only,
@@ -441,8 +457,9 @@ Change them additively; a breaking change bumps the version.
   state never leaks between subjects.
 - **Logos:** tools, connectors, chat apps, model servers and makers show their brand's mark
   (`graph/Logo.tsx`, `nodeLogo`): `npm run site:logos` generates `src/app/lib/logos.generated.ts`
-  from `design/logos/<key>.svg` (anyone can drop one in; drawn as `<img>`, never HTML) and Simple
-  Icons (CC0, devDependency only); `npm test` fails while it is stale. A brand colour is content,
+  from `design/logos/<key>.svg` (anyone can drop one in, under MIT, Apache or CC0; drawn as `<img>`, never
+  HTML), Simple Icons (CC0, devDependency only) and, for services it lacks, LobeHub's icons (`LOBE_TOOLS`);
+  the licences in `design/licences/` go into the app's third-party notices; `npm test` fails while it is stale. A brand colour is content,
   like note paper. No logo = the kind's own tile.
 - **Faces:** agents are glass food bots (`src/app/faces/foods.ts`): the name picks
   the food and its `--food-*` colour, so the same name is always the same bot.
