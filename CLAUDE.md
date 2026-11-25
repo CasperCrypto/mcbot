@@ -178,15 +178,26 @@ Change them additively; a breaking change bumps the version.
   running, and only against the sha256 the editor read.
 - An agent's `dailyBudgetUsd` is McBot-side only (never compiled, no Hermes key): `buildCostReport` compares
   today's (UTC) spend with it; Cost shows the bar and Home's "Needs you" warns at 80% and 100%; at 100% `POST /api/runs` refuses (409) the runs McBot starts (Hermes' own schedules and task-board runs are not stopped).
-- **Learn** (`views/LearnView.tsx`, pure `src/harness/learn.ts`, `engine/learn.ts`; docs/TRAINING.md): the agents'
+- **Knowledge** (`views/KnowledgeView.tsx`, ⌘6, pinned by default): one view of four segments, Business, Memory,
+  Skills, Training; the tabs `memory`, `skills`, `learn` are its segments (`viewOf`), so every link lands there and old
+  rail pins become it. Business is the team knowledge (`BriefFields`, shared with the sheet) and **documents**
+  (`docs` on the board, mcbot.graph/v1 additive, a Y.Map keyed by id): `POST /api/knowledge/doc` (raw bytes, 30 MB,
+  teammates too) keeps the original in `files/knowledge/` (never over a file) and reads it to text, PDF and Office
+  files through McBot's own Hermes (`tools/read_extract.extract_document_text`, `engine/knowledge.ts`); compile writes
+  every skill-capable agent a `business-files` skill (`src/compile/docs.ts`: SKILL.md + `references/<doc>.md`, read
+  with `skill_view`). Export .md (`src/harness/knowledgeMd.ts`, `POST /api/knowledge/export` → `exports/`, host only).
+- **Training** (Knowledge's segment; `views/LearnView.tsx`, pure `src/harness/learn.ts`, `engine/learn.ts`; docs/TRAINING.md): the agents'
   work as data to train a model of your own. Thumbs up / down on any answer in Chat (`<workspace>/ratings.json`,
   `GET/POST /api/ratings`, teammates too) and an agent's **checks** (`checks` on the agent, McBot-side only, never
   compiled: mentions, never mentions, used a tool, word counts, valid JSON) give each run a reward from 0 to 1 (the
   rating wins; failed or stopped runs are 0). Export (`POST /api/learn/export`, host only) writes one agent's
   conversations (runs of one Hermes session together) to `<workspace>/datasets/`, never over an earlier file, as
   OpenAI chat JSONL, the same with rewards, or Hermes' own trajectory format; saved key values, token-shaped strings
-  and the home folder are left out (`redact`). Training itself happens elsewhere (MLX, Unsloth, hosted fine-tuning);
-  the model comes back as a model block.
+  and the home folder are left out (`redact`). **Train** makes the model: in the cloud through a board cloud model's
+  OpenAI fine-tuning API (`engine/train.ts`: `/files`, `/fine_tuning/jobs`, plain HTTP; jobs in
+  `<workspace>/training.json`, `GET/POST /api/train`, host only; at least 10 conversations; "Use it" makes the trained
+  model the agent's main, the old one its backup), or on this computer by a Trainer agent (`lib/trainer.ts`: Hermes'
+  Unsloth and llama.cpp skills, an Until-done task, served at 127.0.0.1:8080).
 - Cost comes from each profile's `state.db`; Hermes-priced vs McBot-estimated is
   always labelled. Hermes reports no GPU time — do not fabricate it. A session on a local model is
   **Free** (`local` on the session), never "unpriced": only cloud models are asked for a price.
@@ -521,7 +532,7 @@ Change them additively; a breaking change bumps the version.
   the window's Minimize / Maximize (app only). One height (30px) for every title-bar control. It
   also lists the last notices (`notices` in the store; Clear) and the doctor's findings with their
   fix (`applyFix` in `shell/DoctorSheet.tsx`), so nothing it covers is lost.
-- **Rail** (`shell/Rail.tsx`): a few pinned views (default Home, Board, Chat, Tasks, Runs) and "…", a menu of every
+- **Rail** (`shell/Rail.tsx`): a few pinned views (default Home, Board, Chat, Tasks, Runs, Knowledge) and "…", a menu of every
   view with its shortcut and a pin toggle (pins kept per computer in localStorage); the view you are on shows even
   when it is not pinned. The app opens on Chat. The title bar stays calm: Compile shows on the Board, or anywhere
   when the agents' files are out of date or broken; the doctor appears only when it has findings; Share is an icon.
@@ -554,7 +565,7 @@ Change them additively; a breaking change bumps the version.
   (all 141), and the Skills view lists Hermes' 44 built-in skills by name ("Show all").
 - Views live behind an error boundary; a broken view must not blank the window.
 - **Fast start:** only Home, Chat and Tasks are in the first bundle (`App.tsx` `lazyView`); the other views
-  (Board with React Flow, Runs, Memory, Skills, Files, Cost, Team, Settings, Browser) are fetched one by one while
+  (Board with React Flow, Runs, Knowledge, Files, Cost, Team, Settings, Browser) are fetched one by one while
   the window is idle right after the first paint, so switching to them never waits; Code (Monaco) loads when opened.
   While the engine starts, the window asks it every 400 ms (every 5 s once it answers).
 - An empty chat offers three starter questions picked from the agent's name, then its description
@@ -685,4 +696,4 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   `site/index.html` (between `<!-- logos:<group> -->` markers) by `npm run site:logos` from the
   app's own marks (`npm test` fails while they are stale).
 
-Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Skills, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘D duplicate · ⌘0 fit the board · right-click the board · ⌘N new window (desktop).
+Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Knowledge, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘D duplicate · ⌘0 fit the board · right-click the board · ⌘N new window (desktop).
