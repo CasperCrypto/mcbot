@@ -75,6 +75,7 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
       id: "context", title: "Context", what: "What it knows before it answers: who it is, memory, skills",
       items: [
         { label: "Identity", detail: soulLines ? `${n(soulLines, "line")} in SOUL.md` : "Empty: say who it is and how it works", state: soulLines ? "set" : "missing", target: self },
+        { label: "Where it works", detail: caps.includes("skills") ? "McBot, its model and tools, and McBot's guide" : "McBot, its model and tools", state: "set", target: self },
         { label: "Team knowledge", detail: briefFilled ? `${briefFilled} of ${BRIEF_FIELDS.length} filled, shared by every agent` : "Empty: tell your agents about the business", state: briefFilled ? "set" : "default", target: { sheet: "knowledge" } },
         { label: "Memory", detail: memEntries == null ? "—" : memEntries ? n(memEntries, "memory", "memories") : "Nothing yet", state: memEntries ? "set" : "default", target: { tab: "memory" } },
         { label: "Skills", detail: [a.skills.length ? n(a.skills.length, "own") : "", a.builtinSkills === false ? "built-in off" : "44 built-in", facts.installedSkills?.length ? `${facts.installedSkills.length} from the library` : ""].filter(Boolean).join(" · "), state: a.skills.length || facts.installedSkills?.length ? "set" : "default", target: { tab: "skills" } },

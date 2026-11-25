@@ -7,8 +7,8 @@
   "files": [
     {
       "path": "profiles/triage/SOUL.md",
-      "sha256": "3050031c6be0dc07e8a3bf801fa35609b5ba87045e9ab23b3cafed90b14539b0",
-      "bytes": 50
+      "sha256": "5b55e9c8c44e41c6ee457ce9a1015884e833130da8c647607deb5f2cbab52f36",
+      "bytes": 472
     },
     {
       "path": "profiles/triage/config.yaml",
@@ -19,6 +19,11 @@
       "path": "profiles/triage/profile.yaml",
       "sha256": "30f6affafe71223bd3592602e25454371ede879cd6722edae0967056dfe73067",
       "bytes": 74
+    },
+    {
+      "path": "profiles/triage/skills/mcbot/mcbot-studio/SKILL.md",
+      "sha256": "d27c13799c05fd9566d7548f6d8bd578efc65e52fcdb3eeae8c5a09f3d1a9ddc",
+      "bytes": 4856
     }
   ]
 }

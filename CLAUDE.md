@@ -69,6 +69,15 @@ Change them additively; a breaking change bumps the version.
   `yes/no/on/off` are booleans and `0755` is octal.
 - Never write secrets. Model nodes carry an env var *name* (`key_env`).
 - No `_config_version` in compiled config.yaml.
+- **Agents know where they work.** Every SOUL.md gets a "Where you work" section after the agent's own text and
+  the team knowledge, before Team (`renderWhere` in `src/compile/soul.ts`): McBot Studio and Hermes, its models by
+  id and where they run ("on this computer", "through OpenRouter", named from the base URL's host), its tools by
+  the id it calls them with and its makers. Only facts config.yaml holds, so a board read back from Hermes compiles
+  the same SOUL.md; `splitSoul` drops the section. Every agent that can load skills also gets McBot's guide as a
+  Hermes skill, `skills/mcbot/mcbot-studio/SKILL.md` (`src/compile/mcbotGuide.ts`): Hermes lists it with a
+  description of at most 60 characters and the agent reads it with `skill_view` only when asked about McBot. Its
+  category folder keeps the board reader off it; the Skills view shows it built in. **Keep the guide true to the
+  app:** when a view, shortcut or flow changes, change the guide (golden-tested like every compiled file).
 - Provider keys are `mcbot-<name>`, referenced as `custom:mcbot-<name>`.
 - The writer owns exactly the files in `<root>/.mcbot/manifest.json`: it deletes
   nothing else, and refuses to write into a profile dir it did not create. Inside
@@ -250,7 +259,7 @@ Change them additively; a breaking change bumps the version.
 - **Team knowledge** lives in the board too (`brief`, optional in `mcbot.graph/v1`; a Y.Map `brief` with one entry per
   field, so two people editing two fields keep both): who the agents work for, what you do, offer, customers, goals,
   voice, channels, how you sell, links, notes. Compile writes it into **every agent's SOUL.md** as a "Shared knowledge"
-  section, after the agent's own text and before the Team section (`renderKnowledge` in `src/compile/soul.ts`: SOUL.md
+  section, after the agent's own text and before "Where you work" and Team (`renderKnowledge` in `src/compile/soul.ts`: SOUL.md
   is the one file Hermes always puts in the system prompt, `agent/prompt_builder.py` `build_context_files_prompt`);
   `splitSoul` in `src/harness/read.ts` reads it back out (the agent's soul never takes it in). Edited in the Team
   knowledge sheet (`shell/KnowledgeSheet.tsx`: ⌘K, Home's Get started, Layers → Context) and by the setup assistant.

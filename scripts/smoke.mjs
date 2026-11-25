@@ -63,11 +63,13 @@ if (!existsSync(join(bundle, "UPSTREAM.json"))) throw new Error(`no staged Herme
 const tmp = mkdtempSync(join(tmpdir(), "mcbot-smoke-"));
 const data = join(tmp, "data");
 const logFile = join(data, "engine.log");
+/** One line per request the stub model got (test/stub-llm/main.ts). */
+const stubLog = join(tmp, "stub-requests.jsonl");
 
 async function main() {
   step(`stub model on :${STUB_PORT}`);
   const stub = spawn(process.execPath, [join(root, "node_modules", "tsx", "dist", "cli.mjs"), join(root, "test", "stub-llm", "main.ts")], {
-    env: { ...process.env, STUB_LLM_PORT: String(STUB_PORT) },
+    env: { ...process.env, STUB_LLM_PORT: String(STUB_PORT), STUB_LLM_LOG: stubLog },
     stdio: "inherit",
   });
   children.push(stub);
@@ -129,6 +131,13 @@ async function main() {
   if (finished.status !== "succeeded" || finished.text !== "Saved to memory: Smoke tests pass") {
     throw new Error(`run: ${JSON.stringify(events.filter((e) => e.type !== "run.log").slice(-6))}`);
   }
+
+  step("the agent knows where it works");
+  const asked = existsSync(stubLog) ? readFileSync(stubLog, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : [];
+  if (!asked.some((r) => r.where && r.guide)) {
+    throw new Error(`the agent's prompt does not say where it works or list McBot's guide: ${JSON.stringify(asked.slice(-3))}`);
+  }
+  console.log(`its prompt has "Where you work" and McBot's guide (${asked.length} requests)`);
 
   step("Report a problem");
   console.log((await call("GET", "/api/diagnostics")).text);

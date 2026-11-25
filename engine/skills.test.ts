@@ -35,11 +35,13 @@ describe("Hermes skills", () => {
     put("web/build-pages", "build-pages"); // skill_manage with one
     put("productivity/decision-questionnaire", "decision-questionnaire");
     put("note-taking/obsidian", "obsidian");
+    put("mcbot/mcbot-studio", "mcbot-studio"); // McBot's own guide, compiled for every agent
     writeFileSync(join(dir, "skills", ".bundled_manifest"), "obsidian:abc123\n");
     mkdirSync(join(dir, "skills", ".hub"), { recursive: true });
     writeFileSync(join(dir, "skills", ".hub", "lock.json"), JSON.stringify({ version: 1, installed: { "decision-questionnaire": { source: "official" } } }));
     const by = Object.fromEntries(profileSkills(dir).map((s) => [s.name, s]));
-    expect(Object.keys(by)).toEqual(["build-pages", "decision-questionnaire", "obsidian", "read-link-lists"]);
+    expect(Object.keys(by)).toEqual(["build-pages", "decision-questionnaire", "mcbot-studio", "obsidian", "read-link-lists"]);
+    expect(by["mcbot-studio"]).toMatchObject({ origin: "builtin", category: "mcbot" });
     expect(by["read-link-lists"]).toMatchObject({ origin: "learned", category: null, path: "skills/read-link-lists/SKILL.md", description: "does read-link-lists" });
     expect(by["build-pages"]).toMatchObject({ origin: "learned", category: "web" });
     expect(by["decision-questionnaire"]!.origin).toBe("library");
