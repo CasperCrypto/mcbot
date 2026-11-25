@@ -292,6 +292,8 @@ const listeners = new Set<Listener>();
 const cancelled = new Set<string>();
 /** Runs waiting on an approval card, by run id. */
 const answers = new Map<string, (choice: string) => void>();
+/** A question the simulated agent asked, waiting for the page's answer (run id → its resolver). */
+const replies = new Map<string, (answer: string) => void>();
 const busy = new Map<string, number>();
 
 interface Step {
@@ -451,6 +453,19 @@ async function play(boardId: string, bundle: AgentBundle, prompt: string, opts: 
         steps = [{ tool: "terminal", input: { command }, output: JSON.stringify({ output: "", exit_code: 0 }), toolNodeId: null }];
         text = `Done: ${command} (simulated in this browser).`;
       }
+    }
+    // "Ask me…" / "which one" / "choose": the agent stops to ask, as Hermes' clarify does (the question card).
+    if (live && /\b(ask me|which one|choose)\b/i.test(prompt)) {
+      const promptId = `q${runId.slice(-8)}`;
+      const question = "Which version should I go with?";
+      emit({ type: "run.tool.started", tool: "clarify", input: { preview: question }, toolNodeId: null });
+      emit({ type: "run.question", promptId, generation: 1, question, choices: ["The short one (Recommended)", "The detailed one"], multiSelect: false, timeoutS: 90 });
+      const answer = await new Promise<string>((resolve) => { replies.set(runId, resolve); setTimeout(() => resolve(""), 90_000); });
+      replies.delete(runId);
+      emit({ type: "run.question.settled", promptId, answer: answer || null });
+      emit({ type: "run.tool.finished", tool: "clarify", output: JSON.stringify({ responses: [{ question, user_response: answer || null }] }), durationMs: 1, isError: false, toolNodeId: null });
+      const picked = answer.replace(/\s*\(Recommended\)$/i, "").trim();
+      text = answer ? `Going with ${picked.toLowerCase()}. ${text}` : `No answer, so I went with the short one. ${text}`;
     }
     for (const s of steps) {
       emit({ type: "run.tool.started", tool: s.tool, input: s.input, toolNodeId: s.toolNodeId });
@@ -824,6 +839,13 @@ export const demoEngine = {
     answers.delete(runId);
     resolve(choice);
     return { answered: choice };
+  }),
+  replyRun: api((runId: string, promptId: string, answer: string) => {
+    const resolve = replies.get(runId);
+    if (!resolve) throw new EngineError(409, "This question was already answered or has expired", {});
+    replies.delete(runId);
+    resolve(answer);
+    return { answered: promptId };
   }),
   cancelRun: api((runId: string) => {
     const events = state.runs[runId];

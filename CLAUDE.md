@@ -166,6 +166,12 @@ Change them additively; a breaking change bumps the version.
   the raw SKILL.md). Its Plugins pane (`views/PluginsPanel.tsx`, `engine/plugins.ts`) lists the
   agent's plugins with on/off and the curated catalog (`hermes/plugin-catalog`); every change goes
   through `hermes -p <agent> plugins …`, which writes `plugins.enabled` itself (never compiled).
+- **Questions:** an agent can ask the person (Hermes' `clarify`): the runs API's event stream carries approvals only,
+  so while a clarify step is open the engine reads `pending_controls` from the run's status (`Runner.watchQuestions`,
+  `run.question` / `run.question.settled`) and `POST /api/runs/:id/reply` answers (a choice, a JSON array for several,
+  text, or "" to skip; a guest may answer in their own run). `approvals/QuestionCard.tsx` in Chat, Home's "Needs you"
+  and the island; Hermes' typed-skip hint is dropped. Hermes' api_server default leaves out clarify, computer use and
+  speech, so compile always pins `platform_toolsets.api_server` to the board's abilities (`cli` only when chosen).
 - Computer use: the chat shows the agent's screen (`chat/screen.ts`: each `computer_use` capture's
   `screenshot_path`), live while it runs and as a step slider after; Stop takes it back.
 - Memory edits: Hermes' `§` format byte for byte, refused while the profile is

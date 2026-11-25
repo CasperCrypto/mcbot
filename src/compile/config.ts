@@ -79,10 +79,13 @@ function serverEntry(tool: ToolData): Record<string, unknown> {
  * so a video maker alone already needs the list. So does a hand-off edge: an
  * agent gives teammates tasks with the kanban tools, which are off by default
  * outside a dispatched task (tools/kanban_tools.py `_visible`). Catalog order, no duplicates.
+ * The api_server surface (McBot's own chat) is always pinned: Hermes' default there leaves out
+ * clarify, computer use and speech (toolsets.py `hermes-api-server`, "no interactive UI tools"),
+ * which McBot shows and answers, so an agent's abilities in McBot are the ones its board lists.
  */
-export function compiledToolsets(bundle: AgentBundle): Capability[] | null {
+export function compiledToolsets(bundle: AgentBundle, surface: "cli" | "api_server" = "cli"): Capability[] | null {
   const base = bundle.agent.data.capabilities;
-  if (base === null && !bundle.video && bundle.team.length === 0) return null;
+  if (surface === "cli" && base === null && !bundle.video && bundle.team.length === 0) return null;
   const on = new Set<Capability>(base ?? DEFAULT_CAPABILITIES);
   if (bundle.image) on.add("image_gen");
   if (bundle.video) on.add("video_gen");
@@ -115,8 +118,10 @@ export function renderConfig(graph: Graph, bundle: AgentBundle): string {
   const toolsets = compiledToolsets(bundle);
   // McBot's own Hermes runs agents through the gateway's runs API, which reads the api_server
   // surface (gateway/platforms/api_server.py `_get_platform_tools(config, "api_server")`); an
-  // external Hermes runs them as `hermes chat` (cli). Chosen abilities apply to both.
-  if (toolsets) doc.platform_toolsets = { cli: toolsets, api_server: [...toolsets] };
+  // external Hermes runs them as `hermes chat` (cli). Chosen abilities apply to both; with none
+  // chosen, cli keeps Hermes' default and api_server gets the board's (compiledToolsets).
+  const api = compiledToolsets(bundle, "api_server")!;
+  doc.platform_toolsets = toolsets ? { cli: toolsets, api_server: api } : { api_server: api };
   // Only what differs from Hermes' defaults (hermes_cli/config_defaults.py `browser`).
   const b = bundle.agent.data.browser;
   const browser: Record<string, unknown> = {};

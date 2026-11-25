@@ -1120,7 +1120,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       }
       return;
     }
-    const runMatch = /^\/api\/runs\/(run_[a-z0-9]+_[a-f0-9]+)(\/cancel|\/approval)?$/.exec(url.pathname);
+    const runMatch = /^\/api\/runs\/(run_[a-z0-9]+_[a-f0-9]+)(\/cancel|\/approval|\/reply)?$/.exec(url.pathname);
     const guest = memberOf.get(req);
     if (runMatch && guest?.role === "chat" && !(await ownsRun(guest, runMatch[1]!))) return deny(res, 404, "no such run");
     try {
@@ -1136,6 +1136,16 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
           throw new HttpError(409, (err as Error).message);
         }
         body = { answered: choice };
+      }
+      else if (runMatch && req.method === "POST" && runMatch[2] === "/reply") {
+        // The answer to what the agent asked (Hermes' clarify): a choice, a JSON array of choices, text, or "" to skip.
+        const { promptId, answer } = parse(z.object({ promptId: z.string().min(1).max(200), answer: z.string().max(16_384) }), await json(req));
+        try {
+          await runner.reply(runMatch[1]!, promptId, answer);
+        } catch (err) {
+          throw new HttpError(409, (err as Error).message);
+        }
+        body = { answered: promptId };
       }
       else {
         const handler = routes[`${req.method} ${url.pathname}`];

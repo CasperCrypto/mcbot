@@ -16,6 +16,7 @@ import { newId } from "../graph/defaults";
 import { StickyNote } from "../notes/StickyNote";
 import { useTasks } from "./TasksView";
 import { ApprovalCard } from "../approvals/ApprovalCard";
+import { QuestionCard } from "../approvals/QuestionCard";
 import { agentsWithoutModel, chainOf, modelsOf } from "../lib/models";
 import { useModelHealth } from "../lib/useModelHealth";
 import { nameChosen } from "../lib/identity";
@@ -379,7 +380,7 @@ export function HomeView() {
   ].sort((a, b) => b.at - a.at).slice(0, 6);
 
   const today = cost?.byDay.find((d) => d.key === utcDay(Date.now()));
-  const asking = list.filter((r) => r.approval);
+  const asking = list.filter((r) => r.approval || r.question);
   const needs = inbox.length + asking.length;
   const latest = latestRunByAgent(runs);
   const busyTask = (profile: string) => working.find((t) => t.assignee === profile);
@@ -420,7 +421,7 @@ export function HomeView() {
                   const task = busyTask(a.data.name);
                   return (
                     <RosterChip key={a.id} agent={a} live={!!run || !!task} step={run ? stepOf(events[run.runId]) : task ? task.title : ""}
-                      failed={r?.status === "failed"} asks={!!r?.approval} noModel={chainOf(graph, a.id).length === 0} />
+                      failed={r?.status === "failed"} asks={!!r?.approval || !!r?.question} noModel={chainOf(graph, a.id).length === 0} />
                   );
                 })}
                 <button className="roster-chip add" onClick={() => app.setNewAgentOpen(true)} data-tip="New agent" aria-label="New agent" data-testid="home-tile-new"><Plus size={15} /></button>
@@ -438,10 +439,11 @@ export function HomeView() {
                 <div key={`ask-${r.runId}`} className="home-ask-row" data-testid="home-approval">
                   <div className="row" style={{ gap: 8, padding: "2px 2px 6px" }}>
                     <AgentFace seed={r.profile} size={22} status="running" />
-                    <span className="title ellipsis grow">{nameOf(r.profile)} asks before acting</span>
+                    <span className="title ellipsis grow">{nameOf(r.profile)} {r.approval ? "asks before acting" : "asks you"}</span>
                     <button className="btn sm ghost" onClick={() => app.openChat(r.agentNodeId)}>Open chat</button>
                   </div>
                   <ApprovalCard run={r} compact />
+                  <QuestionCard run={r} compact />
                 </div>
               ))}
               {inbox.map((i) => (

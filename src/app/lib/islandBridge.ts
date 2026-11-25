@@ -24,6 +24,9 @@ export function islandStateOf(runs: readonly RunSummary[], nameOf: (r: RunSummar
   const running = runs.filter((r) => r.status === "running").sort((a, b) => a.startedAt - b.startedAt);
   const asking = running.find((r) => r.approval);
   if (asking) return { mode: "ask", text: `${nameOf(asking)} asks before acting`, sub: asking.approval!.command || asking.approval!.description, count, seed: asking.profile, runId: asking.runId };
+  // A question is answered in McBot (its options, or typed): the pill says so and a click opens it.
+  const question = running.find((r) => r.question);
+  if (question) return { mode: "run", text: `${nameOf(question)} asks you: ${question.question!.question}`, count, seed: question.profile };
   if (running.length) {
     const first = running[0]!;
     return { mode: "run", text: running.length === 1 ? `${nameOf(first)} is working` : `${running.length} agents working`, count, seed: first.profile };

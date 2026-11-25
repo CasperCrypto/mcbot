@@ -12,7 +12,9 @@
  *
  * McBot's own Hermes runs through the gateway's runs API instead (engine/hermesRuns.ts), whose
  * events map to the same shapes, plus `run.approval` when Hermes asks the person before a risky
- * action and `run.approval.settled` once answered (added in v1, additively).
+ * action and `run.approval.settled` once answered (added in v1, additively), and `run.question` when
+ * the agent asks the person something (Hermes' clarify tool) with `run.question.settled` once it is
+ * answered, skipped or timed out (added in v1, additively).
  */
 import { z } from "zod";
 
@@ -95,6 +97,21 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   z.object({ ...base, type: z.literal("run.approval.settled"), promptId: z.string(), choice: z.string().nullable() }),
   z.object({
     ...base,
+    type: z.literal("run.question"),
+    /** Hermes' prompt id and generation: what an answer must carry back. */
+    promptId: z.string(),
+    generation: z.number().int(),
+    question: z.string(),
+    /** Its options (empty: a free answer); "(recommended)" marks Hermes' suggestion. */
+    choices: z.array(z.string()),
+    /** Any number of the options may be picked. */
+    multiSelect: z.boolean(),
+    /** Seconds before Hermes stops waiting and the agent goes on without an answer. */
+    timeoutS: z.number().nullable(),
+  }),
+  z.object({ ...base, type: z.literal("run.question.settled"), promptId: z.string(), answer: z.string().nullable() }),
+  z.object({
+    ...base,
     type: z.literal("run.finished"),
     status: z.enum(["succeeded", "failed", "interrupted"]),
     exitCode: z.number().int().nullable(),
@@ -149,6 +166,8 @@ export interface RunSummary {
   estimatedUsd: number | null;
   /** Hermes is waiting for the person to allow or deny this, right now. */
   approval: { promptId: string; command: string; description: string; choices: string[] } | null;
+  /** The agent asked the person this and waits for the answer, right now (Hermes' clarify). */
+  question?: { promptId: string; question: string; choices: string[]; multiSelect: boolean; timeoutS: number | null; at: number } | null;
   /** Who started it, when it wasn't the host (Share): member id and name. */
   by?: string;
   byName?: string;
@@ -176,6 +195,7 @@ export function summarizeRun(events: readonly RunEvent[]): RunSummary | null {
     reportedUsd: null,
     estimatedUsd: null,
     approval: null,
+    question: null,
   };
   if (start.by) {
     s.by = start.by;
@@ -198,6 +218,7 @@ export function summarizeRun(events: readonly RunEvent[]): RunSummary | null {
         break;
       case "run.finished":
         s.approval = null;
+        s.question = null;
         s.status = e.status;
         s.finishedAt = e.ts;
         s.text = e.text || s.text;
@@ -210,6 +231,12 @@ export function summarizeRun(events: readonly RunEvent[]): RunSummary | null {
         break;
       case "run.approval.settled":
         if (s.approval?.promptId === e.promptId) s.approval = null;
+        break;
+      case "run.question":
+        s.question = { promptId: e.promptId, question: e.question, choices: e.choices, multiSelect: e.multiSelect, timeoutS: e.timeoutS, at: e.ts };
+        break;
+      case "run.question.settled":
+        if (s.question?.promptId === e.promptId) s.question = null;
         break;
       case "run.cost":
         s.reportedUsd = e.reportedUsd;

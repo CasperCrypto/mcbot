@@ -211,8 +211,11 @@ describe("sharing with anyone", () => {
     expect((await remote("/api/runs/run_mine_aaaaaaaa", { key: other })).status).toBe(404);
     const events = (await (await remote("/api/runs/run_mine_aaaaaaaa", { key: guest })).json()) as { cwd?: string }[];
     expect(events[0]!.cwd).toBe("");
-    // Only the host answers what an agent asks.
+    // Only the host answers an approval card; a guest answers the agent's questions in their own run
+    // (409 here: this run asked nothing), never in someone else's.
     expect((await remote("/api/runs/run_mine_aaaaaaaa/approval", { key: guest, body: { choice: "once" } })).status).toBe(403);
+    expect((await remote("/api/runs/run_mine_aaaaaaaa/reply", { key: guest, body: { promptId: "p1", answer: "red" } })).status).toBe(409);
+    expect((await remote("/api/runs/run_host_bbbbbbbb/reply", { key: guest, body: { promptId: "p1", answer: "red" } })).status).toBe(404);
     g.ws.close();
     t.ws.close();
   });

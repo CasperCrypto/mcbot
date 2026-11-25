@@ -71,8 +71,11 @@ export const BUSY_RETRY_MS = 1500;
 /** How long a stopped run may take to wind down before McBot ends it. */
 export const STOP_GRACE_MS = 4000;
 
+/** How often an open question is looked for while the agent's clarify step runs. */
+const QUESTION_POLL_MS = 700;
+
 export class Runner {
-  private readonly active = new Map<string, { child: ChildProcess | null; profile: string; startedAt: number; cancelled?: boolean; finished?: boolean; hermesRunId?: string; abort?: AbortController }>();
+  private readonly active = new Map<string, { child: ChildProcess | null; profile: string; startedAt: number; cancelled?: boolean; finished?: boolean; hermesRunId?: string; abort?: AbortController; replies?: Map<string, string> }>();
   private gatewayStale = false;
   private gatewayRestart: Promise<void> | null = null;
   private gatewayEnsure: Promise<unknown> = Promise.resolve();
@@ -182,6 +185,51 @@ export class Runner {
     await this.opts.api.runs.answer(run.profile, run.hermesRunId, ask.promptId, ask.generation, choice);
   }
 
+  /**
+   * Answer what the agent asked (Hermes' clarify): one of its choices, a JSON array of choices when
+   * several may be picked, free text, or "" to skip. Only runs through the runs API can ask.
+   */
+  async reply(runId: string, promptId: string, answer: string): Promise<void> {
+    const run = this.active.get(runId);
+    if (!run?.hermesRunId || !this.opts.api) throw new Error("This run is not waiting for an answer");
+    const events = await this.opts.store.events(runId);
+    const settled = new Set(events.filter((e) => e.type === "run.question.settled").map((e) => (e as { promptId: string }).promptId));
+    const ask = events.find((e) => e.type === "run.question" && e.promptId === promptId && !settled.has(promptId));
+    if (!ask || ask.type !== "run.question") throw new Error("This question was already answered or has expired");
+    (run.replies ??= new Map()).set(promptId, answer);
+    await this.opts.api.runs.reply(run.profile, run.hermesRunId, ask.promptId, ask.generation, answer);
+  }
+
+  /**
+   * While the agent's clarify step is open, read its questions from the run's status (the event
+   * stream carries approvals only) and show each once; one that is no longer pending is settled.
+   */
+  private watchQuestions(runId: string, profile: string, hermesRunId: string): () => void {
+    const api = this.opts.api!;
+    const open = new Set<string>();
+    let stopped = false;
+    const settle = (promptId: string) => {
+      open.delete(promptId);
+      this.emit(runId, { type: "run.question.settled", promptId, answer: this.active.get(runId)?.replies?.get(promptId) ?? null });
+    };
+    void (async () => {
+      while (!stopped) {
+        const now = await api.runs.questions(profile, hermesRunId).catch(() => null);
+        if (stopped) break;
+        if (now) {
+          const ids = new Set(now.map((q) => q.promptId));
+          for (const q of now) if (!open.has(q.promptId)) { open.add(q.promptId); this.emit(runId, { type: "run.question", ...q }); }
+          for (const id of [...open]) if (!ids.has(id)) settle(id);
+        }
+        await new Promise((r) => setTimeout(r, QUESTION_POLL_MS));
+      }
+    })();
+    return () => {
+      stopped = true;
+      for (const id of [...open]) settle(id);
+    };
+  }
+
   /** Turn the gateway's API server on for this root and make sure it answers (restarting a gateway that started without it). */
   private async ensureApi(runId: string, bin: HermesBinary): Promise<boolean> {
     const api = this.opts.api!;
@@ -250,9 +298,16 @@ export class Runner {
     const mapper = new RunsApiMapper(req.toolNodes);
     let finished = false;
     let shown = false;
+    // The agent's questions are read while its clarify step is open (watchQuestions).
+    let asking = 0;
+    let stopWatching: (() => void) | null = null;
+    const endQuestions = () => { stopWatching?.(); stopWatching = null; };
     try {
       for await (const e of api.runs.events(req.profile, hermesRunId, abort.signal)) {
         for (const ev of mapper.map(e, started)) {
+          if (ev.type === "run.tool.started" && ev.tool === "clarify" && asking++ === 0) stopWatching = this.watchQuestions(runId, req.profile, hermesRunId);
+          if (ev.type === "run.tool.finished" && ev.tool === "clarify" && asking > 0 && --asking === 0) endQuestions();
+          if (ev.type === "run.finished") endQuestions();
           if (ev.type === "run.finished") {
             // Refused before it said or did anything: the gateway was restarting.
             if (ev.status === "failed" && !shown && !entry?.cancelled && GATEWAY_BUSY.test(ev.error ?? "")) return ev.error ?? "busy";
@@ -268,9 +323,11 @@ export class Runner {
         if (isTerminal(e)) break;
       }
     } catch (err) {
+      endQuestions();
       if (!finished) fail(`Lost the run's events: ${(err as Error).message}`);
       return null;
     }
+    endQuestions();
     if (!finished) fail("The run ended without a result");
     return null;
   }

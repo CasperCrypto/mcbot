@@ -306,6 +306,32 @@ describe("engine", () => {
     expect((await api(`/api/runs/${body.runId}/approval`, { method: "POST", body: JSON.stringify({ choice: "once" }) })).status).toBe(409);
   }, 400_000);
 
+  // Hermes' clarify through the runs API: McBot reads the question from the run's status (its event
+  // stream carries approvals only), shows it, and the person's answer reaches the agent.
+  it.skipIf(!process.env.MCBOT_HERMES_BIN && process.env.MCBOT_E2E !== "1")("shows the agent's question and gives it the person's answer", async () => {
+    const prompt = `call:clarify ${JSON.stringify({ questions: [{ question: "Which colour?", choices: ["red", "blue"] }] })}`;
+    const { body } = await api<{ runId: string }>("/api/runs", { method: "POST", body: JSON.stringify({ boardId: "team", agentNodeId: "n-agent", prompt }) });
+    let summary: RunSummary | undefined;
+    await untilAsync(async () => {
+      summary = (await api<RunSummary[]>("/api/runs?boardId=team")).body.find((r) => r.runId === body.runId);
+      return Boolean(summary?.question) || summary?.status !== "running";
+    }, 240_000);
+    expect(summary?.question, JSON.stringify(summary)).toMatchObject({ question: "Which colour?", choices: ["red (Recommended)", "blue"], multiSelect: false });
+    const promptId = summary!.question!.promptId;
+    expect((await api(`/api/runs/${body.runId}/reply`, { method: "POST", body: JSON.stringify({ promptId, answer: "blue" }) })).status).toBe(200);
+    let events: RunEvent[] = [];
+    await untilAsync(async () => {
+      events = (await api<RunEvent[]>(`/api/runs/${body.runId}`)).body;
+      return events.some((e) => e.type === "run.finished");
+    }, 240_000);
+    expect(events.find((e) => e.type === "run.question.settled")).toMatchObject({ promptId, answer: "blue" });
+    const answered = events.find((e) => e.type === "run.tool.finished" && e.tool === "clarify");
+    expect(answered && answered.type === "run.tool.finished" ? JSON.parse(answered.output) : null).toMatchObject({ responses: [{ question: "Which colour?", user_response: "blue" }] });
+    expect((await api<RunSummary[]>("/api/runs?boardId=team")).body.find((r) => r.runId === body.runId)?.question).toBeNull();
+    // Nothing left to answer.
+    expect((await api(`/api/runs/${body.runId}/reply`, { method: "POST", body: JSON.stringify({ promptId, answer: "red" }) })).status).toBe(409);
+  }, 400_000);
+
   // Approvals → Never ask compiles to approvals.mode "off" (quoted: a bare off is false in YAML 1.1), and Hermes honours it.
   it.skipIf(!process.env.MCBOT_HERMES_BIN && process.env.MCBOT_E2E !== "1")("runs a risky command without asking when the agent is set to never ask", async () => {
     const set = async (value: string | null) => {

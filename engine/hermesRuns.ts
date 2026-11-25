@@ -9,7 +9,12 @@
  *   events       GET   /p/<profile>/v1/runs/<id>/events (SSE: data: {"event", ...})
  *   answer       POST  /p/<profile>/v1/runs/<id>/approval {request_id, execution_generation, choice}
  *   stop         POST  /p/<profile>/v1/runs/<id>/stop
- *   status       GET   /p/<profile>/v1/runs/<id>                               → {session_id, ...}
+ *   status       GET   /p/<profile>/v1/runs/<id>                               → {session_id, pending_controls, ...}
+ *   reply        POST  /p/<profile>/v1/runs/<id>/clarify {request_id, execution_generation, answer}
+ *
+ * The run's own event stream carries approvals but not the agent's questions (Hermes' clarify tool,
+ * gateway/session_api_turn.py `run_api_turn` forwards approval.request only): those are read from the
+ * status' `pending_controls`, the projection Hermes keeps for HTTP clients.
  */
 import { randomBytes } from "node:crypto";
 import { chmod } from "node:fs/promises";
@@ -122,6 +127,25 @@ export class HermesRuns {
     }
   }
 
+  /** The agent's questions waiting for the person now (`pending_controls` of kind "clarify"). */
+  async questions(profile: string, runId: string): Promise<PendingQuestion[]> {
+    const res = await fetch(this.url(profile, `/v1/runs/${runId}`), { headers: this.headers(), signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return [];
+    const body = (await res.json().catch(() => ({}))) as { pending_controls?: unknown };
+    return pendingQuestions(body.pending_controls);
+  }
+
+  /** Answer the agent's question: a choice, a JSON array of choices (several), free text, or "" to skip. */
+  async reply(profile: string, runId: string, promptId: string, generation: number, answer: string): Promise<void> {
+    const res = await fetch(this.url(profile, `/v1/runs/${runId}/clarify`), {
+      method: "POST", headers: this.headers(), body: JSON.stringify({ request_id: promptId, execution_generation: generation, answer }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+      throw new Error(body.error?.message ?? `Hermes refused the answer (${res.status})`);
+    }
+  }
+
   async stop(profile: string, runId: string): Promise<void> {
     await fetch(this.url(profile, `/v1/runs/${runId}/stop`), { method: "POST", headers: this.headers(), body: "{}" }).catch(() => undefined);
   }
@@ -135,6 +159,40 @@ export class HermesRuns {
       return null;
     }
   }
+}
+
+/** A question the agent asked (gateway/session_pending_controls.py `register_clarify`). */
+export interface PendingQuestion {
+  promptId: string;
+  generation: number;
+  question: string;
+  choices: string[];
+  multiSelect: boolean;
+  timeoutS: number | null;
+}
+
+/**
+ * Hermes ends a question for a chat app with how to skip it by typing ("Reply "skip" to skip this
+ * question.", in its own language: gateway/run_turn_runner.py, locales/*.yaml `gateway.clarify.skip_hint`).
+ * McBot's card has a Skip button, so that last line goes.
+ */
+export function withoutSkipHint(question: string): string {
+  return question.replace(/\n[^\n]*\bskip\b[^\n]*$/i, "").trim();
+}
+
+/** The clarify prompts in a run status' `pending_controls`; anything else (approvals) is left out. */
+export function pendingQuestions(raw: unknown): PendingQuestion[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((p): PendingQuestion[] => {
+    if (!p || typeof p !== "object") return [];
+    const c = p as Record<string, unknown>;
+    if (c.kind !== "clarify" || typeof c.prompt_id !== "string" || typeof c.execution_generation !== "number") return [];
+    return [{
+      promptId: c.prompt_id, generation: c.execution_generation, question: typeof c.question === "string" ? withoutSkipHint(c.question) : "",
+      choices: Array.isArray(c.choices) ? c.choices.filter((x): x is string => typeof x === "string") : [],
+      multiSelect: c.multi_select === true, timeoutS: typeof c.timeout_s === "number" ? c.timeout_s : null,
+    }];
+  });
 }
 
 const TERMINAL = new Set(["run.completed", "run.failed", "run.cancelled", "run.interrupted"]);
