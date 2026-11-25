@@ -16,6 +16,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { parse } from "yaml";
 import type { LibrarySkill, ProfileSkill, SkillSearchResult } from "../src/contracts/api";
+import { GUIDE_CATEGORY } from "../src/compile/mcbotGuide";
 
 const front = (text: string): Record<string, unknown> => {
   const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
@@ -115,7 +116,9 @@ export function profileSkills(profileDir: string): ProfileSkill[] {
     const fm = front(readFileSync(file, "utf8"));
     const name = typeof fm.name === "string" && fm.name ? fm.name : rel.split("/").pop()!;
     const folder = rel.split("/").pop()!;
-    const origin: ProfileSkill["origin"] = name in hub || folder in hub ? "library" : bundled.has(name) || bundled.has(folder) ? "builtin" : "learned";
+    // McBot's own guide (src/compile/mcbotGuide.ts) comes with McBot, like Hermes' bundled skills.
+    const mcbot = rel.split("/")[0] === GUIDE_CATEGORY;
+    const origin: ProfileSkill["origin"] = name in hub || folder in hub ? "library" : mcbot || bundled.has(name) || bundled.has(folder) ? "builtin" : "learned";
     out.push({
       name,
       path: `skills/${rel}/SKILL.md`,

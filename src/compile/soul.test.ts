@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AgentDataSchema, BriefSchema } from "../contracts/graph";
-import { renderSoul } from "./soul";
+import { GUIDE_POINTER, WHERE_HEAD, renderSoul, renderWhere } from "./soul";
 
 const agent = (over: object) => AgentDataSchema.parse({ name: "triage", ...over });
 
@@ -32,5 +32,32 @@ describe("renderSoul", () => {
     const withTeam = renderSoul(agent({ soul: "You lead.\n" }), [agent({ name: "writer" })], brief);
     expect(withTeam.indexOf("## Shared knowledge")).toBeLessThan(withTeam.indexOf("## Team"));
     expect(renderSoul(agent({ soul: "You lead.\n" }), [], BriefSchema.parse({}))).toBe("You lead.\n");
+  });
+});
+
+describe("where an agent works", () => {
+  it("names McBot, its models and tools, and the guide when it can read skills", () => {
+    expect(renderWhere({ models: [{ model: "qwen3:8b", where: "on this computer" }, { model: "gpt-5", where: "through OpenAI" }], tools: ["files", "Image maker (OpenRouter)"], skills: true })).toBe(
+      "## Where you work\n\n" +
+      "You are an agent in McBot Studio, a desktop app where people build a team of AI agents on a board and work with them. Hermes Agent runs you. People set your model, tools and team on the board; you can't change them.\n\n" +
+      "- **Model:** `qwen3:8b` on this computer; if it can't answer: `gpt-5` through OpenAI.\n" +
+      "- **Tools from the board:** files, Image maker (OpenRouter).\n\n" +
+      GUIDE_POINTER,
+    );
+  });
+
+  it("says only what it knows: no empty facts, no guide without skills", () => {
+    const text = renderWhere({ models: [{ model: " ", where: "on this computer" }], tools: [], skills: false });
+    expect(text).not.toContain("Model:");
+    expect(text).not.toContain("Tools from the board");
+    expect(text).not.toContain("mcbot-studio");
+  });
+
+  it("comes after the agent's own text and knowledge, before its team", () => {
+    const agent = AgentDataSchema.parse({ name: "lead", displayName: "Lead", soul: "Lead the work." });
+    const team = [AgentDataSchema.parse({ name: "writer", displayName: "Writer", description: "Writes" })];
+    const soul = renderSoul(agent, team, undefined, { models: [], tools: [], skills: true });
+    expect(soul.indexOf("Lead the work.")).toBeLessThan(soul.indexOf(WHERE_HEAD));
+    expect(soul.indexOf(WHERE_HEAD)).toBeLessThan(soul.indexOf("## Team"));
   });
 });

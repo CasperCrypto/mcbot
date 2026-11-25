@@ -9,7 +9,8 @@
  * (src/harness/read.test.ts), apart from compile's header comment.
  */
 import { parse } from "yaml";
-import { BRIEF_LABELS, KNOWLEDGE_HEAD, KNOWLEDGE_INTRO } from "../compile/soul";
+import { BRIEF_LABELS, GUIDE_POINTER, KNOWLEDGE_HEAD, KNOWLEDGE_INTRO, WHERE_HEAD, WHERE_INTRO } from "../compile/soul";
+import { GUIDE_CATEGORY } from "../compile/mcbotGuide";
 import {
   BRIEF_FIELDS,
   emptyBrief,
@@ -89,9 +90,27 @@ function isLocal(url: string): boolean {
   }
 }
 
+/** A line of the "Where you work" facts compile writes (src/compile/soul.ts renderWhere). */
+const WHERE_FACT = /^- \*\*(Model|Tools from the board):\*\* /;
+
+/**
+ * SOUL.md without its "Where you work" section: it says what the board already says (the models
+ * and tools wired to the agent), so the board never takes it in. Anything a person wrote after it stays.
+ */
+function withoutWhere(soul: string): string {
+  const w = soul.indexOf(`\n\n${WHERE_HEAD}\n\n${WHERE_INTRO}`);
+  if (w < 0) return soul;
+  const parts = soul.slice(w + 2).split("\n\n");
+  let i = 2;
+  if (parts[i]?.trim().split("\n").every((l) => WHERE_FACT.test(l))) i++;
+  if (parts[i]?.trim() === GUIDE_POINTER) i++;
+  const rest = parts.slice(i).join("\n\n").trim();
+  return rest ? `${soul.slice(0, w)}\n\n${rest}` : soul.slice(0, w);
+}
+
 /**
  * Split SOUL.md into the agent's own text, the board's brief (the "Shared knowledge" section) and the
- * hand-off list compile appends (src/compile/soul.ts).
+ * hand-off list compile appends (src/compile/soul.ts); the "Where you work" section is dropped.
  */
 export function splitSoul(soul: string): { own: string; team: string[]; brief: Brief | null } {
   const at = soul.indexOf(`\n\n${TEAM_HEAD}\n\n`);
@@ -105,6 +124,7 @@ export function splitSoul(soul: string): { own: string; team: string[]; brief: B
     const after = tail.filter((l) => l.trim() && !TEAM_LINE.test(l) && !l.startsWith(TEAM_INTRO)).join("\n").trim();
     own = after ? `${soul.slice(0, at)}\n\n${after}` : soul.slice(0, at);
   }
+  own = withoutWhere(own);
   const k = own.indexOf(`\n\n${KNOWLEDGE_HEAD}\n\n${KNOWLEDGE_INTRO}\n\n`);
   if (k < 0) return { own, team, brief: null };
   return { own: own.slice(0, k), team, brief: readKnowledge(own.slice(k + KNOWLEDGE_HEAD.length + KNOWLEDGE_INTRO.length + 6)) };
@@ -217,6 +237,8 @@ export function readHermes(board: { id: string; name: string }, profiles: readon
     // Skills the board can hold; the rest stay installed in Hermes.
     const skills: Skill[] = [];
     for (const dir of Object.keys(p.skills).sort()) {
+      // McBot's own guide, compiled for every agent (compile/mcbotGuide.ts): not one of its skills.
+      if (dir === GUIDE_CATEGORY && !p.skills[dir]) continue;
       const s = readSkill(p.skills[dir]!);
       if (s && s.name === dir) skills.push(s);
       else unshown.push({ profile: p.name, what: `skills/${dir}`, why: "installed in Hermes; not a skill the board can edit yet" });

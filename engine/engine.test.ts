@@ -111,8 +111,12 @@ describe("engine", () => {
       ["profiles/triage/SOUL.md", "added"],
       ["profiles/triage/config.yaml", "added"],
       ["profiles/triage/profile.yaml", "added"],
+      ["profiles/triage/skills/mcbot/mcbot-studio/SKILL.md", "added"],
     ]);
     expect(body.gateway).toBe("restart-pending");
+    // The agent knows where it works, and has McBot's guide (src/compile/mcbotGuide.ts).
+    expect(readFileSync(join(workspace, "hermes/profiles/triage/SOUL.md"), "utf8")).toContain("## Where you work");
+    expect(existsSync(join(workspace, "hermes/profiles/triage/skills/mcbot/mcbot-studio/SKILL.md"))).toBe(true);
     const cfg = readFileSync(join(workspace, "hermes/profiles/triage/config.yaml"), "utf8");
     expect(cfg).toContain(`api: ${stub.url}\n`);
     expect(existsSync(join(workspace, "hermes/profiles/triage/skills"))).toBe(true);

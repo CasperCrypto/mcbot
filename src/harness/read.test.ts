@@ -18,8 +18,10 @@ function asProfiles(result: CompileResult): ProfileFiles[] {
     config: at(`${dir}/config.yaml`),
     soul: at(`${dir}/SOUL.md`),
     profileYaml: at(`${dir}/profile.yaml`),
+    // As engine/harnessDisk.ts reads them: every folder under skills/, its own SKILL.md or "" (a category).
     skills: Object.fromEntries(
-      result.files.filter((f) => f.path.startsWith(`${dir}/skills/`) && f.path.endsWith("/SKILL.md")).map((f) => [f.path.split("/")[3]!, f.content]),
+      [...new Set(result.files.filter((f) => f.path.startsWith(`${dir}/skills/`)).map((f) => f.path.split("/")[3]!))]
+        .map((d) => [d, at(`${dir}/skills/${d}/SKILL.md`) ?? ""]),
     ),
   }));
 }
