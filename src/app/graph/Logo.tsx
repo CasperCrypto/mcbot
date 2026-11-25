@@ -41,7 +41,7 @@ export function LogoTile({ logo, kind, sm, children }: { logo: Logo | null; kind
   // a near-black brand sits on the dark tile in white.
   return (
     <span className={`${cls} logo ${logo.tile ? "brand" : "neutral"}`} style={logo.tile ? ({ "--c": logo.tile, color: logo.ink } as CSSProperties) : undefined} data-tip={logo.title} data-tip-side="top">
-      <svg viewBox="0 0 24 24" aria-hidden fill="currentColor"><path d={logo.path} /></svg>
+      <svg viewBox="0 0 24 24" aria-hidden fill="currentColor"><path d={logo.path} fillRule={logo.rule} /></svg>
     </span>
   );
 }
