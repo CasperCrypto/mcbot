@@ -46,6 +46,13 @@ export function LogoTile({ logo, kind, sm, children }: { logo: Logo | null; kind
   );
 }
 
+/** A brand's mark as a glyph in the text colour, for a button: GitHub, X. Nothing when it has none. */
+export function BrandGlyph({ brand, size = 13 }: { brand: string; size?: number }) {
+  const l = LOGOS[brand];
+  if (!l || "src" in l) return null;
+  return <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden fill="currentColor"><path d={l.path} /></svg>;
+}
+
 /** A block's brand: a tool or connector by its name or address, a chat app by platform, a model by its server, a maker by its service. */
 export function nodeLogo(n: GraphNode): Logo | null {
   switch (n.kind) {

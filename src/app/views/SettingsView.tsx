@@ -4,7 +4,7 @@
  * Models are blocks on the board (so they compile); adding one here places it and wires it to the
  * agents picked. Keys never leave this computer: the board only names them.
  */
-import { Check, Cloud, Cpu, ExternalLink, HardDrive, Info, KeyRound, LifeBuoy, LoaderCircle, Palette, Plus, RefreshCw, RotateCw, Trash2, User, Users, Waypoints, Server, Compass } from "lucide-react";
+import { Check, Cloud, Cpu, ExternalLink, HardDrive, Info, KeyRound, LifeBuoy, LoaderCircle, Palette, Plus, RefreshCw, RotateCw, Trash2, User, Users, Waypoints, Server, Compass, Star } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { addEdge, addNode, removeNodes, updateEdge } from "../../board/ydoc";
 import type { HermesInfo, LocalServer, SharingView, UpdateView } from "../../contracts/api";
@@ -15,7 +15,7 @@ import { freeSpot } from "../graph/place";
 import { DEMO, engine, REMOTE } from "../lib/engine";
 import { PEER_COLORS, nameChosen } from "../lib/identity";
 import { agentsOf, attachModel, chainOf, modelsOf, otherEnd, promoteModel, usersOf, type ModelHealth } from "../lib/models";
-import { ModelMark, modelTitle } from "../graph/Logo";
+import { BrandGlyph, ModelMark, modelTitle } from "../graph/Logo";
 import { useModelHealth } from "../lib/useModelHealth";
 import { openExternal } from "../lib/open";
 import { CLOUD_PROVIDERS, LOCAL_PRESETS, keyEnvFor, modelSlug, providerOf } from "../lib/providers";
@@ -25,6 +25,7 @@ import { useApp, type SettingsSection } from "../state/store";
 import { AgentFace, Field, PersonFace, Segmented } from "../ui";
 import { ACCENTS, ACCENT_SWATCH, SCALES, type Accent } from "../lib/appearance";
 import { inApp } from "../lib/desktop";
+import { REPO_URL, X_URL, markStarAsked } from "../lib/links";
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode; host?: boolean }[] = [
   { id: "models", label: "Models", icon: <Cpu size={14} /> },
@@ -542,8 +543,10 @@ function AboutSection() {
             <button className="btn sm primary" onClick={() => void openExternal(update.url!)}><ExternalLink size={12} /> Download</button></div>
         )}
         <div className="settings-row"><span className="grow">Something not working?</span>
-          <button className="btn sm" onClick={() => app.setReportOpen(true)}><LifeBuoy size={12} /> Report a problem</button>
-          <button className="btn sm ghost" onClick={() => void openExternal("https://github.com/CasperCrypto/mcbot")}><ExternalLink size={12} /> GitHub</button></div>
+          <button className="btn sm" onClick={() => app.setReportOpen(true)}><LifeBuoy size={12} /> Report a problem</button></div>
+        <div className="settings-row" data-testid="settings-community"><span className="grow">Like McBot?</span>
+          <button className="btn sm" onClick={() => { markStarAsked(); void openExternal(REPO_URL); }} data-testid="settings-star"><Star size={12} /> Star on GitHub</button>
+          <button className="btn sm ghost" onClick={() => void openExternal(X_URL)}><BrandGlyph brand="x" size={11} /> Follow on X</button></div>
       </Card>
     </>
   );

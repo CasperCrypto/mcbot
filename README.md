@@ -13,8 +13,9 @@ It all runs on your computer, and the whole setup is plain files you own.
 [![CI](https://github.com/CasperCrypto/mcbot/actions/workflows/ci.yml/badge.svg)](https://github.com/CasperCrypto/mcbot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-8e8e93)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/CasperCrypto/mcbot?style=flat&color=ffd60a)](https://github.com/CasperCrypto/mcbot/stargazers)
+[![Follow on X](https://img.shields.io/badge/follow-%40McBotstudio-111111?logo=x)](https://x.com/McBotstudio)
 
-**[Download](https://github.com/CasperCrypto/mcbot/releases/latest)** · **[Try it in your browser](https://mcbot.studio/demo/)** · [Website](https://mcbot.studio) · [How it works](#how-it-works)
+**[Download](https://github.com/CasperCrypto/mcbot/releases/latest)** · **[Try it in your browser](https://mcbot.studio/demo/)** · [Website](https://mcbot.studio) · [How it works](#how-it-works) · [X](https://x.com/McBotstudio)
 
 macOS (Apple silicon and Intel) · Windows 10 and 11 · Linux
 
