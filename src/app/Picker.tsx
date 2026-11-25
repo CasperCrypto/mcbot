@@ -38,7 +38,8 @@ export function Picker<T extends string>({ value, options, onChange, label, plac
 }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
-  const [pos, setPos] = useState<CSSProperties>({ visibility: "hidden" });
+  // Placed before the first paint (below); never hidden, so it can take the keyboard at once.
+  const [pos, setPos] = useState<CSSProperties>({ top: 0, left: 0 });
   const button = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const typed = useRef({ text: "", at: 0 });
@@ -58,7 +59,6 @@ export function Picker<T extends string>({ value, options, onChange, label, plac
     closeOpen = close;
     const i = options.findIndex((o) => o.value === value);
     setActive(i >= 0 ? i : options.findIndex((o) => !o.disabled));
-    menu.current?.focus({ preventScroll: true });
     // A fixed menu would float away from its button: scrolling the page or resizing closes it.
     const onScroll = (e: Event) => { if (!menu.current?.contains(e.target as Node)) close(); };
     window.addEventListener("scroll", onScroll, true);
@@ -80,6 +80,7 @@ export function Picker<T extends string>({ value, options, onChange, label, plac
     const room = window.innerHeight - b.bottom - 8;
     const top = room >= h || b.top - 8 < h ? Math.min(b.bottom + 4, window.innerHeight - h - 8) : b.top - h - 4;
     setPos({ top: Math.max(8, top), left: Math.max(8, Math.min(b.left, window.innerWidth - w - 8)), minWidth: b.width });
+    if (!m.contains(document.activeElement)) m.focus({ preventScroll: true });
   }, [open, options.length]);
 
   useEffect(() => {
@@ -114,23 +115,23 @@ export function Picker<T extends string>({ value, options, onChange, label, plac
 
   return (
     <>
-      <button ref={button} type="button" className={`picker${sm ? " sm" : ""}${className ? ` ${className}` : ""}`} disabled={disabled}
+      <button ref={button} type="button" className={`pick-btn${sm ? " sm" : ""}${className ? ` ${className}` : ""}`} disabled={disabled}
         aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? id : undefined} aria-label={label} data-testid={testId} data-tip={open ? undefined : tip}
         data-dismiss-ignore onClick={() => (open ? close() : setOpen(true))}
         onKeyDown={(e) => { if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) { e.preventDefault(); setOpen(true); } }}>
         {icon ?? chosen?.icon}
-        <span className="picker-value ellipsis">{chosen?.label ?? placeholder}</span>
-        <ChevronsUpDown size={12} className="picker-chev" aria-hidden />
+        <span className="pick-value ellipsis">{chosen?.label ?? placeholder}</span>
+        <ChevronsUpDown size={12} className="pick-chev" aria-hidden />
       </button>
       {open && createPortal(
-        <div ref={menu} id={id} className="menu picker-menu" role="listbox" aria-label={label} tabIndex={-1} style={pos} onKeyDown={onMenuKey}
+        <div ref={menu} id={id} className="menu pick-menu" role="listbox" aria-label={label} tabIndex={-1} style={pos} onKeyDown={onMenuKey}
           aria-activedescendant={active >= 0 ? `${id}-${active}` : undefined} data-testid={testId ? `${testId}-menu` : undefined}>
           {options.map((o, i) => (
             <div key={o.value} id={`${id}-${i}`} data-i={i} role="option" aria-selected={o.value === value} aria-disabled={o.disabled || undefined}
-              className={`picker-option${i === active ? " active" : ""}`} onPointerMove={() => { if (!o.disabled && i !== active) setActive(i); }} onClick={() => pick(o)}>
-              <span className="picker-check">{o.value === value && <Check size={13} strokeWidth={2.6} />}</span>
+              className={`pick-option${i === active ? " active" : ""}`} onPointerMove={() => { if (!o.disabled && i !== active) setActive(i); }} onClick={() => pick(o)}>
+              <span className="pick-check">{o.value === value && <Check size={13} strokeWidth={2.6} />}</span>
               {o.icon}
-              <span className="picker-text"><span className="ellipsis">{o.label}</span>{o.sub && <small className="ellipsis">{o.sub}</small>}</span>
+              <span className="pick-text"><span className="ellipsis">{o.label}</span>{o.sub && <small className="ellipsis">{o.sub}</small>}</span>
             </div>
           ))}
         </div>,

@@ -446,7 +446,7 @@ input.input::placeholder { color: var(--text-4); }
 .layer-input { height: 30px; border: 0; border-radius: var(--r-sm); background: var(--bg-input); color: var(--text); font: inherit; font-size: 13.5px; padding: 0 10px; box-shadow: none; outline: none; }
 .layer-input { width: 110px; text-align: right; }
 .layer-input:focus { box-shadow: 0 0 0 3px var(--accent-soft); }
-.picker.layer-select { min-width: 190px; }
+.pick-btn.layer-select { min-width: 190px; }
 .layer-money { display: inline-flex; align-items: center; gap: 6px; }
 @media (max-width: 720px) { .layers-who { flex-wrap: wrap; } .layer-select { min-width: 0; } }
 

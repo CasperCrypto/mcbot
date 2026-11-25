@@ -1,12 +1,12 @@
-import { ArrowUp, Bell, CalendarClock, Check, ChevronDown, ChevronRight, CircleDashed, Clock, Cpu, Hammer, History, KeyRound, ListChecks, Pause, Play, Plus, RotateCcw, SlidersHorizontal, Square, Trash2, Wallet, X, StickyNote as StickyNoteIcon } from "lucide-react";
+import { ArrowUp, Check, ChevronRight, CircleDashed, Clock, Cpu, Hammer, KeyRound, ListChecks, Pause, Play, Plus, RotateCcw, Square, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AgentSchedules, CostReport, TaskView } from "../../contracts/api";
-import type { AgentNode, ModelData } from "../../contracts/graph";
+import type { AgentNode } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 import { compileBoard, openHermesSetup, runAgent, stopRun } from "../actions";
 import { engine, onKeysChanged } from "../lib/engine";
 import { ago, usd } from "../lib/format";
-import { dailySeries, utcDay } from "../lib/series";
+import { utcDay } from "../lib/series";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
 import { AgentFace, Segmented } from "../ui";
@@ -16,28 +16,18 @@ import { newId } from "../graph/defaults";
 import { StickyNote } from "../notes/StickyNote";
 import { useTasks } from "./TasksView";
 import { ApprovalCard } from "../approvals/ApprovalCard";
-import { agentsWithoutModel, chainOf, modelsOf, otherEnd } from "../lib/models";
-import { ModelMark } from "../graph/Logo";
-import { modelName } from "../lib/modelName";
+import { agentsWithoutModel, chainOf, modelsOf } from "../lib/models";
 import { useModelHealth } from "../lib/useModelHealth";
 import { nameChosen } from "../lib/identity";
 import { latestRunByAgent } from "../state/store";
 import { REMOTE } from "../lib/engine";
+import { Picker } from "../Picker";
+import { agentLabel, agentOptions } from "../lib/agentOptions";
+import { runError } from "../lib/runError";
+import { stepOf } from "../lib/runStep";
 
 const DAY = 86_400_000;
 
-
-/** What a running agent is doing right now, from its live events. */
-function stepOf(events: RunEvent[] | undefined): string {
-  const open = new Map<string, number>();
-  for (const e of events ?? []) {
-    if (e.type === "run.tool.started") open.set(e.tool, (open.get(e.tool) ?? 0) + 1);
-    if (e.type === "run.tool.finished") open.set(e.tool, Math.max(0, (open.get(e.tool) ?? 1) - 1));
-  }
-  const tool = [...open].reverse().find(([, n]) => n > 0)?.[0];
-  if (tool) return `Using ${tool.replace(/^mcp__([^_]+)__/, "$1 · ")}`;
-  return (events ?? []).some((e) => e.type === "run.text") ? "Writing…" : "Thinking…";
-}
 
 interface Item {
   key: string;
@@ -83,16 +73,10 @@ function Ask({ agents }: { agents: AgentNode[] }) {
     }
   };
   if (agents.length === 0 || !chosen) return null;
-  const who = chosen.data.displayName || chosen.data.name;
+  const who = agentLabel(chosen);
   return (
     <div className="composer dash-ask" data-testid="home-ask">
-      <label className="ask-who" data-tip="Who to ask">
-        <AgentFace seed={chosen.data.name} size={22} />
-        <select value={agent} onChange={(e) => setAgent(e.target.value)} aria-label="Agent" data-testid="home-ask-agent">
-          {agents.map((a) => <option key={a.id} value={a.id}>{a.data.displayName || a.data.name}</option>)}
-        </select>
-        <ChevronDown size={12} />
-      </label>
+      <Picker className="ask-picker" label="Agent" tip="Who to ask" value={agent} onChange={setAgent} options={agentOptions(agents)} testId="home-ask-agent" />
       <textarea rows={1} value={text} onChange={(e) => setText(e.target.value)} data-testid="home-ask-input"
         placeholder={mode === "ask" ? `Ask ${who} anything…` : `Give ${who} a task…`}
         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }} />
@@ -102,41 +86,16 @@ function Ask({ agents }: { agents: AgentNode[] }) {
   );
 }
 
-/** One agent as a tile, the way a home app shows a room's lights: who, and what it is doing now. */
-function AgentTile({ agent, live, runId, step, failed, asks, noModel, last, model }: { agent: AgentNode; live: boolean; runId: string | null; step: string; failed: boolean; asks: boolean; noModel: boolean; last: number | null; model: ModelData | null }) {
-  const name = agent.data.displayName || agent.data.name;
+/** One agent in the roster: face and name, a dot when it works, asks or is stuck; a click opens its chat. */
+function RosterChip({ agent, live, step, failed, asks, noModel }: { agent: AgentNode; live: boolean; step: string; failed: boolean; asks: boolean; noModel: boolean }) {
   const state = asks ? "warn" : live ? "run" : noModel ? "warn" : failed ? "fail" : "idle";
-  const line = asks ? "Asks before acting" : live ? step : noModel ? "No model yet" : failed ? "Last run failed" : last ? `Free · ${ago(last)}` : agent.data.description || "Free";
-  const app = useApp.getState();
+  const tip = asks ? "Asks before acting" : live ? step : noModel ? "No model yet" : failed ? "Last run failed" : agent.data.description || "Chat";
   return (
-    <div className="agent-tile" data-state={state} data-testid="home-agent">
-      <button className="agent-tile-main" onClick={() => app.openChat(agent.id)} data-tip="Chat">
-        <AgentFace seed={agent.data.name} size={34} status={live ? "running" : failed ? "failed" : undefined} />
-        <span className="t"><b>{name}{model && <span className="tile-model" data-tip={modelName(model.model)}><ModelMark model={model.model} baseUrl={model.baseUrl} size={13} /></span>}</b><small>{line}</small></span>
-      </button>
-      {runId
-        ? <button className="agent-tile-edit shown" aria-label={`Stop ${name}`} data-tip="Stop" onClick={() => void stopRun(runId)}><Square size={10} /></button>
-        : <button className="agent-tile-edit" aria-label={`${name}: settings`} data-tip="Settings" onClick={() => app.editAgent(agent.id)}><SlidersHorizontal size={13} /></button>}
-    </div>
-  );
-}
-
-/** Today's spend, big, over the last seven days as small bars (UTC days, as Cost counts them). */
-function SpendWidget({ cost }: { cost: CostReport | null }) {
-  const now = Date.now();
-  const days = dailySeries(cost?.byDay ?? [], now, 7, 7);
-  const today = days.at(-1);
-  const week = days.reduce((n, d) => n + d.usd, 0);
-  const max = Math.max(...days.map((d) => d.usd), 0.000001);
-  const over = (cost?.budgets ?? []).filter((b) => b.state !== "ok").length;
-  return (
-    <button className="widget spend-widget" onClick={() => useApp.getState().setTab("cost")} data-testid="home-spend">
-      <div className="widget-head"><Wallet size={13} /><h2>Spent today</h2></div>
-      <b className="spend-now num">{usd(today?.usd ?? 0)}</b>
-      <div className="spend-bars" aria-hidden>
-        {days.map((d) => <i key={d.key} data-today={d.key === utcDay(now) || undefined} style={{ height: `${d.usd > 0 ? Math.max(8, (d.usd / max) * 100) : 4}%` }} />)}
-      </div>
-      <small className="widget-foot">{usd(week)} this week{today?.source === "estimate" ? " · est." : ""}{over ? ` · ${over} near budget` : ""}</small>
+    <button className="roster-chip" data-state={state} onClick={() => useApp.getState().openChat(agent.id)} onContextMenu={(e) => { e.preventDefault(); useApp.getState().editAgent(agent.id); }}
+      data-tip={tip} data-testid="home-agent">
+      <AgentFace seed={agent.data.name} size={26} status={live ? "running" : failed ? "failed" : undefined} />
+      <span className="ellipsis">{agentLabel(agent)}</span>
+      {state !== "idle" && <i className="roster-dot" aria-hidden />}
     </button>
   );
 }
@@ -197,16 +156,14 @@ function Schedules({ agents }: { agents: AgentNode[] }) {
     .sort((a, b) => Number(b.enabled) - Number(a.enabled) || (a.nextRunAt ?? Infinity) - (b.nextRunAt ?? Infinity));
   const nameOf = (p: string) => agents.find((a) => a.data.name === p)?.data.displayName || p;
   return (
-    <section className="widget" data-testid="home-schedules">
-      <div className="widget-head">
-        <CalendarClock size={13} /><h2>Up next</h2><span className="grow" />
+    <section className="hm-section" data-testid="home-schedules">
+      <div className="hm-head">
+        <h2>Up next</h2><span className="grow" />
         <button className="icon-btn sm" aria-label={adding ? "Close" : "New schedule"} data-tip={adding ? undefined : "New schedule"} onClick={() => setAdding(!adding)} data-testid="schedule-add">{adding ? <X size={13} /> : <Plus size={14} />}</button>
       </div>
       {adding && (
         <div className="stack schedule-form" style={{ gap: 10 }}>
-          <select value={profile} onChange={(e) => setProfile(e.target.value)} aria-label="Agent">
-            {agents.map((a) => <option key={a.id} value={a.data.name}>{a.data.displayName || a.data.name}</option>)}
-          </select>
+          <Picker label="Agent" value={profile} onChange={setProfile} options={agentOptions(agents, (a) => a.data.name)} />
           <Segmented value={preset} onChange={setPreset} options={WHEN.map((w) => ({ value: w.value, label: w.label }))} />
           {preset === "custom" && <input className="mono" value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="every 2h · 30m · 0 9 * * 1" aria-label="Schedule" data-tip="'every 2h', '30m' (once), or a cron line" />}
           <textarea rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="What to do each time" aria-label="What to do" data-testid="schedule-prompt" />
@@ -302,21 +259,25 @@ function useAddNote(): () => void {
   };
 }
 
-/** The board's pinned sticky notes (none: nothing shown). */
+/** The board's pinned sticky notes, with + to pin one (an empty note shows only while it is being written). */
 function Notes() {
   const { graph } = useBoard();
-  const pinned = (graph.notes ?? []).filter((n) => n.pinned).sort((a, b) => b.at - a.at);
-  if (!pinned.length) return null;
+  const fresh = useApp((s) => s.freshNote);
+  const add = useAddNote();
+  const pinned = (graph.notes ?? []).filter((n) => n.pinned && (n.text.trim() || n.id === fresh)).sort((a, b) => b.at - a.at);
   return (
-    <section className="notes-grid" data-testid="home-notes" aria-label="Notes">
-      {pinned.map((n) => <StickyNote key={n.id} note={n} />)}
+    <section className="hm-section" data-testid="home-notes" aria-label="Notes">
+      <div className="hm-head">
+        <h2>Notes</h2><span className="grow" />
+        <button className="icon-btn sm" aria-label="Pin a note" data-tip="Pin a note for the team" onClick={add} data-testid="note-add"><Plus size={14} /></button>
+      </div>
+      {pinned.length === 0 ? <div className="home-empty">Nothing pinned</div> : <div className="notes-grid hm-notes">{pinned.map((n) => <StickyNote key={n.id} note={n} />)}</div>}
     </section>
   );
 }
 
 export function HomeView() {
   const { boardId, graph } = useBoard();
-  const addNoteNow = useAddNote();
   const identity = useApp((s) => s.identity);
   const runs = useApp((s) => s.runs);
   const events = useApp((s) => s.events);
@@ -404,7 +365,7 @@ export function HomeView() {
       action: { label: "Assign", icon: <ListChecks size={12} />, run: () => app.showTask(t.id) }, open: () => app.showTask(t.id),
     })),
     ...list.filter((r) => r.status === "failed" && r.startedAt > since).slice(0, 5).map((r): Item => ({
-      key: r.runId, at: r.finishedAt ?? r.startedAt, face: <AgentFace seed={r.profile} size={30} status="failed" />, title: r.prompt.split("\n")[0]!.slice(0, 120), sub: `${nameOf(r.profile)} failed: ${r.error ?? "see the run"}`, tone: "fail",
+      key: r.runId, at: r.finishedAt ?? r.startedAt, face: <AgentFace seed={r.profile} size={30} status="failed" />, title: r.prompt.split("\n")[0]!.slice(0, 120), sub: `${nameOf(r.profile)}: ${runError(r.error)}`, tone: "fail",
       action: { label: "Retry", icon: <RotateCcw size={12} />, run: () => retry(r) }, open: () => { app.selectRun(r.runId); app.setTab("workflows"); },
     })),
   ];
@@ -416,79 +377,61 @@ export function HomeView() {
   ].sort((a, b) => b.at - a.at).slice(0, 6);
 
   const today = cost?.byDay.find((d) => d.key === utcDay(Date.now()));
-  const runsToday = list.filter((r) => r.startedAt > new Date().setHours(0, 0, 0, 0)).length;
-  const doneToday = (tasks ?? []).filter((t) => t.status === "done" && (t.completedAt ?? 0) > new Date().setHours(0, 0, 0, 0)).length;
   const asking = list.filter((r) => r.approval);
   const needs = inbox.length + asking.length;
   const latest = latestRunByAgent(runs);
   const busyTask = (profile: string) => working.find((t) => t.assignee === profile);
-  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  const mainModel = (agentId: string): ModelData | null => {
-    const first = chainOf(graph, agentId)[0];
-    const n = first ? graph.nodes.find((x) => x.id === otherEnd(first, agentId)) : undefined;
-    return n?.kind === "model" ? n.data : null;
-  };
+  const hour = new Date().getHours();
+  const hello = `${hour < 5 || hour >= 18 ? "Good evening" : hour < 12 ? "Good morning" : "Good afternoon"}${nameChosen(identity) ? `, ${identity.name.split(" ")[0]}` : ""}`;
 
   return (
     <section className="main flush-left">
       <div className="scroll-page home" data-testid="home">
-        <div className="home-inner dash">
-          <header className="dash-head" data-testid="home-hello">
-            <div className="dash-title">
-              <span className="dash-date">{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</span>
-              <h1>Home</h1>
+        <div className="home-inner hm">
+          <header className="hm-hello" data-testid="home-hello">
+            <span className="dash-date">{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</span>
+            <div className="hm-hello-row">
+              <h1>{hello}</h1>
+              <span className="grow" />
+              {today && today.usd > 0 && <button className="btn sm ghost num" onClick={() => app.setTab("cost")} data-tip="Spent today" data-testid="home-spend">{usd(today.usd)}</button>}
+              <button className="btn sm" onClick={() => app.setNewAgentOpen(true)} data-testid="home-new-agent"><Plus size={13} /> Agent</button>
             </div>
-            <span className="grow" />
-            <button className="btn sm ghost" onClick={addNoteNow} data-testid="note-add" data-tip="Pin a note for the team"><StickyNoteIcon size={13} /> Note</button>
-            <button className="btn sm" onClick={() => app.setNewAgentOpen(true)} data-testid="home-new-agent"><Plus size={13} /> Agent</button>
           </header>
-
-          <div className="dash-pills" data-testid="home-today">
-            {live.length + working.length > 0 && <button className="dash-pill" data-tone="run" onClick={() => go("home-agents")}><i />{live.length + working.length} at work</button>}
-            {needs > 0 && <button className="dash-pill" data-tone="warn" onClick={() => go("home-inbox")}><Bell size={12} />{needs} need{needs === 1 ? "s" : ""} you</button>}
-            <button className="dash-pill" onClick={() => app.setTab("cost")} data-tip={today?.source === "estimate" ? "Includes McBot estimates" : "As Hermes priced it"}><b className="num">{today ? usd(today.usd) : "$0.00"}</b> today</button>
-            <button className="dash-pill" onClick={() => app.setTab("workflows")}><b className="num">{runsToday}</b> run{runsToday === 1 ? "" : "s"}</button>
-            <button className="dash-pill" onClick={() => app.setTab("tasks")}><b className="num">{doneToday}</b> done</button>
-          </div>
 
           {agents.length === 0 ? (
             // An empty board: the first thing to do is the only thing shown big.
             <section className="widget home-start" data-testid="home-start">
               <h2>Start this board</h2>
-              <span className="faint">Pick a ready team, make one agent, or bring the agents you already run in Hermes.</span>
               <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
                 <button className="btn primary" onClick={() => app.setTeamsOpen(true)}>Start with a team</button>
                 <button className="btn" onClick={() => app.setNewAgentOpen(true)}><Plus size={13} /> New agent</button>
                 <button className="btn ghost" onClick={() => void openHermesSetup()}>Open my Hermes setup</button>
               </div>
             </section>
-          ) : <Ask agents={agents} />}
-
-          {agents.length > 0 && (
-            <section className="dash-section" id="home-agents" data-testid="home-live">
-              <div className="dash-section-head"><h2>Agents</h2><span className="grow" /><button className="btn ghost sm" onClick={() => app.setTab("graph")}>Board <ChevronRight size={12} /></button></div>
-              <div className="agent-tiles">
+          ) : (
+            <>
+              <Ask agents={agents} />
+              <div className="roster" data-testid="home-roster">
                 {agents.map((a) => {
                   const r = latest.get(a.id);
                   const run = live.find((x) => x.agentNodeId === a.id);
                   const task = busyTask(a.data.name);
                   return (
-                    <AgentTile key={a.id} agent={a} live={!!run || !!task} runId={run?.runId ?? null} step={run ? stepOf(events[run.runId]) : task ? task.title : ""}
-                      failed={r?.status === "failed"} asks={!!r?.approval} noModel={chainOf(graph, a.id).length === 0} last={r ? r.finishedAt ?? r.startedAt : null}
-                      model={mainModel(a.id)} />
+                    <RosterChip key={a.id} agent={a} live={!!run || !!task} step={run ? stepOf(events[run.runId]) : task ? task.title : ""}
+                      failed={r?.status === "failed"} asks={!!r?.approval} noModel={chainOf(graph, a.id).length === 0} />
                   );
                 })}
-                <button className="agent-tile add" onClick={() => app.setNewAgentOpen(true)} data-testid="home-tile-new"><Plus size={16} /><span>New agent</span></button>
+                <button className="roster-chip add" onClick={() => app.setNewAgentOpen(true)} data-tip="New agent" aria-label="New agent" data-testid="home-tile-new"><Plus size={15} /></button>
+                <button className="roster-more" onClick={() => app.setTab("graph")}>Board <ChevronRight size={12} /></button>
               </div>
-            </section>
+            </>
           )}
 
           {agents.length > 0 && <GettingStarted agents={agents} keys={keys} runs={list.length} silent={silent.length} />}
-          <Notes />
 
-          <div className="dash-grid">
-            <section className="widget wide" id="home-inbox" data-testid="home-inbox">
-              <div className="widget-head"><Bell size={13} /><h2>Needs you</h2>{needs > 0 && <span className="chip warn num">{needs}</span>}</div>
+          {needs > 0 && (
+            <section className="hm-section" id="home-inbox" data-testid="home-inbox">
+              <div className="hm-head"><h2>Needs you</h2><span className="hm-count num">{needs}</span></div>
               {asking.map((r) => (
                 <div key={`ask-${r.runId}`} className="home-ask-row" data-testid="home-approval">
                   <div className="row" style={{ gap: 8, padding: "2px 2px 6px" }}>
@@ -499,7 +442,7 @@ export function HomeView() {
                   <ApprovalCard run={r} compact />
                 </div>
               ))}
-              {needs === 0 ? <div className="home-empty widget-calm"><Check size={14} /> Nothing waiting on you</div> : inbox.map((i) => (
+              {inbox.map((i) => (
                 <div key={i.key} className="home-row need-row" data-tone={i.tone}>
                   <button className="home-row-main" onClick={i.open}>
                     {i.face}
@@ -508,29 +451,63 @@ export function HomeView() {
                       <span className="sub ellipsis">{i.sub}</span>
                     </span>
                   </button>
-                  {i.action && <button className={`btn sm${i.tone === "warn" ? " primary" : ""}`} onClick={i.action.run}>{i.action.icon}{i.action.label}</button>}
+                  {i.action && <button className="btn sm" onClick={i.action.run}>{i.action.icon}{i.action.label}</button>}
                 </div>
               ))}
             </section>
+          )}
 
-            <SpendWidget cost={cost} />
+          {(live.length > 0 || working.length > 0) && (
+            <section className="hm-section" data-testid="home-live">
+              <div className="hm-head"><h2>At work</h2></div>
+              {live.map((r) => (
+                <div key={r.runId} className="home-row">
+                  <button className="home-row-main" onClick={() => app.openChat(r.agentNodeId)}>
+                    <AgentFace seed={r.profile} size={28} status="running" />
+                    <span className="grow" style={{ display: "grid", gap: 1 }}>
+                      <span className="title ellipsis">{r.prompt.split("\n")[0]}</span>
+                      <span className="sub ellipsis">{nameOf(r.profile)} · {stepOf(events[r.runId])}</span>
+                    </span>
+                  </button>
+                  <button className="icon-btn sm" aria-label={`Stop ${nameOf(r.profile)}`} data-tip="Stop" onClick={() => void stopRun(r.runId)}><Square size={10} /></button>
+                </div>
+              ))}
+              {working.map((t) => (
+                <div key={t.id} className="home-row">
+                  <button className="home-row-main" onClick={() => app.showTask(t.id)}>
+                    <AgentFace seed={t.assignee ?? "task"} size={28} status="running" />
+                    <span className="grow" style={{ display: "grid", gap: 1 }}>
+                      <span className="title ellipsis">{t.title}</span>
+                      <span className="sub ellipsis">{nameOf(t.assignee)} · task</span>
+                    </span>
+                  </button>
+                </div>
+              ))}
+            </section>
+          )}
 
-            <section className="widget wide" data-testid="home-recent">
-              <div className="widget-head"><History size={13} /><h2>Lately</h2></div>
-              {recent.length === 0 ? <div className="home-empty">Answers and finished tasks show up here</div> : recent.map((r) => (
+          {recent.length > 0 && (
+            <section className="hm-section" data-testid="home-recent">
+              <div className="hm-head"><h2>Recent</h2><span className="grow" /><button className="roster-more" onClick={() => app.setTab("workflows")}>All runs <ChevronRight size={12} /></button></div>
+              {recent.map((r) => (
                 <button key={r.key} className="home-row home-row-main" onClick={r.open}>
-                  <AgentFace seed={r.profile} size={28} status="succeeded" />
+                  <AgentFace seed={r.profile} size={28} />
                   <span className="grow" style={{ display: "grid", gap: 1 }}>
                     <span className="title ellipsis">{r.title}</span>
                     <span className="sub ellipsis">{r.sub}</span>
                   </span>
-                  <span className="faint" style={{ fontSize: 12 }}>{ago(r.at)}</span>
+                  <span className="faint num" style={{ fontSize: 12 }}>{ago(r.at)}</span>
                 </button>
               ))}
             </section>
+          )}
 
-            <Schedules agents={agents} />
-          </div>
+          {agents.length > 0 && (
+            <div className="hm-pair">
+              <Schedules agents={agents} />
+              <Notes />
+            </div>
+          )}
         </div>
       </div>
     </section>

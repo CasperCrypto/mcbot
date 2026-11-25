@@ -181,7 +181,7 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
       leaveT = setTimeout(() => {
         // Typing in its field, or a menu of its own open: stay.
         if (el.contains(document.activeElement) && document.activeElement !== el) return;
-        if (document.activeElement?.closest(".picker-menu")) return;
+        if (document.activeElement?.closest(".pick-menu")) return;
         byHover.current = false;
         setOpen(false);
       }, CLOSE_AFTER_MS);
