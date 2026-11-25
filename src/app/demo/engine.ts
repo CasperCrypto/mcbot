@@ -16,7 +16,7 @@ import { addVersion, type HarnessVersion } from "../../harness/versions";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
 import { LIBRARY } from "../../contracts/library.generated";
 import type { HarnessPlan, PlanChoices } from "../../harness/plan";
-import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView, LearnExport, LearnView, DocUpload } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView, LearnExport, LearnView, DocUpload, TrainJob } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { DOC_TEXT_MAX, GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
@@ -292,6 +292,8 @@ const listeners = new Set<Listener>();
 const cancelled = new Set<string>();
 /** Runs waiting on an approval card, by run id. */
 const answers = new Map<string, (choice: string) => void>();
+/** Training jobs started in the demo (simulated). */
+const demoTrain: TrainJob[] = [];
 /** A question the simulated agent asked, waiting for the page's answer (run id → its resolver). */
 const replies = new Map<string, (answer: string) => void>();
 const busy = new Map<string, number>();
@@ -840,6 +842,31 @@ export const demoEngine = {
     resolve(choice);
     return { answered: choice };
   }),
+  // Training in the cloud, simulated: a job that validates, runs and succeeds in about half a minute.
+  trainJobs: async (boardId: string): Promise<TrainJob[]> => demoTrain.filter((j) => j.boardId === boardId).map((j) => {
+    const age = Date.now() - j.createdAt;
+    const status: TrainJob["status"] = j.status === "cancelled" ? "cancelled" : age < 5000 ? "validating" : age < 12_000 ? "queued" : age < 30_000 ? "running" : "succeeded";
+    return { ...j, status, model: status === "succeeded" ? `ft:${j.baseModel}:demo::${j.profile}` : null, updatedAt: Date.now() };
+  }),
+  startTraining: async (boardId: string, agentNodeId: string, modelNodeId: string, baseModel: string): Promise<TrainJob> => {
+    const graph = graphOf(requireBoard(boardId));
+    const agent = graph.nodes.find((n) => n.id === agentNodeId && n.kind === "agent");
+    const model = graph.nodes.find((n) => n.id === modelNodeId && n.kind === "model");
+    if (!agent || !model || model.kind !== "model" || model.data.endpoint !== "cloud") throw new EngineError(409, "Pick one of the board's cloud models to train with", {});
+    const now = Date.now();
+    const job: TrainJob = {
+      id: `train_demo_${now.toString(36)}`, boardId, agentNodeId, profile: (agent.data as { name: string }).name, provider: model.data.label || "Cloud", baseUrl: model.data.baseUrl, keyEnv: model.data.apiKeyEnv,
+      baseModel, model: null, remoteId: `ftjob-demo-${now}`, status: "validating", error: null, examples: 12, dataset: "demo.jsonl", createdAt: now, updatedAt: now,
+    };
+    demoTrain.unshift(job);
+    return job;
+  },
+  cancelTraining: async (id: string): Promise<TrainJob> => {
+    const job = demoTrain.find((j) => j.id === id);
+    if (!job) throw new EngineError(404, "No such training job", {});
+    job.status = "cancelled";
+    return job;
+  },
   // The browser demo reads text files itself; PDF and Office files need McBot's own Hermes (the desktop app).
   addDoc: async (name: string, data: Blob): Promise<DocUpload> => {
     if (!/\.(md|markdown|txt|text|csv|tsv|json|ya?ml|html?|xml|log)$/i.test(name)) throw new EngineError(409, "In this browser demo McBot reads text files; the desktop app reads PDF and Office files too", {});

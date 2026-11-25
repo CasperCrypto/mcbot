@@ -1,5 +1,5 @@
 /** Thin client for the local engine (engine/server.ts). */
-import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView, LearnExport, LearnView, DocUpload } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView, LearnExport, LearnView, DocUpload, TrainJob } from "../../contracts/api";
 import type { HarnessVersion } from "../../harness/versions";
 import type { Graph } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
@@ -86,6 +86,10 @@ const http = {
   run: (runId: string) => call<RunEvent[]>("GET", `/api/runs/${runId}`),
   startRun: (boardId: string, agentNodeId: string, prompt: string) => call<{ runId: string }>("POST", "/api/runs", { boardId, agentNodeId, prompt }),
   answerRun: (runId: string, choice: string) => call<{ answered: string }>("POST", `/api/runs/${runId}/approval`, { choice }),
+  /** Training in the cloud: the board's jobs (their state asked of the provider), start one, cancel one. */
+  trainJobs: (boardId: string) => call<TrainJob[]>("GET", `/api/train?boardId=${encodeURIComponent(boardId)}`),
+  startTraining: (boardId: string, agentNodeId: string, modelNodeId: string, baseModel: string, pick: DatasetPick) => call<TrainJob>("POST", "/api/train", { boardId, agentNodeId, modelNodeId, baseModel, pick }),
+  cancelTraining: (id: string) => call<TrainJob>("POST", "/api/train/cancel", { id }),
   /** A document for the agents: kept in files/knowledge, read to text (PDF and Office files by Hermes). */
   addDoc: (name: string, data: Blob) => upload<DocUpload>(`/api/knowledge/doc?name=${encodeURIComponent(name)}`, data),
   /** The board's knowledge as Markdown, saved in <workspace>/exports (never over an earlier file). */

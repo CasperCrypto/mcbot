@@ -545,3 +545,29 @@ export interface DocUpload {
   /** Where the original is, inside the shared files folder ("knowledge/plan.pdf"). */
   file: string;
 }
+
+/** GET/POST /api/train: a fine-tuning job in the cloud (engine/train.ts). */
+export type TrainStatus = "validating" | "queued" | "running" | "succeeded" | "failed" | "cancelled";
+
+export interface TrainJob {
+  id: string;
+  boardId: string;
+  agentNodeId: string;
+  profile: string;
+  /** The provider as people know it ("OpenAI"), its OpenAI-compatible base URL and key variable. */
+  provider: string;
+  baseUrl: string;
+  keyEnv: string;
+  /** The model it starts from, and the one it made once it succeeded. */
+  baseModel: string;
+  model: string | null;
+  /** The provider's own job id. */
+  remoteId: string;
+  status: TrainStatus;
+  error: string | null;
+  examples: number;
+  /** The dataset sent, under <workspace>/datasets. */
+  dataset: string;
+  createdAt: number;
+  updatedAt: number;
+}

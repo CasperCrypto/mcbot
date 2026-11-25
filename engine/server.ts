@@ -54,6 +54,8 @@ import { GitHubError, downloadRepo, inspectRepo, parseGitHub } from "./github";
 import { APP_PAGES, hasWebApp, pagePolicy, webFile } from "./webApp";
 import { frameable } from "./web";
 import { Ratings, agentConversations, learnAgent, writeDataset } from "./learn";
+import { MIN_EXAMPLES, TrainError, TrainStore, cancelFineTune, isActive, newTrainId, readFineTune, startFineTune, trainSuffix, type TrainJob } from "./train";
+import type { DatasetFormat, DatasetPick } from "../src/harness/learn";
 import type { Rating } from "../src/harness/learn";
 import { renderSoul } from "../src/compile/soul";
 import { liveContext } from "../src/harness/liveContext";
@@ -262,6 +264,23 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
   };
   /** Run `hermes <argv>` under the root; a failure becomes Hermes' own words, as a 409. */
   const hermesCli = kanban;
+  /** An agent's conversations written as a dataset in <workspace>/datasets (Training's Export and Train). */
+  const dataset = async (boardIdIn: unknown, agentNodeId: string, format: DatasetFormat, pick: DatasetPick) => {
+    const boardId = await requireBoard(boardIdIn);
+    const graph = await relay.graph(boardId);
+    const { bundles } = resolveGraph(graph);
+    const bundle = bundles.find((b) => b.agent.id === agentNodeId);
+    if (!bundle) throw new HttpError(404, "No such agent on this board");
+    const [runs, rated, saved] = await Promise.all([store.list(boardId), ratings.all(), secrets.env()]);
+    const convs = await agentConversations(bundle, runs, rated, (id) => store.events(id));
+    const system = renderSoul(bundle.agent.data, bundle.team.map((t) => t.data), graph.brief);
+    const model = bundle.models[0]?.data.model ?? null;
+    const written = await writeDataset(join(cfg.workspace, "datasets"), { profile: bundle.agent.data.name, convs, format, pick, system, model, secrets: Object.values(saved) });
+    return { graph: { ...graph, id: boardId }, bundle, written };
+  };
+  const trainStore = new TrainStore(join(cfg.workspace, "training.json"));
+  /** When each running training job was last asked about. */
+  const trainAsked = new Map<string, number>();
   /** A ready task starts only while the gateway runs (its dispatcher hands it to the agent). */
   const wakeDispatcher = () => void runner.ensureGateway().then((r) => console.log(`[engine] tasks: gateway ${r}`)).catch(() => undefined);
   const person = z.string().trim().min(1).max(64);
@@ -900,16 +919,70 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
     /** One agent's conversations as a training dataset in <workspace>/datasets/. Host only: it holds every chat. */
     "POST /api/learn/export": async (req): Promise<LearnExport> => {
       const body = parse(z.object({ boardId: z.string(), agentNodeId: z.string(), format: z.enum(["chat", "rewards", "sharegpt"]), pick: z.enum(["good", "all"]) }), await json(req));
-      const boardId = await requireBoard(body.boardId);
-      const graph = await relay.graph(boardId);
-      const { bundles } = resolveGraph(graph);
-      const bundle = bundles.find((b) => b.agent.id === body.agentNodeId);
-      if (!bundle) throw new HttpError(404, "No such agent on this board");
-      const [runs, rated, saved] = await Promise.all([store.list(boardId), ratings.all(), secrets.env()]);
-      const convs = await agentConversations(bundle, runs, rated, (id) => store.events(id));
-      const system = renderSoul(bundle.agent.data, bundle.team.map((t) => t.data), graph.brief);
-      const model = bundle.models[0]?.data.model ?? null;
-      return writeDataset(join(cfg.workspace, "datasets"), { profile: bundle.agent.data.name, convs, format: body.format, pick: body.pick, system, model, secrets: Object.values(saved) });
+      return (await dataset(body.boardId, body.agentNodeId, body.format, body.pick)).written;
+    },
+
+    // ---- training in the cloud: the provider's OpenAI fine-tuning API (engine/train.ts) ----
+    "GET /api/train": async (_req, url): Promise<TrainJob[]> => {
+      const boardId = await requireBoard(url.searchParams.get("boardId"));
+      const jobs = (await trainStore.all()).filter((j) => j.boardId === boardId);
+      const saved = await secrets.env();
+      // Ask the provider about jobs still going, at most every 15 s each.
+      await Promise.all(jobs.filter((j) => isActive(j) && Date.now() - (trainAsked.get(j.id) ?? 0) > 15_000).map(async (j) => {
+        trainAsked.set(j.id, Date.now());
+        const key = saved[j.keyEnv];
+        if (!key) return;
+        try {
+          const now = await readFineTune(fetch, { baseUrl: j.baseUrl, key, remoteId: j.remoteId });
+          if (now.status !== j.status || now.model !== j.model) {
+            Object.assign(j, now, { updatedAt: Date.now() });
+            await trainStore.put(j);
+          }
+        } catch {
+          /* asked again on the next look */
+        }
+      }));
+      return jobs;
+    },
+    "POST /api/train": async (req): Promise<TrainJob> => {
+      const body = parse(z.object({ boardId: z.string(), agentNodeId: z.string(), modelNodeId: z.string(), baseModel: z.string().trim().min(1).max(200), pick: z.enum(["good", "all"]).default("good") }), await json(req));
+      const { bundle, graph, written } = await dataset(body.boardId, body.agentNodeId, "chat", body.pick);
+      const node = graph.nodes.find((n): n is ModelNode => n.id === body.modelNodeId && n.kind === "model");
+      if (!node || node.data.endpoint !== "cloud") throw new HttpError(409, "Pick one of the board's cloud models to train with");
+      const key = (await secrets.env())[node.data.apiKeyEnv];
+      if (!key) throw new HttpError(409, `Save ${node.data.apiKeyEnv} in Settings → API keys first`);
+      if (written.examples < MIN_EXAMPLES) throw new HttpError(409, `Fine-tuning needs at least ${MIN_EXAMPLES} ${body.pick === "good" ? "good " : ""}conversations; ${bundle.agent.data.displayName || bundle.agent.data.name} has ${written.examples}. Rate answers in Chat or add checks`);
+      const provider = node.data.label || new URL(node.data.baseUrl).hostname;
+      try {
+        const started = await startFineTune(fetch, {
+          baseUrl: node.data.baseUrl, key, provider, jsonl: await readFile(written.path, "utf8"), fileName: written.file, model: body.baseModel, suffix: trainSuffix(bundle.agent.data.name),
+        });
+        const now = Date.now();
+        const job: TrainJob = {
+          id: newTrainId(), boardId: graph.id, agentNodeId: bundle.agent.id, profile: bundle.agent.data.name, provider, baseUrl: node.data.baseUrl, keyEnv: node.data.apiKeyEnv,
+          baseModel: body.baseModel, model: null, remoteId: started.remoteId, status: started.status, error: null, examples: written.examples, dataset: written.file, createdAt: now, updatedAt: now,
+        };
+        await trainStore.put(job);
+        return job;
+      } catch (err) {
+        if (err instanceof TrainError) throw new HttpError(err.status, err.message);
+        throw new HttpError(502, `Couldn't reach ${provider}: ${(err as Error).message}`);
+      }
+    },
+    "POST /api/train/cancel": async (req): Promise<TrainJob> => {
+      const body = parse(z.object({ id: z.string() }), await json(req));
+      const job = (await trainStore.all()).find((j) => j.id === body.id);
+      if (!job) throw new HttpError(404, "No such training job");
+      const key = (await secrets.env())[job.keyEnv];
+      if (!key) throw new HttpError(409, `Save ${job.keyEnv} in Settings → API keys first`);
+      try {
+        await cancelFineTune(fetch, { baseUrl: job.baseUrl, key, remoteId: job.remoteId });
+      } catch (err) {
+        throw new HttpError(409, (err as Error).message);
+      }
+      Object.assign(job, { status: "cancelled", updatedAt: Date.now() });
+      await trainStore.put(job);
+      return job;
     },
 
     "GET /api/fs/roots": async (_req, url): Promise<FsRoot[]> => {
