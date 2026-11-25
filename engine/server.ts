@@ -7,11 +7,11 @@
  */
 import { randomBytes } from "node:crypto";
 import { createReadStream, existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { ChildProcess } from "node:child_process";
 import type { AddressInfo } from "node:net";
-import { join, resolve } from "node:path";
+import { basename, join, relative, resolve } from "node:path";
 import { homedir } from "node:os";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
@@ -30,7 +30,8 @@ import { PROFILE_NAME_RE as PROFILE_RE, type Graph, type ModelNode } from "../sr
 import { buildCostReport } from "./cost";
 import { atomicWrite } from "./fsutil";
 import { FolderError, Folders, browseFolders } from "./folders";
-import { bundledSource, bundledUpstream, findHermes, gatewayStatus, prepareHermes, setupHome, stopGateway } from "./hermes";
+import { bundledSource, bundledUpstream, findHermes, gatewayStatus, hermesCommand, hermesEnv, prepareHermes, setupHome, stopGateway } from "./hermes";
+import { DOC_MAX_BYTES, docKind, docText, extractWithHermes, freePath, hermesDirOf, safeDocName, saveDoc } from "./knowledge";
 import { MemoryConflict, readMemory, readSessions, readTaskWork, writeMemory } from "./hermesData";
 import { JOB_ID_RE, createScheduleArgv, readSchedules, scheduleActionArgv } from "./schedules";
 import { SEED_ARGV, SKILL_ID_RE, SKILL_NAME_RE, addSkillArgv, bundledSeeded, installArgv, installedSkills, listLibrary, parseSkillSearch, profileSkills, searchSkillsArgv, skillSources, uninstallArgv, updateArgv } from "./skills";
@@ -91,6 +92,18 @@ class HttpError extends Error {
   constructor(readonly status: number, message: string, readonly body?: unknown) {
     super(message);
   }
+}
+
+/** A request's raw bytes (a document upload), refused past `max`. */
+async function rawBody(req: IncomingMessage, max: number): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const c of req) {
+    size += (c as Buffer).length;
+    if (size > max) throw new HttpError(413, `That file is larger than ${Math.round(max / 1_048_576)} MB`);
+    chunks.push(c as Buffer);
+  }
+  return Buffer.concat(chunks);
 }
 
 async function json(req: IncomingMessage): Promise<unknown> {
@@ -515,6 +528,42 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
         compiled: dir ? existsSync(dir) : false,
         skills: dir ? profileSkills(dir) : [],
       };
+    },
+    // ---- knowledge: documents for the agents, and the whole knowledge as Markdown ----
+    "POST /api/knowledge/doc": async (req, url) => {
+      // The original's bytes as the body, its name in the query: kept in files/knowledge/, read to text here.
+      const name = safeDocName(url.searchParams.get("name") ?? "");
+      const kind = docKind(name);
+      if (!kind) throw new HttpError(415, "McBot reads text, PDF and Office files (Word, Excel, PowerPoint, OpenDocument, RTF, EPUB)");
+      const data = await rawBody(req, DOC_MAX_BYTES);
+      if (!data.length) throw new HttpError(400, "The file is empty");
+      const path = await saveDoc(join(cfg.workspace, "files", "knowledge"), name, data);
+      let raw: string;
+      if (kind === "text") raw = data.toString("utf8");
+      else {
+        const found = await findHermes();
+        if (!found || found.kind !== "bundled" || !found.prefix?.[0]) throw new HttpError(409, "PDF and Office files are read by McBot's own engine; add a text version instead");
+        const prepared = await prepareHermes(found, cfg.hermesHome);
+        const cmd = hermesCommand(prepared, [], hermesEnv(cfg.hermesHome));
+        try {
+          raw = await extractWithHermes(prepared.path, hermesDirOf(prepared.prefix![0]!), cmd.env, path);
+        } catch (err) {
+          throw new HttpError(422, `McBot couldn't read ${name}: ${(err as Error).message}`);
+        }
+      }
+      const { text, truncated } = docText(raw);
+      return { name: basename(path), text, bytes: data.length, truncated, file: relative(join(cfg.workspace, "files"), path).replace(/\\/g, "/") };
+    },
+    "POST /api/knowledge/export": async (req) => {
+      // Never over an earlier file, like board exports.
+      const body = parse(z.object({ boardId: z.string(), markdown: z.string().min(1).max(5_000_000) }), await json(req));
+      const boardId = await requireBoard(body.boardId);
+      const dir = join(cfg.workspace, "exports");
+      await mkdir(dir, { recursive: true });
+      const stamp = new Date().toISOString().slice(0, 10);
+      const path = freePath(dir, `${boardId}-knowledge-${stamp}.md`);
+      await writeFile(path, body.markdown, { flag: "wx" });
+      return { path };
     },
     "POST /api/skills/install": async (req) => {
       const body = parse(z.object({ profile: z.string().regex(PROFILE_RE), id: z.string().regex(SKILL_ID_RE) }), await json(req));

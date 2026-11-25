@@ -386,6 +386,26 @@ export const emptyBrief = (): Brief => BriefSchema.parse({});
 /** A brief with nothing in it is no brief. */
 export const briefHasContent = (b: Partial<Brief> | null | undefined): boolean => !!b && BRIEF_FIELDS.some((k) => (b[k] ?? "").trim());
 
+/**
+ * A document the people added for the agents (Knowledge → Business): a business plan, prices, a policy.
+ * Its text (a PDF or Office file converted by Hermes' own read_file extractor, a text file as it is)
+ * is compiled into every agent that can load skills as the `business-files` skill, one reference file
+ * per document, which the agent reads with `skill_view` when it needs it (src/compile/docs.ts). The
+ * original file stays in the shared files folder (`files/knowledge/`). Added to mcbot.graph/v1 additively.
+ */
+export const DOC_TEXT_MAX = 200_000;
+export const DocSchema = z.object({
+  id: z.string().min(1),
+  /** The file's name as added ("pricing.pdf"). */
+  name: z.string().min(1).max(200),
+  text: z.string().max(DOC_TEXT_MAX).default(""),
+  /** The original's size in bytes, who added it and when (Unix ms). */
+  bytes: z.number().int().nonnegative().default(0),
+  by: z.string().max(64).default(""),
+  at: z.number().int().nonnegative().default(0),
+});
+export type Doc = z.infer<typeof DocSchema>;
+
 export const GraphSchema = z.object({
   schema: z.literal(GRAPH_SCHEMA),
   id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
@@ -400,6 +420,8 @@ export const GraphSchema = z.object({
   frames: z.array(FrameSchema).optional(),
   /** What every agent knows about who it works for (optional; compiled into each SOUL.md). */
   brief: BriefSchema.optional(),
+  /** Documents for the agents (optional; compiled into each agent's business-files skill). */
+  docs: z.array(DocSchema).optional(),
 });
 export type Graph = z.infer<typeof GraphSchema>;
 

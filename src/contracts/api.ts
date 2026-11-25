@@ -533,3 +533,15 @@ export interface LearnExport {
   text?: string;
 }
 
+
+/** POST /api/knowledge/doc: a document read to text, its original kept in the shared files folder. */
+export interface DocUpload {
+  /** The name it was saved under (a second "plan.pdf" becomes "plan (2).pdf"). */
+  name: string;
+  text: string;
+  bytes: number;
+  /** The text was longer than a board keeps (DOC_TEXT_MAX) and was cut. */
+  truncated: boolean;
+  /** Where the original is, inside the shared files folder ("knowledge/plan.pdf"). */
+  file: string;
+}

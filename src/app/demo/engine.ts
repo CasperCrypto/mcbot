@@ -16,10 +16,10 @@ import { addVersion, type HarnessVersion } from "../../harness/versions";
 import { sha256Hex, utf8Bytes } from "../../compile/text";
 import { LIBRARY } from "../../contracts/library.generated";
 import type { HarnessPlan, PlanChoices } from "../../harness/plan";
-import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView, LearnExport, LearnView } from "../../contracts/api";
+import type { CatalogPlugin, InstalledPlugin, LibrarySkill, ProfileSkill, SkillSearchResult, SkillsView, AgentMemoryView, BoardExport, BoardInfo, CompileResponse, CostReport, Diagnostics, FsBrowse, FsEntry, FsListing, FsPreview, FsRoot, Health, HermesInfo, MemoryFileView, AgentSchedules, ScheduleView, SetupDetect, SetupProfile, SetupState, SharingView, GuestView, GitHubRepoView, LoginView, SignInView, TaskAction, UpdateView, TaskDetail, TasksView, TaskView, LearnExport, LearnView, DocUpload } from "../../contracts/api";
 import upstream from "../../../hermes/UPSTREAM.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
-import { GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
+import { DOC_TEXT_MAX, GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
 import { applyToDoc, agentEditable } from "../../harness/live";
 import { mergeConfig } from "../../harness/merge";
 import { readHermes, unshownNote, type ProfileFiles } from "../../harness/read";
@@ -840,6 +840,20 @@ export const demoEngine = {
     resolve(choice);
     return { answered: choice };
   }),
+  // The browser demo reads text files itself; PDF and Office files need McBot's own Hermes (the desktop app).
+  addDoc: async (name: string, data: Blob): Promise<DocUpload> => {
+    if (!/\.(md|markdown|txt|text|csv|tsv|json|ya?ml|html?|xml|log)$/i.test(name)) throw new EngineError(409, "In this browser demo McBot reads text files; the desktop app reads PDF and Office files too", {});
+    const raw = (await data.text()).replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+    return { name, text: raw.slice(0, DOC_TEXT_MAX), bytes: data.size, truncated: raw.length > DOC_TEXT_MAX, file: `knowledge/${name}` };
+  },
+  exportKnowledge: async (_boardId: string, markdown: string) => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([markdown], { type: "text/markdown" }));
+    a.download = "knowledge.md";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    return { path: "knowledge.md (downloaded)" };
+  },
   replyRun: api((runId: string, promptId: string, answer: string) => {
     const resolve = replies.get(runId);
     if (!resolve) throw new EngineError(409, "This question was already answered or has expired", {});

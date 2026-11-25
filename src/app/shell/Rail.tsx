@@ -1,6 +1,6 @@
 import { Command, MoreHorizontal, Pin, PinOff, Settings } from "lucide-react";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import { useApp, type Tab } from "../state/store";
+import { useApp, viewOf, type Tab } from "../state/store";
 import { REMOTE } from "../lib/engine";
 import { useDismiss } from "../lib/presence";
 import { VIEWS } from "./Palette";
@@ -10,11 +10,12 @@ export const HIDDEN_FOR_GUESTS = new Set(["code", "files", "skills", "passwords"
 
 /** The views the rail shows; the rest sit behind "…" (pin them there). Kept per computer. */
 const PINS_KEY = "mcbot.rail.pins";
-export const DEFAULT_PINS: Tab[] = ["home", "graph", "agents", "tasks", "workflows"];
+export const DEFAULT_PINS: Tab[] = ["home", "graph", "agents", "tasks", "workflows", "knowledge"];
 function loadPins(): Tab[] {
   try {
     const v = JSON.parse(localStorage.getItem(PINS_KEY) ?? "null") as unknown;
-    if (Array.isArray(v) && v.every((t) => typeof t === "string")) return v as Tab[];
+    // Pins from before Knowledge (Skills, Memory, Learn) become Knowledge.
+    if (Array.isArray(v) && v.every((t) => typeof t === "string")) return [...new Set((v as Tab[]).map(viewOf))];
   } catch { /* storage unavailable: the default set */ }
   return DEFAULT_PINS;
 }
@@ -23,7 +24,8 @@ function savePins(pins: Tab[]) {
 }
 
 export function Rail() {
-  const tab = useApp((s) => s.tab);
+  // Memory, Skills and Training are Knowledge's segments: the rail marks Knowledge for them.
+  const tab = viewOf(useApp((s) => s.tab));
   const setTab = useApp((s) => s.setTab);
   const setPalette = useApp((s) => s.setPalette);
   const runs = useApp((s) => s.runs);
