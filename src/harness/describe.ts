@@ -49,6 +49,7 @@ export function describeHarness(g: Graph): string {
     const limits = [
       d.reasoning ? `thinking ${d.reasoning}` : null,
       d.maxSteps ? `up to ${d.maxSteps} steps per message` : null,
+      d.approvals ? `approvals ${d.approvals === "manual" ? "always ask" : d.approvals === "off" ? "never ask" : "smart"}` : null,
       d.dailyBudgetUsd ? `daily budget $${d.dailyBudgetUsd}` : null,
       d.builtinSkills === false ? "no built-in skills" : null,
       d.skills.length ? `${d.skills.length} skill${d.skills.length === 1 ? "" : "s"} of its own (${d.skills.map((s) => s.name).join(", ")})` : null,

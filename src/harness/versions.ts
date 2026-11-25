@@ -79,6 +79,7 @@ function nodeChanges(a: GraphNode, b: GraphNode): string[] {
     if (x.description !== y.description) out.push(`${n}: says it does something new`);
     if ((x.maxSteps ?? null) !== (y.maxSteps ?? null)) out.push(`${n}: steps per message ${x.maxSteps ?? "any"} → ${y.maxSteps ?? "any"}`);
     if ((x.reasoning ?? null) !== (y.reasoning ?? null)) out.push(`${n}: thinking ${x.reasoning ?? "default"} → ${y.reasoning ?? "default"}`);
+    if ((x.approvals ?? "smart") !== (y.approvals ?? "smart")) out.push(`${n}: approvals ${x.approvals ?? "smart"} → ${y.approvals ?? "smart"}`);
     if ((x.dailyBudgetUsd ?? null) !== (y.dailyBudgetUsd ?? null)) out.push(`${n}: daily budget ${x.dailyBudgetUsd ? `$${x.dailyBudgetUsd}` : "none"} → ${y.dailyBudgetUsd ? `$${y.dailyBudgetUsd}` : "none"}`);
     if ((x.builtinSkills ?? true) !== (y.builtinSkills ?? true)) out.push(`${n}: Hermes' built-in skills ${y.builtinSkills === false ? "off" : "on"}`);
     if (!same(x.skills, y.skills)) out.push(`${n}: its own skills changed (${y.skills.length})`);

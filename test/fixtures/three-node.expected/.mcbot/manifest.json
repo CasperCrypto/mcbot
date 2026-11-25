@@ -12,8 +12,8 @@
     },
     {
       "path": "profiles/triage/config.yaml",
-      "sha256": "f719cf791c048cc8c7145b484c3637ef21ad7ee11e3cc7cc57bbcef54b8c254f",
-      "bytes": 493
+      "sha256": "ddb5c918f1fd11152bc126f89c851cc9e65e1dcb486c2dedaab606a9c3361309",
+      "bytes": 776
     },
     {
       "path": "profiles/triage/profile.yaml",
@@ -22,8 +22,8 @@
     },
     {
       "path": "profiles/triage/skills/mcbot/mcbot-studio/SKILL.md",
-      "sha256": "d27c13799c05fd9566d7548f6d8bd578efc65e52fcdb3eeae8c5a09f3d1a9ddc",
-      "bytes": 4856
+      "sha256": "0e65ae50d18e59e22e9d47e68cdb7690c8749472e5a35c896ae32e1489a19aab",
+      "bytes": 5570
     }
   ]
 }

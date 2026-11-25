@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ToolDataSchema } from "../contracts/graph";
+import { DEFAULT_CAPABILITIES, ToolDataSchema } from "../contracts/graph";
 import { compiledToolsets, mcpServerEntry, mcpToolPrefix, renderConfig } from "./config";
 import { resolveGraph } from "./validate";
 
@@ -29,6 +29,10 @@ describe("renderConfig", () => {
         "      - -y",
         '      - "@modelcontextprotocol/server-filesystem"',
         "      - ${workspaceFolder}",
+        // No abilities chosen: McBot's own chat (the runs API) still gets the ones the board lists.
+        "platform_toolsets:",
+        "  api_server:",
+        ...["web", "browser", "file", "terminal", "code_execution", "vision", "image_gen", "tts", "memory", "session_search", "skills", "todo", "clarify", "delegation", "cronjob", "computer_use", "connections"].map((t) => `    - ${t}`),
         "",
       ].join("\n"),
     );
@@ -89,11 +93,15 @@ describe("abilities and makers", () => {
   };
   const tail = (out: string) => out.slice(out.indexOf("mcp_servers:"));
 
-  it("leaves Hermes' default tool sets alone when nothing is chosen", () => {
+  it("leaves Hermes' cli default alone when nothing is chosen, and gives McBot's chat the board's defaults", () => {
     const { graph, bundles, issues } = board({});
     expect(issues.filter((i) => i.level === "error")).toEqual([]);
     expect(compiledToolsets(bundles[0]!)).toBeNull();
-    expect(renderConfig(graph, bundles[0]!)).not.toContain("platform_toolsets");
+    // Hermes' api_server default leaves out clarify, computer use and speech (toolsets.py `hermes-api-server`).
+    expect(compiledToolsets(bundles[0]!, "api_server")).toEqual([...DEFAULT_CAPABILITIES]);
+    const out = renderConfig(graph, bundles[0]!);
+    expect(out).toContain("platform_toolsets:\n  api_server:\n    - web\n");
+    expect(out).not.toContain("  cli:");
   });
 
   it("pins chosen abilities to the cli and api_server surfaces, in catalog order, byte for byte", () => {
@@ -200,5 +208,27 @@ describe("config.yaml: the loop layer", () => {
     const capped = renderConfig(graph!, bundles.find((b) => b.agent.data.name === "a")!);
     expect(capped).toContain("\nagent:\n  max_turns: 25\n");
     expect(renderConfig(graph!, bundles.find((b) => b.agent.data.name === "c")!)).not.toContain("max_turns");
+  });
+});
+
+describe("config.yaml: guardrails", () => {
+  it("says when the agent asks before a risky command with approvals.mode, only when the board sets it", async () => {
+    const { resolveGraph } = await import("./validate");
+    const g = {
+      schema: "mcbot.graph/v1", id: "b", name: "B",
+      nodes: [
+        { id: "m", kind: "model", position: { x: 0, y: 0 }, data: { name: "local", endpoint: "local", baseUrl: "http://127.0.0.1:11434/v1", model: "qwen3:8b" } },
+        { id: "a", kind: "agent", position: { x: 0, y: 0 }, data: { name: "a", approvals: "manual" } },
+        { id: "o", kind: "agent", position: { x: 0, y: 0 }, data: { name: "o", approvals: "off" } },
+        { id: "c", kind: "agent", position: { x: 0, y: 0 }, data: { name: "c" } },
+      ],
+      edges: [{ id: "e1", source: "m", target: "a" }, { id: "e2", source: "m", target: "o" }, { id: "e3", source: "m", target: "c" }],
+    };
+    const { graph, bundles } = resolveGraph(g);
+    const of = (name: string) => renderConfig(graph!, bundles.find((b) => b.agent.data.name === name)!);
+    expect(of("a")).toContain("\napprovals:\n  mode: manual\n");
+    // YAML 1.1 reads a bare off as false: quoted, so Hermes gets the word.
+    expect(of("o")).toContain("\napprovals:\n  mode: \"off\"\n");
+    expect(of("c")).not.toContain("approvals");
   });
 });

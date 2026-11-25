@@ -725,10 +725,12 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       const body = parse(z.object({
         boardId: z.string(), title: z.string().trim().min(1).max(300), body: z.string().max(20_000).default(""),
         assignee: z.string().nullable().default(null), parents: z.array(z.string().regex(TASK_ID_RE)).max(20).default([]), by: person,
+        // Keep working until a check agrees it is done (Hermes' goal mode).
+        goal: z.boolean().default(false),
       }), await json(req));
       const team = await teamOf(await requireBoard(body.boardId));
       if (body.assignee !== null && !team.has(body.assignee)) throw new HttpError(409, `${body.assignee} isn't a compiled agent on this board. Compile, then give it tasks.`);
-      const out = await kanban(createArgv({ title: body.title, body: body.body, assignee: body.assignee, createdBy: body.by, parents: body.parents, tenant: boardTenant(body.boardId) }), body.body);
+      const out = await kanban(createArgv({ title: body.title, body: body.body, assignee: body.assignee, createdBy: body.by, parents: body.parents, tenant: boardTenant(body.boardId), goal: body.goal }), body.body);
       const id = (JSON.parse(out) as { id?: string }).id ?? "";
       const task = readTask(cfg.hermesHome, id, team);
       if (!task) throw new HttpError(500, "Hermes did not create the task");
@@ -747,8 +749,13 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       ])), await json(req));
       const team = await teamOf(await requireBoard(body.boardId));
       if (body.action === "assign" && body.profile !== null && !team.has(body.profile)) throw new HttpError(409, `${body.profile} isn't a compiled agent on this board`);
-      if (!readTask(cfg.hermesHome, body.id, team)) throw new HttpError(404, "no such task");
-      await kanban(actionArgv(body.id, body as TaskAction, body.by));
+      const before = readTask(cfg.hermesHome, body.id, team);
+      if (!before) throw new HttpError(404, "no such task");
+      // Hermes refuses a completion with no evidence, except a review's approval (kanban_db.py
+      // `_gate_empty_completion`): a person's "Mark done" keeps what came of it, else says who closed it.
+      const action = body.action === "complete" && !body.text && before.status !== "review"
+        ? { ...body, text: before.result ?? `Marked done by ${body.by}` } : body;
+      await kanban(actionArgv(body.id, action as TaskAction, body.by));
       const task = readTask(cfg.hermesHome, body.id, team);
       if (!task) throw new HttpError(404, "no such task");
       if (task.assignee && ["ready", "todo"].includes(task.status)) wakeDispatcher();
@@ -1113,7 +1120,7 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       }
       return;
     }
-    const runMatch = /^\/api\/runs\/(run_[a-z0-9]+_[a-f0-9]+)(\/cancel|\/approval)?$/.exec(url.pathname);
+    const runMatch = /^\/api\/runs\/(run_[a-z0-9]+_[a-f0-9]+)(\/cancel|\/approval|\/reply)?$/.exec(url.pathname);
     const guest = memberOf.get(req);
     if (runMatch && guest?.role === "chat" && !(await ownsRun(guest, runMatch[1]!))) return deny(res, 404, "no such run");
     try {
@@ -1129,6 +1136,16 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
           throw new HttpError(409, (err as Error).message);
         }
         body = { answered: choice };
+      }
+      else if (runMatch && req.method === "POST" && runMatch[2] === "/reply") {
+        // The answer to what the agent asked (Hermes' clarify): a choice, a JSON array of choices, text, or "" to skip.
+        const { promptId, answer } = parse(z.object({ promptId: z.string().min(1).max(200), answer: z.string().max(16_384) }), await json(req));
+        try {
+          await runner.reply(runMatch[1]!, promptId, answer);
+        } catch (err) {
+          throw new HttpError(409, (err as Error).message);
+        }
+        body = { answered: promptId };
       }
       else {
         const handler = routes[`${req.method} ${url.pathname}`];

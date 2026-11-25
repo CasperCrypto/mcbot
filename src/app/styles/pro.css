@@ -512,9 +512,24 @@ h1, h2, h3 { text-wrap: balance; }
 
 /* A task's progress (TasksView Work): how long, how many steps, the newest steps, its last words. */
 .task-work-head { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+.task-until { gap: 12px; padding: 10px 12px; border-radius: var(--r-md); background: var(--surface-1); }
+.task-until > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; }
+.task-until small { font-size: 12px; }
 .task-steps { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .task-steps li { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 5px 8px; border-radius: var(--r-sm); background: var(--surface-1); font-size: 12.5px; }
 .task-steps li b { flex: none; font-weight: 600; }
 .task-steps li .mono { flex: 1; min-width: 0; color: var(--text-2); font-size: 12px; }
 .task-steps li .faint { flex: none; margin-left: auto; font-size: 11.5px; }
 .task-said { margin: 0; padding: 8px 10px; border-radius: var(--r-sm); background: var(--surface-1); color: var(--text-2); font-size: 13px; line-height: 1.45; }
+
+/* The agent asks the person something (approvals/QuestionCard.tsx): neutral, set apart by fill. */
+.approval.question { background: var(--surface-2); border: 0; box-shadow: var(--lift); }
+.approval.question .approval-head { color: var(--accent-text); }
+.approval.question .approval-head b { font-weight: 600; white-space: normal; }
+.question-choices .btn[aria-pressed="true"] { background: rgb(var(--accent-rgb) / 0.24); color: var(--text); }
+.question-tag { margin-left: 6px; font-size: 11px; color: var(--text-3); }
+.btn.primary .question-tag { color: inherit; opacity: 0.7; }
+.question-reply { display: flex; align-items: center; gap: 6px; }
+.question-reply input { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border: 0; border-radius: var(--r-sm); background: var(--surface-1); color: var(--text); font: inherit; font-size: 13px; }
+.question-reply input:focus { outline: none; box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / 0.5); }
+.accent-text { color: var(--accent-text); }

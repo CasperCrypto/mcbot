@@ -8,6 +8,14 @@ import type { AgentBundle } from "../../compile/validate";
 import { BRIEF_FIELDS, DEFAULT_CAPABILITIES, type Brief } from "../../contracts/graph";
 import type { AgentMemoryView, InstalledPlugin, ScheduleView } from "../../contracts/api";
 
+/** How careful it is before a risky command (`approvals.mode`; unset = Hermes' "smart"). */
+const CARE: Record<string, string> = {
+  "": "Asks you when its safety check isn't sure (Hermes' default)",
+  smart: "Asks you when its safety check isn't sure",
+  manual: "Asks you before every risky command",
+  off: "Never asks: runs risky commands itself",
+};
+
 export type LayerId = "surfaces" | "loop" | "context" | "model" | "tools" | "plugins" | "guardrails";
 
 /** Where an item is changed: a block on the board, or a view. */
@@ -20,7 +28,7 @@ export interface LayerItem {
   state: "set" | "default" | "missing";
   target: LayerTarget;
   /** A setting of the agent itself, changed right in the row (the Layers view draws its control). */
-  edit?: "maxSteps" | "reasoning" | "helpers" | "dailyBudgetUsd";
+  edit?: "maxSteps" | "reasoning" | "helpers" | "dailyBudgetUsd" | "approvals";
 }
 
 export interface Layer {
@@ -107,7 +115,7 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
     {
       id: "guardrails", title: "Guardrails", what: "What keeps it safe and affordable",
       items: [
-        { label: "Approvals", detail: "Asks you before risky commands", state: "default", target: { tab: "settings" } },
+        { label: "Approvals", detail: CARE[a.approvals ?? ""] ?? CARE[""]!, state: a.approvals ? "set" : "default", target: self, edit: "approvals" },
         { label: "Daily budget", detail: a.dailyBudgetUsd ? `$${a.dailyBudgetUsd} a day` : "No limit", state: a.dailyBudgetUsd ? "set" : "default", target: self, edit: "dailyBudgetUsd" },
       ],
     },

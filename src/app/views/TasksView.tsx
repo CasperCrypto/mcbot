@@ -12,6 +12,7 @@ import { Picker } from "../Picker";
 import { agentOptions } from "../lib/agentOptions";
 import { toolLabel } from "../lib/toolLabel";
 import { span } from "../../harness/liveContext";
+import { taskNote } from "../lib/taskNote";
 
 /** Hermes' columns (hermes_cli/kanban_workflow.py); the first three show only when they hold tasks. */
 const LANES: { status: TaskStatus; label: string; always: boolean }[] = [
@@ -61,7 +62,7 @@ function Card({ t, agents, selected, onOpen }: { t: TaskView; agents: AgentNode[
   return (
     <button className="task-card" aria-selected={selected} onClick={onOpen} data-testid="task-card" data-status={t.status}>
       <span className="task-title">{t.title}</span>
-      {t.result && t.status !== "running" && <span className="task-result ellipsis">{t.result}</span>}
+      {t.result && t.status !== "running" && <span className="task-result ellipsis">{taskNote(t.result)}</span>}
       {t.error && t.status === "blocked" && <span className="task-result fail ellipsis">{t.error}</span>}
       <span className="row task-meta">
         {t.assignee ? <AgentFace seed={t.assignee} size={18} status={t.status === "running" ? "running" : null} /> : <CircleDashed size={15} className="faint" />}
@@ -81,12 +82,13 @@ function NewTask({ agents, onClose, onCreated }: { agents: AgentNode[]; onClose:
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [assignee, setAssignee] = useState<string | null>(agents[0]?.data.name ?? null);
+  const [goal, setGoal] = useState(true);
   const [busy, setBusy] = useState(false);
   const create = async () => {
     if (!title.trim() || busy) return;
     setBusy(true);
     try {
-      onCreated(await engine.createTask(boardId, { title: title.trim(), body, assignee, by: identity.name }));
+      onCreated(await engine.createTask(boardId, { title: title.trim(), body, assignee, by: identity.name, goal }));
     } catch (err) {
       toast({ kind: "fail", text: (err as Error).message });
     } finally {
@@ -114,6 +116,10 @@ function NewTask({ agents, onClose, onCreated }: { agents: AgentNode[]; onClose:
               <CircleDashed size={18} /><span>Nobody yet</span>
             </button>
           </div>
+        </div>
+        <div className="row task-until" data-tip="After each round a check reads the work against the task. Not done: it keeps going, up to 20 rounds, then asks you.">
+          <span className="grow"><b>Until done</b><small className="faint">Keeps working until a check agrees</small></span>
+          <button type="button" className="switch" role="switch" aria-checked={goal} aria-label="Until done" data-testid="task-goal" onClick={() => setGoal(!goal)}><span /></button>
         </div>
         <div className="row"><span className="grow" /><button className="btn primary" disabled={!title.trim() || busy} onClick={() => void create()} data-testid="task-create">Add task</button></div>
       </div>
@@ -195,6 +201,7 @@ function Detail({ id, agents, onClose, onChanged, closing = false }: { id: strin
     <aside ref={panel} data-closing={closing || undefined} className="side-panel glass" data-testid="task-detail">
       <div className="side-panel-head">
         <b className="grow ellipsis">{task.title}</b>
+        {task.goal && <span className="chip" data-tip="Keeps working until a check agrees it's done, up to 20 rounds" data-testid="task-goal-chip">Until done</span>}
         <span className={`chip ${STATE_CHIP[task.status] ?? ""}`}>{lane?.label ?? task.status}</span>
         <button className="icon-btn" aria-label="Close" onClick={onClose}><X size={15} /></button>
       </div>
@@ -211,7 +218,7 @@ function Detail({ id, agents, onClose, onChanged, closing = false }: { id: strin
         {task.result && (
           <div className="stack" style={{ gap: 6 }}>
             <span className="section-label">Result</span>
-            <p className="task-body">{task.result}</p>
+            <p className="task-body">{taskNote(task.result)}</p>
           </div>
         )}
         {task.error && <p className="task-body fail">{task.error}</p>}

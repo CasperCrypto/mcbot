@@ -294,14 +294,15 @@ const EDIT_ROUTES = new Set([
 /** A guest (Can chat): their chat with the agents they were given, nothing else. */
 const CHAT_ROUTES = new Set(["GET /api/health", "GET /api/guest", "GET /api/runs", "POST /api/runs", "GET /api/events", "GET /api/media"]);
 
-const RUN_PATH = /^\/api\/runs\/run_[a-z0-9]+_[a-f0-9]+(\/cancel|\/approval)?$/;
+const RUN_PATH = /^\/api\/runs\/run_[a-z0-9]+_[a-f0-9]+(\/cancel|\/approval|\/reply)?$/;
 
 export function guestAllowed(method: string, path: string, role: Role = "edit"): boolean {
   const run = RUN_PATH.exec(path);
   if (run) {
     // A teammate may stop a run and answer its approval card, as the host can; a guest may stop
-    // their own run, and only the host answers what their agent asks.
-    if (role === "chat") return (method === "GET" && !run[1]) || (method === "POST" && run[1] === "/cancel");
+    // their own run and answer the agent's questions in it (their conversation), and only the host
+    // answers its approval cards.
+    if (role === "chat") return (method === "GET" && !run[1]) || (method === "POST" && (run[1] === "/cancel" || run[1] === "/reply"));
     return method === "GET" || method === "POST";
   }
   return (role === "chat" ? CHAT_ROUTES : EDIT_ROUTES).has(`${method} ${path}`);

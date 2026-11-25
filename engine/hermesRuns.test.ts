@@ -39,3 +39,18 @@ describe("runs through Hermes' runs API", () => {
     expect(apiEnv(a)).toEqual({ API_SERVER_KEY: a.key, API_SERVER_PORT: "4555", API_SERVER_HOST: "127.0.0.1" });
   });
 });
+
+describe("the agent's questions in a run's status", () => {
+  it("reads clarify prompts only, without the hint for chat apps", async () => {
+    const { pendingQuestions } = await import("./hermesRuns");
+    expect(pendingQuestions([
+      { kind: "approval", prompt_id: "a1", execution_generation: 2, command: "rm -rf x", choices: ["once", "deny"] },
+      { kind: "clarify", prompt_id: "q1", execution_generation: 2, question: 'Which colour?\nReply "skip" to skip this question.', choices: ["red (Recommended)", "blue"], multi_select: false },
+      { kind: "clarify", prompt_id: "q2", execution_generation: 2, question: "Which days?\nAntworte mit „skip“, um diese Frage zu überspringen.", choices: ["Mon", "Tue"], multi_select: true, timeout_s: 90 },
+    ])).toEqual([
+      { promptId: "q1", generation: 2, question: "Which colour?", choices: ["red (Recommended)", "blue"], multiSelect: false, timeoutS: null },
+      { promptId: "q2", generation: 2, question: "Which days?", choices: ["Mon", "Tue"], multiSelect: true, timeoutS: 90 },
+    ]);
+    expect(pendingQuestions(undefined)).toEqual([]);
+  });
+});

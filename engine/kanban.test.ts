@@ -69,19 +69,38 @@ describe("hermes kanban argv", () => {
     expect(createArgv({ title: "Pick a date", body: "", assignee: null, createdBy: "Ada" })).toEqual(["kanban", "create", "--body-file", "-", "--created-by", "Ada", "--json", "--", "Pick a date"]);
   });
 
+  it("asks Hermes to keep going until a check agrees it is done", () => {
+    expect(createArgv({ title: "Sheets tab", body: "", assignee: "coder", createdBy: "Ada", goal: true })).toEqual(
+      ["kanban", "create", "--body-file", "-", "--created-by", "Ada", "--json", "--assignee", "coder", "--goal", "--", "Sheets tab"]);
+  });
+
   it("maps each action to its command", () => {
     const id = "t_00000001";
     expect(actionArgv(id, { action: "comment", text: "-v looks good" }, "Ada")).toEqual(["kanban", "comment", id, "--author", "Ada", "--", "-v looks good"]);
     expect(actionArgv(id, { action: "assign", profile: null }, "Ada")).toEqual(["kanban", "assign", id, "none"]);
-    expect(actionArgv(id, { action: "complete", text: "Shipped" }, "Ada")).toEqual(["kanban", "complete", id, "--result", "Shipped"]);
+    // A person's verdict is the human override (--force: no goal judge, hermes/MCBOT.md); a text starting with - stays text.
+    expect(actionArgv(id, { action: "complete", text: "-v shipped" }, "Ada")).toEqual(["kanban", "complete", id, "--force", "--result=-v shipped"]);
+    expect(actionArgv(id, { action: "complete" }, "Ada")).toEqual(["kanban", "complete", id, "--force"]);
     expect(actionArgv(id, { action: "block" }, "Ada")).toEqual(["kanban", "block", id]);
     expect(actionArgv(id, { action: "unblock" }, "Ada")).toEqual(["kanban", "unblock", id]);
-    expect(actionArgv(id, { action: "changes", text: "Shorter" }, "Ada")).toEqual(["kanban", "reopen-review", id, "--reason", "Shorter"]);
+    expect(actionArgv(id, { action: "changes", text: "-Shorter" }, "Ada")).toEqual(["kanban", "reopen-review", id, "--reason=-Shorter"]);
     expect(actionArgv(id, { action: "archive" }, "Ada")).toEqual(["kanban", "archive", id]);
   });
 
   it("reports Hermes' own error line", () => {
     expect(kanbanError({ code: 1, stdout: "", stderr: "\x1b[0;36m→\x1b[0m Checking for uv...\ncannot unblock t_1: not blocked\n" })).toBe("cannot unblock t_1: not blocked");
+  });
+});
+
+describe("a task that keeps going until it is done", () => {
+  it("reads goal_mode from Hermes, and nothing for a task without it", () => {
+    const db = board();
+    const conn = new DatabaseSync(join(db, "kanban.db"));
+    conn.exec("ALTER TABLE tasks ADD COLUMN goal_mode INTEGER NOT NULL DEFAULT 0");
+    conn.prepare("UPDATE tasks SET goal_mode = 1 WHERE id = ?").run("t_00000002");
+    conn.close();
+    expect(readTask(db, "t_00000002", TEAM)?.goal).toBe(true);
+    expect(readTask(db, "t_00000001", TEAM)).not.toHaveProperty("goal");
   });
 });
 

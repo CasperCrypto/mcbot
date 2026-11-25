@@ -292,6 +292,8 @@ const listeners = new Set<Listener>();
 const cancelled = new Set<string>();
 /** Runs waiting on an approval card, by run id. */
 const answers = new Map<string, (choice: string) => void>();
+/** A question the simulated agent asked, waiting for the page's answer (run id → its resolver). */
+const replies = new Map<string, (answer: string) => void>();
 const busy = new Map<string, number>();
 
 interface Step {
@@ -451,6 +453,19 @@ async function play(boardId: string, bundle: AgentBundle, prompt: string, opts: 
         steps = [{ tool: "terminal", input: { command }, output: JSON.stringify({ output: "", exit_code: 0 }), toolNodeId: null }];
         text = `Done: ${command} (simulated in this browser).`;
       }
+    }
+    // "Ask me…" / "which one" / "choose": the agent stops to ask, as Hermes' clarify does (the question card).
+    if (live && /\b(ask me|which one|choose)\b/i.test(prompt)) {
+      const promptId = `q${runId.slice(-8)}`;
+      const question = "Which version should I go with?";
+      emit({ type: "run.tool.started", tool: "clarify", input: { preview: question }, toolNodeId: null });
+      emit({ type: "run.question", promptId, generation: 1, question, choices: ["The short one (Recommended)", "The detailed one"], multiSelect: false, timeoutS: 90 });
+      const answer = await new Promise<string>((resolve) => { replies.set(runId, resolve); setTimeout(() => resolve(""), 90_000); });
+      replies.delete(runId);
+      emit({ type: "run.question.settled", promptId, answer: answer || null });
+      emit({ type: "run.tool.finished", tool: "clarify", output: JSON.stringify({ responses: [{ question, user_response: answer || null }] }), durationMs: 1, isError: false, toolNodeId: null });
+      const picked = answer.replace(/\s*\(Recommended\)$/i, "").trim();
+      text = answer ? `Going with ${picked.toLowerCase()}. ${text}` : `No answer, so I went with the short one. ${text}`;
     }
     for (const s of steps) {
       emit({ type: "run.tool.started", tool: s.tool, input: s.input, toolNodeId: s.toolNodeId });
@@ -825,6 +840,13 @@ export const demoEngine = {
     resolve(choice);
     return { answered: choice };
   }),
+  replyRun: api((runId: string, promptId: string, answer: string) => {
+    const resolve = replies.get(runId);
+    if (!resolve) throw new EngineError(409, "This question was already answered or has expired", {});
+    replies.delete(runId);
+    resolve(answer);
+    return { answered: promptId };
+  }),
   cancelRun: api((runId: string) => {
     const events = state.runs[runId];
     const done = events?.some((e) => e.type === "run.finished");
@@ -917,13 +939,14 @@ export const demoEngine = {
     return { tasks: tasks.map((t) => taskView(t, team)).sort((a, b) => b.createdAt - a.createdAt), gateway: true };
   }),
   task: api((boardId: string, id: string): TaskDetail => taskView(findTask(id), teamOf(requireBoard(boardId)))),
-  createTask: api((boardId: string, input: { title: string; body: string; assignee: string | null; by: string; parents?: string[] }): TaskView => {
+  createTask: api((boardId: string, input: { title: string; body: string; assignee: string | null; by: string; parents?: string[]; goal?: boolean }): TaskView => {
     const team = teamOf(requireBoard(boardId));
     if (input.assignee !== null && !team.has(input.assignee)) throw new EngineError(409, `${input.assignee} isn't a compiled agent on this board. Compile, then give it tasks.`, {});
     const t: TaskDetail & { board: string } = {
       board: boardId,
       id: taskId(), title: input.title.trim(), body: input.body, assignee: input.assignee, agentNodeId: null, status: input.assignee ? "ready" : "todo", priority: 0,
       createdBy: input.by, createdAt: Date.now(), startedAt: null, completedAt: null, result: null, error: null, parents: input.parents ?? [], children: [], comments: 0, thread: [], attempts: [],
+      ...(input.goal ? { goal: true } : {}),
     };
     (state.tasks ??= []).push(t);
     save();
@@ -941,7 +964,7 @@ export const demoEngine = {
         t.assignee = a.profile;
         if (t.status === "todo" && a.profile) t.status = "ready";
         break;
-      case "complete": Object.assign(t, { status: "done", completedAt: Date.now(), result: a.text || t.result }); break;
+      case "complete": Object.assign(t, { status: "done", completedAt: Date.now(), result: a.text || t.result || (t.status === "review" ? null : `Marked done by ${by}`) }); break;
       case "block":
         if (!["ready", "todo", "running", "triage"].includes(t.status)) refuse(`cannot block ${id}: it is ${t.status}`);
         t.status = "blocked";

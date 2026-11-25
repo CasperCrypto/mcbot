@@ -910,7 +910,11 @@ def _cmd_complete(args: argparse.Namespace) -> int:
     fail_msg: dict[str, str] = {}
     with kbc.connect_closing() as conn:
         def op(tid):
-            gate_err = _goal_gate_error(
+            # McBot: a forced completion from outside any worker (no HERMES_KANBAN_TASK) is a person's
+            # override, as the dashboard's "done" (plugins/kanban/dashboard/plugin_api.py _STATUS_HANDLERS,
+            # force=True): the goal judge gates worker handoffs, not a person's verdict.
+            human = bool(getattr(args, "force", False)) and not os.environ.get("HERMES_KANBAN_TASK")
+            gate_err = None if human else _goal_gate_error(
                 conn, tid, (summary or args.result or "").strip(), "completion",
                 "Re-scope with kanban edit, or record the block with kanban block instead of completing.",
                 "Provide evidence matching the task's acceptance criteria.")

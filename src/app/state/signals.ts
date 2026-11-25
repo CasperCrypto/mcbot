@@ -63,6 +63,12 @@ export function useSignals(tasks: readonly TaskView[] | null, runs: Record<strin
       asked.current.add(r.approval.promptId);
       void notify(`${nameOf(r.profile)} asks before acting`, `${r.approval.description}: ${r.approval.command}`);
     }
+    // …and when it stops to ask the person something (it waits a minute or so, then goes on).
+    for (const r of Object.values(runs)) {
+      if (!r.question || asked.current.has(r.question.promptId)) continue;
+      asked.current.add(r.question.promptId);
+      void notify(`${nameOf(r.profile)} asks you`, r.question.question);
+    }
   }, [runs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

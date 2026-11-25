@@ -15,3 +15,22 @@ mcp_servers:
       - -y
       - "@modelcontextprotocol/server-filesystem"
       - ${workspaceFolder}
+platform_toolsets:
+  api_server:
+    - web
+    - browser
+    - file
+    - terminal
+    - code_execution
+    - vision
+    - image_gen
+    - tts
+    - memory
+    - session_search
+    - skills
+    - todo
+    - clarify
+    - delegation
+    - cronjob
+    - computer_use
+    - connections

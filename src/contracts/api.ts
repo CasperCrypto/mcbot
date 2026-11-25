@@ -258,6 +258,8 @@ export interface TaskView {
   parents: string[];
   children: string[];
   comments: number;
+  /** It keeps working until a check agrees it is done (Hermes' goal mode, `goal_mode`). */
+  goal?: boolean;
 }
 
 export interface TaskComment {

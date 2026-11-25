@@ -1,6 +1,7 @@
 import { applyFix } from "./DoctorSheet";
 import type { Finding } from "../graph/doctor";
-import { ArrowUp, Bot, CalendarClock, Check, Copy, Hammer, LoaderCircle, MessagesSquare, Minus, Search, ShieldAlert, Square, SquareDashed, UserPlus, X } from "lucide-react";
+import { ArrowUp, Bot, CalendarClock, Check, CircleHelp, Copy, Hammer, LoaderCircle, MessagesSquare, Minus, Search, ShieldAlert, Square, SquareDashed, UserPlus, X } from "lucide-react";
+import { QuestionCard } from "../approvals/QuestionCard";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AgentSchedules, CostReport } from "../../contracts/api";
 import type { RunSummary } from "../../contracts/run";
@@ -30,7 +31,7 @@ import { agentOptions } from "../lib/agentOptions";
  * never opens because the pointer passes by on its way to something under it. Opened by hovering,
  * it closes when the pointer leaves; opened by click, on Esc or a click outside.
  */
-type Mode = "rest" | "ask" | "run" | "compile" | "message" | "toast" | "problems";
+type Mode = "rest" | "ask" | "question" | "run" | "compile" | "message" | "toast" | "problems";
 
 /** How long the pointer rests on the pill before it opens, and how long it may wander off before it closes. */
 const OPEN_AFTER_MS = 240;
@@ -118,6 +119,7 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
 
   const running = useMemo(() => Object.values(runs).filter((r) => r.status === "running").sort((a, b) => a.startedAt - b.startedAt), [runs]);
   const asking = running.filter((r) => r.approval);
+  const questioning = running.filter((r) => r.question && !r.approval);
   const now = useNow(running.length > 0);
   const toast = toasts.at(-1);
   const { last, fresh } = useLatestMessage();
@@ -131,7 +133,7 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
   const runsToday = Object.values(runs).filter((r) => r.startedAt >= midnight).length;
 
   // A notice (a compile that failed and its Fix) comes before a team message: it is what was just done.
-  const mode: Mode = asking.length ? "ask" : running.length ? "run" : busy ? "compile" : toast ? "toast" : fresh ? "message" : problemErrors ? "problems" : "rest";
+  const mode: Mode = asking.length ? "ask" : questioning.length ? "question" : running.length ? "run" : busy ? "compile" : toast ? "toast" : fresh ? "message" : problemErrors ? "problems" : "rest";
 
   // Measure the content and animate the pill to it (the morph).
   useLayoutEffect(() => {
@@ -247,6 +249,13 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
           </div>
         ))}
 
+        {questioning.map((r) => (
+          <div key={`q-${r.runId}`} className="island-sec ask">
+            <div className="island-line"><CircleHelp size={15} className="accent-text" /><b>{nameOf(r)}</b><span className="faint">asks you</span></div>
+            <QuestionCard run={r} compact />
+          </div>
+        ))}
+
         <div className="island-grid">
           <div className="island-sec">
             <span className="island-label">{running.length ? "Working now" : "Agents"}</span>
@@ -339,6 +348,16 @@ export function Island({ findings = [] }: { findings?: Finding[] }) {
         <span className="ellipsis" style={{ maxWidth: 260 }}><b>{nameOf(r)}</b> <span className="faint">asks: {r.approval!.command || r.approval!.description}</span></span>
         <button className="pill primary" onClick={(e) => { e.stopPropagation(); answer(r, "once"); }}>Allow</button>
         <button className="pill" onClick={(e) => { e.stopPropagation(); answer(r, "deny"); }}>Deny</button>
+      </div>
+    );
+  } else if (mode === "question") {
+    const r = questioning[0]!;
+    body = (
+      <div className="island-bar">
+        <span className="island-dot" />
+        <AgentFace seed={r.profile} size={22} status="running" />
+        <span className="ellipsis" style={{ maxWidth: 300 }}><b>{nameOf(r)}</b> <span className="faint">asks: {r.question!.question}</span></span>
+        <button className="pill primary" onClick={(e) => { e.stopPropagation(); openChat(r.agentNodeId); }}>Answer</button>
       </div>
     );
   } else if (mode === "run") {

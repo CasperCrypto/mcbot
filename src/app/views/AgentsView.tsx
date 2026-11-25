@@ -13,6 +13,7 @@ import { useApp } from "../state/store";
 import { AgentFace, Empty } from "../ui";
 import { toolLabel } from "../lib/toolLabel";
 import { ApprovalCard } from "../approvals/ApprovalCard";
+import { QuestionCard } from "../approvals/QuestionCard";
 import { screenCaptures } from "../chat/screen";
 import { RichText } from "../chat/RichText";
 import { AgentPage } from "../agent/AgentPage";
@@ -150,8 +151,9 @@ export function AgentMessage({ run, events, name, onChoose, waitingFor }: { run:
       {plan && plan.length > 0 && <Plan items={plan} live={run.status === "running"} />}
       {shots.length > 0 && <Screen profile={run.profile} shots={shots} live={run.status === "running"} />}
       <ApprovalCard run={run} waitingFor={waitingFor} />
+      <QuestionCard run={run} />
       {run.status === "running" && !text ? (
-        run.approval ? null : <div className="bubble" style={{ padding: 0 }}><span className="typing"><i /><i /><i /></span></div>
+        run.approval || run.question ? null : <div className="bubble" style={{ padding: 0 }}><span className="typing"><i /><i /><i /></span></div>
       ) : (
         failed && !text ? <div className="bubble" data-testid="agent-text">{run.error ?? "Failed"}</div>
           : <div className="bubble"><RichText text={text} onChoose={run.status === "running" ? undefined : onChoose}
@@ -191,7 +193,7 @@ function Thread({ agent, model, info, onInfo }: { agent: AgentNode; model: strin
   const thread = useMemo(() => Object.values(runs).filter((r) => r.agentNodeId === agent.id).sort((a, b) => a.startedAt - b.startedAt), [runs, agent.id]);
   const running = thread.find((r) => r.status === "running");
   const textLen = thread.reduce((n, r) => n + r.text.length, 0);
-  const asking = thread.filter((r) => r.approval).length;
+  const asking = thread.filter((r) => r.approval || r.question).length;
 
   useEffect(() => {
     for (const r of thread) if (!events[r.runId]) engine.run(r.runId).then((e) => loadEvents(r.runId, e)).catch(() => undefined);

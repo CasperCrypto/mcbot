@@ -24,12 +24,13 @@ describe("harness versions", () => {
 
   it("say what changed in words", () => {
     expect(describeChanges(null, v1)).toEqual(["First version: 1 agent, 1 block"]);
-    const v2 = board([agent("a", "researcher", { reasoning: "high", maxSteps: 20 }), model("m1", "openai/gpt-4o-mini"), agent("w", "writer")],
+    const v2 = board([agent("a", "researcher", { reasoning: "high", maxSteps: 20, approvals: "manual" }), model("m1", "openai/gpt-4o-mini"), agent("w", "writer")],
       [{ id: "e1", source: "m1", target: "a", order: 0 }, { id: "e2", source: "a", target: "w", order: 0 }]);
     expect(describeChanges(v1, v2)).toEqual([
       "Added agent Writer",
       "Researcher: steps per message any → 20",
       "Researcher: thinking default → high",
+      "Researcher: approvals smart → manual",
       "Model Claude Sonnet 4.5 → GPT-4o mini",
       "Researcher hands work to Writer",
     ]);

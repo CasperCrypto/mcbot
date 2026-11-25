@@ -46,7 +46,8 @@ function state(t: TaskView, i: LiveContextInput, self: boolean): string {
       const since = t.startedAt ? `, for ${span(i.now - t.startedAt)}` : "";
       const last = w?.recent.at(-1);
       const steps = w && w.steps ? `; ${w.steps} step${w.steps === 1 ? "" : "s"} so far, the last ${w.lastAt ? `${span(i.now - w.lastAt)} ago` : "earlier"}${last ? ` (${last.tool}${last.detail ? ` ${last.detail}` : ""})` : ""}` : "";
-      return `${who} working on it in its own run${since}${steps}`;
+      const until = t.goal ? ", and it keeps going until a check agrees it is done" : "";
+      return `${who} working on it in its own run${since}${steps}${until}`;
     }
     case "blocked": return `blocked${t.error ? `: ${clip(t.error, 160)}` : ""}`;
     case "review": return "finished, waiting for a person to review it";

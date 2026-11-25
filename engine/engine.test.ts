@@ -174,6 +174,17 @@ describe("engine", () => {
     expect((await api<TasksView>("/api/tasks?boardId=team")).body.tasks.some((t) => t.id === id)).toBe(false);
   }, 300_000);
 
+  // Until done (Hermes' goal mode): the task says so, and a person's "Mark done" needs no words and no judge
+  // (Hermes refuses an empty completion; McBot's --force is a person's override, hermes/MCBOT.md).
+  it.skipIf(!process.env.MCBOT_HERMES_BIN && process.env.MCBOT_E2E !== "1")("keeps a task going until done, and a person marks it done in one click", async () => {
+    const created = await api<TaskView>("/api/tasks", { method: "POST", body: JSON.stringify({ boardId: "team", title: "Plan the launch", body: "", assignee: null, by: "Ada", goal: true }) });
+    expect(created.status, JSON.stringify(created.body)).toBe(200);
+    expect(created.body).toMatchObject({ title: "Plan the launch", goal: true });
+    const done = await api<TaskDetail>("/api/tasks/act", { method: "POST", body: JSON.stringify({ boardId: "team", id: created.body.id, by: "Ada", action: "complete" }) });
+    expect(done.status, JSON.stringify(done.body)).toBe(200);
+    expect(done.body).toMatchObject({ status: "done", result: "Marked done by Ada", goal: true });
+  }, 120_000);
+
   // The agent's abilities and its image maker, as Hermes reads them: only the chosen tool sets are
   // offered to the model, and image_generate goes to the wired provider with the saved key.
   it.skipIf(!process.env.MCBOT_HERMES_BIN && process.env.MCBOT_E2E !== "1")("gives an agent only its chosen abilities and makes an image with its image maker", async () => {
@@ -293,5 +304,59 @@ describe("engine", () => {
     expect((await api<RunSummary[]>("/api/runs?boardId=team")).body.find((r) => r.runId === body.runId)?.approval).toBeNull();
     // Nothing left to answer.
     expect((await api(`/api/runs/${body.runId}/approval`, { method: "POST", body: JSON.stringify({ choice: "once" }) })).status).toBe(409);
+  }, 400_000);
+
+  // Hermes' clarify through the runs API: McBot reads the question from the run's status (its event
+  // stream carries approvals only), shows it, and the person's answer reaches the agent.
+  it.skipIf(!process.env.MCBOT_HERMES_BIN && process.env.MCBOT_E2E !== "1")("shows the agent's question and gives it the person's answer", async () => {
+    const prompt = `call:clarify ${JSON.stringify({ questions: [{ question: "Which colour?", choices: ["red", "blue"] }] })}`;
+    const { body } = await api<{ runId: string }>("/api/runs", { method: "POST", body: JSON.stringify({ boardId: "team", agentNodeId: "n-agent", prompt }) });
+    let summary: RunSummary | undefined;
+    await untilAsync(async () => {
+      summary = (await api<RunSummary[]>("/api/runs?boardId=team")).body.find((r) => r.runId === body.runId);
+      return Boolean(summary?.question) || summary?.status !== "running";
+    }, 240_000);
+    expect(summary?.question, JSON.stringify(summary)).toMatchObject({ question: "Which colour?", choices: ["red (Recommended)", "blue"], multiSelect: false });
+    const promptId = summary!.question!.promptId;
+    expect((await api(`/api/runs/${body.runId}/reply`, { method: "POST", body: JSON.stringify({ promptId, answer: "blue" }) })).status).toBe(200);
+    let events: RunEvent[] = [];
+    await untilAsync(async () => {
+      events = (await api<RunEvent[]>(`/api/runs/${body.runId}`)).body;
+      return events.some((e) => e.type === "run.finished");
+    }, 240_000);
+    expect(events.find((e) => e.type === "run.question.settled")).toMatchObject({ promptId, answer: "blue" });
+    const answered = events.find((e) => e.type === "run.tool.finished" && e.tool === "clarify");
+    expect(answered && answered.type === "run.tool.finished" ? JSON.parse(answered.output) : null).toMatchObject({ responses: [{ question: "Which colour?", user_response: "blue" }] });
+    expect((await api<RunSummary[]>("/api/runs?boardId=team")).body.find((r) => r.runId === body.runId)?.question).toBeNull();
+    // Nothing left to answer.
+    expect((await api(`/api/runs/${body.runId}/reply`, { method: "POST", body: JSON.stringify({ promptId, answer: "red" }) })).status).toBe(409);
+  }, 400_000);
+
+  // Approvals → Never ask compiles to approvals.mode "off" (quoted: a bare off is false in YAML 1.1), and Hermes honours it.
+  it.skipIf(!process.env.MCBOT_HERMES_BIN && process.env.MCBOT_E2E !== "1")("runs a risky command without asking when the agent is set to never ask", async () => {
+    const set = async (value: string | null) => {
+      const c = client();
+      await until(() => c.provider.synced);
+      setNodeField(c.doc, "n-agent", "approvals", value ?? undefined);
+      await until(() => ((graphFromDoc(c.doc).nodes.find((n) => n.id === "n-agent")?.data as { approvals?: string }).approvals ?? null) === value);
+      await engine.relay.flush();
+      c.provider.destroy();
+      const compiled = await api<CompileResponse>("/api/compile", { method: "POST", body: JSON.stringify({ boardId: "team" }) });
+      expect(compiled.body.ok).toBe(true);
+    };
+    await set("off");
+    expect(readFileSync(join(workspace, "hermes/profiles/triage/config.yaml"), "utf8")).toContain('\napprovals:\n  mode: "off"\n');
+    const target = join(workspace, "hermes/profiles/triage/workspace/scratch");
+    writeFileSync(target, "temporary\n");
+    const { body } = await api<{ runId: string }>("/api/runs", { method: "POST", body: JSON.stringify({ boardId: "team", agentNodeId: "n-agent", prompt: `call:terminal ${JSON.stringify({ command: `rm -rf ${target}` })}` }) });
+    let events: RunEvent[] = [];
+    await untilAsync(async () => {
+      events = (await api<RunEvent[]>(`/api/runs/${body.runId}`)).body;
+      return events.some((e) => e.type === "run.finished");
+    }, 240_000);
+    expect(events.some((e) => e.type === "run.approval"), JSON.stringify(events.filter((e) => e.type !== "run.log").slice(-4))).toBe(false);
+    expect(existsSync(target)).toBe(false);
+    await set(null);
+    expect(readFileSync(join(workspace, "hermes/profiles/triage/config.yaml"), "utf8")).not.toContain("approvals:");
   }, 400_000);
 });

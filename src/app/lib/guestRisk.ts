@@ -12,5 +12,7 @@ export function guestRisks(agent: AgentNode, graph: Graph): string[] {
   const abilities = RISKY.filter((k) => caps.includes(k)).map((k) => CAPABILITIES.find((c) => c.key === k)?.label ?? k);
   const wired = new Set(graph.edges.flatMap((e) => (e.source === agent.id ? [e.target] : e.target === agent.id ? [e.source] : [])));
   const tools = graph.nodes.filter((n) => n.kind === "tool" && wired.has(n.id)).map((n) => (n.data as { name?: string }).name ?? "a tool");
-  return [...abilities, ...tools];
+  // "Never ask" (approvals.mode off): a guest's request could run a risky command with nobody asked.
+  const unasked = agent.data.approvals === "off" && (abilities.length || tools.length) ? ["never asks before risky commands"] : [];
+  return [...abilities, ...tools, ...unasked];
 }

@@ -235,8 +235,16 @@ export function chatArgv(profile: string, bin?: Pick<HermesBinary, "kind">): str
   return bin?.kind === "bundled" ? [...argv, "--source", "mcbot"] : argv;
 }
 
+/**
+ * The scope Hermes' kanban dispatcher gives a worker (gateway/session_kanban.py, hermes_cli/kanban_db_dispatch.py).
+ * McBot is never one of its workers: started from inside an agent's task (an agent working on McBot), it would
+ * pass that scope on, and Hermes would refuse every task but that one and judge a person's verdict as the worker's.
+ */
+const WORKER_SCOPE = /^HERMES_(KANBAN_\w+|PROFILE|SESSION_SOURCE|TENANT)$/;
+
 export function hermesEnv(root: string, base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
-  return { ...base, HERMES_HOME: root };
+  const env = Object.fromEntries(Object.entries(base).filter(([k]) => !WORKER_SCOPE.test(k)));
+  return { ...env, HERMES_HOME: root };
 }
 
 /** hermes/UPSTREAM.json, written by scripts/hermes-sync.ts. */

@@ -8,6 +8,8 @@ export function stepOf(events: readonly RunEvent[] | undefined): string {
     const e = events[i]!;
     if (e.type === "run.approval") return "Waiting for you";
     if (e.type === "run.approval.settled") return "Thinking";
+    if (e.type === "run.question") return "Asking you";
+    if (e.type === "run.question.settled") return "Thinking";
     if (e.type === "run.tool.started") return toolLabel(e.tool);
     if (e.type === "run.tool.finished") return "Thinking";
     if (e.type === "run.text") return "Writing";
