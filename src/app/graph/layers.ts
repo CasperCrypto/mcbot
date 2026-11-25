@@ -28,7 +28,7 @@ export interface LayerItem {
   state: "set" | "default" | "missing";
   target: LayerTarget;
   /** A setting of the agent itself, changed right in the row (the Layers view draws its control). */
-  edit?: "maxSteps" | "reasoning" | "helpers" | "dailyBudgetUsd" | "approvals";
+  edit?: "maxSteps" | "reasoning" | "helpers" | "dailyBudgetUsd" | "approvals" | "neverRun" | "blockedSites";
 }
 
 export interface Layer {
@@ -116,6 +116,8 @@ export function harnessLayers(b: AgentBundle, facts: LayerFacts = {}): Layer[] {
       id: "guardrails", title: "Guardrails", what: "What keeps it safe and affordable",
       items: [
         { label: "Approvals", detail: CARE[a.approvals ?? ""] ?? CARE[""]!, state: a.approvals ? "set" : "default", target: self, edit: "approvals" },
+        { label: "Never run", detail: a.neverRun?.length ? `${a.neverRun.length} command${a.neverRun.length === 1 ? "" : "s"} blocked, even when it never asks` : "Nothing blocked", state: a.neverRun?.length ? "set" : "default", target: self, edit: "neverRun" },
+        { label: "Blocked websites", detail: a.blockedSites?.length ? `${a.blockedSites.length} site${a.blockedSites.length === 1 ? "" : "s"} its tools won't open` : "None", state: a.blockedSites?.length ? "set" : "default", target: self, edit: "blockedSites" },
         { label: "Daily budget", detail: a.dailyBudgetUsd ? `$${a.dailyBudgetUsd} a day` : "No limit", state: a.dailyBudgetUsd ? "set" : "default", target: self, edit: "dailyBudgetUsd" },
       ],
     },

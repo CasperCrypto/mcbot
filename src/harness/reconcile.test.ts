@@ -73,6 +73,20 @@ describe("Hermes → board", () => {
     expect(after.config).not.toContain("headed");
   });
 
+  it("follows the agent's own settings changed in Hermes: steps, thinking, approvals, never run, blocked sites", () => {
+    const graph = load("full.graph.json");
+    const { changed, after } = follow(graph, "writer", (f) => ({
+      ...f,
+      config: f.config!.replace("  max_turns: 40\n", "  max_turns: 12\n").replace("  reasoning_effort: high\n", "")
+        .replace("  mode: manual\n", "  mode: \"off\"\n  deny:\n    - git push --force*\n")
+        .concat("security:\n  website_blocklist:\n    enabled: true\n    domains:\n      - bad.example\n"),
+    }));
+    expect(changed.sort()).toEqual(["approvals", "blocked websites", "commands it may never run", "steps per message", "thinking"]);
+    expect(after.config).toContain("  max_turns: 12\n");
+    expect(after.config).not.toContain("reasoning_effort");
+    expect(after.config).toContain('\napprovals:\n  mode: "off"\n  deny:\n    - git push --force*\nsecurity:\n  website_blocklist:\n    enabled: true\n    domains:\n      - bad.example\n');
+  });
+
   it("follows a hand-off removed from the Team section", () => {
     const graph = load("full.graph.json");
     const { changed, after, next } = follow(graph, "researcher", (f) => ({ ...f, soul: f.soul!.replace(/\n\n## Team[\s\S]*$/, "\n") }));

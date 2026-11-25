@@ -4,7 +4,7 @@
  * settings (steps per message, helpers, thinking, approvals, daily budget) are controls in their row; every
  * other row opens what changes it: the block on the Board (its inspector) or the view that holds it.
  */
-import { Brain, ChevronRight, Cpu, MessageSquare, Puzzle, Radio, Repeat, ShieldCheck, Wrench } from "lucide-react";
+import { Brain, ChevronRight, Cpu, MessageSquare, Puzzle, Radio, Repeat, ShieldCheck, Wrench, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { resolveGraph } from "../../compile";
 import type { AgentBundle } from "../../compile/validate";
@@ -27,6 +27,25 @@ const ICONS: Record<LayerId, ReactNode> = {
 const THINKING: Record<string, string> = {
   none: "Off", minimal: "Minimal", low: "Low", medium: "Medium", high: "High", xhigh: "Extra high", max: "Max", ultra: "Ultra",
 };
+
+/** A short list edited in place: chips with ×, and a field that adds on Enter. */
+function ListEdit({ values, placeholder, label, normalize, onChange, testId }: { values: string[]; placeholder: string; label: string; normalize: (s: string) => string; onChange: (v: string[]) => void; testId: string }) {
+  const [draft, setDraft] = useState("");
+  const add = () => {
+    const v = normalize(draft.trim());
+    if (v && !values.includes(v)) onChange([...values, v]);
+    setDraft("");
+  };
+  return (
+    <div className="layer-list" data-testid={testId}>
+      {values.map((v) => (
+        <span key={v} className="layer-chip mono">{v}<button type="button" aria-label={`Remove ${v}`} onClick={() => onChange(values.filter((x) => x !== v))}><X size={11} /></button></span>
+      ))}
+      <input className="layer-input" value={draft} placeholder={placeholder} aria-label={`Add to ${label}`} maxLength={253}
+        onChange={(e) => setDraft(e.target.value)} onBlur={add} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+    </div>
+  );
+}
 
 /** The control for a row that is one of the agent's own settings. */
 function Editor({ item, bundle }: { item: LayerItem; bundle: AgentBundle }) {
@@ -62,6 +81,12 @@ function Editor({ item, bundle }: { item: LayerItem; bundle: AgentBundle }) {
             { value: "off", label: "Never ask", sub: "Runs risky commands itself" },
           ]} />
       );
+    case "neverRun":
+      return <ListEdit values={a.neverRun ?? []} label="Never run" placeholder="git push --force*" normalize={(v) => v.slice(0, 200)} testId="layer-edit-neverRun"
+        onChange={(v) => set("neverRun", v.length ? v.slice(0, 50) : null)} />;
+    case "blockedSites":
+      return <ListEdit values={a.blockedSites ?? []} label="Blocked websites" placeholder="example.com" testId="layer-edit-blockedSites"
+        normalize={(v) => v.toLowerCase().replace(/^https?:\/\//, "").split("/")[0]!.replace(/^www\./, "")} onChange={(v) => set("blockedSites", v.length ? v.slice(0, 200) : null)} />;
     case "helpers": {
       const caps = a.capabilities ?? DEFAULT_CAPABILITIES;
       const on = caps.includes("delegation");

@@ -332,6 +332,34 @@ describe("engine", () => {
     expect((await api(`/api/runs/${body.runId}/reply`, { method: "POST", body: JSON.stringify({ promptId, answer: "red" }) })).status).toBe(409);
   }, 400_000);
 
+  // Never run (approvals.deny) holds even when the agent never asks: Hermes checks it before any bypass.
+  it.skipIf(!process.env.MCBOT_HERMES_BIN && process.env.MCBOT_E2E !== "1")("never runs a blocked command, even for an agent that never asks", async () => {
+    const set = async (fields: Record<string, unknown>) => {
+      const c = client();
+      await until(() => c.provider.synced);
+      for (const [k, v] of Object.entries(fields)) setNodeField(c.doc, "n-agent", k, v ?? undefined);
+      await until(() => Object.entries(fields).every(([k, v]) => JSON.stringify((graphFromDoc(c.doc).nodes.find((n) => n.id === "n-agent")?.data as Record<string, unknown>)[k] ?? null) === JSON.stringify(v)));
+      await engine.relay.flush();
+      c.provider.destroy();
+      const compiled = await api<CompileResponse>("/api/compile", { method: "POST", body: JSON.stringify({ boardId: "team" }) });
+      expect(compiled.body.ok).toBe(true);
+    };
+    await set({ approvals: "off", neverRun: ["rm -rf *"] });
+    expect(readFileSync(join(workspace, "hermes/profiles/triage/config.yaml"), "utf8")).toContain('\napprovals:\n  mode: "off"\n  deny:\n    - rm -rf *\n');
+    const target = join(workspace, "hermes/profiles/triage/workspace/precious");
+    writeFileSync(target, "keep\n");
+    const { body } = await api<{ runId: string }>("/api/runs", { method: "POST", body: JSON.stringify({ boardId: "team", agentNodeId: "n-agent", prompt: `call:terminal ${JSON.stringify({ command: `rm -rf ${target}` })}` }) });
+    let events: RunEvent[] = [];
+    await untilAsync(async () => {
+      events = (await api<RunEvent[]>(`/api/runs/${body.runId}`)).body;
+      return events.some((e) => e.type === "run.finished");
+    }, 240_000);
+    expect(existsSync(target)).toBe(true);
+    const out = events.find((e) => e.type === "run.tool.finished" && e.tool === "terminal");
+    expect(out && out.type === "run.tool.finished" ? out.output : "", JSON.stringify(events.filter((e) => e.type !== "run.log").slice(-4))).toContain("BLOCKED");
+    await set({ approvals: null, neverRun: null });
+  }, 400_000);
+
   // Knowledge → Business: a Word file is read by Hermes' own extractor, goes on the board, compiles into
   // every agent's business-files skill, and the agent reads it with skill_view.
   it.skipIf(!process.env.MCBOT_HERMES_BIN && process.env.MCBOT_E2E !== "1")("reads a business document and gives it to the agents as a skill", async () => {

@@ -562,3 +562,10 @@ h1, h2, h3 { text-wrap: balance; }
 .learn-train-panel input { height: 30px; min-width: 0; padding: 0 10px; border: 0; border-radius: var(--r-sm); background: var(--bg-input); color: var(--text); font: inherit; font-size: 13px; }
 .learn-train-panel input:focus { outline: none; box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / 0.5); }
 .learn-train-row[data-status] { cursor: default; }
+
+/* Layers → Guardrails lists (Never run, Blocked websites). */
+.layer-list { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; max-width: 62%; }
+.layer-chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 4px 0 8px; border-radius: var(--r-sm); background: var(--surface-2); font-size: 12px; color: var(--text); }
+.layer-chip button { display: grid; place-items: center; width: 18px; height: 18px; border: 0; border-radius: 5px; background: transparent; color: var(--text-3); cursor: pointer; }
+.layer-chip button:hover { background: rgb(var(--tint-rgb) / 0.08); color: var(--text); }
+.layer-list .layer-input { width: 170px; }

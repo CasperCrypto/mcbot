@@ -96,6 +96,13 @@ export function reconcile(input: Graph, files: ProfileFiles): Reconciled {
     const theirsList = theirs.capabilities === null ? null : compiledToolsets({ ...(bundle ?? emptyBundle(agent)), agent: { ...agent, data: { ...agent.data, capabilities: theirs.capabilities } } });
     if (!same(ours, theirsList)) set(agent.id, "capabilities", theirs.capabilities, "abilities");
     if (!same(browserOf(agent.data.browser), browserOf(theirs.browser))) set(agent.id, "browser", theirs.browser, "browser");
+    // The agent's own settings config.yaml holds: steps per message, thinking, approvals, never run, blocked sites.
+    const setting = (v: unknown) => (v === undefined || v === null || (Array.isArray(v) && v.length === 0) ? null : v);
+    for (const [key, what] of [["maxSteps", "steps per message"], ["reasoning", "thinking"], ["approvals", "approvals"], ["neverRun", "commands it may never run"], ["blockedSites", "blocked websites"]] as const) {
+      const mine = setting((agent.data as Record<string, unknown>)[key]);
+      const hers = setting((theirs as Record<string, unknown>)[key]);
+      if (!same(mine, hers)) set(agent.id, key, hers ?? undefined, what);
+    }
 
     // Models, tools and makers wired to the agent.
     const modelUnshown = read.unshown.some((u) => u.what.startsWith("model "));

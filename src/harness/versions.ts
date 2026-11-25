@@ -80,6 +80,8 @@ function nodeChanges(a: GraphNode, b: GraphNode): string[] {
     if ((x.maxSteps ?? null) !== (y.maxSteps ?? null)) out.push(`${n}: steps per message ${x.maxSteps ?? "any"} → ${y.maxSteps ?? "any"}`);
     if ((x.reasoning ?? null) !== (y.reasoning ?? null)) out.push(`${n}: thinking ${x.reasoning ?? "default"} → ${y.reasoning ?? "default"}`);
     if ((x.approvals ?? "smart") !== (y.approvals ?? "smart")) out.push(`${n}: approvals ${x.approvals ?? "smart"} → ${y.approvals ?? "smart"}`);
+    if (!same(x.neverRun ?? [], y.neverRun ?? [])) out.push(`${n}: never runs ${(y.neverRun ?? []).length} command${(y.neverRun ?? []).length === 1 ? "" : "s"}`);
+    if (!same(x.blockedSites ?? [], y.blockedSites ?? [])) out.push(`${n}: ${(y.blockedSites ?? []).length} blocked website${(y.blockedSites ?? []).length === 1 ? "" : "s"}`);
     if ((x.dailyBudgetUsd ?? null) !== (y.dailyBudgetUsd ?? null)) out.push(`${n}: daily budget ${x.dailyBudgetUsd ? `$${x.dailyBudgetUsd}` : "none"} → ${y.dailyBudgetUsd ? `$${y.dailyBudgetUsd}` : "none"}`);
     if ((x.builtinSkills ?? true) !== (y.builtinSkills ?? true)) out.push(`${n}: Hermes' built-in skills ${y.builtinSkills === false ? "off" : "on"}`);
     if (!same(x.skills, y.skills)) out.push(`${n}: its own skills changed (${y.skills.length})`);

@@ -155,6 +155,16 @@ export const AgentDataSchema = z.object({
   reasoning: ReasoningSchema.nullish(),
   /** When it asks before a risky command (`approvals.mode`); null/unset = Hermes' default ("smart"). */
   approvals: ApprovalModeSchema.nullish(),
+  /**
+   * Commands it may never run, as case-insensitive globs ("git push --force*"): `approvals.deny`,
+   * which Hermes checks before anything else, even when the agent never asks (tools/approval_floors.py).
+   */
+  neverRun: z.array(z.string().trim().min(1).max(200)).max(50).nullish(),
+  /**
+   * Websites its web and browser tools may not open ("example.com" also blocks its subdomains,
+   * "*.example.com" only those): `security.website_blocklist` (tools/website_policy.py).
+   */
+  blockedSites: z.array(z.string().trim().min(1).max(253)).max(200).nullish(),
   /** How its browser runs (Hermes' `browser:` settings); null = Hermes' defaults. */
   browser: z.object({
     /** A visible window you can watch (`browser.headed`). */

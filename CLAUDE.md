@@ -414,14 +414,18 @@ Change them additively; a breaking change bumps the version.
 - **Layers** (second mode of the board, `graph/LayersView.tsx`, pure `graph/layers.ts`): one agent's harness outside in,
   grouped like Settings: Surfaces (McBot chat, chat apps), Loop (steps per message, hand-offs, helpers, schedules),
   Context (SOUL.md, team knowledge, memory, skills, Hermes' compaction), Model (main and backups), Tools (abilities,
-  connectors, makers), Plugins, Guardrails (approvals, daily budget). Each row says whether the board sets it, Hermes
-  defaults it or it is missing. The agent's own settings (steps per message, helpers, thinking, approvals, daily budget: `edit`
+  connectors, makers), Plugins, Guardrails (approvals, never run, blocked websites, daily budget). Each row says whether the board sets it, Hermes
+  defaults it or it is missing. The agent's own settings (steps per message, helpers, thinking, approvals, never run, blocked websites, daily budget: `edit`
   in `layers.ts`) change right in their row; every other row opens where it is changed. The loop's **steps per message** is the agent's `maxSteps`, compiled to `agent.max_turns`
   (only when set; `OWNED` `agent.max_turns`; read back by `src/harness/read.ts`). Its **thinking** is `reasoning`,
   compiled to `agent.reasoning_effort` (`none`…`ultra`, only when set; `OWNED`; read back). Its **approvals** is
   `approvals` (Always ask = `manual`, Smart = unset, Hermes' default, Never ask = `off`, quoted), compiled to
   `approvals.mode` (`OWNED`; read back, a bare `off` too; its other `approvals.*` keys stay in Hermes); Guardrails and the
-  agent page change it, and the Share sheet warns when a guest could reach an agent that never asks. A tool block's **only
+  agent page change it, and the Share sheet warns when a guest could reach an agent that never asks. **Never run**
+  (`neverRun`, globs) compiles to `approvals.deny`, which Hermes checks even when the agent never asks; **blocked
+  websites** (`blockedSites`) to `security.website_blocklist` (`enabled: true`, `domains`); McBot owns those two only
+  while the board sets a list or the existing one isn't switched off (`OWNED` `entries` sees both sides). The agent's own
+  settings (steps, thinking, approvals, never run, blocked sites) also follow edits made in Hermes (`reconcile.ts`). A tool block's **only
   these tools** (`toolsInclude`, and `toolsExclude` read from Hermes) compiles to `mcp_servers.<name>.tools.include`
   / `.exclude`: fewer tool definitions, fewer tokens per message (Hermes' code-mode-like `execute_code` covers only
   its built-in tools, not MCP ones).

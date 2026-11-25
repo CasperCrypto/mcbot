@@ -101,6 +101,20 @@ describe("careful writer: config.yaml", () => {
     expect(mergeConfig(disk, compiled("model:\n  provider: custom:mcbot-a\n"))).toBe(compiled("image_gen:\n  provider: comfyui\n  model: sdxl\n  steps: 30\nmodel:\n  provider: custom:mcbot-a\n"));
   });
 
+  it("keeps the other approvals and security settings, and a blocklist switched off in Hermes", () => {
+    const disk = "approvals:\n  mode: smart\n  timeout: 120\nsecurity:\n  redact_secrets: true\n  website_blocklist:\n    enabled: false\n    domains:\n      - old.example\n";
+    // The board sets nothing: the person's switched-off list and every other key stay.
+    expect(mergeConfig(disk, compiled("model:\n  provider: custom:mcbot-a\n"))).toBe(
+      compiled("approvals:\n  timeout: 120\nsecurity:\n  redact_secrets: true\n  website_blocklist:\n    enabled: false\n    domains:\n      - old.example\nmodel:\n  provider: custom:mcbot-a\n"),
+    );
+    // The board blocks sites: they replace it, and the rest stays.
+    expect(mergeConfig(disk, compiled("approvals:\n  deny:\n    - git push --force*\nsecurity:\n  website_blocklist:\n    enabled: true\n    domains:\n      - bad.example\n"))).toBe(
+      compiled("approvals:\n  timeout: 120\n  deny:\n    - git push --force*\nsecurity:\n  redact_secrets: true\n  website_blocklist:\n    enabled: true\n    domains:\n      - bad.example\n"),
+    );
+    // A list the board showed and then cleared goes.
+    expect(mergeConfig("security:\n  website_blocklist:\n    enabled: true\n    domains:\n      - x.example\n", compiled("model:\n  provider: custom:mcbot-a\n"))).toBe(compiled("model:\n  provider: custom:mcbot-a\n"));
+  });
+
   it("replaces a file Hermes could not read either", () => {
     expect(mergeConfig("- a\n- b\n", compiled("a: 1\n"))).toBe(compiled("a: 1\n"));
     expect(mergeConfig("a: [\n", compiled("a: 1\n"))).toBe(compiled("a: 1\n"));

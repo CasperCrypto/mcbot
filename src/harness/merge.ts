@@ -12,7 +12,7 @@ import { MEDIA_PROVIDERS, SLUG_RE } from "../contracts/graph";
 import { canonicalText } from "../compile/text";
 
 /** A key McBot owns outright, a map of owned sub-keys, or a family of entries McBot owns. */
-type Owned = true | { readonly [key: string]: Owned } | { readonly entries: (key: string, parent: Record<string, unknown>) => boolean };
+type Owned = true | { readonly [key: string]: Owned } | { readonly entries: (key: string, parent: Record<string, unknown>, next: Record<string, unknown>) => boolean };
 
 const maker = (media: "image" | "video") => ({
   // A maker the board cannot show (a provider it does not know) is the person's: left alone.
@@ -29,7 +29,10 @@ export const OWNED: { readonly [key: string]: Owned } = {
   platform_toolsets: { cli: true, api_server: true },
   browser: { headed: true, engine: true, use_real_profile: true },
   agent: { max_turns: true, reasoning_effort: true },
-  approvals: { mode: true },
+  approvals: { mode: true, deny: true },
+  // The board's blocked websites, or a list it can still show; one switched off in Hermes
+  // (enabled: false) is the person's until the board sets one (compile writes enabled: true).
+  security: { website_blocklist: { entries: (key: string, parent: Record<string, unknown>, next: Record<string, unknown>) => (key === "enabled" || key === "domains") && (next.enabled === true || parent.enabled !== false) } },
   image_gen: maker("image"),
   video_gen: maker("video"),
   platforms: { telegram: { extra: { base_url: true } } },
@@ -62,9 +65,10 @@ function apply(doc: Document, next: Document, path: Path, owned: Owned, previous
   }
   if ("entries" in owned && typeof owned.entries === "function") {
     const keys = new Set([...keysAt(doc, path), ...keysAt(next, path)]);
-    const before = previous.getIn(path);
-    const parent = (before && typeof before === "object" ? (before as { toJSON?: () => unknown }).toJSON?.() ?? before : {}) as Record<string, unknown>;
-    for (const k of keys) if (owned.entries(k, parent)) apply(doc, next, [...path, k], true, previous);
+    const plain = (v: unknown) => (v && typeof v === "object" ? (v as { toJSON?: () => unknown }).toJSON?.() ?? v : {}) as Record<string, unknown>;
+    const parent = plain(previous.getIn(path));
+    const coming = plain(next.getIn(path));
+    for (const k of keys) if (owned.entries(k, parent, coming)) apply(doc, next, [...path, k], true, previous);
   } else {
     for (const [k, sub] of Object.entries(owned as { [key: string]: Owned })) apply(doc, next, [...path, k], sub, previous);
   }

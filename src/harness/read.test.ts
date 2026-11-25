@@ -72,6 +72,17 @@ describe("Hermes setup → board", () => {
     expect(kept.unshown.map((u) => u.what)).toEqual(["config.yaml: approvals.cron_mode"]);
   });
 
+  it("reads what an agent may never do, and leaves the rest of security in Hermes", () => {
+    const read = (config: string) => readHermes({ id: "b", name: "B" }, [{ name: "helper", config, soul: "# Helper\n", profileYaml: null, skills: {} }]);
+    const data = (r: ReturnType<typeof read>) => r.graph.nodes[0]!.data as { neverRun?: string[]; blockedSites?: string[] };
+    const on = read("approvals:\n  deny:\n    - git push --force*\nsecurity:\n  redact_secrets: true\n  website_blocklist:\n    enabled: true\n    domains:\n      - Bad.example\n");
+    expect(data(on)).toMatchObject({ neverRun: ["git push --force*"], blockedSites: ["bad.example"] });
+    expect(on.unshown.map((u) => u.what)).toEqual(["config.yaml: security.redact_secrets"]);
+    const off = read("security:\n  website_blocklist:\n    enabled: false\n    domains:\n      - old.example\n");
+    expect(data(off).blockedSites).toBeUndefined();
+    expect(off.unshown.map((u) => u.what)).toEqual(["config.yaml: security.website_blocklist.enabled", "config.yaml: security.website_blocklist.domains"]);
+  });
+
   it("splits the compiled Team section from the agent's own words", () => {
     const soul = "# Lead\n\nRuns the desk.\n\n## Team\n\nYou can hand work to these agents.\n\n- `writer` (Writer): drafts\n- `editor`";
     expect(splitSoul(soul)).toEqual({ own: "# Lead\n\nRuns the desk.", team: ["writer", "editor"], brief: null });
