@@ -5,7 +5,7 @@ import type { AgentNode } from "../../contracts/graph";
 import type { RunEvent, RunSummary } from "../../contracts/run";
 import { compileBoard, openHermesSetup, runAgent, stopRun } from "../actions";
 import { engine, onKeysChanged } from "../lib/engine";
-import { ago, usd } from "../lib/format";
+import { ago, plainLine, usd } from "../lib/format";
 import { utcDay } from "../lib/series";
 import { useBoard } from "../state/board";
 import { useApp } from "../state/store";
@@ -305,6 +305,8 @@ export function HomeView() {
   const noModel = agentsWithoutModel(graph);
   const modelHealth = useModelHealth(modelsOf(graph));
   const silent = modelsOf(graph).filter((m) => modelHealth[m.id] === "down" || modelHealth[m.id] === "missing");
+  // "OpenRouter key", not "OPENROUTER_API_KEY": the model that needs it says whose it is.
+  const keyOwner = (k: string) => modelsOf(graph).find((m) => m.data.apiKeyEnv === k)?.data.label || k;
   const missingKeys = [...new Set(modelsOf(graph).filter((m) => m.data.endpoint === "cloud" && m.data.apiKeyEnv && keys && !keys.includes(m.data.apiKeyEnv)).map((m) => m.data.apiKeyEnv))];
 
   const list = useMemo(() => Object.values(runs).sort((a, b) => b.startedAt - a.startedAt), [runs]);
@@ -340,7 +342,7 @@ export function HomeView() {
       action: { label: "Fix", icon: <Cpu size={12} />, run: () => app.openSettings("models") }, open: () => app.openSettings("models"),
     })),
     ...missingKeys.map((k): Item => ({
-      key: `key-${k}`, at: Date.now(), face: <span className="tile sm file"><KeyRound size={14} /></span>, title: `${k} isn't saved`, sub: "A cloud model needs this key", tone: "warn",
+      key: `key-${k}`, at: Date.now(), face: <span className="tile sm file"><KeyRound size={14} /></span>, title: `${keyOwner(k)} key isn't saved`, sub: `Its agents can't answer without ${k}`, tone: "warn",
       action: { label: "Add key", icon: <KeyRound size={12} />, run: () => app.openSettings("keys") }, open: () => app.openSettings("keys"),
     })),
     ...(drift ? [{
@@ -372,8 +374,8 @@ export function HomeView() {
 
   // Finished lately: answers and done tasks, newest first.
   const recent = [
-    ...list.filter((r) => r.status === "succeeded").slice(0, 6).map((r) => ({ key: r.runId, at: r.finishedAt ?? r.startedAt, profile: r.profile, title: r.prompt.split("\n")[0]!, sub: r.text.split("\n")[0] ?? "", open: () => app.openChat(r.agentNodeId) })),
-    ...(tasks ?? []).filter((t) => t.status === "done").slice(0, 6).map((t) => ({ key: t.id, at: t.completedAt ?? t.createdAt, profile: t.assignee ?? "task", title: t.title, sub: t.result ?? "Done", open: () => app.showTask(t.id) })),
+    ...list.filter((r) => r.status === "succeeded").slice(0, 6).map((r) => ({ key: r.runId, at: r.finishedAt ?? r.startedAt, profile: r.profile, title: plainLine(r.prompt), sub: plainLine(r.text), open: () => app.openChat(r.agentNodeId) })),
+    ...(tasks ?? []).filter((t) => t.status === "done").slice(0, 6).map((t) => ({ key: t.id, at: t.completedAt ?? t.createdAt, profile: t.assignee ?? "task", title: t.title, sub: t.result ? plainLine(t.result) : "Done", open: () => app.showTask(t.id) })),
   ].sort((a, b) => b.at - a.at).slice(0, 6);
 
   const today = cost?.byDay.find((d) => d.key === utcDay(Date.now()));
