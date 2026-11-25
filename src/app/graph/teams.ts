@@ -6,6 +6,7 @@ import { MEDIA_PROVIDERS, type Graph, type GraphEdge, type GraphNode, type Model
 import { withRichAnswers } from "../chat/rich";
 import { RESERVED_PROFILE_NAMES } from "../../contracts/graph";
 import { CATALOG, CONNECTOR_TOOLS, catalogNode } from "./catalog";
+import { freeDisplayName } from "./defaults";
 
 interface Member {
   /** The profile id it would like (made unique on the board). */
@@ -157,6 +158,7 @@ export function teamToAdd(graph: Graph, team: StarterTeam, model: ModelNode | nu
   if (!model) nodes.push(modelNode);
   const ids = new Map<string, string>();
   const skills: { profile: string; who: string; ids: readonly string[] }[] = [];
+  const shown: string[] = [];
   team.members.forEach((m, i) => {
     let name = m.name;
     for (let n = 2; taken.has(name) || RESERVED_PROFILE_NAMES.includes(name); n++) name = `${m.name}-${n}`;
@@ -166,7 +168,9 @@ export function teamToAdd(graph: Graph, team: StarterTeam, model: ModelNode | nu
     ids.set(m.name, id);
     // The lead on top, its team in a row below: hand-offs read top to bottom.
     const position = i === 0 ? { x: left + 340 + ((team.members.length - 2) * 260) / 2, y: top } : { x: left + 340 + (i - 1) * 260, y: top + 240 };
-    nodes.push({ id, kind: "agent", position, data: { name, displayName: m.displayName, description: m.description, soul: withRichAnswers(m.soul), skills: [], capabilities: null } });
+    const displayName = freeDisplayName(graph, m.displayName, shown);
+    shown.push(displayName);
+    nodes.push({ id, kind: "agent", position, data: { name, displayName, description: m.description, soul: withRichAnswers(m.soul), skills: [], capabilities: null } });
     edges.push({ id: `edge-${uid()}`, source: modelNode.id, target: id, order: 0 });
   });
   for (const [from, to] of team.handoffs) edges.push({ id: `edge-${uid()}`, source: ids.get(from)!, target: ids.get(to)!, order: 0 });

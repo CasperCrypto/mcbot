@@ -79,11 +79,22 @@ export function newChannel(g: Graph, platform: PlatformId, position: { x: number
  * A copy of a block beside the original (right-click → Duplicate, ⌘D): a new id, a free name of its
  * kind, "copy" in its title, everything else the same. Wires are not copied: the copy starts alone.
  */
+/**
+ * A display name no other agent on the board shows: "Writer", else "Writer 2", "Writer 3"… (as a
+ * Mac names a second folder). `also` holds names given in the same change, not on the board yet.
+ */
+export function freeDisplayName(g: Graph, wanted: string, also: Iterable<string> = []): string {
+  const taken = new Set([...g.nodes.filter((n) => n.kind === "agent").map((n) => String(n.data.displayName || n.data.name)), ...also].map((x) => x.trim().toLowerCase()));
+  const base = wanted.trim();
+  if (!taken.has(base.toLowerCase())) return base;
+  for (let n = 2; ; n++) if (!taken.has(`${base} ${n}`.toLowerCase())) return `${base} ${n}`;
+}
+
 export function duplicateNode(g: Graph, node: GraphNode): GraphNode {
   const data = structuredClone(node.data) as Record<string, unknown>;
   const base = String(data.name ?? node.kind).replace(/-copy(-\d+)?$/, "");
   data.name = uniqueName(`${base}-copy`, namesOf(g, node.kind));
-  if (node.kind === "agent" && typeof data.displayName === "string" && data.displayName) data.displayName = `${data.displayName} copy`;
+  if (node.kind === "agent" && typeof data.displayName === "string" && data.displayName) data.displayName = freeDisplayName(g, String(data.displayName).replace(/ \d+$/, ""));
   if (node.kind !== "agent" && typeof data.label === "string" && data.label) data.label = `${data.label} copy`;
   return { ...node, id: newId(node.kind), position: { x: node.position.x + 44, y: node.position.y + 44 }, data } as GraphNode;
 }

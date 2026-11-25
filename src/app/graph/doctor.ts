@@ -6,12 +6,14 @@
 import { resolveGraph } from "../../compile";
 import type { Graph, GraphNode } from "../../contracts/graph";
 import { agentsOf, agentsWithoutModel, modelsOf, type ModelHealth } from "../lib/models";
+import { freeDisplayName } from "./defaults";
 
 export type Fix =
   | { kind: "select"; nodeId: string; label: string }
   | { kind: "settings"; page: "models" | "keys" | "engine"; label: string }
   | { kind: "compile"; label: string }
-  | { kind: "delete"; nodeId: string; label: string };
+  | { kind: "delete"; nodeId: string; label: string }
+  | { kind: "rename"; nodeId: string; name: string; label: string };
 
 export interface Finding {
   id: string;
@@ -88,6 +90,21 @@ export function checkHarness(g: Graph, ctx: DoctorContext): Finding[] {
   for (const a of agentsOf(g)) {
     if (a.data.dailyBudgetUsd) continue;
     if (g.edges.some((e) => e.target === a.id && paid.has(e.source))) out.push({ id: `budget-${a.id}`, level: "tip", title: `${title(a)} has no daily budget`, sub: "It uses a paid model with no cap", nodeId: a.id, fix: { kind: "select", nodeId: a.id, label: "Set budget" } });
+  }
+
+  // Two agents people can't tell apart (two starter teams' Writers): the later ones get "Writer 2"…
+  const shown = new Map<string, GraphNode[]>();
+  for (const a of agentsOf(g)) {
+    const key = title(a).trim().toLowerCase();
+    shown.set(key, [...(shown.get(key) ?? []), a]);
+  }
+  const given: string[] = [];
+  for (const same of shown.values()) {
+    for (const a of same.slice(1)) {
+      const name = freeDisplayName(g, title(a), given);
+      given.push(name);
+      out.push({ id: `twin-${a.id}`, level: "tip", title: `Two agents are called ${title(a)}`, sub: `This one becomes ${name}`, nodeId: a.id, fix: { kind: "rename", nodeId: a.id, name, label: "Rename" } });
+    }
   }
 
   if (ctx.drift) out.push({ id: "drift", level: "warn", title: `${ctx.drift} file${ctx.drift > 1 ? "s" : ""} differ from the board`, sub: "Agents run what was last compiled", fix: { kind: "compile", label: "Compile" } });

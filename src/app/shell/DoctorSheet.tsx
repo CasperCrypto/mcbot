@@ -4,7 +4,7 @@
  */
 import { CircleCheck, CircleX, Lightbulb, Stethoscope, TriangleAlert, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { removeNodes } from "../../board/ydoc";
+import { removeNodes, setNodeField } from "../../board/ydoc";
 import { compileBoard } from "../actions";
 import { checkHarness, type Finding } from "../graph/doctor";
 import { REMOTE, engine, onKeysChanged } from "../lib/engine";
@@ -45,6 +45,7 @@ export function applyFix(f: Finding, boardId: string, doc: Parameters<typeof rem
   if (x.kind === "settings") { app.setDoctorOpen(false); app.openSettings(x.page); }
   if (x.kind === "compile") void compileBoard(boardId);
   if (x.kind === "delete") { removeNodes(doc, [x.nodeId]); app.toast({ kind: "ok", text: "Removed · ⌘Z brings it back" }); }
+  if (x.kind === "rename") setNodeField(doc, x.nodeId, "displayName", x.name);
 }
 
 export function DoctorSheet() {

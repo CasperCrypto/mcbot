@@ -23,6 +23,13 @@ describe("harness doctor", () => {
     expect(ids(g, ctx({ health: { m: "ok" }, keys: ["GITHUB_PERSONAL_ACCESS_TOKEN", "BRAVE_API_KEY"] }))).toEqual([]);
   });
 
+  it("finds two agents people can't tell apart, and renames the later one", () => {
+    const g = board([agent("a", "writer", { displayName: "Writer" }), agent("b", "writer-2", { displayName: "Writer" }), agent("c", "writer-3", { displayName: "writer" }), local("m")], [edge("e1", "m", "a"), edge("e2", "m", "b"), edge("e3", "m", "c")]);
+    const f = checkHarness(g, ctx({ health: { m: "ok" } }));
+    expect(f.map((x) => x.id)).toEqual(["twin-b", "twin-c"]);
+    expect(f.map((x) => x.fix)).toEqual([{ kind: "rename", nodeId: "b", name: "Writer 2", label: "Rename" }, { kind: "rename", nodeId: "c", name: "writer 3", label: "Rename" }]);
+  });
+
   it("is quiet about a healthy board", () => {
     expect(ids(board([agent("a", "writer"), local("m")], [edge("e", "m", "a")]), ctx({ health: { m: "ok" } }))).toEqual([]);
   });

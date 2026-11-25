@@ -28,6 +28,16 @@ describe("starter teams", () => {
     expect(resolveGraph(g).issues.filter((i) => i.level === "error")).toEqual([]);
   });
 
+  it("names a second team's members so no two agents show the same name", () => {
+    const graph: Graph = { schema: GRAPH_SCHEMA, id: "b", name: "B", nodes: [], edges: [] };
+    const first = teamToAdd(graph, research, null, newModel);
+    const once = { ...graph, nodes: first.nodes, edges: first.edges };
+    const second = teamToAdd(once, research, null, newModel);
+    const shown = [...first.nodes, ...second.nodes].filter((n) => n.kind === "agent").map((n) => String(n.data.displayName));
+    expect(new Set(shown).size).toBe(shown.length);
+    expect(shown).toContain(`${research.members[1]!.displayName} 2`);
+  });
+
   it("members bring only skills Hermes' library ships, under the profile name they got", async () => {
     const { LIBRARY } = await import("../../contracts/library.generated");
     const ids = new Set(LIBRARY.map((s) => s.id));

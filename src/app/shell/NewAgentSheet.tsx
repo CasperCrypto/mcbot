@@ -6,7 +6,7 @@ import { addEdge, addNode } from "../../board/ydoc";
 import { RESERVED_PROFILE_NAMES, type GraphNode, type ModelNode } from "../../contracts/graph";
 import { compileBoard, learnSkills, skillName } from "../actions";
 import { prettyName } from "../lib/names";
-import { newAgent, newId, newMaker, newModel } from "../graph/defaults";
+import { freeDisplayName, newAgent, newId, newMaker, newModel } from "../graph/defaults";
 import { CATALOG, CONNECTOR_TOOLS, catalogNode } from "../graph/catalog";
 import { makerProvider } from "../graph/teams";
 import { freeSpot } from "../graph/place";
@@ -60,7 +60,7 @@ export function NewAgentSheet() {
     setBusy(true);
     const app = useApp.getState();
     const base = newAgent(graph, freeSpot(graph, "agent", null, null)) as Extract<GraphNode, { kind: "agent" }>;
-    const agent: GraphNode = { ...base, data: { ...base.data, name: id, displayName: name.trim(), description: about.trim(), soul: withRichAnswers(soul.trim()) } };
+    const agent: GraphNode = { ...base, data: { ...base.data, name: id, displayName: freeDisplayName(graph, name), description: about.trim(), soul: withRichAnswers(soul.trim()) } };
     let modelId = model;
     doc.transact(() => {
       addNode(doc, agent);
