@@ -477,7 +477,7 @@ h1, h2, h3, .lede, .hero-lede { text-wrap: balance; }
 .foot { padding: 64px 0 40px; border-top: 0.5px solid var(--line); }
 .foot-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr); gap: 48px; }
 .foot-pitch p { max-width: 380px; margin: 14px 0 0; color: var(--text-3); font-size: 14.5px; }
-.foot-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.foot-cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
 .foot-cols h4 { margin: 0 0 10px; color: var(--text); font-size: 13.5px; font-weight: 600; }
 .foot-cols a { display: block; padding: 4px 0; color: var(--text-3); font-size: 14px; transition: color 0.15s; }
 .foot-cols a:hover { color: var(--text); }

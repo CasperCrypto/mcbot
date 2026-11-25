@@ -6,12 +6,14 @@
 import { resolveGraph } from "../../compile";
 import type { Graph, GraphNode } from "../../contracts/graph";
 import { agentsOf, agentsWithoutModel, modelsOf, type ModelHealth } from "../lib/models";
+import { freeDisplayName } from "./defaults";
 
 export type Fix =
   | { kind: "select"; nodeId: string; label: string }
   | { kind: "settings"; page: "models" | "keys" | "engine"; label: string }
   | { kind: "compile"; label: string }
-  | { kind: "delete"; nodeId: string; label: string };
+  | { kind: "delete"; nodeId: string; label: string }
+  | { kind: "rename"; nodeId: string; name: string; label: string };
 
 export interface Finding {
   id: string;
@@ -35,6 +37,14 @@ export interface DoctorContext {
 const title = (n: GraphNode) => String(("displayName" in n.data && n.data.displayName) || ("label" in n.data && n.data.label) || n.data.name || n.kind);
 const RANK = { error: 0, warn: 1, tip: 2 } as const;
 const ENV_REF = /\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g;
+
+/** Parameters a model id names, in billions ("qwen3:8b", "Qwen3.5-9B" → 8, 9); null when it names none. */
+export function sizeB(model: string): number | null {
+  const m = /(?:^|[^a-z0-9.])(\d+(?:\.\d+)?)\s*b(?![a-z0-9])/i.exec(model);
+  return m ? Number(m[1]) : null;
+}
+/** At or under this, a local model is small for a lead that hands work to a team. */
+export const SMALL_B = 14;
 
 export function checkHarness(g: Graph, ctx: DoctorContext): Finding[] {
   const out: Finding[] = [];
@@ -88,6 +98,29 @@ export function checkHarness(g: Graph, ctx: DoctorContext): Finding[] {
   for (const a of agentsOf(g)) {
     if (a.data.dailyBudgetUsd) continue;
     if (g.edges.some((e) => e.target === a.id && paid.has(e.source))) out.push({ id: `budget-${a.id}`, level: "tip", title: `${title(a)} has no daily budget`, sub: "It uses a paid model with no cap", nodeId: a.id, fix: { kind: "select", nodeId: a.id, label: "Set budget" } });
+  }
+
+  // A lead on a small local model: it tends to answer itself instead of handing work on or using its tools.
+  for (const b of resolveGraph(g).bundles) {
+    const main = b.models[0];
+    const size = main?.data.endpoint === "local" ? sizeB(main.data.model) : null;
+    if (!b.team.length || size === null || size > SMALL_B) continue;
+    out.push({ id: `small-lead-${b.agent.id}`, level: "tip", title: `${title(b.agent)} leads a team on a small model`, sub: `Larger models (${SMALL_B + 1}B and up, or a cloud one) hand off work and use tools more reliably`, nodeId: b.agent.id, fix: { kind: "settings", page: "models", label: "Pick a model" } });
+  }
+
+  // Two agents people can't tell apart (two starter teams' Writers): the later ones get "Writer 2"…
+  const shown = new Map<string, GraphNode[]>();
+  for (const a of agentsOf(g)) {
+    const key = title(a).trim().toLowerCase();
+    shown.set(key, [...(shown.get(key) ?? []), a]);
+  }
+  const given: string[] = [];
+  for (const same of shown.values()) {
+    for (const a of same.slice(1)) {
+      const name = freeDisplayName(g, title(a), given);
+      given.push(name);
+      out.push({ id: `twin-${a.id}`, level: "tip", title: `Two agents are called ${title(a)}`, sub: `This one becomes ${name}`, nodeId: a.id, fix: { kind: "rename", nodeId: a.id, name, label: "Rename" } });
+    }
   }
 
   if (ctx.drift) out.push({ id: "drift", level: "warn", title: `${ctx.drift} file${ctx.drift > 1 ? "s" : ""} differ from the board`, sub: "Agents run what was last compiled", fix: { kind: "compile", label: "Compile" } });

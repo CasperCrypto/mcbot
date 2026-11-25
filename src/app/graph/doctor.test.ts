@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GRAPH_SCHEMA, type Graph, type GraphEdge, type GraphNode } from "../../contracts/graph";
-import { checkHarness, type DoctorContext } from "./doctor";
+import { checkHarness, sizeB, type DoctorContext } from "./doctor";
 
 const agent = (id: string, name: string, extra: Record<string, unknown> = {}): GraphNode => ({ id, kind: "agent", position: { x: 0, y: 0 }, data: { name, displayName: name, description: "", soul: "", skills: [], capabilities: null, ...extra } } as unknown as GraphNode);
 const local = (id: string): GraphNode => ({ id, kind: "model", position: { x: 0, y: 0 }, data: { name: id, label: "Ollama", endpoint: "local", baseUrl: "http://127.0.0.1:11434/v1", model: "qwen3:8b", apiKeyEnv: "", pricing: null } } as unknown as GraphNode);
@@ -21,6 +21,33 @@ describe("harness doctor", () => {
     expect(f.map((x) => `${x.level}:${x.id}`)).toEqual(["error:tool-key-gh-GITHUB_PERSONAL_ACCESS_TOKEN", "warn:tool-key-brave-BRAVE_API_KEY"]);
     expect(f[0]!.fix).toEqual({ kind: "select", nodeId: "gh", label: "Add key" });
     expect(ids(g, ctx({ health: { m: "ok" }, keys: ["GITHUB_PERSONAL_ACCESS_TOKEN", "BRAVE_API_KEY"] }))).toEqual([]);
+  });
+
+  it("finds two agents people can't tell apart, and renames the later one", () => {
+    const g = board([agent("a", "writer", { displayName: "Writer" }), agent("b", "writer-2", { displayName: "Writer" }), agent("c", "writer-3", { displayName: "writer" }), local("m")], [edge("e1", "m", "a"), edge("e2", "m", "b"), edge("e3", "m", "c")]);
+    const f = checkHarness(g, ctx({ health: { m: "ok" } }));
+    expect(f.map((x) => x.id)).toEqual(["twin-b", "twin-c"]);
+    expect(f.map((x) => x.fix)).toEqual([{ kind: "rename", nodeId: "b", name: "Writer 2", label: "Rename" }, { kind: "rename", nodeId: "c", name: "writer 3", label: "Rename" }]);
+  });
+
+  it("reads a model's size from its id", () => {
+    expect(sizeB("qwen3:8b")).toBe(8);
+    expect(sizeB("DeepSeek-V4-Pro-Qwen3.5-9B")).toBe(9);
+    expect(sizeB("llama3.1:70b-instruct-q4_K_M")).toBe(70);
+    expect(sizeB("gemma3:4b")).toBe(4);
+    expect(sizeB("mixtral-8x7b")).toBeNull(); // a mixture of experts, 47B in all: not "small"
+    expect(sizeB("gpt-5")).toBeNull();
+    expect(sizeB("claude-sonnet-4.5")).toBeNull();
+  });
+
+  it("tips a lead that hands work to a team on a small local model, not one on a big or cloud model", () => {
+    const small = { ...local("m"), data: { ...(local("m").data as object), model: "DeepSeek-V4-Pro-Qwen3.5-9B" } } as GraphNode;
+    const g = board([agent("lead", "lead"), agent("w", "writer"), small], [edge("e1", "m", "lead"), edge("e2", "m", "w"), edge("h", "lead", "w")]);
+    const f = checkHarness(g, ctx({ health: { m: "ok" } }));
+    expect(f.map((x) => x.id)).toEqual(["small-lead-lead"]);
+    expect(f[0]!.fix).toEqual({ kind: "settings", page: "models", label: "Pick a model" });
+    const big = { ...small, data: { ...(small.data as object), model: "qwen3:32b" } } as GraphNode;
+    expect(ids(board([agent("lead", "lead"), agent("w", "writer"), big], [edge("e1", "m", "lead"), edge("e2", "m", "w"), edge("h", "lead", "w")]), ctx({ health: { m: "ok" } }))).toEqual([]);
   });
 
   it("is quiet about a healthy board", () => {

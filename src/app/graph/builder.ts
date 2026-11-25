@@ -11,7 +11,7 @@ import { restrictPlan, type HarnessPlan, type PlanAgent, type PlanChoices } from
 import { withRichAnswers } from "../chat/rich";
 import { AGENT_SUGGESTIONS, agentIdFor } from "../shell/agentSuggestions";
 import { CATALOG, CONNECTOR_TOOLS, catalogNode } from "./catalog";
-import { newChannel } from "./defaults";
+import { freeDisplayName, newChannel } from "./defaults";
 import { makerProvider } from "./teams";
 
 const TOOLS = [...CATALOG, ...CONNECTOR_TOOLS];
@@ -118,13 +118,16 @@ export function planToBoard(plan: HarnessPlan, graph: Graph, model: ModelNode | 
   const makerNames = new Set(graph.nodes.filter((n) => n.kind === "media").map((n) => String(n.data.name)));
   const others = p.agents.length - 1;
 
+  const shown: string[] = [];
   p.agents.forEach((a, i) => {
     const profile = agentIdFor(a.name, new Set([...taken, ...RESERVED_PROFILE_NAMES]));
     taken.add(profile);
     const id = `agent-${uid()}`;
     ids.set(a.name.toLowerCase(), id);
     const position = i === 0 ? { x: left + 340 + (Math.max(0, others - 1) * 280) / 2, y: top } : { x: left + 340 + (i - 1) * 280, y: top + 260 };
-    nodes.push({ id, kind: "agent", position, data: { name: profile, displayName: a.name, description: a.about, soul: withRichAnswers(a.soul), skills: [], capabilities: null, ...(a.maxSteps ? { maxSteps: a.maxSteps } : {}) } });
+    const displayName = freeDisplayName(graph, a.name, shown);
+    shown.push(displayName);
+    nodes.push({ id, kind: "agent", position, data: { name: profile, displayName, description: a.about, soul: withRichAnswers(a.soul), skills: [], capabilities: null, ...(a.maxSteps ? { maxSteps: a.maxSteps } : {}) } });
     edges.push({ id: `edge-${uid()}`, source: modelNode.id, target: id, order: 0 });
     if (a.skills.length) skills.push({ profile, who: a.name, ids: a.skills });
     a.tools.forEach((t, k) => {

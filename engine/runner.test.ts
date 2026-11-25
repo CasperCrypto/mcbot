@@ -25,6 +25,68 @@ async function finishedOf(store: RunStore, runId: string, within = STOP_GRACE_MS
   return [];
 }
 
+describe("a gateway that is restarting", () => {
+  it("sends the run again when Hermes answers it is draining", async () => {
+    const { root, store } = setup();
+    let starts = 0;
+    const runs = {
+      up: async () => true,
+      start: async () => {
+        starts++;
+        if (starts === 1) throw new Error("Gateway is draining existing work; retry shortly.");
+        return "run_h3";
+      },
+      stop: async () => undefined,
+      sessionOf: async () => null,
+      events: async function* () { yield { event: "run.completed", output: "Done" }; },
+    } as unknown as HermesRuns;
+    const runner = new Runner({ store, root, managedRoot: false, api: { runs, env: {} }, findHermes: async () => ({ path: "hermes", shell: false, kind: "bundled" }) });
+    const runId = await runner.start(req);
+    const done = await finishedOf(store, runId, 8000);
+    expect(starts).toBe(2);
+    expect(done).toHaveLength(1);
+    expect(done[0]).toMatchObject({ status: "succeeded", text: "Done" });
+  }, 15_000);
+
+  it("sends a turn refused with runtime_draining again, but not one that already answered", async () => {
+    const { root, store } = setup();
+    let starts = 0;
+    const runs = {
+      up: async () => true,
+      start: async () => `run_h${++starts}`,
+      stop: async () => undefined,
+      sessionOf: async () => null,
+      events: async function* (_p: string, id: string) {
+        if (id === "run_h1") yield { event: "run.failed", error: "runtime_draining" };
+        else yield { event: "run.completed", output: "Answered" };
+      },
+    } as unknown as HermesRuns;
+    const runner = new Runner({ store, root, managedRoot: false, api: { runs, env: {} }, findHermes: async () => ({ path: "hermes", shell: false, kind: "bundled" }) });
+    const runId = await runner.start(req);
+    const done = await finishedOf(store, runId, 8000);
+    expect(starts).toBe(2);
+    expect(done).toHaveLength(1);
+    expect(done[0]).toMatchObject({ status: "succeeded", text: "Answered" });
+  }, 15_000);
+
+  it("fails at once for any other refusal", async () => {
+    const { root, store } = setup();
+    let starts = 0;
+    const runs = {
+      up: async () => true,
+      start: async () => { starts++; throw new Error("Unknown profile"); },
+      stop: async () => undefined,
+      sessionOf: async () => null,
+      events: async function* () { /* none */ },
+    } as unknown as HermesRuns;
+    const runner = new Runner({ store, root, managedRoot: false, api: { runs, env: {} }, findHermes: async () => ({ path: "hermes", shell: false, kind: "bundled" }) });
+    const runId = await runner.start(req);
+    const done = await finishedOf(store, runId, 5000);
+    expect(starts).toBe(1);
+    expect(done[0]).toMatchObject({ status: "failed", error: "Unknown profile" });
+  }, 15_000);
+});
+
 describe("stopping a run", () => {
   it("stops a one-shot Hermes that ignores SIGINT", async () => {
     const { root, store } = setup();

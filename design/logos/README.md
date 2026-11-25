@@ -20,3 +20,10 @@ until their SVG is added here.
   (MIT, © LobeHub), as the model marks are.
 - `email`, `sms`, `irc`, `knowledge`, `thinking`: plain glyphs for things that have no brand, drawn
   with [Lucide](https://lucide.dev)'s paths (ISC).
+- `canva`: [Devicon](https://github.com/devicons/devicon) (MIT, design/licences/devicon-LICENSE).
+- `dingtalk`: [MingCute](https://github.com/Richard9394/MingCute) (Apache-2.0,
+  design/licences/mingcute-LICENSE), drawn white for the dark tile.
+
+Services Simple Icons has no mark for (OpenAI, xAI, Krea, Groq, fal, DeepInfra, Together) come from
+LobeHub's icons in `scripts/tool-logos.ts` (`LOBE_TOOLS`, with each brand's tile colour), not from
+files here.

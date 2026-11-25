@@ -168,7 +168,7 @@
 .code-editor { grid-row: 1; position: relative; min-height: 0; }
 .monaco-host { position: absolute; inset: 0; }
 .code-ask { grid-row: 2; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); }
-.code-ask select { height: 28px; border-radius: var(--r-sm); border: 1px solid var(--line-2); background: var(--bg-input); padding: 0 6px; }
+.code-ask .pick-btn { flex: none; max-width: 34%; }
 .code-ask input { flex: 1; height: 28px; border: 0; outline: 0; background: transparent; user-select: text; }
 .code-terminal { grid-row: 3; min-height: 0; border-top: 1px solid var(--line); background: var(--bg-canvas); }
 .terminal-wrap { position: relative; height: 100%; }

@@ -38,7 +38,7 @@ release notes when it ships.
 | ● fixed in 0.7.0 | A long model id pushed an agent block's model and cost out of its card; the board showed through the inspector; on narrow windows the inspector covered the Board / Layers / Hermes switch | `styles/graph.css`, `styles/tokens.css` |
 | ● fixed in 0.7.0 | Skill names read "Mcp", "Mlops", "Antigravity cli"; Runs showed raw tool names; chat apps listed raw variable names; Ask McBot's request box had no field style | `lib/names.ts`, `views/RunsView.tsx`, `lib/chatApps.ts` |
 | ○ | Hermes' 14 personalities (`display.personality`) apply to chat apps and the terminal but not to runs McBot starts (the runs API takes `instructions` per request): expose them once runs can carry one | `hermes_cli/personality.py`, `gateway/platforms/api_server_runs.py:498` |
-| ○ | 30 brands have no logo (Slack, Canva, OpenAI, Microsoft, AWS, Amplitude, Twilio…): add SVGs to `design/logos/` | `design/logos/README.md` |
+| ○ | 20 tools still have no logo (Attio, Context7, Parallel, Klaviyo, Semgrep, Plaid, Jan, Feishu, WeCom…): add SVGs under an MIT, Apache or CC0 licence to `design/logos/` | `design/logos/README.md` |
 | ○ | Asana's connector is left out (its OAuth client comes from `${ASANA_CLIENT_ID}`) | `scripts/hermes-connectors.ts` |
 | ○ | A daily budget stops runs McBot starts, not Hermes' own schedules or task-board runs | `engine/cost.ts` |
 

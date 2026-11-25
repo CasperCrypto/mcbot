@@ -1,4 +1,4 @@
-import { Check, CheckCheck, Cloud, HardDrive, LoaderCircle, LogIn, Plug, Plus, RotateCcw, Send, Trash2, X } from "lucide-react";
+import { Check, CheckCheck, Clapperboard, Cloud, HardDrive, LoaderCircle, LogIn, Plug, Plus, RotateCcw, Send, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SignInView } from "../../contracts/api";
 import { removeNodes, setNodeField } from "../../board/ydoc";
@@ -13,9 +13,10 @@ import { useBoard } from "../state/board";
 import { useDismiss } from "../lib/presence";
 import { useApp } from "../state/store";
 import { Field, Issues, Segmented, TextListField } from "../ui";
-import { LogoTile, nodeLogo } from "./Logo";
+import { LogoTile, logoFor, nodeLogo } from "./Logo";
 import { MakerIcon } from "./nodes";
 import { AgentPage } from "../agent/AgentPage";
+import { Picker } from "../Picker";
 
 type Errors = Record<string, string>;
 export function fieldErrors(schema: { safeParse(v: unknown): { success: boolean; error?: { issues: { path: PropertyKey[]; message: string }[] } } }, data: unknown): Errors {
@@ -168,13 +169,11 @@ function MakerFields({ data, set }: { data: MediaData; set: (f: string, v: unkno
   const service = services[data.provider];
   return (
     <>
-      <label className="field">
+      <div className="field">
         <span>Service</span>
-        <select value={service ? data.provider : ""} onChange={(e) => set("provider", e.target.value)} data-testid="maker-service">
-          {!service && <option value="" disabled>Pick a service</option>}
-          {Object.entries(services).map(([id, p]) => <option key={id} value={id}>{p.label}</option>)}
-        </select>
-      </label>
+        <Picker label="Service" placeholder="Pick a service" value={service ? data.provider : ""} onChange={(v) => set("provider", v)} testId="maker-service"
+          options={Object.entries(services).map(([id, p]) => ({ value: id, label: p.label, icon: <LogoTile logo={logoFor([id])} kind="media" sm><Clapperboard size={12} /></LogoTile> }))} />
+      </div>
       {service && <KeyField name={service.keyEnv} />}
       <Field label="Model" value={data.model} onChange={(v) => set("model", v)} mono placeholder="Service default" />
       <Field label="ID" value={data.name} onChange={(v) => set("name", v)} mono error={errors.name} />

@@ -1,7 +1,7 @@
 import {
   ClipboardCopy,
   History as HistoryIcon,
-  BookOpen, Bot, FileCode2, FolderGit2, History, Palette as PaletteIcon, Stethoscope, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Upload, Users, Waypoints, Workflow, GraduationCap, Compass, Dumbbell } from "lucide-react";
+  BookOpen, Bot, FileCode2, FolderGit2, History, Palette as PaletteIcon, Stethoscope, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Upload, Users, Waypoints, Workflow, GraduationCap, Compass, Dumbbell, Star } from "lucide-react";
 import { describeHarness } from "../../harness/describe";
 import { Logo } from "../faces/FoodFace";
 import { redo, undo } from "../../board/undo";
@@ -20,6 +20,9 @@ import { AgentFace, Kbd } from "../ui";
 import { searchRuns } from "../lib/search";
 import { frecency, fuzzyScore, loadRecent, recordUse } from "../lib/rank";
 import { usePresence } from "../lib/presence";
+import { BrandGlyph } from "../graph/Logo";
+import { openExternal } from "../lib/open";
+import { REPO_URL, X_URL, markStarAsked } from "../lib/links";
 
 interface Command {
   id: string;
@@ -137,6 +140,8 @@ function useCommands(close: () => void): Command[] {
       { id: "appearance", group: "Actions", label: "Accent colour…", hint: "Blue, purple, pink, red, orange, yellow, green or graphite", icon: <PaletteIcon size={15} />, run: () => app.openSettings("appearance") },
       { id: "hermes", group: "Actions", label: "Engine", hint: "Status and restart", icon: <Cpu size={15} />, run: () => app.setHermesOpen(true) },
       { id: "report", group: "Actions", label: "Report a problem…", hint: "Details to paste into an issue", icon: <LifeBuoy size={15} />, run: () => app.setReportOpen(true) },
+      { id: "star", group: "Actions", label: "Star McBot Studio on GitHub", hint: "Helps others find it", icon: <Star size={15} />, run: () => { close(); markStarAsked(); void openExternal(REPO_URL); } },
+      { id: "follow-x", group: "Actions", label: "Follow McBot Studio on X", hint: "@McBotstudio", icon: <BrandGlyph brand="x" size={14} />, run: () => { close(); void openExternal(X_URL); } },
       { id: "setup", group: "Actions", label: "Set up a new team…", hint: "Run the setup assistant again", icon: <Compass size={15} />, run: () => { close(); app.setSetup({ completed: false, profile: app.setup?.profile ?? null }); } },
       ...(DEMO ? [{ id: "reset-demo", group: "Actions", label: "Reset demo", hint: "Start over with the sample board", icon: <RotateCcw size={15} />, run: resetDemo }] : []),
       ...VIEWS.map((v, i) => ({ id: `go-${v.tab}`, group: "Go to", label: v.label, hint: v.tip, icon: v.icon, keys: i < 9 ? ["⌘", String(i + 1)] : undefined, run: () => { app.setTab(v.tab); close(); } })),

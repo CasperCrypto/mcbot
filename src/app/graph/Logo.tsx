@@ -41,9 +41,16 @@ export function LogoTile({ logo, kind, sm, children }: { logo: Logo | null; kind
   // a near-black brand sits on the dark tile in white.
   return (
     <span className={`${cls} logo ${logo.tile ? "brand" : "neutral"}`} style={logo.tile ? ({ "--c": logo.tile, color: logo.ink } as CSSProperties) : undefined} data-tip={logo.title} data-tip-side="top">
-      <svg viewBox="0 0 24 24" aria-hidden fill="currentColor"><path d={logo.path} /></svg>
+      <svg viewBox="0 0 24 24" aria-hidden fill="currentColor"><path d={logo.path} fillRule={logo.rule} /></svg>
     </span>
   );
+}
+
+/** A brand's mark as a glyph in the text colour, for a button: GitHub, X. Nothing when it has none. */
+export function BrandGlyph({ brand, size = 13 }: { brand: string; size?: number }) {
+  const l = LOGOS[brand];
+  if (!l || "src" in l) return null;
+  return <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden fill="currentColor"><path d={l.path} /></svg>;
 }
 
 /** A block's brand: a tool or connector by its name or address, a chat app by platform, a model by its server, a maker by its service. */

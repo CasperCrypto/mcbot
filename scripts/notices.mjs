@@ -41,6 +41,13 @@ const head = [
   "the desktop shell is built with Tauri (MIT or Apache-2.0, https://github.com/tauri-apps/tauri) and Rust crates under MIT or Apache-2.0;",
   "The engine keeps its own licence file and third-party notices in its folder inside the app.",
 ].join("\n");
+// Brand marks drawn inside the app (design/logos, LobeHub's icons) keep their licences too.
+const LICENCES = join(ROOT, "design", "licences");
+if (existsSync(LICENCES)) {
+  for (const f of readdirSync(LICENCES).sort()) {
+    blocks.push([`Icons: ${f.replace(/-LICENSE$/, "")}`, "", readFileSync(join(LICENCES, f), "utf8").trim()].join("\n"));
+  }
+}
 mkdirSync(join(ROOT, "public"), { recursive: true });
 writeFileSync(join(ROOT, "public", "third-party-notices.txt"), `${head}\n\n${"=".repeat(72)}\n\n${blocks.join(`\n\n${"=".repeat(72)}\n\n`)}\n`);
 console.log(`public/third-party-notices.txt: ${blocks.length} packages`);

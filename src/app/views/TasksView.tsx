@@ -8,6 +8,8 @@ import { useBoard } from "../state/board";
 import { useDismiss, useLingering } from "../lib/presence";
 import { useApp } from "../state/store";
 import { AgentFace, Empty, PersonFace } from "../ui";
+import { Picker } from "../Picker";
+import { agentOptions } from "../lib/agentOptions";
 
 /** Hermes' columns (hermes_cli/kanban_workflow.py); the first three show only when they hold tasks. */
 const LANES: { status: TaskStatus; label: string; always: boolean }[] = [
@@ -167,10 +169,8 @@ function Detail({ id, agents, onClose, onChanged, closing = false }: { id: strin
         {task.body && <p className="task-body">{task.body}</p>}
         <div className="task-facts">
           <span className="faint">For</span>
-          <select value={task.assignee ?? ""} disabled={busy || task.status === "running"} onChange={(e) => void act({ action: "assign", profile: e.target.value || null })} aria-label="Assign to">
-            <option value="">Nobody yet</option>
-            {agents.map((a) => <option key={a.id} value={a.data.name}>{a.data.displayName || a.data.name}</option>)}
-          </select>
+          <Picker sm label="Assign to" value={task.assignee ?? "-"} disabled={busy || task.status === "running"} onChange={(v) => void act({ action: "assign", profile: v === "-" ? null : v })}
+            options={[{ value: "-", label: "Nobody yet" }, ...agentOptions(agents, (a) => a.data.name)]} />
           <span className="faint">From</span><Who name={task.createdBy} agents={agents} />
           <span className="faint">Added</span><span>{ago(task.createdAt)}</span>
         </div>
