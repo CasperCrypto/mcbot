@@ -55,6 +55,17 @@ export interface RunnerOptions {
 
 /** The gateway was booting or shutting down when the client connected (hermes_cli/gateway_chat.py). */
 const GATEWAY_NOT_READY = /Gateway (starting|draining)/i;
+/**
+ * Hermes refuses new work for a moment while its gateway restarts (a restart when idle, after a
+ * saved key or an update): `POST /v1/runs` answers 503 `gateway_draining`
+ * (gateway/platforms/api_server.py `_draining_response`), or the turn is refused `runtime_draining`
+ * (gateway/session_api_turn.py), or the gateway is briefly not listening. Such a run is sent again.
+ */
+export const GATEWAY_BUSY = /runtime_draining|gateway_draining|draining existing work|Gateway (is )?(starting|draining)/i;
+const NOT_LISTENING = /fetch failed|ECONNREFUSED|ECONNRESET|socket hang up/i;
+/** How long a run waits for a restarting gateway, and the pause between tries. */
+export const BUSY_WAIT_MS = 60_000;
+export const BUSY_RETRY_MS = 1500;
 /** How long a stopped run may take to wind down before McBot ends it. */
 export const STOP_GRACE_MS = 4000;
 
@@ -198,14 +209,35 @@ export class Runner {
     const fail = (error: string): void => {
       this.emit(runId, { type: "run.finished", status: "failed", exitCode: null, text: "", tokens: null, durationMs: Date.now() - started, sessionId: null, error });
     };
-    if (!(await this.ensureApi(runId, bin))) return fail("The engine gateway did not start its runs API");
+    // A gateway that is restarting refuses the run for a moment: wait for it and send the run again.
+    for (const giveUp = Date.now() + BUSY_WAIT_MS; ;) {
+      if (!(await this.ensureApi(runId, bin))) return fail("The engine gateway did not start its runs API");
+      const entry = this.active.get(runId);
+      if (entry?.cancelled) return this.endStopped(runId);
+      const busy = await this.sendApi(runId, req, started, fail);
+      if (busy === null) return;
+      if (Date.now() > giveUp) return fail("The engine was restarting and did not come back in time. Send it again.");
+      this.emit(runId, { type: "run.log", stream: "stderr", line: `[mcbot] the engine gateway is restarting (${busy}); sending this run again` });
+      await new Promise((r) => setTimeout(r, BUSY_RETRY_MS));
+      if (this.active.get(runId)?.cancelled) return this.endStopped(runId);
+    }
+  }
+
+  /**
+   * Send the run to Hermes once and follow it to its end. Resolves to why Hermes was busy when the
+   * run should be sent again (it was refused before it did anything), else null (it ended).
+   */
+  private async sendApi(runId: string, req: StartRun, started: number, fail: (error: string) => void): Promise<string | null> {
+    const api = this.opts.api!;
     const entry = this.active.get(runId);
-    if (entry?.cancelled) return this.endStopped(runId);
     let hermesRunId: string;
     try {
       hermesRunId = await api.runs.start(req.profile, req.prompt);
     } catch (err) {
-      return fail((err as Error).message);
+      const message = (err as Error).message;
+      if (GATEWAY_BUSY.test(message) || NOT_LISTENING.test(message)) return message;
+      fail(message);
+      return null;
     }
     const abort = new AbortController();
     if (entry) Object.assign(entry, { hermesRunId, abort });
@@ -215,15 +247,19 @@ export class Runner {
     }
     const mapper = new RunsApiMapper(req.toolNodes);
     let finished = false;
+    let shown = false;
     try {
       for await (const e of api.runs.events(req.profile, hermesRunId, abort.signal)) {
         for (const ev of mapper.map(e, started)) {
           if (ev.type === "run.finished") {
+            // Refused before it said or did anything: the gateway was restarting.
+            if (ev.status === "failed" && !shown && !entry?.cancelled && GATEWAY_BUSY.test(ev.error ?? "")) return ev.error ?? "busy";
             const sessionId = await api.runs.sessionOf(req.profile, hermesRunId);
             this.emit(runId, { ...ev, sessionId });
             finished = true;
             if (sessionId) this.emitCost(runId, req, sessionId);
           } else {
+            if (ev.type !== "run.log") shown = true;
             this.emit(runId, ev);
           }
         }
@@ -231,9 +267,10 @@ export class Runner {
       }
     } catch (err) {
       if (!finished) fail(`Lost the run's events: ${(err as Error).message}`);
-      return;
+      return null;
     }
     if (!finished) fail("The run ended without a result");
+    return null;
   }
 
   private emitCost(runId: string, req: StartRun, sessionId: string): void {

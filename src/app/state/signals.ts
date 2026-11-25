@@ -6,6 +6,7 @@ import { attentionCount } from "../lib/attention";
 import { notify, setAttention, setIslandActive, islandBridge } from "../lib/desktop";
 import { islandStateOf, type IslandAct, type IslandState } from "../lib/islandBridge";
 import { engine } from "../lib/engine";
+import { runError } from "../lib/runError";
 
 /**
  * Keep the menu bar count current, and notify when an agent finishes or a task changes in a way
@@ -60,7 +61,7 @@ export function useSignals(tasks: readonly TaskView[] | null, runs: Record<strin
     for (const r of Object.values(runs)) {
       if (before.get(r.runId) !== "running" || r.status === "running") continue;
       if (r.status === "succeeded") void notify(`${nameOf(r.profile)} answered`, r.text.split("\n")[0] || r.prompt);
-      if (r.status === "failed") void notify(`${nameOf(r.profile)} failed`, r.error ?? r.prompt);
+      if (r.status === "failed") void notify(`${nameOf(r.profile)} failed`, r.error ? runError(r.error) : r.prompt);
     }
   }, [runs]); // eslint-disable-line react-hooks/exhaustive-deps
 
