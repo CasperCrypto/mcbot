@@ -100,8 +100,9 @@ It sets (`--dry-run` lists it without changing anything):
   unless they ask for more; Actions may open pull requests (the engine update); a person approves the
   workflows of every outside contributor's pull request.
 - **"Protect main"** (ruleset on the default branch): no deleting it, no force pushes, signed commits, and
-  every change through a pull request whose checks passed (`test`, `windows`, `dependencies`,
-  `analyze (javascript-typescript)`, `analyze (actions)`, all from GitHub Actions). An admin may merge a
+  every change through a pull request whose checks passed (`test`, `windows`,
+  `analyze (javascript-typescript)`, `analyze (actions)`, all from GitHub Actions, and `dependencies` once the
+  dependency graph is on: the script checks, and says where to switch it on if Dependabot alerts didn't). An admin may merge a
   pull request GitHub started no checks for (the engine update's, opened by a workflow; or run CI on its
   branch by hand), but never push around a pull request. With a second maintainer, also require one
   approval and review from Code Owners (`.github/CODEOWNERS`).

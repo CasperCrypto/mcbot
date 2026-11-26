@@ -64,6 +64,17 @@ JSON
 step "Dependabot alerts (known vulnerabilities in dependencies)" -X PUT "repos/$REPO/vulnerability-alerts"
 step "Dependabot security updates (a pull request that fixes one)" -X PUT "repos/$REPO/automated-security-fixes"
 step "private vulnerability reporting (SECURITY.md's \"Report a vulnerability\")" -X PUT "repos/$REPO/private-vulnerability-reporting"
+# CI's `dependencies` check (GitHub's dependency review) needs the dependency graph, which turning on
+# Dependabot alerts also does. Its SBOM export answers only while the graph is on. Until it does, the
+# check is left out of "Protect main", so a missing graph can't block every pull request.
+graph=on
+if [ "$DRY" = 0 ] && ! gh api "repos/$REPO/dependency-graph/sbom" --silent >/dev/null 2>&1; then
+  graph=off
+  printf '  ✗ dependency graph is still off: turn it on at https://github.com/%s/settings/security_analysis, then run this again\n' "$REPO"
+  failed+=("dependency graph (Settings → Code security → Dependency graph), then run this again")
+else
+  [ "$DRY" = 0 ] && printf '  ✓ dependency graph is on (CI can review new dependencies)\n'
+fi
 
 echo "GitHub Actions"
 step "only GitHub's own actions, plus the ones listed below" -X PUT "repos/$REPO/actions/permissions" --input - <<'JSON'
@@ -82,6 +93,9 @@ step "a person approves workflows on every outside contributor's pull request" \
 JSON
 
 echo "Rulesets"
+required() { printf '{ "context": "%s", "integration_id": %s }' "$1" "$ACTIONS_APP"; }
+checks="$(required test), $(required windows), $(required "analyze (javascript-typescript)"), $(required "analyze (actions)")"
+[ "$graph" = on ] && checks="$checks, $(required dependencies)"
 # The default branch: no deleting it, no rewriting its history, no change without a pull request whose
 # checks passed, every commit signed. An admin may still merge a pull request whose checks GitHub never
 # started (the engine update's, opened by a workflow), but never push around a pull request.
@@ -104,13 +118,7 @@ ruleset "Protect main" <<JSON
         "required_review_thread_resolution": false } },
     { "type": "required_status_checks", "parameters": {
         "strict_required_status_checks_policy": false,
-        "required_status_checks": [
-          { "context": "test", "integration_id": $ACTIONS_APP },
-          { "context": "windows", "integration_id": $ACTIONS_APP },
-          { "context": "dependencies", "integration_id": $ACTIONS_APP },
-          { "context": "analyze (javascript-typescript)", "integration_id": $ACTIONS_APP },
-          { "context": "analyze (actions)", "integration_id": $ACTIONS_APP }
-        ] } }
+        "required_status_checks": [ $checks ] } }
   ]
 }
 JSON
