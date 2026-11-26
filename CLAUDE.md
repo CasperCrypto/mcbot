@@ -621,8 +621,11 @@ Change them additively; a breaking change bumps the version.
   `logins.json`, `logins.key`, `sharing.json`) out of the Files view and the editor.
 - **Browser view:** on macOS and Windows the page is a real child webview over the view's page
   area (`src-tauri/src/browser.rs`, Tauri `unstable` feature, one `page-<window>` per window), so
-  sites that refuse iframes still load; it hides while a sheet or ⌘K is open (native views draw
-  above HTML), and is placed again after layout and motion settle (the view has no entry motion).
+  sites that refuse iframes still load; native views draw above HTML, so it steps aside (a quiet
+  placeholder with the site's name) while a sheet or ⌘K is open or any floating layer overlaps it:
+  a picker's menu, a context menu, a dialog, the island once it grows (`lib/layers.ts`, found in the
+  DOM, nothing registers), and comes back on the page it was on, not the one it first opened. It is
+  placed again after layout and motion settle (the view has no entry motion).
   "Open in your browser" hands a page to the system browser (opener plugin: https, and http on
   localhost); `browser_open` (McBot's own window) is async, since a window built in a synchronous
   command deadlocks on Windows.
