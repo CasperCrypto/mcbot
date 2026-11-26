@@ -1,7 +1,7 @@
 import {
   ClipboardCopy,
   History as HistoryIcon,
-  BookOpen, Bot, FileCode2, FolderGit2, History, Palette as PaletteIcon, Stethoscope, Redo2, Undo2, KeyRound, Settings, Brain, Code2, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Upload, Users, Waypoints, Workflow, GraduationCap, Compass, Dumbbell, Library, Star } from "lucide-react";
+  BookOpen, Bot, FileCode2, FolderGit2, History, Palette as PaletteIcon, Stethoscope, Redo2, Undo2, KeyRound, Settings, Brain, Globe, House, ListChecks, Cpu, Send, ChartColumnBig, Cloud, CornerDownLeft, Download, FolderOpen, FolderPlus, Hammer, HardDrive, Layers, LifeBuoy, MessagesSquare, Plug, Plus, RotateCcw, Search, Server, Upload, Users, Waypoints, Workflow, GraduationCap, Compass, Dumbbell, Library, Star } from "lucide-react";
 import { describeHarness } from "../../harness/describe";
 import { Logo } from "../faces/FoodFace";
 import { redo, undo } from "../../board/undo";
@@ -39,8 +39,8 @@ interface Command {
 }
 
 /**
- * The rail, in four groups: core (Home, Board, Chat), the agents' work (Tasks, Runs, Skills),
- * the workbench (Code, Browser, Files) and insight (Memory, Cost, Team). ⌘1–9 follow this order.
+ * The rail, in four groups: core (Home, Board, Chat), the agents' work (Tasks, Runs, Knowledge),
+ * the workbench (Files, Browser, Passwords) and insight (Cost, Team). ⌘1–9 follow this order.
  */
 export const VIEWS: { tab: Tab; label: string; icon: ReactNode; group: number; tip?: string }[] = [
   { tab: "home", label: "Home", icon: <House size={15} />, group: 0 },
@@ -49,9 +49,8 @@ export const VIEWS: { tab: Tab; label: string; icon: ReactNode; group: number; t
   { tab: "tasks", label: "Tasks", icon: <ListChecks size={15} />, group: 1 },
   { tab: "workflows", label: "Runs", icon: <History size={15} />, group: 1 },
   { tab: "knowledge", label: "Knowledge", icon: <Library size={15} />, group: 1, tip: "What your agents know: business, documents, memory, skills, training" },
-  { tab: "code", label: "Code", icon: <Code2 size={15} />, group: 2 },
+  { tab: "files", label: "Files", icon: <FolderOpen size={15} />, group: 2, tip: "Every folder your agents work in: edit, add, ask" },
   { tab: "browser", label: "Browser", icon: <Globe size={15} />, group: 2 },
-  { tab: "files", label: "Files", icon: <FolderOpen size={15} />, group: 2 },
   { tab: "passwords", label: "Passwords", icon: <KeyRound size={15} />, group: 2, tip: "Logins and API keys" },
   { tab: "cost", label: "Cost", icon: <ChartColumnBig size={15} />, group: 3 },
   { tab: "team", label: "Team", icon: <Users size={15} />, group: 3 },

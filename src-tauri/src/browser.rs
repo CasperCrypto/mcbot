@@ -52,7 +52,8 @@ pub async fn browser_show(app: AppHandle<Wry>, window: Window<Wry>, url: String,
     }
     let parent = window.label().to_string();
     let emitter = app.clone();
-    let builder = WebviewBuilder::new(label(&window), WebviewUrl::External(parsed)).on_page_load(move |_page, payload| {
+    // A site gets a file dropped on it as in any browser (an upload field, say).
+    let builder = WebviewBuilder::new(label(&window), WebviewUrl::External(parsed)).disable_drag_drop_handler().on_page_load(move |_page, payload| {
         let url = payload.url().to_string();
         let loading = matches!(payload.event(), PageLoadEvent::Started);
         let _ = emitter.emit_to(parent.as_str(), "browser:url", Nav { url, loading });

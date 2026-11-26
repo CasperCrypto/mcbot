@@ -132,9 +132,10 @@ any in a click.
 | **An agent asks before it guesses** | **The agent's plan, live** |
 | ![A question in the chat](docs/screenshots/question.png) | ![An answer with its plan](docs/screenshots/plan.png) |
 
-And: **Home** with what needs you and who is at work, **Tasks** and **schedules**, **Memory** you can read and edit,
-**Files** and **Code** (editor and terminal), a calm dark design with your accent colour, ⌘K for everything,
-⌘⇧Space from any app, and a menu bar icon with notifications.
+And: **Home** with what needs you and who is at work, **Tasks** and **schedules**, **Memory** you can read, edit and
+drop notes into, **Files** for every folder your agents work in (drop files and folders in, edit, rename, move,
+delete with Undo, a terminal, and ask an agent about any file), a calm dark design with your accent colour, ⌘K for
+everything, ⌘⇧Space from any app, and a menu bar icon with notifications.
 
 ## How it compares
 

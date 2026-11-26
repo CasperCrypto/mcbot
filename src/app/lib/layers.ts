@@ -29,8 +29,9 @@ export function layersOver(area: { getBoundingClientRect(): Box; contains(other:
 }
 
 /**
- * True while a floating layer covers the element: checked on every change to the page's elements, and
- * again as a layer settles (the island grows with a spring after its class changes).
+ * True while a floating layer covers the element: checked on every change to the page's elements, again
+ * as a layer settles, and when a transition ends (the island grows and shrinks with a spring after its
+ * class changes).
  */
 export function useLayersOver(ref: RefObject<HTMLElement | null>, enabled: boolean): boolean {
   const [over, setOver] = useState(false);
@@ -57,12 +58,17 @@ export function useLayersOver(ref: RefObject<HTMLElement | null>, enabled: boole
     const watch = new MutationObserver(changed);
     watch.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "open", "data-closing"] });
     window.addEventListener("resize", changed);
+    // A layer that grows or shrinks with a transition (the island's spring) is checked again when it ends.
+    document.addEventListener("transitionend", soon, true);
+    document.addEventListener("animationend", soon, true);
     check();
     return () => {
       watch.disconnect();
       cancelAnimationFrame(raf);
       settle.forEach(clearTimeout);
       window.removeEventListener("resize", changed);
+      document.removeEventListener("transitionend", soon, true);
+      document.removeEventListener("animationend", soon, true);
     };
   }, [ref, enabled]);
   return over;

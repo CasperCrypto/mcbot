@@ -127,7 +127,7 @@ button.island-sec:hover { background: rgba(255, 255, 255, 0.09); }
 .sidebar-search { display: flex; align-items: center; gap: 8px; height: 32px; margin: 4px 2px 8px; padding: 0 10px; border-radius: var(--r); background: rgb(var(--tint-rgb) / 0.045); border: 1px solid var(--line); color: var(--text-3); }
 .sidebar-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 13.5px; user-select: text; }
 .sidebar-search input::placeholder { color: var(--text-4); }
-.sidebar-scroll { flex: 1; overflow: auto; display: grid; align-content: start; gap: 1px; padding-right: 2px; }
+.sidebar-scroll { flex: 1; overflow: auto; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 1px; padding-right: 2px; }
 .sidebar-group { display: flex; align-items: center; padding: 12px 10px 4px; font-size: 12.5px; font-weight: 600; color: var(--text-3); }
 .sidebar-group .icon-btn { margin-left: auto; }
 

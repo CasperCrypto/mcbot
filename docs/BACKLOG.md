@@ -19,7 +19,7 @@ release notes when it ships.
 | ● 0.5.0 | "McBot Studio x.y.z is out": the installed app asks GitHub's latest release (at start, then every 6 h) and offers Download | `engine/updates.ts`, Settings → About |
 | ○ | Seeding the 44 built-in skills after a compile shows no progress | `engine/skills.ts` |
 | ● done | The inspector uses the thicker panel material (`--mat-panel`) | `styles/glass.css` |
-| ● done | ⌘1–9 follow the rail order (⌘9 is Files), in the shortcut list and ⌘K hints | `shell/Palette.tsx` |
+| ● done | ⌘1–9 follow the rail order (⌘7 is Files, which took in Code), in the shortcut list and ⌘K hints | `shell/Palette.tsx` |
 | ● fixed in 0.5.1 | The browser demo lists all 141 library skills (generated: `npm run engine:library`) | `demo/engine.ts` |
 | ● 0.5.1 | 19 starting agents (was 6) and 8 starter teams (was 4), each with fitting Hermes library skills installed after the first compile; the Skills view names Hermes' 44 built-in skills | `shell/agentSuggestions.ts`, `graph/teams.ts` |
 | ● 0.6.0 | Ask McBot: describe the team, review the proposed harness, add it with one Undo (the board's own model plans it, else a quick plan) | `shell/BuilderSheet.tsx`, `engine/builder.ts`, `src/harness/plan.ts` |

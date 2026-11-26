@@ -1,6 +1,11 @@
 import { FileText, Hammer, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { compileBoard } from "../actions";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type DragEvent } from "react";
+import type { AgentNode } from "../../contracts/graph";
+import { hasFiles } from "../files/drop";
+import { shownAs } from "../files/paths";
+import { addDocuments } from "../lib/documents";
+import { AskBar } from "../shell/AskBar";
 import type { AgentMemoryView, MemoryFileView } from "../../contracts/api";
 import { engine } from "../lib/engine";
 import { layoutTree, type TreeIn } from "../lib/tree";
@@ -53,13 +58,21 @@ function Editor({ agent, sel, onClose, onSaved }: { agent: AgentMemoryView; sel:
   );
 }
 
+/** Hermes keeps memory as entries between "§" lines; a dropped text that has them is several entries. */
+export const entriesOf = (text: string): string[] => text.replace(/\r\n?/g, "\n").split(/\n§\n/).map((e) => e.trim()).filter(Boolean);
+/** Characters the entries take in Hermes' file (they are joined with "\n§\n"). */
+export const memoryChars = (entries: readonly string[]): number => entries.map((e) => e.trim()).filter(Boolean).join("\n§\n").length;
+
 export function MemoryView() {
-  const { boardId } = useBoard();
+  const { boardId, graph, doc } = useBoard();
+  const toast = useApp((s) => s.toast);
   const runs = useApp((s) => s.runs);
   const setTab = useApp((s) => s.setTab);
   const [agents, setAgents] = useState<AgentMemoryView[] | null>(null);
   const [current, setCurrent] = useState<string | null>(null);
   const [sel, setSel] = useState<Sel>(null);
+  const [dropping, setDropping] = useState(false);
+  const [hot, setHot] = useState<"memory" | "user" | null>(null);
   const finished = Object.values(runs).filter((r) => r.status !== "running").length;
 
   const load = useCallback(() => engine.memory(boardId).then(setAgents).catch(() => setAgents([])), [boardId]);
@@ -104,6 +117,60 @@ export function MemoryView() {
     return { nodes: ns, edges: es };
   }, [agent]);
 
+  /**
+   * Text files dropped on MEMORY.md or USER.md become entries while they fit (Hermes' limit); a file
+   * too big for memory, or one that isn't text (a PDF…), becomes a document every agent reads when
+   * it needs it.
+   */
+  const addFiles = async (target: "memory" | "user", files: File[]) => {
+    if (!agent) return;
+    if (agent.busy) return toast({ kind: "fail", text: `${agent.displayName} is working. Add it when the run ends.` });
+    const f = agent[target];
+    let entries = [...f.entries];
+    const added: string[] = [];
+    const toDocs: File[] = [];
+    for (const file of files) {
+      const text = shownAs(file.name) === "text" && file.size < 200_000 ? await file.text() : null;
+      const more = text === null || text.includes("\u0000") ? null : entriesOf(text);
+      if (!more?.length || memoryChars([...entries, ...more]) > f.limit) {
+        if (more?.length !== 0) toDocs.push(file);
+        continue;
+      }
+      entries = [...entries, ...more];
+      added.push(file.name);
+    }
+    if (added.length) {
+      try {
+        const saved = await engine.saveMemory(agent.profile, target, entries, f.sha256);
+        setAgents((prev) => prev?.map((a) => (a.profile === agent.profile ? { ...a, [saved.target]: saved } : a)) ?? prev);
+        toast({ kind: "ok", text: `${added.length === 1 ? added[0] : `${added.length} files`} added to ${FILE[target]}` });
+      } catch (err) {
+        toast({ kind: "fail", text: (err as Error).message });
+      }
+    }
+    if (toDocs.length) {
+      const docs = await addDocuments(doc, boardId, toDocs);
+      if (docs.length) toast({ kind: "info", text: `${docs.length === 1 ? docs[0] : `${docs.length} files`} ${docs.length === 1 ? "is" : "are"} too big for memory: added to Documents, which every agent reads when it needs them`, action: { label: "Open", run: () => setTab("knowledge") } });
+    }
+  };
+  const dragOn = (e: DragEvent) => {
+    if (!hasFiles(e.dataTransfer) || !agent?.compiled) return;
+    e.preventDefault();
+    setDropping(true);
+  };
+  const dropOn = (target: "memory" | "user") => ({
+    onDragOver: (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setHot(target); },
+    onDragLeave: () => setHot(null),
+    onDrop: (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDropping(false);
+      setHot(null);
+      void addFiles(target, [...e.dataTransfer.files]);
+    },
+  });
+  const nodeId = agent ? graph.nodes.find((n): n is AgentNode => n.kind === "agent" && n.data.name === agent.profile)?.id : undefined;
+
   const onSelect = (id: string | null) => {
     if (!id || id === "agent") return setSel(null);
     if (id === "memory" || id === "user") return setSel({ target: id, index: null });
@@ -129,7 +196,20 @@ export function MemoryView() {
           </button>
         ))}
       </Sidebar>
-      <section className="main" data-testid="memory-graph">
+      <section className="main memory-main" data-testid="memory-graph" onDragOver={dragOn} onDrop={(e) => { e.preventDefault(); setDropping(false); }}
+        onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) { setDropping(false); setHot(null); } }}>
+        {dropping && agent && (
+          <div className="memory-drop" data-testid="memory-drop">
+            {(["memory", "user"] as const).map((t) => (
+              <div key={t} className={`memory-drop-zone${hot === t ? " hot" : ""}`} {...dropOn(t)}>
+                <FileText size={22} />
+                <b>{FILE[t]}</b>
+                <span>{t === "memory" ? `What ${agent.displayName} notes for itself` : `What ${agent.displayName} knows about you`}</span>
+                <small className="faint">{Math.max(0, agent[t].limit - agent[t].chars)} characters free · bigger files become documents</small>
+              </div>
+            ))}
+          </div>
+        )}
         {agent && !agent.compiled ? (
           <Empty title={`${agent.displayName} has no memory yet`} action={
             <button className="btn primary" onClick={() => void compileBoard(boardId).then((ok) => { if (ok) void load(); })}><Hammer size={13} /> Compile to create it</button>
@@ -140,6 +220,11 @@ export function MemoryView() {
             {sel && <Editor key={`${sel.target}:${sel.index}`} agent={agent} sel={sel} onClose={() => setSel(null)} onSaved={(f) => setAgents((prev) => prev?.map((a) => (a.profile === agent.profile ? { ...a, [f.target]: f } : a)) ?? prev)} />}
           </div>
         ) : <Empty title="Loading" />}
+        {agent?.compiled && (
+          <AskBar className="memory-ask" testId="memory-ask" prefer={nodeId}
+            placeholder={`Ask ${agent.displayName} to remember, forget or tidy something…`}
+            about={() => "(This is about your memory: MEMORY.md and USER.md. Change it with your memory tool.)"} />
+        )}
       </section>
     </>
   );

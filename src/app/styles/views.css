@@ -311,3 +311,53 @@
 .accent-swatch:hover { transform: scale(1.1); }
 .accent-swatch[aria-checked="true"] { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3.5px var(--line-3); }
 .accent-swatch[aria-checked="true"]::after { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: #ffffff; }
+
+/* ---------- Files: the tree, the editor, previews, the map, drops ---------- */
+.files-layer[hidden] { display: none; }
+.files-main { position: relative; }
+.files-layer { position: absolute; inset: 0; background: var(--bg-main); }
+.files-wait { padding: 20px; }
+.files-page { overflow: auto; }
+.file-page { max-width: 760px; margin: 0 auto; padding: 28px 32px 64px; user-select: text; line-height: 1.6; }
+.file-preview { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; overflow: auto; }
+.file-preview img, .file-preview video { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: var(--r-md); box-shadow: var(--lift); }
+.file-preview audio { width: min(520px, 100%); }
+.file-preview.drawing { place-items: stretch; align-content: start; }
+.file-card { display: grid; justify-items: center; gap: 10px; max-width: 360px; padding: 28px 36px; border-radius: var(--r-lg); background: var(--surface-1); box-shadow: var(--lift); text-align: center; }
+.file-card b { max-width: 290px; }
+.ext.big { width: 54px; height: 54px; border-radius: 14px; font-size: 12px; }
+/* A drop over the view: where it goes, in the accent's fill (no outline). */
+.files-drop { position: absolute; inset: 10px; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 8px; border-radius: var(--r-lg); background: rgb(var(--accent-rgb) / 0.1); color: var(--accent-text); font-weight: 600; pointer-events: none; animation: pop-in var(--t-fast) var(--ease) both; }
+.tree-row.drop { background: rgb(var(--accent-rgb) / 0.16); color: var(--text); }
+.tree-row.dim { color: var(--text-3); }
+.tree-row.editing { cursor: default; }
+.tree-row .tree-more { display: grid; place-items: center; width: 20px; height: 20px; margin-right: -4px; border-radius: 5px; color: var(--text-3); opacity: 0; flex: none; }
+.tree-row:hover .tree-more, .tree-row:focus-visible .tree-more, .tree-row[aria-selected="true"] .tree-more { opacity: 1; }
+.tree-row .tree-more:hover { background: rgb(var(--tint-rgb) / 0.08); color: var(--text); }
+.tree-input { flex: 1; width: 0; min-width: 0; height: 22px; padding: 0 6px; border: 0; border-radius: 5px; background: var(--bg-input); color: var(--text); font: inherit; outline: none; box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / 0.55); user-select: text; }
+.tree-skel { height: 9px; width: 58%; border-radius: 5px; }
+.tree-empty { font-size: 12.5px; }
+.menu-sep { height: 1px; margin: 4px 8px; background: var(--divide); }
+.ask-bar .ask-quick { display: flex; gap: 6px; flex: none; }
+.ask-bar input:disabled { opacity: 0.6; }
+
+/* "Ask an agent about this" floating over a graph or a page: glass, at the bottom. */
+.memory-ask, .knowledge-ask {
+  border: 0; border-radius: 14px; padding: 6px 8px 6px 12px;
+  background: var(--mat-regular); backdrop-filter: var(--mat-blur); -webkit-backdrop-filter: var(--mat-blur);
+  box-shadow: var(--shadow-3), var(--mat-edge);
+}
+.memory-ask { position: absolute; left: 14px; right: 14px; bottom: 14px; z-index: 4; }
+.memory-main:has(.side-panel) .memory-ask { right: 454px; }
+.knowledge-ask { position: sticky; bottom: 14px; z-index: 4; max-width: 1116px; margin: 0 auto 14px; width: calc(100% - 64px); }
+.doc-row[role="button"] { cursor: default; }
+.doc-row[aria-selected="true"] { background: rgb(var(--accent-rgb) / 0.14); }
+/* Dropping on Memory: which file it goes to. */
+.memory-drop { position: absolute; inset: 0; z-index: 8; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 18px; background: rgb(var(--tint-rgb) / 0.02); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: pop-in var(--t-fast) var(--ease) both; }
+.memory-drop-zone { display: grid; place-content: center; justify-items: center; gap: 8px; padding: 20px; border-radius: var(--r-lg); background: var(--surface-1); box-shadow: var(--lift); color: var(--text-2); text-align: center; transition: background var(--t-fast), color var(--t-fast); }
+.memory-drop-zone b { color: var(--text); font-size: 15px; }
+.memory-drop-zone.hot { background: rgb(var(--accent-rgb) / 0.16); color: var(--accent-text); }
+.memory-drop-zone > * { pointer-events: none; }
+/* The map's zoom buttons sit above the floating Ask bar. */
+.memory-main .react-flow__panel.bottom.left { bottom: 62px; }
+.knowledge-business .knowledge-cols { padding-bottom: 84px; }
