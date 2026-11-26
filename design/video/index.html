@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <title>McBot Studio launch video</title>
 <!--
-  The launch video, as markup. `npx tsx design/video/render.ts` renders it frame by frame (render.ts says how);
-  opening this file in a browser plays it (add #t=12.5 to hold one moment). The bots are the app's own
-  (site/foods.js), the brand marks are the app's own (render.ts passes them in as window.LOGOS).
+  The launch video, as markup. `npx tsx design/video/render.ts` renders it frame by frame with its soundtrack
+  (render.ts says how); opening this file in a browser plays it silently (add #t=12.5 to hold one moment). The
+  bots are the app's own (site/foods.js), the brand marks are the app's own (render.ts passes them in as
+  window.LOGOS). Everything is cut to a 120 BPM soundtrack: a beat is 0.5 s, a bar 2 s.
 -->
 <link rel="stylesheet" href="../../site/foods.css">
 <link rel="stylesheet" href="style.css">
@@ -14,6 +15,14 @@
 </head>
 <body>
 <div id="stage">
+<div id="cam">
+
+  <!-- 0 · Cold open: three words on the beat, then the drop -->
+  <section class="scene" id="open">
+    <h1 class="say" data-say="0">Your agents.</h1>
+    <h1 class="say" data-say="1">Your models.</h1>
+    <h1 class="say" data-say="2">Your computer.</h1>
+  </section>
 
   <!-- 1 · Intro -->
   <section class="scene" id="intro">
@@ -214,7 +223,23 @@
     </div>
   </section>
 
-  <!-- 11 · End card -->
+  <!-- 11 · Montage: what it works with, then what else it does, a word a beat -->
+  <section class="scene" id="montage">
+    <h2 class="hl" id="mt-hl" data-words>Works with what you already use.</h2>
+    <div class="wall" id="wall">
+      <span class="lg tile" data-logo="claude"></span><span class="lg tile" data-logo="openai"></span><span class="lg tile" data-logo="gemini"></span><span class="lg tile" data-logo="deepseek"></span><span class="lg tile" data-logo="mistral"></span><span class="lg tile" data-logo="ollama"></span><span class="lg tile" data-logo="lmstudio"></span><span class="lg tile" data-logo="openrouter"></span>
+      <span class="lg tile" data-logo="slack"></span><span class="lg tile" data-logo="discord"></span><span class="lg tile" data-logo="telegram"></span><span class="lg tile" data-logo="whatsapp"></span><span class="lg tile" data-logo="gmail"></span><span class="lg tile" data-logo="googledrive"></span><span class="lg tile" data-logo="notion"></span><span class="lg tile" data-logo="linear"></span>
+      <span class="lg tile" data-logo="github"></span><span class="lg tile" data-logo="figma"></span><span class="lg tile" data-logo="stripe"></span><span class="lg tile" data-logo="huggingface"></span><span class="lg tile" data-logo="supabase"></span><span class="lg tile" data-logo="vercel"></span><span class="lg tile" data-logo="todoist"></span><span class="lg tile" data-logo="exa"></span>
+    </div>
+    <h1 class="say" data-feat="0">Memory.</h1>
+    <h1 class="say" data-feat="1">Schedules.</h1>
+    <h1 class="say" data-feat="2">Skills.</h1>
+    <h1 class="say" data-feat="3">Chat apps.</h1>
+    <h1 class="say" data-feat="4">Budgets.</h1>
+    <h1 class="say" data-feat="5">History.</h1>
+  </section>
+
+  <!-- 12 · End card -->
   <section class="scene" id="end">
     <div class="bot" id="end-bot" style="left: 830px; top: 252px; width: 260px;"><img src="../../site/assets/burger.webp" alt=""><span class="eye l"><i></i></span><span class="eye r"><i></i></span></div>
     <h2 class="end-name" data-words>McBot Studio</h2>
@@ -223,6 +248,8 @@
   </section>
 
   <div id="cursor"><svg viewBox="0 0 32 32"><path d="M3 2.5v23.6l6.2-6 4.4 9.6 4.3-1.9-4.3-9.5h8.6z" fill="#fff" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+</div>
+<div id="flash"></div>
 </div>
 <script src="scenes.js"></script>
 </body>

@@ -229,6 +229,19 @@ img, svg { display: block; }
 .end-cta { position: absolute; left: 0; right: 0; top: 790px; display: flex; justify-content: center; gap: 16px; }
 .end-cta .btn { height: 66px; padding: 0 32px; border-radius: 18px; font-size: 25px; }
 
+/* ---------- the camera (shakes on the drops) and the drop's flash ---------- */
+#cam { position: absolute; inset: 0; }
+#flash { position: absolute; inset: 0; z-index: 60; background: #fff; opacity: 0; pointer-events: none; }
+
+/* ---------- 0: cold open, and the montage's words ---------- */
+.say { position: absolute; left: 0; right: 0; top: 430px; margin: 0; text-align: center; font: 750 168px/1.05 var(--display); letter-spacing: -0.055em; white-space: nowrap; opacity: 0; }
+
+/* ---------- 11: montage ---------- */
+.wall { position: absolute; left: 0; right: 0; top: 330px; display: grid; grid-template-columns: repeat(8, 132px); justify-content: center; gap: 30px; }
+.lg.tile { width: 132px; height: 132px; border-radius: 34px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 24px 40px -18px rgba(0, 0, 0, 0.95); }
+.lg.tile svg { width: 52%; height: 52%; }
+.lg.tile img { width: 56%; height: 56%; }
+
 /* ---------- the pointer ---------- */
 #cursor { position: absolute; left: 0; top: 0; width: 34px; height: 34px; z-index: 50; pointer-events: none; }
 #cursor svg { width: 100%; height: 100%; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55)); }
