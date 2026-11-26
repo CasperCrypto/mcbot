@@ -471,7 +471,13 @@ def music(score, dur):
 
     arp.x = arp.x + delay(arp.x, beat * 0.75, 0.32) * 0.3
     wet = reverb(pads.x + arp.x * 0.8 + fx.x * 0.6 + drums.x * 0.12, 2.8, 0.55)
-    return drums.x + bass.x + pads.x + arp.x + fx.x + wet * 0.3
+    out = drums.x + bass.x + pads.x + arp.x + fx.x + wet * 0.3
+    # The hush is near silence, tails and echoes too, so each drop lands out of nothing.
+    for a, b in hush:
+        i, j = int(a * SR), int(b * SR)
+        k = n_of(0.03)
+        out[:, i:j] *= np.concatenate([np.linspace(1, 0.03, min(k, j - i)), np.full(max(0, j - i - k), 0.03)])
+    return out
 
 
 def cue_sounds(score, dur, music_on=True):
