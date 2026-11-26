@@ -25,9 +25,8 @@ import { readTextOrNull } from "./fsutil";
 export const ENV_BEGIN = "# >>> McBot keys: rewritten before each run; change them in McBot";
 export const ENV_END = "# <<< McBot keys";
 
-/** Files the Files view must never list or show: they hold keys. */
-/** Files that hold keys: agents' .env, and McBot's own (API keys, logins and their key, who joined). */
-export const SECRET_FILES = new Set([".env", ".op.env", "secrets.json", "logins.json", "logins.key", "sharing.json"]);
+/** Files that hold keys, never listed or shown (src/harness/live.ts, shared with the app). */
+export { SECRET_FILES } from "../src/harness/live";
 
 const ENV_REF = /\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g;
 

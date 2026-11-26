@@ -21,7 +21,8 @@ import upstream from "../../../hermes/UPSTREAM.json";
 import { version as APP_VERSION } from "../../../package.json";
 import { MANIFEST_PATH, type FileChange, type Manifest } from "../../contracts/compile";
 import { DOC_TEXT_MAX, GRAPH_SCHEMA, type Graph } from "../../contracts/graph";
-import { applyToDoc, agentEditable } from "../../harness/live";
+import { applyToDoc, agentEditable, normal, safeName, SECRET_FILES } from "../../harness/live";
+import { shownAs } from "../files/paths";
 import { mergeConfig } from "../../harness/merge";
 import { readHermes, unshownNote, type ProfileFiles } from "../../harness/read";
 import { followChanges } from "../../harness/reconcile";
@@ -534,7 +535,7 @@ function listVirtual(files: Record<string, string>, dir: string): FsEntry[] {
       const kids = new Set(Object.keys(files).filter((p) => p.startsWith(`${child}/`)).map((p) => p.slice(child.length + 1).split("/")[0]).filter((n) => n && n !== ".keep"));
       seen.set(name, { name, path: child, kind: "dir", bytes: 0, children: kids.size, owned: false });
     } else {
-      seen.set(name, { name, path: child, kind: "file", bytes: utf8Bytes(body).length, children: null, owned: false });
+      seen.set(name, { name, path: child, kind: "file", bytes: body.startsWith(BIN) ? Number(body.slice(BIN.length)) : utf8Bytes(body).length, children: null, owned: false });
     }
   }
   return [...seen.values()].sort((a, b) => Number(b.kind === "dir") - Number(a.kind === "dir") || a.name.localeCompare(b.name));
@@ -562,6 +563,29 @@ function filesOf(rootId: string): { files: Record<string, string>; owned: (p: st
     return { files: profileFiles(profile), owned: (p) => owned.has(`profiles/${profile}/${p}`) };
   }
   throw new EngineError(404, "unknown folder", {});
+}
+
+/** A file dropped into the demo that isn't text: kept in the page as it is (`demoBlobs`), its size after the mark. */
+const BIN = "\0bin:";
+const demoBlobs = new Map<string, Blob>();
+/** Deleted in the demo, for Undo: the files and pictures that were under the path. */
+const demoTrash = new Map<string, { root: string; path: string; files: [string, string][]; blobs: [string, Blob][] }>();
+
+/** The demo changes only Shared files and the sample project (an agent's own folder is the board's). */
+function changeableFiles(root: string): Record<string, string> {
+  if (root.startsWith("profile:")) throw new EngineError(403, "In the demo, files are added to Shared files and the sample project", {});
+  return filesOf(root).files;
+}
+const demoClean = (p: string) => normal(p);
+const underPath = (files: Record<string, string>, path: string) => Object.keys(files).filter((k) => k === path || k.startsWith(`${path}/`));
+const isDirIn = (files: Record<string, string>, path: string) => !path || Object.keys(files).some((k) => k.startsWith(`${path}/`));
+/** "name (2).ext"… for a file that is there, as the engine does. */
+function demoFree(files: Record<string, string>, dir: string, name: string): string {
+  const at = (n: string) => (dir ? `${dir}/${n}` : n);
+  if (!underPath(files, at(name)).length) return at(name);
+  const dot = name.lastIndexOf(".");
+  const [stem, ext] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ""];
+  for (let n = 2; ; n++) if (!underPath(files, at(`${stem} (${n})${ext}`)).length) return at(`${stem} (${n})${ext}`);
 }
 
 // ---------- the API ----------
@@ -1207,6 +1231,7 @@ export const demoEngine = {
     const { files } = filesOf(root);
     const text = files[path];
     if (text === undefined) throw new EngineError(404, "no such file", {});
+    if (text.startsWith(BIN)) return { path, bytes: Number(text.slice(BIN.length)), text: null, reason: "Binary file" };
     return { path, bytes: utf8Bytes(text).length, text, sha256: sha256Hex(text) };
   }),
   /** The code editor's save, in this browser only (the shared files and the sample project). */
@@ -1217,6 +1242,74 @@ export const demoEngine = {
     if ((current === undefined ? null : sha256Hex(current)) !== baseSha256) throw new EngineError(409, "The file changed since you opened it. Reopen it to see the change.", {});
     files[path] = text;
     return { path, bytes: utf8Bytes(text).length, sha256: sha256Hex(text) };
+  }),
+  addFile: api(async (root: string, dir: string, name: string, data: Blob) => {
+    const files = changeableFiles(root);
+    const clean = safeName(name);
+    if (!clean) throw new EngineError(400, "That file has no usable name", {});
+    if (SECRET_FILES.has(clean)) throw new EngineError(403, "Files that hold keys are kept out of the Files view", {});
+    const d = demoClean(dir);
+    if (!isDirIn(files, d)) throw new EngineError(404, `${d} is not there any more`, {});
+    const path = demoFree(files, d, clean);
+    const text = shownAs(clean) === "text" || shownAs(clean) === "drawing" ? await data.text() : null;
+    if (text === null || text.includes("\0")) {
+      files[path] = `${BIN}${data.size}`;
+      demoBlobs.set(`${root}:${path}`, data);
+    } else files[path] = text;
+    return { path, bytes: data.size };
+  }),
+  makeFolder: api((root: string, dir: string, name: string) => {
+    const files = changeableFiles(root);
+    const clean = safeName(name);
+    if (!clean || clean !== name.trim()) throw new EngineError(400, "Give the folder a name without / \\ : * ? \" < > or |", {});
+    const path = demoClean(dir) ? `${demoClean(dir)}/${clean}` : clean;
+    if (underPath(files, path).length) throw new EngineError(409, `There is already something called ${clean}`, {});
+    files[`${path}/.keep`] = "";
+    return { path };
+  }),
+  renameFile: api((root: string, from: string, to: string) => {
+    const files = changeableFiles(root);
+    const [a, b] = [demoClean(from), demoClean(to)];
+    if (!a || !b) throw new EngineError(403, "That is the whole folder", {});
+    if (b.startsWith(`${a}/`)) throw new EngineError(400, "A folder can't go inside itself", {});
+    const moving = underPath(files, a);
+    if (!moving.length) throw new EngineError(404, `${a} is not there any more`, {});
+    if (a !== b && underPath(files, b).length) throw new EngineError(409, `There is already something called ${b.split("/").pop()}`, {});
+    for (const k of moving) {
+      const next = b + k.slice(a.length);
+      files[next] = files[k]!;
+      delete files[k];
+      const blob = demoBlobs.get(`${root}:${k}`);
+      if (blob) { demoBlobs.delete(`${root}:${k}`); demoBlobs.set(`${root}:${next}`, blob); }
+    }
+    return { path: b };
+  }),
+  removeFile: api((root: string, path: string) => {
+    const files = changeableFiles(root);
+    const p = demoClean(path);
+    if (!p) throw new EngineError(400, "That is the whole folder", {});
+    const gone = underPath(files, p);
+    if (!gone.length) throw new EngineError(404, `${p} is not there any more`, {});
+    const id = `${Date.now().toString(36)}${Math.random().toString(16).slice(2, 10)}`;
+    demoTrash.set(id, { root, path: p, files: gone.map((k) => [k, files[k]!]), blobs: gone.flatMap((k) => (demoBlobs.has(`${root}:${k}`) ? [[k, demoBlobs.get(`${root}:${k}`)!] as [string, Blob]] : [])) });
+    for (const k of gone) { delete files[k]; demoBlobs.delete(`${root}:${k}`); }
+    return { trash: id, name: p.split("/").pop()! };
+  }),
+  restoreFile: api((trash: string) => {
+    const rec = demoTrash.get(trash);
+    if (!rec) throw new EngineError(404, "That is gone from the trash", {});
+    const files = changeableFiles(rec.root);
+    const dir = rec.path.includes("/") ? rec.path.slice(0, rec.path.lastIndexOf("/")) : "";
+    const back = demoFree(files, dir, rec.path.split("/").pop()!);
+    for (const [k, v] of rec.files) files[back + k.slice(rec.path.length)] = v;
+    for (const [k, b] of rec.blobs) demoBlobs.set(`${rec.root}:${back + k.slice(rec.path.length)}`, b);
+    demoTrash.delete(trash);
+    return { root: rec.root, path: back };
+  }),
+  rawFile: api((root: string, path: string): Blob => {
+    const blob = demoBlobs.get(`${root}:${demoClean(path)}`);
+    if (!blob) throw new EngineError(404, "no such file", {});
+    return blob;
   }),
 };
 

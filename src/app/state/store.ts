@@ -9,7 +9,7 @@ import type { Rating } from "../../harness/learn";
 export type Tab = "home" | "graph" | "agents" | "tasks" | "code" | "browser" | "workflows" | "knowledge" | "memory" | "skills" | "files" | "passwords" | "cost" | "learn" | "team" | "settings";
 
 /** Memory, Skills and Training are segments of Knowledge: the view (and the rail) they belong to. */
-export const viewOf = (t: Tab): Tab => (t === "memory" || t === "skills" || t === "learn" ? "knowledge" : t);
+export const viewOf = (t: Tab): Tab => (t === "memory" || t === "skills" || t === "learn" ? "knowledge" : t === "code" ? "files" : t);
 
 export type SettingsSection = "models" | "keys" | "appearance" | "you" | "team" | "engine" | "about";
 
@@ -327,7 +327,8 @@ export const useApp = create<State>((set, get) => ({
   toast: (t) => {
     const id = ++toastId;
     set((s) => ({ toasts: [...s.toasts, { ...t, id }], notices: [{ ...t, id, at: Date.now() }, ...s.notices].slice(0, 8) }));
-    setTimeout(() => get().dismiss(id), t.kind === "fail" ? 8000 : 3200);
+    // A notice with something to do (Undo, Open) stays long enough to do it.
+    setTimeout(() => get().dismiss(id), t.kind === "fail" ? 8000 : t.action ? 6500 : 3200);
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })),
 }));

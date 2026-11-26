@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -8,9 +8,10 @@ import { startEngine, type Engine } from "./server";
 const ORIGIN = "http://localhost:5173";
 let engine: Engine;
 let outside: string;
+let workspace: string;
 
 beforeAll(async () => {
-  const workspace = mkdtempSync(join(tmpdir(), "mcbot-fs-"));
+  workspace = mkdtempSync(join(tmpdir(), "mcbot-fs-"));
   mkdirSync(join(workspace, "files"), { recursive: true });
   outside = mkdtempSync(join(tmpdir(), "mcbot-project-"));
   mkdirSync(join(outside, "src/lib"), { recursive: true });
@@ -81,6 +82,86 @@ describe("folder browsing", () => {
     const { body: root } = await api<FsRoot>("/api/fs/roots", { path: outside });
     await api("/api/fs/roots/close", { id: root.id });
     expect((await api(`/api/fs/list?root=${root.id}&path=`)).status).toBe(404);
+  });
+});
+
+describe("changing files", () => {
+  const post = async <T,>(path: string, body: unknown) => api<T & { error?: string }>(path, body);
+  const upload = async (root: string, dir: string, name: string, data: string) => {
+    const res = await fetch(`${engine.url}/api/fs/upload?root=${encodeURIComponent(root)}&dir=${encodeURIComponent(dir)}&name=${encodeURIComponent(name)}`, {
+      method: "POST", headers: { origin: ORIGIN, "content-type": "application/octet-stream" }, body: data,
+    });
+    return { status: res.status, body: (await res.json()) as { path?: string; bytes?: number; error?: string } };
+  };
+  let project: string;
+  let root: FsRoot;
+  beforeAll(async () => {
+    project = mkdtempSync(join(tmpdir(), "mcbot-change-"));
+    mkdirSync(join(project, "notes"), { recursive: true });
+    writeFileSync(join(project, "notes/plan.md"), "# Plan\n");
+    root = (await api<FsRoot>("/api/fs/roots", { path: project })).body;
+  });
+
+  it("adds a dropped file beside the others, never over one", async () => {
+    expect(await upload(root.id, "notes", "brief.md", "# Brief\n")).toMatchObject({ status: 200, body: { path: "notes/brief.md", bytes: 8 } });
+    expect((await upload(root.id, "notes", "plan.md", "# Other\n")).body.path).toBe("notes/plan (2).md");
+    expect(readFileSync(join(project, "notes/plan.md"), "utf8")).toBe("# Plan\n");
+    // Only the name counts: a path in it is dropped, and dotfiles keep their dot.
+    expect((await upload(root.id, "", "../../evil/.gitignore", "dist\n")).body.path).toBe(".gitignore");
+    expect((await upload(root.id, "", ".env", "KEY=1")).status).toBe(403);
+    expect((await upload(root.id, "../", "x.md", "x")).status).toBe(400);
+    expect((await upload(root.id, "gone", "x.md", "x")).status).toBe(404);
+  });
+
+  it("makes folders and renames or moves things, never over something", async () => {
+    expect((await post("/api/fs/mkdir", { root: root.id, dir: "", name: "drafts" })).body).toEqual({ path: "drafts" });
+    expect((await post("/api/fs/mkdir", { root: root.id, dir: "", name: "drafts" })).status).toBe(409);
+    expect((await post("/api/fs/mkdir", { root: root.id, dir: "", name: "a/b" })).status).toBe(400);
+    expect((await post("/api/fs/rename", { root: root.id, from: "notes/brief.md", to: "notes/Brief v2.md" })).body).toEqual({ path: "notes/Brief v2.md" });
+    expect((await post("/api/fs/rename", { root: root.id, from: "notes/Brief v2.md", to: "drafts/Brief v2.md" })).status).toBe(200);
+    expect(existsSync(join(project, "drafts/Brief v2.md"))).toBe(true);
+    expect((await post("/api/fs/rename", { root: root.id, from: "notes/plan (2).md", to: "notes/plan.md" })).status).toBe(409);
+    expect((await post("/api/fs/rename", { root: root.id, from: "notes", to: "notes/inner" })).status).toBe(400);
+    expect((await post("/api/fs/rename", { root: root.id, from: "notes/plan.md", to: "../plan.md" })).status).toBe(400);
+    expect((await post("/api/fs/rename", { root: root.id, from: "notes/plan.md", to: "notes/.env" })).status).toBe(403);
+    expect((await post("/api/fs/rename", { root: root.id, from: ".", to: "x" })).status).toBe(403);
+  });
+
+  it("deletes into the trash, and Undo puts it back", async () => {
+    writeFileSync(join(project, "drafts/keep.txt"), "keep\n");
+    const del = await post<{ trash: string; name: string }>("/api/fs/delete", { root: root.id, path: "drafts" });
+    expect(del.body.name).toBe("drafts");
+    expect(existsSync(join(project, "drafts"))).toBe(false);
+    expect(readdirSync(join(workspace, ".trash")).length).toBe(2);
+    expect((await post("/api/fs/restore", { trash: del.body.trash })).body).toEqual({ root: root.id, path: "drafts" });
+    expect(readFileSync(join(project, "drafts/keep.txt"), "utf8")).toBe("keep\n");
+    expect(readdirSync(join(workspace, ".trash"))).toEqual([]);
+    // Its place was taken meanwhile: it comes back beside it.
+    const again = await post<{ trash: string }>("/api/fs/delete", { root: root.id, path: "drafts/keep.txt" });
+    writeFileSync(join(project, "drafts/keep.txt"), "new\n");
+    expect((await post<{ path: string }>("/api/fs/restore", { trash: again.body.trash })).body.path).toBe("drafts/keep (2).txt");
+    expect((await post("/api/fs/restore", { trash: again.body.trash })).status).toBe(404);
+    // Never the folder itself.
+    for (const path of [".", "./", "notes/.."]) expect((await post("/api/fs/delete", { root: root.id, path })).status).toBe(400);
+    expect(existsSync(project)).toBe(true);
+  });
+
+  it("streams an image for the preview, and nothing that isn't a picture, video or sound", async () => {
+    writeFileSync(join(project, "logo.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    const raw = (path: string) => fetch(`${engine.url}/api/fs/raw?root=${encodeURIComponent(root.id)}&path=${encodeURIComponent(path)}`, { headers: { origin: ORIGIN } });
+    const png = await raw("logo.png");
+    expect([png.status, png.headers.get("content-type")]).toEqual([200, "image/png"]);
+    expect(Buffer.from(await png.arrayBuffer()).length).toBe(4);
+    expect((await raw("notes/plan.md")).status).toBe(415);
+    expect((await raw("../x.png")).status).toBe(400);
+  });
+
+  it("keeps an agent's own files where they are: only its workspace/ changes", async () => {
+    const { addable, changeable, normal, safeName } = await import("./folders");
+    expect([addable("profile:a", "workspace"), addable("profile:a", "workspace/out"), addable("profile:a", ""), addable("profile:a", "memories")]).toEqual([true, true, false, false]);
+    expect([changeable("profile:a", "workspace/x.md"), changeable("profile:a", "workspace"), changeable("profile:a", "SOUL.md"), changeable("folder:x", "SOUL.md"), changeable("folder:x", "")]).toEqual([true, false, false, true, false]);
+    expect([normal("a/./b/"), normal("."), normal("workspace/."), normal("a\\b")]).toEqual(["a/b", "", "workspace", "a/b"]);
+    expect([safeName("C:\\x\\Report.pdf"), safeName(".."), safeName("  "), safeName("a<b>.md")]).toEqual(["Report.pdf", null, null, "ab.md"]);
   });
 });
 

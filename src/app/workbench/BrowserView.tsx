@@ -12,6 +12,7 @@ import { addRecent, isFavorite, loadFavorites, toggleFavorite, type Site } from 
 import { BrowserStart } from "./BrowserStart";
 
 import { framedUrl, toUrl } from "../lib/pageUrl";
+import { useLayersOver } from "../lib/layers";
 import { agentOptions } from "../lib/agentOptions";
 import { Picker } from "../Picker";
 
@@ -65,15 +66,23 @@ export default function BrowserView() {
   const [keysOpen, setKeysOpen] = useState(false);
   const area = useRef<HTMLDivElement>(null);
   const native = useMemo(() => nativePage(), []) && !nativeFailed;
-  // A native page draws above the window's HTML, so it steps aside while a sheet or ⌘K is open.
-  const covered = useApp((s) => s.paletteOpen || s.compileOpen || s.hermesOpen || s.reportOpen || s.newAgentOpen || s.catalogOpen || s.chatAppsOpen || s.teamOpen || s.teamsOpen || s.shareOpen || s.folderPickerOpen);
   const url = at >= 0 ? history[at] ?? null : null;
+  // A native page draws above the window's HTML, so it steps aside while anything floats over it: a
+  // sheet or ⌘K, a pop-up menu (the agent picker below it), a side panel, the island opening or
+  // showing a notice (lib/layers.ts finds them all).
+  const sheet = useApp((s) => s.paletteOpen || s.compileOpen || s.hermesOpen || s.reportOpen || s.newAgentOpen || s.catalogOpen || s.chatAppsOpen || s.teamOpen || s.teamsOpen || s.shareOpen || s.folderPickerOpen);
+  const layered = useLayersOver(area, native && !!url);
+  const covered = sheet || layered;
   useEffect(() => {
     remembered = { history, at };
     setLive(null);
   }, [history, at]);
   // The page on screen: where the native page went, else the address asked for.
   const shown = (native ? live : null) ?? url;
+  // Where the native page is now, for coming back after something covered it (not the address it
+  // started from, or every closed menu would undo the links followed inside the page).
+  const liveRef = useRef<string | null>(null);
+  liveRef.current = live;
   // Every page shown joins the start page's recent list.
   useEffect(() => {
     if (shown) addRecent(shown);
@@ -176,7 +185,7 @@ export default function BrowserView() {
         return;
       }
       try {
-        await page.show(url, b);
+        await page.show(liveRef.current ?? url, b);
       } catch (err) {
         if (!alive) return;
         setNativeFailed(true);
@@ -309,7 +318,9 @@ export default function BrowserView() {
             </div>
           </div>
         ) : url && native ? (
-          <div ref={area} className="browser-native" data-testid="browser-native" />
+          <div ref={area} className="browser-native" data-testid="browser-native">
+            {covered && <div className="browser-held" aria-hidden="true"><Globe size={26} /><span>{site}</span></div>}
+          </div>
         ) : url && verdict === undefined ? (
           <div className="browser-demo"><LoaderCircle size={22} className="spin-icon faint" /></div>
         ) : url && verdict === false ? (

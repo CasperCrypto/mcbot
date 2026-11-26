@@ -74,15 +74,14 @@ const TeamView = lazyView(() => import("./views/TeamView"), (m) => m.TeamView);
 const SettingsView = lazyView(() => import("./views/SettingsView"), (m) => m.SettingsView);
 const BrowserTab = lazyView(() => import("./workbench/BrowserView"), (m) => m.default);
 const PasswordsView = lazyView(() => import("./views/PasswordsView"), (m) => m.PasswordsView);
-/** Monaco and xterm are big: the Code view loads only when it is opened. */
-const CodeTab = lazyView(() => import("./workbench/CodeView"), (m) => m.default, false);
 
 const VIEW_COMPONENTS = {
   home: HomeView,
   graph: GraphView,
   agents: AgentsView,
   tasks: TasksView,
-  code: CodeTab,
+  // Code is part of Files now (old links and pins land there).
+  code: FilesView,
   browser: BrowserTab,
   workflows: RunsView,
   knowledge: KnowledgeView,
@@ -146,15 +145,15 @@ function BoardEffects() {
       } else if (k === "k") {
         e.preventDefault();
         app.setPalette(!app.paletteOpen);
-      } else if (k === "s" && app.tab !== "code") {
-        // In Code, ⌘S saves the file (workbench/CodeView.tsx).
+      } else if (k === "s" && !(viewOf(app.tab) === "files" && document.querySelector("[data-saves='true']"))) {
+        // In Files, with a file open, ⌘S saves the file (views/FilesView.tsx).
         e.preventDefault();
         void compileBoard(boardId);
       } else if (/^[1-9]$/.test(k) && VIEWS[Number(k) - 1]) {
         e.preventDefault();
         app.setTab(VIEWS[Number(k) - 1]!.tab);
-      } else if ((k === "=" || k === "+" || k === "-") && inApp() && app.tab !== "code") {
-        // Bigger or smaller, the whole app (a web browser zooms by itself; Code zooms its editor).
+      } else if ((k === "=" || k === "+" || k === "-") && inApp()) {
+        // Bigger or smaller, the whole app (a web browser zooms by itself).
         e.preventDefault();
         app.setAppearance({ ...app.appearance, scale: stepScale(app.appearance.scale, k === "-" ? -1 : 1) });
       }

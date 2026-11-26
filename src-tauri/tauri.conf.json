@@ -18,6 +18,7 @@
         "height": 900,
         "minWidth": 960,
         "minHeight": 600,
+        "dragDropEnabled": false,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
         "theme": "Dark",

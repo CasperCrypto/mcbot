@@ -29,7 +29,7 @@ import { diagnosticsText, osLine, redact, tail } from "./diagnostics";
 import { PROFILE_NAME_RE as PROFILE_RE, type Graph, type ModelNode } from "../src/contracts/graph";
 import { buildCostReport } from "./cost";
 import { atomicWrite } from "./fsutil";
-import { FolderError, Folders, browseFolders } from "./folders";
+import { FILE_MAX_BYTES, FolderError, Folders, browseFolders } from "./folders";
 import { bundledSource, bundledUpstream, findHermes, gatewayStatus, hermesCommand, hermesEnv, prepareHermes, setupHome, stopGateway } from "./hermes";
 import { DOC_MAX_BYTES, docKind, docText, extractWithHermes, freePath, hermesDirOf, safeDocName, saveDoc } from "./knowledge";
 import { MemoryConflict, readMemory, readSessions, readTaskWork, writeMemory } from "./hermesData";
@@ -1040,6 +1040,33 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
       }
       return saved;
     },
+    /** Files dropped or picked into a folder: the bytes as the body, the name in the query; never over a file. */
+    "POST /api/fs/upload": async (req, url) => {
+      const root = url.searchParams.get("root") ?? "";
+      const dir = await folders.resolveRoot(root, (await readManifest(cfg.hermesHome))?.profiles ?? []);
+      const data = await rawBody(req, FILE_MAX_BYTES);
+      return folders.add(root, dir, url.searchParams.get("dir") ?? "", url.searchParams.get("name") ?? "", data);
+    },
+    "POST /api/fs/mkdir": async (req) => {
+      const body = parse(z.object({ root: z.string(), dir: z.string().max(1000), name: z.string().min(1).max(255) }), await json(req));
+      const dir = await folders.resolveRoot(body.root, (await readManifest(cfg.hermesHome))?.profiles ?? []);
+      return folders.mkdir(body.root, dir, body.dir, body.name);
+    },
+    "POST /api/fs/rename": async (req) => {
+      const body = parse(z.object({ root: z.string(), from: z.string().min(1).max(1000), to: z.string().min(1).max(1000) }), await json(req));
+      const dir = await folders.resolveRoot(body.root, (await readManifest(cfg.hermesHome))?.profiles ?? []);
+      return folders.rename(body.root, dir, body.from, body.to);
+    },
+    /** Delete: the item waits in <workspace>/.trash for Undo (`/api/fs/restore`). */
+    "POST /api/fs/delete": async (req) => {
+      const body = parse(z.object({ root: z.string(), path: z.string().min(1).max(1000) }), await json(req));
+      const dir = await folders.resolveRoot(body.root, (await readManifest(cfg.hermesHome))?.profiles ?? []);
+      return folders.remove(body.root, dir, body.path);
+    },
+    "POST /api/fs/restore": async (req) => {
+      const { trash } = parse(z.object({ trash: z.string().max(40) }), await json(req));
+      return folders.restore(trash, (await readManifest(cfg.hermesHome))?.profiles ?? []);
+    },
   };
 
   async function hermesInfo(): Promise<HermesInfo> {
@@ -1215,6 +1242,19 @@ export async function startEngine(cfg: EngineConfig): Promise<Engine> {
         clearInterval(keep);
         sse.delete(res);
       });
+      return;
+    }
+    // An image, video or sound in a folder, streamed as itself for the Files view's preview (host only).
+    if (req.method === "GET" && url.pathname === "/api/fs/raw") {
+      try {
+        const dir = await folders.resolveRoot(url.searchParams.get("root") ?? "", (await readManifest(cfg.hermesHome))?.profiles ?? []);
+        const file = await folders.raw(dir, url.searchParams.get("path") ?? "");
+        res.writeHead(200, { "content-type": file.type, "content-length": file.size, "cache-control": "no-store", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'" });
+        createReadStream(file.abs).pipe(res);
+      } catch (err) {
+        const status = err instanceof FolderError ? err.status : 500;
+        res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify({ error: (err as Error).message }));
+      }
       return;
     }
     // An image or video an agent made, streamed as itself (the chat shows it from a blob URL).

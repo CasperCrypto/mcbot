@@ -175,7 +175,10 @@ Change them additively; a breaking change bumps the version.
 - Computer use: the chat shows the agent's screen (`chat/screen.ts`: each `computer_use` capture's
   `screenshot_path`), live while it runs and as a step slider after; Stop takes it back.
 - Memory edits: Hermes' `§` format byte for byte, refused while the profile is
-  running, and only against the sha256 the editor read.
+  running, and only against the sha256 the editor read. A file dropped on Memory lands on MEMORY.md or USER.md
+  (two targets while dragging): a text file becomes entries while they fit Hermes' limit (2,200 / 1,375 characters,
+  `hermes/tools/memory_tool.py`; a `§` line splits entries); anything bigger, or not text, becomes a Business
+  document (`lib/documents.ts`).
 - An agent's `dailyBudgetUsd` is McBot-side only (never compiled, no Hermes key): `buildCostReport` compares
   today's (UTC) spend with it; Cost shows the bar and Home's "Needs you" warns at 80% and 100%; at 100% `POST /api/runs` refuses (409) the runs McBot starts (Hermes' own schedules and task-board runs are not stopped).
 - **Knowledge** (`views/KnowledgeView.tsx`, ⌘6, pinned by default): one view of four segments, Business, Memory,
@@ -185,7 +188,9 @@ Change them additively; a breaking change bumps the version.
   teammates too) keeps the original in `files/knowledge/` (never over a file) and reads it to text, PDF and Office
   files through McBot's own Hermes (`tools/read_extract.extract_document_text`, `engine/knowledge.ts`); compile writes
   every skill-capable agent a `business-files` skill (`src/compile/docs.ts`: SKILL.md + `references/<doc>.md`, read
-  with `skill_view`). Export .md (`src/harness/knowledgeMd.ts`, `POST /api/knowledge/export` → `exports/`, host only).
+  with `skill_view`). Files dropped anywhere on Business become documents (`lib/documents.ts` `addDocuments`, also
+  Memory's overflow); a document clicked is selected, and the Ask bar sends its text with the question. Export .md
+  (`src/harness/knowledgeMd.ts`, `POST /api/knowledge/export` → `exports/`, host only).
 - **Training** (Knowledge's segment; `views/LearnView.tsx`, pure `src/harness/learn.ts`, `engine/learn.ts`; docs/TRAINING.md): the agents'
   work as data to train a model of your own. Thumbs up / down on any answer in Chat (`<workspace>/ratings.json`,
   `GET/POST /api/ratings`, teammates too) and an agent's **checks** (`checks` on the agent, McBot-side only, never
@@ -343,7 +348,7 @@ Change them additively; a breaking change bumps the version.
   app (McBot has no mail server, `lib/invite.ts`), Copy link, a QR code for a phone
   (`shell/QrCode.tsx`, qrcode-generator, MIT), who has access with their role. Join (desktop) takes a
   pasted link, http or https. Agents always run on the host. A joined window keeps the host's address,
-  its key and role in localStorage (`src/app/lib/remote.ts`) and hides Code and Files.
+  its key and role in localStorage (`src/app/lib/remote.ts`) and hides Files.
 
 ## UI invariants
 
@@ -548,7 +553,10 @@ Change them additively; a breaking change bumps the version.
 - **Frameless window:** on Windows and Linux the main window has no native frame (`src-tauri/tauri.windows.conf.json`,
   `tauri.linux.conf.json`, and `new_window`); the title bar is the frame (drag region, `WindowControls` for
   minimize, maximize and close). macOS keeps its overlay title bar and traffic lights. The in-app island hangs
-  from the top edge (flat on top, round underneath), like a notch.
+  from the top edge (flat on top, round underneath), like a notch. Every McBot window (and the Browser's page) turns
+  off Tauri's own drag-drop handler (`dragDropEnabled: false` in all three window configs, `disable_drag_drop_handler`
+  in `new_window` and `browser.rs`): Tauri's handler takes files dragged in from Finder or Explorer first, and the
+  page would never see them as drops.
 - **Floating island** (desktop only; `src-tauri/src/lib.rs` `island`, `shell/IslandPill.tsx`, `lib/islandBridge.ts`):
   a small always-on-top window at the top centre of the screen, shown while no McBot window is in
   front and an agent works or asks (or every window is hidden, so it is the way back). Click brings
@@ -569,7 +577,8 @@ Change them additively; a breaking change bumps the version.
 - Views live behind an error boundary; a broken view must not blank the window.
 - **Fast start:** only Home, Chat and Tasks are in the first bundle (`App.tsx` `lazyView`); the other views
   (Board with React Flow, Runs, Knowledge, Files, Cost, Team, Settings, Browser) are fetched one by one while
-  the window is idle right after the first paint, so switching to them never waits; Code (Monaco) loads when opened.
+  the window is idle right after the first paint, so switching to them never waits; the editor (Monaco) and the
+  terminal load with the first text file or terminal opened in Files.
   While the engine starts, the window asks it every 400 ms (every 5 s once it answers).
 - An empty chat offers three starter questions picked from the agent's name, then its description
   (`chat/starters.ts`); one click sends it.
@@ -585,10 +594,16 @@ Change them additively; a breaking change bumps the version.
 - **Local folders:** the engine reads only inside roots the user opened
   (`<workspace>/folders.json`), the shared files folder and compiled profiles,
   path-checked. The folder picker (`shell/FolderPicker.tsx`, `GET /api/fs/browse`, host only)
-  lists folder names, never files, so a folder is opened by clicking, not by typing its path. The Code view's editor (Monaco, loaded on first use) writes back
+  lists folder names, never files, so a folder is opened by clicking, not by typing its path. The Files editor writes back
   only to opened folders, the shared files folder, an agent's `workspace/` and its Hermes
   settings (SOUL.md, config.yaml, profile.yaml, skills; the board follows them), never memory,
-  logs, state or a key file, and only over the sha256 it read.
+  logs, state or a key file, and only over the sha256 it read. Files are added (`POST /api/fs/upload`, raw bytes,
+  200 MB, never over a file: "name (2).ext"), folders made, renamed or moved (one root) and deleted only where
+  `changeable` / `addable` say (`src/harness/live.ts`, shared by engine, view and demo): anywhere in an opened folder
+  or the shared files, and in an agent's folder only inside `workspace/`; never the root itself, never a key file.
+  A delete moves the item to `<workspace>/.trash` for 30 days (`POST /api/fs/delete` → `trash` id; Undo or ⌘Z is
+  `POST /api/fs/restore`, beside it as "name (2)" if its place was taken). Previews stream images, video and sound
+  as themselves (`GET /api/fs/raw`, realpath-checked inside the root). All of them host only.
 - **Terminal:** real shells in the desktop shell (`src-tauri/src/terminal.rs`,
   portable-pty), never in the engine, so the engine stays one plain executable.
   The browser has none.
@@ -603,6 +618,20 @@ Change them additively; a breaking change bumps the version.
   --yes-deps`, docs/HERMES.md), or a **project** (`POST /api/github/download`: GitHub's archive unpacked with
   `tar` into the shared files folder's `github/<repo>`, 80 MB at most). Any of them can go to an agent as a
   question instead.
+- **Files** (`views/FilesView.tsx`, ⌘7; parts in `src/app/files/`, pure ones in `files/paths.ts` and `files/drop.ts`):
+  one view for every folder (the agents' folders, the shared files, folders the person opened); the old Code view is
+  part of it (the `code` tab lands here, `viewOf`). The tree (`files/FileTree.tsx`) opens files and folds folders;
+  right-click or "…" has the row's actions (`files/RowMenu.tsx`: New file, New folder, Add files…, Rename F2, Delete
+  ⌘⌫, Ask an agent, Show as a map, Show in Finder, Copy path, Close this folder); dragging a row onto a folder moves it;
+  files and whole folders dropped from the computer go into the folder aimed at (an agent's own files: its
+  `workspace/`; a dropped folder never mixes into one that is there, `placeDrop`; `.git`, `node_modules` and the like
+  stay behind; 500 files a drop). Text opens in Monaco (`files/CodeEditor.tsx`, its own lazy chunk, one model per
+  open file), Markdown as a page first (Edit / Preview); images, video, sound and drawings show as themselves
+  (`files/Preview.tsx`), anything else by name and size. Map shows a root as the read-only graph (`files/FolderMap.tsx`),
+  sharing the tree's open folders. The view unmounts when another opens, so open files, unsaved text and where you were
+  wait in its `session` until you come back. What is open refreshes every 6 s and on focus (agents write files). The
+  Ask bar sends the file (or the selection) or the folder's listing with the question (`shell/AskBar.tsx`, the same in
+  Files, Knowledge and Memory).
 - **Browser start page** (`workbench/BrowserStart.tsx`, pure `lib/browserStore.ts`, kept per computer):
   one big field (address or search), favorites as brand tiles (`siteLogo`: Simple Icons marks, a few
   site keys added in `scripts/tool-logos.ts`), what answers on the usual local ports (asked of the
@@ -617,12 +646,15 @@ Change them additively; a breaking change bumps the version.
   `guestAllowed`). Fill (`browser_fill` in `src-tauri/src/browser.rs`) runs only on the native page,
   only while it is on the login's site or a subdomain, and only over https (or this computer); it
   types into the page's fields and submits nothing. Hermes never sees logins. `SECRET_FILES`
-  (`engine/profileEnv.ts`) keeps every file that holds keys (agents' `.env`, McBot's `secrets.json`,
+  (`src/harness/live.ts`, shared with the engine and the demo) keeps every file that holds keys (agents' `.env`, McBot's `secrets.json`,
   `logins.json`, `logins.key`, `sharing.json`) out of the Files view and the editor.
 - **Browser view:** on macOS and Windows the page is a real child webview over the view's page
   area (`src-tauri/src/browser.rs`, Tauri `unstable` feature, one `page-<window>` per window), so
-  sites that refuse iframes still load; it hides while a sheet or ⌘K is open (native views draw
-  above HTML), and is placed again after layout and motion settle (the view has no entry motion).
+  sites that refuse iframes still load; native views draw above HTML, so it steps aside (a quiet
+  placeholder with the site's name) while a sheet or ⌘K is open or any floating layer overlaps it:
+  a picker's menu, a context menu, a dialog, the island once it grows (`lib/layers.ts`, found in the
+  DOM, nothing registers), and comes back on the page it was on, not the one it first opened. It is
+  placed again after layout and motion settle (the view has no entry motion).
   "Open in your browser" hands a page to the system browser (opener plugin: https, and http on
   localhost); `browser_open` (McBot's own window) is async, since a window built in a synchronous
   command deadlocks on Windows.
@@ -710,4 +742,4 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   `--music file` for other music under the cue sounds, `--gif 4 11` for a clip). Its copy shows what the app
   does; when a flow it shows changes, change the scene.
 
-Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Knowledge, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘D duplicate · ⌘0 fit the board · right-click the board · ⌘N new window (desktop).
+Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Knowledge, Files, Browser, Passwords) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘D duplicate · ⌘0 fit the board · right-click the board · ⌘N new window (desktop).

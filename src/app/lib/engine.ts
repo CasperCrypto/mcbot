@@ -113,6 +113,16 @@ const http = {
   list: (root: string, path: string) => call<FsListing>("GET", `/api/fs/list?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
   writeFile: (root: string, path: string, text: string, baseSha256: string | null) => call<{ path: string; bytes: number; sha256: string; followed?: string[] }>("PUT", "/api/fs/write", { root, path, text, baseSha256 }),
   read: (root: string, path: string) => call<FsPreview>("GET", `/api/fs/read?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
+  /** A file dropped or picked into a folder; it never replaces one ("name (2).ext"). */
+  addFile: (root: string, dir: string, name: string, data: Blob) => upload<{ path: string; bytes: number }>(`/api/fs/upload?root=${encodeURIComponent(root)}&dir=${encodeURIComponent(dir)}&name=${encodeURIComponent(name)}`, data),
+  makeFolder: (root: string, dir: string, name: string) => call<{ path: string }>("POST", "/api/fs/mkdir", { root, dir, name }),
+  /** Rename or move, inside one root. */
+  renameFile: (root: string, from: string, to: string) => call<{ path: string }>("POST", "/api/fs/rename", { root, from, to }),
+  /** Delete: it waits in the trash, and `restoreFile` puts it back. */
+  removeFile: (root: string, path: string) => call<{ trash: string; name: string }>("POST", "/api/fs/delete", { root, path }),
+  restoreFile: (trash: string) => call<{ root: string; path: string }>("POST", "/api/fs/restore", { trash }),
+  /** An image, video or sound in a folder, as itself (the Files view's preview). */
+  rawFile: (root: string, path: string) => blob(`/api/fs/raw?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`),
   setup: () => call<SetupState>("GET", "/api/setup"),
   setupDetect: () => call<SetupDetect>("GET", "/api/setup/detect"),
   setupModels: (baseUrl: string, keyName?: string) => call<{ models: string[] | null }>("POST", "/api/setup/models", { baseUrl, keyName }),

@@ -7,12 +7,15 @@
  */
 import { Download, FileText, Trash2, Upload } from "lucide-react";
 import { useEffect, useRef, useState, type DragEvent } from "react";
-import { addDoc, removeDoc } from "../../board/ydoc";
-import { DOC_TEXT_MAX, type Doc } from "../../contracts/graph";
+import { removeDoc } from "../../board/ydoc";
+import type { Doc } from "../../contracts/graph";
 import { knowledgeMarkdown } from "../../harness/knowledgeMd";
 import { compileBoard } from "../actions";
+import { hasFiles } from "../files/drop";
+import { addDocuments } from "../lib/documents";
 import { engine, REMOTE } from "../lib/engine";
 import { ago } from "../lib/format";
+import { AskBar } from "../shell/AskBar";
 import { BriefFields } from "../shell/KnowledgeSheet";
 import { HIDDEN_FOR_GUESTS } from "../shell/Rail";
 import { useBoard } from "../state/board";
@@ -32,7 +35,6 @@ const SEGMENTS: { value: Tab; label: string }[] = [
 export const KNOWLEDGE_TABS: readonly Tab[] = SEGMENTS.map((s) => s.value);
 
 const size = (bytes: number) => (bytes >= 1_048_576 ? `${(bytes / 1_048_576).toFixed(1)} MB` : bytes >= 1024 ? `${Math.round(bytes / 1024)} KB` : `${bytes} B`);
-const newDocId = () => `doc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 export function KnowledgeView() {
   const tab = useApp((s) => s.tab);
@@ -76,11 +78,10 @@ function ExportButton() {
 
 function Business() {
   const { graph, doc, boardId } = useBoard();
-  const identity = useApp((s) => s.identity);
-  const toast = useApp((s) => s.toast);
   const docs = [...(graph.docs ?? [])].sort((a, b) => b.at - a.at);
   const [adding, setAdding] = useState<string[]>([]);
   const [over, setOver] = useState(false);
+  const [picked, setPicked] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
   // The agents get new knowledge with their next compile: do it once when leaving, quietly, if anything changed.
   const brief = JSON.stringify(graph.brief ?? null);
@@ -91,34 +92,30 @@ function Business() {
     if (first.current !== latest.current.brief) void compileBoard(latest.current.boardId, { quiet: true });
   }, []);
 
-  const add = async (files: FileList | File[]) => {
-    for (const file of [...files]) {
-      setAdding((a) => [...a, file.name]);
-      try {
-        const r = await engine.addDoc(file.name, file);
-        const d: Doc = { id: newDocId(), name: r.name, text: r.text, bytes: r.bytes, by: identity.name, at: Date.now() };
-        addDoc(doc, d);
-        if (r.truncated) toast({ kind: "info", text: `${r.name} is long: the agents get its first ${Math.round(DOC_TEXT_MAX / 1000)}k characters` });
-      } catch (err) {
-        toast({ kind: "fail", text: (err as Error).message });
-      } finally {
-        setAdding((a) => a.filter((n) => n !== file.name));
-      }
-    }
-    void compileBoard(boardId, { quiet: true });
-  };
+  const add = (files: FileList | File[]) => addDocuments(doc, boardId, [...files], (name, on) => setAdding((a) => (on ? [...a, name] : a.filter((n) => n !== name))));
   const remove = (d: Doc) => {
+    if (picked === d.id) setPicked(null);
     removeDoc(doc, d.id);
     void compileBoard(boardId, { quiet: true });
   };
-  const drop = (e: DragEvent) => {
+  // Files dropped anywhere on Business become documents.
+  const over_ = (e: DragEvent) => {
+    if (!hasFiles(e.dataTransfer)) return;
     e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setOver(true);
+  };
+  const drop = (e: DragEvent) => {
     setOver(false);
+    if (!hasFiles(e.dataTransfer)) return;
+    e.preventDefault();
     if (e.dataTransfer.files.length) void add(e.dataTransfer.files);
   };
+  const chosen = docs.find((d) => d.id === picked) ?? null;
 
   return (
-    <section className="main knowledge-business" data-testid="knowledge-business">
+    <section className="main knowledge-business" data-testid="knowledge-business" onDragOver={over_} onDrop={drop}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(false); }}>
       <div className="knowledge-cols">
         <div className="knowledge-col">
           <h2 className="knowledge-h" data-tip="Every agent knows this: it is in each one's SOUL.md">What they know</h2>
@@ -126,7 +123,7 @@ function Business() {
         </div>
         <div className="knowledge-col">
           <h2 className="knowledge-h" data-tip="Every agent can read these when a question needs them (its business-files skill)">Documents</h2>
-          <div className={`doc-drop${over ? " over" : ""}`} onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={drop}
+          <div className={`doc-drop${over ? " over" : ""}`}
             onClick={() => input.current?.click()} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") input.current?.click(); }} data-testid="doc-drop">
             <Upload size={18} />
             <b>Add documents</b>
@@ -135,18 +132,23 @@ function Business() {
           </div>
           {adding.map((n) => <div key={`adding-${n}`} className="doc-row skeleton"><FileText size={15} /><span className="grow ellipsis">{n}</span><span className="faint">Reading…</span></div>)}
           {docs.map((d) => (
-            <div key={d.id} className="doc-row" data-testid="doc-row">
+            <div key={d.id} className="doc-row" aria-selected={picked === d.id} data-testid="doc-row" role="button" tabIndex={0}
+              onClick={() => setPicked(picked === d.id ? null : d.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPicked(picked === d.id ? null : d.id); } }}
+              data-tip={picked === d.id ? undefined : "Select it to ask an agent about it"} data-tip-side="top">
               <FileText size={15} className="faint" />
               <span className="grow doc-name">
                 <b className="ellipsis">{d.name}</b>
                 <small className="faint ellipsis">{size(d.bytes)}{d.text.trim() ? "" : " · no text found"}{d.by ? ` · ${d.by}` : ""}{d.at ? ` · ${ago(d.at)}` : ""}</small>
               </span>
-              <button className="icon-btn sm" aria-label={`Remove ${d.name}`} data-tip="Remove" onClick={() => remove(d)} data-testid="doc-remove"><Trash2 size={14} /></button>
+              <button className="icon-btn sm" aria-label={`Remove ${d.name}`} data-tip="Remove" onClick={(e) => { e.stopPropagation(); remove(d); }} data-testid="doc-remove"><Trash2 size={14} /></button>
             </div>
           ))}
           {docs.length === 0 && adding.length === 0 && <p className="faint knowledge-empty">Plans, price lists, policies: every agent reads them when a question needs them.</p>}
         </div>
       </div>
+      <AskBar className="knowledge-ask" testId="knowledge-ask"
+        placeholder={chosen ? `Ask about ${chosen.name}: summarize it, find…, draft a reply from it` : "Ask about your business: write a policy, check a price, draft an offer…"}
+        about={() => (chosen ? `Document: ${chosen.name}\n\n${chosen.text.slice(0, 40_000)}` : "(What you know about the business is in your instructions, and its documents in your business-files skill.)")} />
     </section>
   );
 }

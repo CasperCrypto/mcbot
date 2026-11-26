@@ -336,6 +336,7 @@ async fn browser_open(app: AppHandle<Wry>, url: String) -> Result<(), String> {
     WebviewWindowBuilder::new(&app, "browser", WebviewUrl::External(parsed))
         .title("McBot Studio Browser")
         .inner_size(1200.0, 820.0)
+        .disable_drag_drop_handler()
         .build()
         .map(|_| ())
         .map_err(|e| e.to_string())
@@ -349,7 +350,10 @@ fn new_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let builder = WebviewWindowBuilder::new(app, format!("board-{n}"), WebviewUrl::App("index.html".into()))
         .title("McBot Studio")
         .inner_size(1440.0, 900.0)
-        .min_inner_size(960.0, 600.0);
+        .min_inner_size(960.0, 600.0)
+        // Files dragged in from Finder or Explorer reach the page as HTML drops (Knowledge, Files, Memory);
+        // Tauri's own handler would take them first and the page would never see them.
+        .disable_drag_drop_handler();
     let builder = builder.theme(Some(tauri::Theme::Dark)).background_color(tauri::window::Color(12, 12, 13, 255));
     #[cfg(target_os = "macos")]
     let builder = builder
