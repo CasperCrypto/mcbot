@@ -282,11 +282,25 @@ Change them additively; a breaking change bumps the version.
   Windows unsigned. `.github/workflows/release.yml` builds draft releases from
   `v*` tags (or by hand) for macOS (arm64, x64), Windows and Linux (a tag push whose release is already published
   builds nothing: publishing a draft creates its tag); `publish-release.yml` (by hand, a tag)
-  checks every installer is there, adds `docs/releases/<tag>.md` and publishes the draft; the website explains the
-  one-time "Open Anyway" / "Run anyway". On a Mac with no Developer ID, the free way
+  checks every installer is there, adds `SHA256SUMS.txt` and `docs/releases/<tag>.md` and publishes the draft; the
+  website explains the one-time "Open Anyway" / "Run anyway". On a Mac with no Developer ID, the free way
   without a prompt is `site/install.sh` (`curl … | sh`): curl sets no quarantine flag,
   so Gatekeeper never asks; it installs the newest release's DMG into /Applications
-  (an AppImage into ~/.local/bin on Linux) and talks only to github.com.
+  (an AppImage into ~/.local/bin on Linux), only after its SHA256 matches the release's `SHA256SUMS.txt`,
+  and talks only to github.com.
+- **Supply chain** (SECURITY.md "How releases are made"; `test/supply-chain.test.ts` fails a PR that weakens
+  it): installers are built only from a commit on the default branch, without caches, with GitHub's build
+  provenance (`actions/attest-build-provenance`); workflows declare least-privilege `permissions`, never run on
+  `pull_request_target` / `workflow_run`, check out with `persist-credentials: false` (only `hermes-sync.yml`'s
+  `propose`, which runs no repository code, pushes) and pass event data to scripts as `env`, never `${{ }}`
+  inside `run:`; a job that runs dependencies holds a read-only token (the installers' build aside). Actions:
+  GitHub's own plus the `THIRD_PARTY` list, pinned to a commit. npm packages only from the registry with
+  integrity hashes, install scripts only from `INSTALL_SCRIPTS`; crates only from crates.io. Vulnerable
+  transitive packages are patched with `overrides` in package.json. Every path that builds or ships is in
+  `.github/CODEOWNERS`. The GitHub settings a file can't hold (rulesets "Protect main" and "Protect release
+  tags", squash merges only, secret scanning, Actions policy) are applied by `scripts/github-security.sh` with an
+  admin's `gh` sign-in (SECURITY.md "Settings for maintainers"); when a CI job is renamed, change its required check
+  there too.
 
 ## Shared board
 

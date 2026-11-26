@@ -4,6 +4,14 @@
 #
 # Unsigned on purpose (free and open source): macOS asks once (System Settings → Privacy &
 # Security → Open Anyway), Windows SmartScreen asks once (More info → Run anyway).
+#
+# What keeps the installers honest (SECURITY.md, "How releases are made"):
+#   - they are built only from a commit that is on the default branch (a tag or a run by hand
+#     on anything else stops here), so every line in them went through a merged pull request;
+#   - no caches: a cache another workflow wrote can never reach an installer;
+#   - every installer gets a signed build provenance (GitHub artifact attestations), so anyone
+#     can check it was built here, from this commit: `gh attestation verify <file> --repo CasperCrypto/mcbot`;
+#   - publish-release.yml adds SHA256SUMS.txt, which site/install.sh checks before installing.
 name: Release
 
 on:
@@ -11,23 +19,35 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
   # Publishing a draft creates its tag, and a tag push starts this workflow: a release that is
   # already published needs no second set of installers (that left a stray v0.8.0 draft).
   check:
     runs-on: ubuntu-latest
+    permissions:
+      # Draft releases are listed only for a token that can write.
+      contents: write
     outputs:
       build: ${{ steps.check.outputs.build }}
     steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
           EVENT: ${{ github.event_name }}
+          DEFAULT: ${{ github.event.repository.default_branch }}
         run: |
+          set -euo pipefail
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/$DEFAULT"; then
+            echo "::error::$GITHUB_SHA is not on $DEFAULT. Installers are built only from code that was merged into $DEFAULT."
+            exit 1
+          fi
           if [ "$EVENT" = "push" ] && gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.draft' 2>/dev/null | grep -qx false; then
             echo "$TAG is already published: nothing to build"
             echo "build=false" >> "$GITHUB_OUTPUT"
@@ -38,6 +58,10 @@ jobs:
   build:
     needs: check
     if: needs.check.outputs.build == 'true'
+    permissions:
+      contents: write      # attach the installers to the draft release
+      id-token: write      # sign the build provenance (Sigstore, through GitHub)
+      attestations: write  # keep it with the repository
     strategy:
       fail-fast: false
       matrix:
@@ -47,7 +71,7 @@ jobs:
           - platform: macos-latest
             target: aarch64-apple-darwin
             also: x86_64-apple-darwin
-            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            rust_targets: aarch64-apple-darwin x86_64-apple-darwin
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
             rust_targets: x86_64-pc-windows-msvc
@@ -57,16 +81,22 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # No `cache:` here, and no Rust cache: release builds start clean.
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.rust_targets }}
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri -> target
+      # rustup comes with every GitHub runner; no third-party action between the toolchain and the installers.
+      - name: Rust
+        shell: bash
+        env:
+          TARGETS: ${{ matrix.rust_targets }}
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+          rustup target add $TARGETS
+          rustc --version
       - name: Linux build dependencies
         if: matrix.platform == 'ubuntu-22.04'
         run: |
@@ -102,3 +132,16 @@ jobs:
             Not signed yet: on macOS open it once, then System Settings → Privacy & Security → Open Anyway; on Windows choose More info → Run anyway.
           releaseDraft: true
           prerelease: false
+      # Signed proof of where each installer came from. Never blocks a release: a missing
+      # attestation shows up in `gh attestation verify`, a missing installer would not.
+      - name: Build provenance
+        continue-on-error: true
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            src-tauri/target/*/release/bundle/dmg/*.dmg
+            src-tauri/target/*/release/bundle/msi/*.msi
+            src-tauri/target/*/release/bundle/nsis/*.exe
+            src-tauri/target/*/release/bundle/appimage/*.AppImage
+            src-tauri/target/*/release/bundle/deb/*.deb
+            src-tauri/target/*/release/bundle/rpm/*.rpm

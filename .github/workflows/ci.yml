@@ -1,6 +1,9 @@
 # Every pull request and every push to the default branch: the tests, the typecheck,
 # the desktop UI build and the browser demo build. Real-Hermes tests skip themselves
 # here (no prepared engine); run them locally with MCBOT_E2E=1 npm test.
+#
+# Pull requests from forks run with a read-only token and no secrets (`pull_request`, never
+# `pull_request_target`); test/supply-chain.test.ts keeps it that way.
 name: CI
 
 on:
@@ -21,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -39,6 +44,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -51,3 +58,16 @@ jobs:
       - name: Tests (not blocking yet)
         continue-on-error: true
         run: npm test
+
+  # A pull request that adds or bumps a dependency with a known high or critical advisory fails
+  # here, before anyone merges it (GitHub's advisory database: npm, crates and Actions).
+  dependencies:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

@@ -8,6 +8,11 @@
 #   4. run every test, the typecheck and both builds
 #   5. open (or update) one PR: green = ready to review, red or conflicts = draft with the reasons
 #
+# Two jobs, so upstream's code never runs next to a token that can write: `sync` merges and runs
+# the checks with a read-only token and hands over a git bundle; `propose` runs nothing from the
+# repository or the release, only git and gh, refuses a bundle that touches anything outside
+# hermes/, patches/hermes/ and src/contracts/, pushes the branch and opens the PR.
+#
 # PRs opened with GITHUB_TOKEN do not start other workflows, so the checks run here and their
 # result is written into the PR.
 name: Engine update
@@ -21,9 +26,7 @@ on:
         description: "Upstream tag (default: newest stable)"
         required: false
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: hermes-sync
@@ -32,41 +35,52 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.find.outputs.tag }}
+      current: ${{ steps.find.outputs.current }}
+      code: ${{ steps.sync.outputs.code }}
+      ok: ${{ steps.check.outputs.ok }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
       - run: npm ci
       - name: Find the release
         id: find
         env:
           WANT: ${{ inputs.tag }}
         run: |
+          set -euo pipefail
           up=$(node -p "require('./hermes/UPSTREAM.json').upstream")
           base=$(node -p "require('./hermes/UPSTREAM.json').commit")
           tag="$WANT"
           if [ -z "$tag" ]; then
             tag=$(git ls-remote --tags --refs --sort=-version:refname "$up" | awk '{print $2}' | sed 's#refs/tags/##' | grep -E '^v[0-9]{1,3}\.[0-9]+\.[0-9]+$' | head -n1)
           fi
+          # The tag ends up in a branch name, a commit message and the PR title: a release name, nothing else.
+          [[ "$tag" =~ ^v[0-9A-Za-z._-]{1,40}$ ]] || { echo "::error::Not an upstream release tag: $tag"; exit 1; }
           mkdir -p "$RUNNER_TEMP/up" && cd "$RUNNER_TEMP/up"
           git init -q && git remote add origin "$up"
           git fetch -q --depth=1 origin "$base" "refs/tags/$tag:refs/tags/$tag"
           next=$(git rev-parse "$tag^{commit}")
           git checkout -q "$tag"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "repo=$RUNNER_TEMP/up" >> "$GITHUB_OUTPUT"
           if [ "$next" = "$base" ]; then echo "current=true" >> "$GITHUB_OUTPUT"; else echo "current=false" >> "$GITHUB_OUTPUT"; fi
           echo "hermes/ is at ${base:0:12}; newest stable is $tag (${next:0:12})"
       - name: Merge it into hermes/
         if: steps.find.outputs.current == 'false'
         id: sync
+        env:
+          TAG: ${{ steps.find.outputs.tag }}
         run: |
           set +e
-          npx tsx scripts/hermes-sync.ts "${{ steps.find.outputs.repo }}" "${{ steps.find.outputs.tag }}" 2>&1 | grep -v "^warning: in the working copy" | tee sync.log
+          npx tsx scripts/hermes-sync.ts "$RUNNER_TEMP/up" "$TAG" 2>&1 | grep -v "^warning: in the working copy" | tee sync.log
           echo "code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
           npm run -s engine:platforms && npm run -s engine:connectors
       - name: Check
@@ -79,21 +93,66 @@ jobs:
           npm run build > build.log 2>&1 || ok=false
           npm run build:demo >> build.log 2>&1 || ok=false
           echo "ok=$ok" >> "$GITHUB_OUTPUT"
-      - name: Open or update the pull request
+      - name: Bundle the merge
         if: steps.find.outputs.current == 'false'
         env:
-          GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.find.outputs.tag }}
-          SYNC: ${{ steps.sync.outputs.code }}
-          OK: ${{ steps.check.outputs.ok }}
         run: |
-          branch="engine/hermes-$TAG"
+          set -euo pipefail
+          base=$(git rev-parse HEAD)
           git config user.name "github-actions[bot]"
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$branch"
           git add -A hermes patches src/contracts
           git commit -q -m "Engine: Hermes $TAG" -m "Merged by .github/workflows/hermes-sync.yml (npm run engine:sync)."
-          git push -f origin "$branch"
+          mkdir -p out
+          git bundle create out/sync.bundle "$base..HEAD"
+          cp sync.log out/ 2>/dev/null || true
+          { [ -f test.log ] && grep -E "FAIL|✗|×|Error|error TS" test.log build.log | head -n 80; } > out/failures.log || true
+      - if: steps.find.outputs.current == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-sync
+          path: out/
+          retention-days: 7
+
+  propose:
+    needs: sync
+    if: needs.sync.outputs.current == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # Needs its credentials to push the branch; nothing from the repository runs in this job.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: engine-sync
+          path: ${{ runner.temp }}/sync
+      - name: Open or update the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.sync.outputs.tag }}
+          SYNC: ${{ needs.sync.outputs.code }}
+          OK: ${{ needs.sync.outputs.ok }}
+          DEFAULT: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9A-Za-z._-]{1,40}$ ]] || { echo "::error::Not an upstream release tag: $TAG"; exit 1; }
+          dir="$RUNNER_TEMP/sync"
+          git bundle verify -q "$dir/sync.bundle"
+          git fetch -q "$dir/sync.bundle" HEAD
+          # An engine update changes the engine and what McBot generates from it, nothing else.
+          outside=$(git diff --name-only "$GITHUB_SHA" FETCH_HEAD | grep -vE '^(hermes/|patches/hermes/|src/contracts/)' || true)
+          if [ -n "$outside" ]; then
+            echo "::error::The engine update touches files outside hermes/, patches/hermes/ and src/contracts/:"
+            echo "$outside"
+            exit 1
+          fi
+          branch="engine/hermes-$TAG"
+          git push -f origin "FETCH_HEAD:refs/heads/$branch"
           {
             echo "Hermes **$TAG** merged into \`hermes/\` with McBot's changes kept."
             echo
@@ -102,18 +161,16 @@ jobs:
             echo
             echo "Before merging: run \`MCBOT_E2E=1 npm test\` once on a computer with the engine prepared (\`npm run engine:setup\`), and check \`docs/HERMES.md\` for settings this release renamed."
             echo
-            echo "<details><summary>Merge log</summary>"; echo; echo '```'; tail -n 60 sync.log; echo '```'; echo "</details>"
+            echo "<details><summary>Merge log</summary>"; echo; echo '```'; tail -n 60 "$dir/sync.log" 2>/dev/null || true; echo '```'; echo "</details>"
             if [ "$OK" != "true" ]; then
-              echo "<details><summary>Failures</summary>"; echo; echo '```'
-              grep -E "FAIL|✗|×|Error|error TS" test.log build.log | head -n 80
-              echo '```'; echo "</details>"
+              echo "<details><summary>Failures</summary>"; echo; echo '```'; cat "$dir/failures.log" 2>/dev/null || true; echo '```'; echo "</details>"
             fi
-          } > body.md
+          } > "$RUNNER_TEMP/body.md"
           n=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')
           draft=""
           if [ "$SYNC" != "0" ] || [ "$OK" != "true" ]; then draft="--draft"; fi
           if [ -n "$n" ]; then
-            gh pr edit "$n" --body-file body.md
+            gh pr edit "$n" --body-file "$RUNNER_TEMP/body.md"
           else
-            gh pr create --head "$branch" --base "${{ github.event.repository.default_branch }}" --title "Engine: Hermes $TAG" --body-file body.md $draft
+            gh pr create --head "$branch" --base "$DEFAULT" --title "Engine: Hermes $TAG" --body-file "$RUNNER_TEMP/body.md" $draft
           fi

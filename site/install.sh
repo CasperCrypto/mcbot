@@ -22,14 +22,30 @@ case "$os" in
 esac
 
 say "Finding the newest McBot Studio…"
-url=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
-  | grep -o '"browser_download_url": *"[^"]*"' | sed 's/^.*"\(https[^"]*\)"$/\1/' | grep -E "$want" | head -n 1)
+urls=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
+  | grep -o '"browser_download_url": *"[^"]*"' | sed 's/^.*"\(https[^"]*\)"$/\1/')
+url=$(printf '%s\n' "$urls" | grep -E "$want" | head -n 1)
 [ -n "$url" ] || fail "no download for this computer in the newest release yet"
+case "$url" in "https://github.com/$REPO/releases/download/"*) ;; *) fail "unexpected download address: $url" ;; esac
+sums_url=$(printf '%s\n' "$urls" | grep -E '/SHA256SUMS\.txt$' | head -n 1)
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-say "Downloading $(basename "$url")…"
+file=$(basename "$url")
+say "Downloading $file…"
 curl -fL --progress-bar -o "$tmp/pkg" "$url"
+
+# The release lists every installer's SHA256 (publish-release.yml): a download that differs is not installed.
+if [ -n "$sums_url" ]; then
+  curl -fsSL -o "$tmp/sums" "$sums_url" || fail "could not download the release's checksums"
+  expected=$(awk -v f="$file" '$2 == f { print $1 }' "$tmp/sums" | head -n 1)
+  [ -n "$expected" ] || fail "the release's checksums do not list $file"
+  if command -v sha256sum >/dev/null 2>&1; then got=$(sha256sum "$tmp/pkg" | cut -d' ' -f1); else got=$(shasum -a 256 "$tmp/pkg" | cut -d' ' -f1); fi
+  [ "$got" = "$expected" ] || fail "the download does not match the release's checksum (got $got, expected $expected); nothing was installed"
+  say "Checksum matches."
+else
+  say "This release has no checksum list yet; installing without that check."
+fi
 
 if [ "$os" = "Darwin" ]; then
   hdiutil attach -nobrowse -quiet -mountpoint "$tmp/mnt" "$tmp/pkg"

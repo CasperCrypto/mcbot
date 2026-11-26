@@ -1,7 +1,8 @@
-# Publish a draft release that release.yml built: it checks every installer is there, puts the notes
-# from docs/releases/<tag>.md above the download instructions, and publishes it (which creates the tag
-# on the commit it was built from). The website's download buttons and the app's update notice then
-# offer it. Run it by hand: Actions → Publish release → tag, e.g. v0.5.0.
+# Publish a draft release that release.yml built: it checks every installer is there, adds
+# SHA256SUMS.txt (each installer's checksum, which site/install.sh checks before installing), puts
+# the notes from docs/releases/<tag>.md above the download instructions, and publishes it (which
+# creates the tag on the commit it was built from). The website's download buttons and the app's
+# update notice then offer it. Run it by hand: Actions → Publish release → tag, e.g. v0.5.0.
 name: Publish release
 
 on:
@@ -11,14 +12,17 @@ on:
         description: "The draft's tag, e.g. v0.5.0"
         required: true
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Publish the draft
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -34,7 +38,21 @@ jobs:
           for want in '_aarch64\.dmg$' '_x64\.dmg$' '\.(msi|exe)$' '_amd64\.AppImage$'; do
             grep -Eq "$want" <<<"$assets" || { echo "Missing an installer matching $want"; exit 1; }
           done
+
+          # SHA256SUMS.txt from the bytes people will download (each asset as the release serves it).
+          sums="$RUNNER_TEMP/SHA256SUMS.txt"
+          : > "$sums"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$id/assets" --paginate --jq '.[] | "\(.id)\t\(.name)"' | while IFS=$'\t' read -r aid name; do
+            [ "$name" = "SHA256SUMS.txt" ] && { gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$aid"; continue; }
+            gh api -H "Accept: application/octet-stream" "repos/$GITHUB_REPOSITORY/releases/assets/$aid" > "$RUNNER_TEMP/asset"
+            printf '%s  %s\n' "$(sha256sum "$RUNNER_TEMP/asset" | cut -d' ' -f1)" "$name" >> "$sums"
+          done
+          cat "$sums"
+          curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: text/plain" \
+            --data-binary @"$sums" "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$id/assets?name=SHA256SUMS.txt" > /dev/null
+
           body=$(gh api "repos/$GITHUB_REPOSITORY/releases/$id" --jq .body)
           notes="docs/releases/$TAG.md"
           if [ -f "$notes" ]; then body="$(cat "$notes")"$'\n\n'"$body"; fi
+          body="$body"$'\n\n'"Check a download: compare it with SHA256SUMS.txt, or run \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\` (built by this repository's Release workflow)."
           gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$id" -F draft=false -f make_latest=true -f body="$body" --jq .html_url
