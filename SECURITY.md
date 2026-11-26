@@ -69,6 +69,13 @@ installer carries a signed build provenance that says which workflow and commit 
 gh attestation verify "McBot.Studio_0.9.0_aarch64.dmg" --repo CasperCrypto/mcbot
 ```
 
+## If a secret is ever pushed
+
+Treat it as public the moment it reaches GitHub, even if the commit is deleted a minute later: forks,
+clones, pull request refs and public archives keep copies, and rewriting history does not reach them.
+**Revoke it and make a new one first**; cleaning the history afterwards is optional. Secret scanning with
+push protection (below) stops most keys before they leave your computer.
+
 ## Settings for maintainers
 
 What the files above can't do on their own. Check these once, and again when someone gets access:
@@ -92,6 +99,10 @@ What the files above can't do on their own. Check these once, and again when som
    Leave CodeQL on its advanced setup (`codeql.yml`).
 6. **Pages:** verify `mcbot.studio` for your account (Settings → Pages → Verified domains) so nobody else can
    publish under it, and keep Enforce HTTPS on: `site/install.sh` is served from there.
-7. **Pin `tauri-apps/tauri-action` to a commit** in `release.yml` (`uses: tauri-apps/tauri-action@<sha> # v1.x.y`;
+7. **Merges and branches** (Settings → General → Pull Requests): allow **squash merging** only, so each pull
+   request lands on the default branch as one commit GitHub signs ("Verified"); then add **Require signed
+   commits** to the default branch ruleset. Turn on **Automatically delete head branches**, and delete old
+   branches whose pull requests were merged or closed.
+8. **Pin `tauri-apps/tauri-action` to a commit** in `release.yml` (`uses: tauri-apps/tauri-action@<sha> # v1.x.y`;
    `git ls-remote https://github.com/tauri-apps/tauri-action` lists them), then take it out of
    `NOT_PINNED_YET` in `test/supply-chain.test.ts`.
