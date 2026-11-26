@@ -1,0 +1,16 @@
+# Who reviews what. With the default branch's ruleset set to "Require review from Code Owners"
+# (SECURITY.md, "Settings for maintainers"), a pull request that touches these paths cannot be
+# merged until an owner approves it.
+*                       @CasperCrypto
+
+# What builds, signs or ships the installers, and what runs on people's computers before the app.
+/.github/               @CasperCrypto
+/scripts/               @CasperCrypto
+/src-tauri/             @CasperCrypto
+/site/install.sh        @CasperCrypto
+/package.json           @CasperCrypto
+/package-lock.json      @CasperCrypto
+/hermes/                @CasperCrypto
+/patches/               @CasperCrypto
+/engine/                @CasperCrypto
+/test/supply-chain.test.ts @CasperCrypto
