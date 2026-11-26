@@ -78,31 +78,44 @@ push protection (below) stops most keys before they leave your computer.
 
 ## Settings for maintainers
 
-What the files above can't do on their own. Check these once, and again when someone gets access:
+What the files above can't do on their own. One script switches on everything a script can, with your
+own GitHub sign-in (an admin's), and is safe to run again:
 
-1. **Account:** two-factor authentication with a passkey or an authenticator app (not SMS); review
-   Settings → Applications and personal access tokens, and remove what you don't use.
-2. **Default branch ruleset** (Settings → Rules → Rulesets → New branch ruleset, target: default branch):
-   restrict deletions, block force pushes, require a pull request before merging, and require the status
-   checks `test`, `windows` and `dependencies` (CI) and `analyze (javascript-typescript)` (CodeQL). With a
-   second maintainer, also require one approval and review from Code Owners (`.github/CODEOWNERS`). Engine
-   update PRs are opened by a workflow, so GitHub starts no checks on them: run CI on their branch by hand
-   (Actions → CI → Run workflow).
-3. **Tag ruleset** (New tag ruleset, target `v*`): restrict creations, updates and deletions, with only
-   repository admins allowed to bypass. A `v*` tag starts the release build.
-4. **Actions** (Settings → Actions → General): allow actions by GitHub plus `tauri-apps/tauri-action@*`
-   only; require approval for workflows from **all external contributors**; workflow permissions
-   **read-only** by default, with "Allow GitHub Actions to create and approve pull requests" on (the engine
-   update opens one).
-5. **Code security** (Settings → Code security): private vulnerability reporting (this page's "Report a
-   vulnerability" needs it), Dependabot alerts and security updates, secret scanning with push protection.
-   Leave CodeQL on its advanced setup (`codeql.yml`).
-6. **Pages:** verify `mcbot.studio` for your account (Settings → Pages → Verified domains) so nobody else can
-   publish under it, and keep Enforce HTTPS on: `site/install.sh` is served from there.
-7. **Merges and branches** (Settings → General → Pull Requests): allow **squash merging** only, so each pull
-   request lands on the default branch as one commit GitHub signs ("Verified"); then add **Require signed
-   commits** to the default branch ruleset. Turn on **Automatically delete head branches**, and delete old
-   branches whose pull requests were merged or closed.
-8. **Pin `tauri-apps/tauri-action` to a commit** in `release.yml` (`uses: tauri-apps/tauri-action@<sha> # v1.x.y`;
+```bash
+gh auth login
+```
+
+```bash
+bash scripts/github-security.sh
+```
+
+It sets (`--dry-run` lists it without changing anything):
+
+- **Merges:** squash merging only, so every commit on the default branch is one GitHub signs; a merged
+  pull request's branch is deleted.
+- **Code security:** secret scanning with push protection, Dependabot alerts and security updates, private
+  vulnerability reporting (this page's "Report a vulnerability" needs it). CodeQL stays on its advanced
+  setup (`codeql.yml`).
+- **Actions:** only GitHub's own actions plus `tauri-apps/tauri-action`; workflows get a read-only token
+  unless they ask for more; Actions may open pull requests (the engine update); a person approves the
+  workflows of every outside contributor's pull request.
+- **"Protect main"** (ruleset on the default branch): no deleting it, no force pushes, signed commits, and
+  every change through a pull request whose checks passed (`test`, `windows`, `dependencies`,
+  `analyze (javascript-typescript)`, `analyze (actions)`, all from GitHub Actions). An admin may merge a
+  pull request GitHub started no checks for (the engine update's, opened by a workflow; or run CI on its
+  branch by hand), but never push around a pull request. With a second maintainer, also require one
+  approval and review from Code Owners (`.github/CODEOWNERS`).
+- **"Protect release tags"** (`v*`): a published version's tag never moves or disappears. Creating one stays
+  open, since publishing a release creates its tag, and `release.yml` builds nothing from a commit that is
+  not on the default branch.
+- **Pages:** HTTPS only (`site/install.sh` is served from there).
+
+Only you can do these:
+
+1. **Two-factor sign-in** with a passkey or an authenticator app, not SMS
+   (https://github.com/settings/security); remove apps and tokens you don't use.
+2. **Verify `mcbot.studio`** for your account (https://github.com/settings/pages), so nobody else can
+   publish under it.
+3. **Pin `tauri-apps/tauri-action` to a commit** in `release.yml` (`uses: tauri-apps/tauri-action@<sha> # v1.x.y`;
    `git ls-remote https://github.com/tauri-apps/tauri-action` lists them), then take it out of
    `NOT_PINNED_YET` in `test/supply-chain.test.ts`.

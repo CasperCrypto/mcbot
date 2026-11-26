@@ -292,7 +292,10 @@ Change them additively; a breaking change bumps the version.
   GitHub's own plus the `THIRD_PARTY` list, pinned to a commit. npm packages only from the registry with
   integrity hashes, install scripts only from `INSTALL_SCRIPTS`; crates only from crates.io. Vulnerable
   transitive packages are patched with `overrides` in package.json. Every path that builds or ships is in
-  `.github/CODEOWNERS`. The GitHub settings a file can't hold are listed in SECURITY.md "Settings for maintainers".
+  `.github/CODEOWNERS`. The GitHub settings a file can't hold (rulesets "Protect main" and "Protect release
+  tags", squash merges only, secret scanning, Actions policy) are applied by `scripts/github-security.sh` with an
+  admin's `gh` sign-in (SECURITY.md "Settings for maintainers"); when a CI job is renamed, change its required check
+  there too.
 
 ## Shared board
 
