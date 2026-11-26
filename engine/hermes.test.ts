@@ -57,6 +57,17 @@ describe("McBot's own Hermes", () => {
     expect((await findHermes({ MCBOT_HERMES_DIR: dir, PATH: "" }))?.kind).toBe("bundled");
   });
 
+  it("never lets text become a command when Hermes is a .cmd launcher (it runs through a shell)", () => {
+    const shim = { path: "C:\\Program Files\\Hermes\\hermes.cmd", shell: true, kind: "external" as const };
+    const win = hermesCommand(shim, ["skills", "search", "pdf & calc.exe | x > y ^ z", "C:\\dir\\"], {}, "win32");
+    expect(win.file).toBe('"C:\\Program Files\\Hermes\\hermes.cmd"');
+    expect(win.args).toEqual(['"skills"', '"search"', '"pdf & calc.exe | x > y ^ z"', '"C:\\dir\\\\"']);
+    for (const bad of ['a" & calc "', "%PATH%", "hi!", "line\nbreak"]) expect(() => hermesCommand(shim, [bad], {}, "win32")).toThrow(/can't be given/);
+    expect(hermesCommand({ ...shim, path: "/opt/hermes.cmd" }, ["it's $(rm -rf ~)"], {}, "linux").args).toEqual(["'it'\\''s $(rm -rf ~)'"]);
+    // Without a shell (McBot's own Hermes, a hermes.exe) every word goes through as it is.
+    expect(hermesCommand({ ...shim, shell: false }, ["a & b"], {}, "win32")).toMatchObject({ file: shim.path, args: ["a & b"] });
+  });
+
   it("labels its runs mcbot; an external Hermes keeps the default", () => {
     expect(chatArgv("support", { kind: "bundled" })).toEqual(["-p", "support", "chat", "--query-file", "-", "--oneshot", "--format", "stream-json", "--source", "mcbot"]);
     expect(chatArgv("support", { kind: "external" })).not.toContain("--source");

@@ -193,9 +193,31 @@ export async function setupHome(src: { dir: string; runtime: string }, home: str
   return env && bin ? { ...bin, env: { ...bin.env, ...env } } : null;
 }
 
-/** How to start Hermes with `argv`, and the environment it needs. */
-export function hermesCommand(bin: HermesBinary, argv: string[], env: NodeJS.ProcessEnv): { file: string; args: string[]; env: NodeJS.ProcessEnv } {
-  return { file: bin.path, args: [...(bin.prefix ?? []), ...argv], env: { ...env, ...bin.env } };
+/**
+ * How to start Hermes with `argv`, and the environment it needs. A `.cmd`/`.bat` Hermes starts
+ * through a shell (Node can't start one without), which reads the command line as a script: a task
+ * title or a search with `&`, `|` or `%PATH%` in it would run or expand. So there every word is
+ * quoted (`shellArg`); McBot's own Hermes never needs a shell.
+ */
+export function hermesCommand(bin: HermesBinary, argv: string[], env: NodeJS.ProcessEnv, platform: NodeJS.Platform = process.platform): { file: string; args: string[]; env: NodeJS.ProcessEnv } {
+  const args = [...(bin.prefix ?? []), ...argv];
+  const quote = (a: string) => shellArg(a, platform);
+  return { file: bin.shell ? quote(bin.path) : bin.path, args: bin.shell ? args.map(quote) : args, env: { ...env, ...bin.env } };
+}
+
+/**
+ * One word for a shell command line. cmd.exe: in double quotes, where `&`, `|`, `<`, `>`, `^` and
+ * spaces are plain text; what it still reads inside them (`"`, `%`, `!`, line breaks) is refused
+ * rather than escaped, since a batch launcher passes its arguments on through `%*` a second time.
+ * Elsewhere: single quotes, the POSIX shell's literal form.
+ */
+export function shellArg(arg: string, platform: NodeJS.Platform = process.platform): string {
+  if (platform !== "win32") return `'${arg.replace(/'/g, "'\\''")}'`;
+  if (/["%!\r\n\0]/.test(arg)) {
+    throw new Error(`This Hermes is a .cmd launcher, which can't be given ${JSON.stringify(arg.length > 40 ? `${arg.slice(0, 40)}…` : arg)} safely (" % ! and line breaks): use McBot's own engine or a hermes.exe`);
+  }
+  // A backslash before the closing quote would escape it for the program's own argument parser.
+  return `"${arg.replace(/(\\+)$/, "$1$1")}"`;
 }
 
 async function executable(p: string): Promise<boolean> {
