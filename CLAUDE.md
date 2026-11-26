@@ -700,9 +700,14 @@ MCBOT_E2E=1 npm test   also run the real end-to-end test on McBot's own Hermes
   app's own marks (`npm test` fails while they are stale).
 - The **launch video** is markup too (`design/video/`: `index.html`, `style.css`, `scenes.js`): the site's colours
   and rules (no gradients or glows), the app's bots (`site/foods.js`) and brand marks (`render.ts` passes them in).
-  `scenes.js` draws every frame from its time alone (CSS transitions off, CSS animations set to the clock), so
-  `npx tsx design/video/render.ts` screenshots each frame with Playwright and encodes it with ffmpeg into
-  `design/video/out/` (ignored; `--still 12.5` for one frame, `--gif 4 11` for a clip). Its copy shows what the
-  app does; when a flow it shows changes, change the scene.
+  It is cut to a 120 BPM soundtrack (scenes on bar lines, two drops with a shake, a flash on the first and the
+  last). `scenes.js` draws every frame from its time alone (CSS transitions off, CSS animations set to the clock)
+  and exports the score (`VIDEO.score()`: the beat, builds, drops, break and every sound's moment);
+  `audio.py` (numpy, scipy) composes the music note by note from it and adds a sound on every cue, nothing
+  sampled, so the video ships with sound that is ours. `npx tsx design/video/render.ts` screenshots each frame
+  with Playwright, encodes with ffmpeg, makes the soundtrack, brings it to -14 LUFS in two passes and muxes AAC,
+  into `design/video/out/` (ignored; `--still 12.5` for one frame, `--audio-only` to redo the sound,
+  `--music file` for other music under the cue sounds, `--gif 4 11` for a clip). Its copy shows what the app
+  does; when a flow it shows changes, change the scene.
 
 Shortcuts: ⌘⇧Space McBot from anywhere · ⌘K commands · ⌘1–9 views (rail order: Home, Board, Chat, Tasks, Runs, Knowledge, Code, Browser, Files) · ⌘S compile · ⌘Z / ⇧⌘Z undo / redo · ⌘D duplicate · ⌘0 fit the board · right-click the board · ⌘N new window (desktop).
